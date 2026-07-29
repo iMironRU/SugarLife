@@ -1,3 +1,16 @@
+/* Десктоп/крупный экран с мышью — приложение колонкой по центру «стола».
+   Сенсорные устройства (телефоны/планшеты) — всегда на весь экран. */
+@media (min-width: 700px) and (pointer: fine) {
+  html body { background: var(--c-desk); }
+  html body ion-app {           /* перебиваем inset:0 у Ionic (задан жёстко) */
+    left: 50% !important; right: auto !important;
+    margin-left: -201px !important;   /* центрируем колонку 402px */
+    width: 402px !important; max-width: 402px !important;
+    border-left: 1px solid var(--color-neutral-800);
+    border-right: 1px solid var(--color-neutral-800);
+  }
+}
+
 /* Экраны */
 .screen { padding: 4px 20px 24px; }
 
