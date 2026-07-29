@@ -89,9 +89,8 @@ function slotValue(schedule: any[]): number | null {
   return val;
 }
 
-async function loadDeviceStatus(base: string, token?: string): Promise<Device | null> {
-  const raw = await getJSON(base, '/api/v1/devicestatus.json?count=1', token);
-  const d = Array.isArray(raw) ? raw[0] : null;
+// Нормализация одного документа devicestatus (переиспользуется REST + сокетом)
+export function normDeviceDoc(d: any): Device | null {
   if (!d) return null;
   const oa = d.openaps || {}, loop = d.loop || {}, pump = d.pump || {}, ext = pump.extended || {};
   return {
@@ -103,8 +102,28 @@ async function loadDeviceStatus(base: string, token?: string): Promise<Device | 
     baseBasal: num(ext.BaseBasalRate),
     tempRate: num(ext.TempBasalAbsoluteRate),
     lastBolus: num(ext.LastBolusAmount),
-    at: d.date || (d.created_at && Date.parse(d.created_at)) || null,
+    at: d.date || (d.mills) || (d.created_at && Date.parse(d.created_at)) || null,
   };
+}
+
+// Нормализация SGV из сокета ({mills, mgdl, direction}) или REST ({date/dateString, sgv})
+export function normSgv(s: any): Entry | null {
+  const mgdl = num(s.mgdl, s.sgv);
+  const t = s.mills || s.date || (s.dateString && Date.parse(s.dateString));
+  if (mgdl == null || !t) return null;
+  return { t, mgdl, mmol: mgdl / MGDL_PER_MMOL, dir: s.direction || 'Flat' };
+}
+
+// Нормализация treatment из сокета/REST
+export function normTreatment(t: any): Treatment | null {
+  const tt = t.mills || t.date || (t.created_at && Date.parse(t.created_at));
+  if (!tt) return null;
+  return { t: tt, type: t.eventType || '', carbs: num(t.carbs), insulin: num(t.insulin) };
+}
+
+async function loadDeviceStatus(base: string, token?: string): Promise<Device | null> {
+  const raw = await getJSON(base, '/api/v1/devicestatus.json?count=1', token);
+  return normDeviceDoc(Array.isArray(raw) ? raw[0] : null);
 }
 
 async function loadProfile(base: string, token?: string): Promise<Profile | null> {
