@@ -734,14 +734,16 @@ body { margin: 0; overflow: hidden; background: var(--color-bg); overscroll-beha
                 </g>
                 <sc-if value="{{ lCarbs }}" hint-placeholder-val="{{ true }}">
                   <g style="fill:var(--c-carb-2)" fill-opacity="0.55">
-                    <rect x="52" y="196" width="9" height="62" rx="3"></rect>
-                    <rect x="124" y="162" width="9" height="96" rx="3"></rect>
-                    <rect x="196" y="212" width="9" height="46" rx="3"></rect>
-                    <rect x="296" y="182" width="9" height="76" rx="3"></rect>
+                    <sc-for list="{{ carbBars }}" as="c" hint-placeholder-count="4">
+                      <rect x="{{ c.x }}" y="{{ c.y }}" width="9" height="{{ c.h }}" rx="3"></rect>
+                    </sc-for>
                   </g>
                 </sc-if>
                 <sc-if value="{{ lInsulin }}" hint-placeholder-val="{{ true }}">
-                  <path d="M0,244 L48,244 L48,222 L96,222 L96,236 L120,236 L120,206 L168,206 L168,232 L216,232 L216,218 L264,218 L264,238 L312,238 L312,214 L402,214" fill="none" style="stroke:var(--c-ins)" stroke-width="2" stroke-opacity="0.85"></path>
+                  <path d="{{ insulinPath }}" fill="none" style="stroke:var(--c-ins)" stroke-width="2" stroke-opacity="0.85"></path>
+                  <sc-for list="{{ insulinDots }}" as="d" hint-placeholder-count="0">
+                    <circle cx="{{ d.cx }}" cy="{{ d.cy }}" r="{{ d.r }}" style="fill:var(--c-ins)" fill-opacity="0.9"></circle>
+                  </sc-for>
                 </sc-if>
                 <sc-if value="{{ lActivity }}" hint-placeholder-val="{{ false }}">
                   <path d="M0,252 C40,250 60,232 92,230 C124,228 140,246 176,244 C212,242 236,220 272,224 C310,228 350,246 402,242 L402,258 L0,258 Z" style="fill:var(--color-accent)" fill-opacity="0.20"></path>
