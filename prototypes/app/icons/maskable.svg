@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#161826"/>
+  <circle cx="256" cy="256" r="118" fill="none" stroke="#9184d9" stroke-width="12" opacity="0.9"/>
+  <circle cx="256" cy="256" r="118" fill="#9184d9" opacity="0.10"/>
+  <path d="M150,290 C182,258 214,306 248,282 C286,256 314,308 350,284 C374,268 392,290 410,282"
+        fill="none" stroke="#93c79b" stroke-width="12" stroke-linecap="round" opacity="0.85"/>
+  <text x="256" y="252" text-anchor="middle" font-family="Inter, system-ui, sans-serif"
+        font-size="92" font-weight="600" letter-spacing="-2" fill="#e9e9ed">5,8</text>
+  <text x="256" y="296" text-anchor="middle" font-family="Inter, system-ui, sans-serif"
+        font-size="27" font-weight="500" fill="#cfd3e5">ммоль/л</text>
+</svg>
