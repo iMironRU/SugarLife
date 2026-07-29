@@ -673,7 +673,7 @@ class Component extends DCLogic {
       isOther: !['today', 'metrics', 'profile', 'mon', 'ins', 'ds'].includes(tab),
       goProfile: go('profile'),
       full,
-      headPad: tab === 'today' ? '36px' : (line ? '14px' : '20px'),
+      headPad: tab === 'today' ? '48px' : (line ? '14px' : '20px'),
       rowH: full ? '150px' : (line ? '54px' : '92px'),
       rectTop: full ? '10px' : (line ? '4px' : '7px'),
       rectH: full ? '130px' : (line ? '46px' : '78px'),
@@ -965,7 +965,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const deskMQ = window.matchMedia('(min-width: 700px) and (pointer: fine)');
     const setVH = () => {
       if (deskMQ.matches) { root.style.height = ''; return; }
-      const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+      const h = window.innerHeight; // стабильнее visualViewport (не «дышит» под адресную строку/клавиатуру)
       root.style.height = h + 'px';
     };
     setVH();
