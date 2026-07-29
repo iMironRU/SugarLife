@@ -10,30 +10,49 @@
   color: var(--color-neutral-300); cursor: pointer; font-size: 15px;
 }
 
-/* Верхний блок: крылья + круг */
-.hero {
-  display: flex; align-items: center; justify-content: space-between;
-  border-radius: 20px; padding: 16px 16px; margin-top: 2px;
+/* Верхний блок: три кнопки — НМГ | круг | Помпа (по макету) */
+.hero { position: relative; height: 150px; margin-top: 4px; }
+
+.hero-rect {
+  position: absolute; left: 0; right: 0; top: 10px; height: 130px;
+  display: flex; border-radius: 20px; overflow: hidden;
   border: 1.5px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 14%, transparent), color-mix(in srgb, var(--color-accent) 4%, transparent));
 }
-.wing { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
-.wing-r { align-items: flex-end; text-align: right; }
-.wing-ico { font-size: 22px; line-height: 1; margin-bottom: 4px; }
-.wing-title { font-size: 14px; font-weight: 600; color: var(--color-text); }
-.wing-sub { font-size: 10px; color: var(--color-neutral-400); line-height: 1.3; }
-.wing-val { font-size: 15px; font-weight: 600; color: var(--color-text); margin-top: 3px; }
+.hero-btn {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
+  background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
+  color: var(--color-text); transition: background .16s;
+}
+.hero-nmg { align-items: flex-start; text-align: left; padding: 0 20px 0 18px; }
+.hero-pump { align-items: flex-end; text-align: right; padding: 0 18px 0 20px; }
+.hero-btn:active { background: color-mix(in srgb, var(--color-accent) 20%, transparent); }
+.hero-gap { width: 146px; flex-shrink: 0; }
 
-.circle {
-  flex-shrink: 0; width: 148px; height: 148px; border-radius: 50%; margin: 0 -16px; z-index: 2;
-  border: 2px solid var(--color-accent);
-  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--color-accent) 14%, transparent), var(--color-bg) 74%);
+.wing-ico { font-size: 22px; line-height: 1; margin-bottom: 5px; color: var(--color-accent); display: flex; }
+.wing-ico ion-icon { font-size: 22px; color: var(--color-accent); }
+.wing-head { display: flex; align-items: center; gap: 5px; }
+.wing-title { font-size: 14px; font-weight: 600; color: var(--color-text); }
+.wing-sub { font-size: 10px; color: var(--color-neutral-400); line-height: 1.4; }
+.wing-val { font-size: 15px; font-weight: 600; color: var(--color-text); margin-top: 3px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 7px;
+  font-size: 9px; font-weight: 600; line-height: 1; color: var(--c-glu);
+  background: color-mix(in srgb, var(--c-glu) 18%, transparent);
+}
+.badge .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--c-glu); }
+
+.hero-circle {
+  position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+  width: 150px; height: 150px; border-radius: 50%; padding: 0; cursor: pointer; z-index: 2;
+  border: 2px solid var(--color-accent); font-family: var(--font-body);
   box-shadow: 0 0 0 8px var(--color-bg), 0 0 22px color-mix(in srgb, var(--color-accent) 22%, transparent), inset 0 0 30px color-mix(in srgb, var(--color-accent) 16%, transparent);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--color-accent) 14%, transparent), var(--color-bg) 74%);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
 .circle-val { display: flex; align-items: center; gap: 6px; }
-.circle-val > span:first-child { font-size: 44px; font-weight: 600; letter-spacing: -.02em; line-height: 1; }
-.circle-arrow { font-size: 26px; color: var(--c-glu); font-weight: 700; }
+.circle-val > span:first-child { font-size: 44px; font-weight: 600; letter-spacing: -.02em; line-height: 1; color: var(--color-text); }
+.circle-arrow { font-size: 24px; color: var(--c-glu); font-weight: 700; }
 .circle-unit { font-size: 12px; color: var(--color-neutral-300); margin-top: 4px; }
 .circle-ago { font-size: 10px; color: var(--color-neutral-400); margin-top: 5px; }
 
