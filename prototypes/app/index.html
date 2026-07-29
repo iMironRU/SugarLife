@@ -1574,7 +1574,7 @@ body { margin: 0; overflow: hidden; background: var(--color-bg); overscroll-beha
             <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
               <div>
                 <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Болюс</div>
-                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ rapid }} · активный инсулин 2,4 ед</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ rapid }} · активный инсулин {{ activeIob }} ед</div>
               </div>
               <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
                 <i class="ph-bold ph-x" style="font-size:15px"></i>
@@ -1620,7 +1620,7 @@ body { margin: 0; overflow: hidden; background: var(--color-bg); overscroll-beha
                 <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px">
                   <span style="font-size:11px;color:var(--color-neutral-400)">на еду {{ bolusFood }} ед</span>
                   <span style="font-size:11px;color:var(--color-neutral-400)">коррекция {{ bolusCorr }} ед</span>
-                  <span style="font-size:11px;color:var(--color-neutral-400)">− активный 2,4 ед</span>
+                  <span style="font-size:11px;color:var(--color-neutral-400)">− активный {{ activeIob }} ед</span>
                 </div>
               </div>
 

@@ -120,6 +120,8 @@ class Component extends DCLogic {
     // ===== Живые данные Nightscout (если настроены), иначе демо =====
     const NS = (window.Store && window.Store.data) || null;
     const nsLive = NS && NS.latest ? NS : null;
+    const nsDevice = NS && NS.device ? NS.device : null;
+    const nsProfile = NS && NS.profile ? NS.profile : null;
     const nsCfg = window.Nightscout ? window.Nightscout.getCfg() : null;
     const nsStat = window.Store ? window.Store.status : 'off';
     const agoText = (t) => {
@@ -437,8 +439,13 @@ class Component extends DCLogic {
       ...t, col: remOn ? 'var(--color-text)' : 'var(--color-neutral-600)',
     }));
 
-    // --- калькулятор болюса ---
-    const IC = 8, ISF = 2.2, IOB = 2.4, TARGET = 6.0;
+    // --- калькулятор болюса (живые СУИ/ISF/target из профиля, IOB из devicestatus) ---
+    const IC = (nsProfile && nsProfile.ic) || 8;
+    const ISF = (nsProfile && nsProfile.isf) || 2.2;
+    const IOB = (nsDevice && nsDevice.iob != null) ? nsDevice.iob : 2.4;
+    const TARGET = (nsProfile && nsProfile.targetLow != null)
+      ? (nsProfile.targetLow + (nsProfile.targetHigh != null ? nsProfile.targetHigh : nsProfile.targetLow)) / 2
+      : 6.0;
     const food = this.state.bolusCarbs / IC;
     const corr = Math.max(0, (this.state.bolusBg - TARGET) / ISF);
     const suggested = Math.max(0, Math.round((food + corr - IOB) * 10) / 10);
@@ -740,7 +747,12 @@ class Component extends DCLogic {
         if (!isNaN(n)) this.setState({ shotUnits: Math.min(60, Math.max(0.5, Math.round(n * 10) / 10)) });
       },
       shotInsulin: this.state.shotKind === 'basal' ? this.state.basal : this.state.rapid,
-      pumpSummary: (running ? 'работает' : 'приостановлена') + ' · базал ' + fmt(this.state.basalRate) + ' ед/ч · 112 ед',
+      pumpSummary: nsDevice
+        ? ((nsDevice.status || (running ? 'работает' : 'приостановлена'))
+           + ' · базал ' + fmt(nsDevice.baseBasal != null ? nsDevice.baseBasal : this.state.basalRate) + ' ед/ч'
+           + (nsDevice.reservoir != null ? ' · ' + Math.round(nsDevice.reservoir) + ' ед' : ''))
+        : ((running ? 'работает' : 'приостановлена') + ' · базал ' + fmt(this.state.basalRate) + ' ед/ч · 112 ед'),
+      activeIob: fmt(IOB),
       pumpStateLabel: running ? 'работает' : 'приостановлена',
       togglePump: () => this.setState(s => ({ pumpRunning: s.pumpRunning === false })),
       pumpBtnLabel: running ? 'Приостановить подачу' : 'Возобновить подачу',
@@ -820,7 +832,7 @@ class Component extends DCLogic {
       rapidTitle: isPen ? 'Болюсный инсулин' : 'Инсулин в резервуаре',
       rapid: this.state.rapid,
       pumpIcon: isPen ? 'ph-bold ph-pen-nib' : 'ph-bold ph-syringe',
-      insulinLeft: isPen ? '28 ед' : '112 ед',
+      insulinLeft: isPen ? '28 ед' : ((nsDevice && nsDevice.reservoir != null) ? Math.round(nsDevice.reservoir) + ' ед' : '112 ед'),
       deviceSub: isPen ? 'картридж' : 'резервуар · 2 дн',
       openGlucose: () => this.setState({ sheet: 'glucose' }),
       closeSheet: () => this.setState({ sheet: null }),
