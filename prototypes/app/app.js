@@ -673,7 +673,7 @@ class Component extends DCLogic {
       isOther: !['today', 'metrics', 'profile', 'mon', 'ins', 'ds'].includes(tab),
       goProfile: go('profile'),
       full,
-      headPad: tab === 'today' ? '72px' : (line ? '52px' : '58px'),
+      headPad: tab === 'today' ? '36px' : (line ? '14px' : '20px'),
       rowH: full ? '150px' : (line ? '54px' : '92px'),
       rectTop: full ? '10px' : (line ? '4px' : '7px'),
       rectH: full ? '130px' : (line ? '46px' : '78px'),
@@ -956,6 +956,27 @@ window.addEventListener('DOMContentLoaded', () => {
   const app = new Component();
   window.__app = app;
   window.DC.mount(app, document.getElementById('tpl'), document.getElementById('root'));
+
+  // Высота приложения точно по видимой области. На iOS Safari 100dvh/fixed «дырявит»
+  // (при появлении/скрытии панели браузера остаётся зазор), поэтому ставим высоту из
+  // visualViewport. На десктопе (колонка-«стол») — оставляем по CSS.
+  (() => {
+    const root = document.getElementById('root');
+    const deskMQ = window.matchMedia('(min-width: 700px) and (pointer: fine)');
+    const setVH = () => {
+      if (deskMQ.matches) { root.style.height = ''; return; }
+      const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+      root.style.height = h + 'px';
+    };
+    setVH();
+    window.addEventListener('resize', setVH);
+    window.addEventListener('orientationchange', setVH);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', setVH);
+      window.visualViewport.addEventListener('scroll', setVH);
+    }
+    deskMQ.addEventListener ? deskMQ.addEventListener('change', setVH) : deskMQ.addListener(setVH);
+  })();
 
   if (window.Store) window.Store.start();
 
