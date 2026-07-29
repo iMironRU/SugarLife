@@ -71,6 +71,12 @@ export async function ping(base: string, token?: string) {
   };
 }
 
+// Загрузка entries за период (дней). count ограничен, для длинных периодов — выборка.
+export async function loadEntriesRange(base: string, token: string | undefined, days: number): Promise<Entry[]> {
+  const count = Math.min(days * 300, 8000);
+  return loadEntries(base, token, count);
+}
+
 async function loadEntries(base: string, token?: string, count = 288): Promise<Entry[]> {
   const raw = await getJSON(base, '/api/v1/entries.json?count=' + count, token);
   return (Array.isArray(raw) ? raw : [])

@@ -7,6 +7,7 @@ import { barChart, pulse, home, water, personCircle } from 'ionicons/icons';
 
 import Today from './pages/Today';
 import Profile from './pages/Profile';
+import Metrics from './pages/Metrics';
 import Placeholder from './pages/Placeholder';
 
 export default function App() {
@@ -16,7 +17,7 @@ export default function App() {
         <IonTabs>
           <IonRouterOutlet>
             <Route exact path="/today" component={Today} />
-            <Route exact path="/metrics" render={() => <Placeholder title="Метрики" icon="📊" />} />
+            <Route exact path="/metrics" component={Metrics} />
             <Route exact path="/mon" render={() => <Placeholder title="Мониторинг" icon="∿" />} />
             <Route exact path="/ins" render={() => <Placeholder title="Инсулин" icon="💉" />} />
             <Route exact path="/profile" component={Profile} />
