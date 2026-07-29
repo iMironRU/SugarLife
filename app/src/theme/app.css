@@ -76,6 +76,95 @@
 .food-ico { font-size: 22px; color: var(--c-carb); }
 .food-title { font-size: 14px; font-weight: 600; }
 
+/* ===== Профиль ===== */
+.screen-pad { padding-top: 16px; }
+.sec { margin: 24px 2px 8px; }
+
+.profile-head { display: flex; align-items: center; gap: 14px; }
+.avatar {
+  width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+  background: var(--c-avatar-bg); display: flex; align-items: center; justify-content: center;
+}
+.avatar ion-icon { font-size: 44px; color: var(--c-avatar-fg); }
+.profile-name { font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.profile-sub { font-size: 12px; color: var(--color-neutral-400); margin-top: 5px; }
+
+.stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 20px; }
+.stat { border-radius: 16px; padding: 12px; background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900)); }
+.stat-label { font-size: 11px; color: var(--color-neutral-400); }
+.stat-val { font-size: 22px; font-weight: 600; margin-top: 6px; line-height: 1; }
+.stat-val span { font-size: 11px; font-weight: 500; color: var(--color-neutral-300); margin-left: 2px; }
+
+.theme-chips { display: flex; gap: 8px; }
+.theme-chip {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 14px 8px;
+  border-radius: 16px; cursor: pointer; font-family: var(--font-body);
+  background: transparent; border: 1px solid var(--color-neutral-800);
+  color: var(--color-neutral-400); transition: background .16s, border-color .16s;
+}
+.theme-chip ion-icon { font-size: 19px; }
+.theme-chip span { font-size: 12px; font-weight: 500; }
+.theme-chip.on {
+  background: color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-900));
+  border-color: color-mix(in srgb, var(--color-accent) 65%, transparent);
+  color: var(--color-text);
+}
+
+.list { border-radius: 18px; overflow: hidden; background: var(--color-neutral-900); }
+.list-row {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  background: transparent; border: 0; border-bottom: 1px solid var(--color-neutral-800);
+  cursor: pointer; font-family: var(--font-body); color: var(--color-text); text-align: left;
+}
+.list-row:last-child { border-bottom: 0; }
+.list-row:disabled { cursor: default; }
+.list-row:not(:disabled):active { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.list-ico { font-size: 19px; color: var(--color-accent); flex-shrink: 0; }
+.list-title { flex: 1; min-width: 0; font-size: 14px; }
+.list-value { font-size: 13px; color: var(--color-neutral-400); }
+.list-chev { font-size: 14px; color: var(--color-neutral-600); }
+
+.logout {
+  width: 100%; margin-top: 24px; padding: 14px; border-radius: 16px; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--c-danger) 55%, transparent); background: transparent;
+  color: var(--c-danger-2); font-size: 14px; font-weight: 500; font-family: var(--font-body);
+}
+.logout:active { background: color-mix(in srgb, var(--c-danger) 14%, transparent); }
+
+/* ===== Шторка Nightscout ===== */
+.sheet { --background: var(--color-bg); }
+.sheet::part(scroll) { padding: 6px 18px 26px; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 0 4px; }
+.sheet-title { font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
+.sheet-close {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
+  color: var(--color-neutral-300); cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.sheet-desc { font-size: 13px; color: var(--color-neutral-400); line-height: 1.5; margin: 8px 0 16px; }
+.field-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-500); margin: 0 2px 6px; }
+.field {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+  border: 1px solid var(--color-neutral-800); border-radius: 14px; padding: 4px 14px;
+  background: var(--color-neutral-900);
+}
+.field-ico { font-size: 17px; color: var(--color-neutral-500); flex-shrink: 0; }
+.field ion-input { --padding-start: 0; --padding-end: 0; font-size: 14px; }
+.connect-btn { --border-radius: 16px; margin-top: 4px; font-weight: 600; }
+.sheet-msg { min-height: 18px; font-size: 13px; color: var(--color-neutral-300); text-align: center; margin: 12px 0; }
+.sync-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 16px; border-radius: 16px; background: var(--color-neutral-900);
+}
+.sync-toggle-title { font-size: 14px; }
+.sync-toggle-sub { font-size: 11px; color: var(--color-neutral-400); margin-top: 2px; }
+ion-toggle {
+  --track-background: var(--color-neutral-800);
+  --track-background-checked: var(--color-accent);
+  --handle-background: var(--color-neutral-100);
+  --handle-background-checked: #ffffff;
+}
+
 /* Заглушка */
 .placeholder {
   height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
