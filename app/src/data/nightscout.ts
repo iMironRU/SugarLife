@@ -13,7 +13,7 @@ export interface Profile {
   name: string; ic: number | null; isf: number | null; basal: number | null;
   targetLow: number | null; targetHigh: number | null; dia: number | null; units?: string;
 }
-export interface Treatment { t: number; type: string; carbs: number | null; insulin: number | null }
+export interface Treatment { t: number; type: string; carbs: number | null; insulin: number | null; rate: number | null; duration: number | null }
 
 const CFG_KEY = 'sl.ns.cfg';
 export const MGDL_PER_MMOL = 18.0;
@@ -129,7 +129,18 @@ export function normSgv(s: any): Entry | null {
 export function normTreatment(t: any): Treatment | null {
   const tt = t.mills || t.date || (t.created_at && Date.parse(t.created_at));
   if (!tt) return null;
-  return { t: tt, type: t.eventType || '', carbs: num(t.carbs), insulin: num(t.insulin) };
+  return {
+    t: tt, type: t.eventType || '', carbs: num(t.carbs), insulin: num(t.insulin),
+    rate: num(t.rate, t.absolute), duration: num(t.duration),
+  };
+}
+
+// Загрузка treatments за период (дней)
+export async function loadTreatmentsRange(base: string, token: string | undefined, days: number): Promise<Treatment[]> {
+  const since = Date.now() - days * 86400e3;
+  const path = `/api/v1/treatments.json?count=50000&find[created_at][$gte]=${new Date(since).toISOString()}`;
+  const raw = await getJSON(base, path, token);
+  return (Array.isArray(raw) ? raw : []).map(normTreatment).filter((x): x is Treatment => x != null).sort((a, b) => a.t - b.t);
 }
 
 async function loadDeviceStatus(base: string, token?: string): Promise<Device | null> {
@@ -151,9 +162,7 @@ async function loadProfile(base: string, token?: string): Promise<Profile | null
 
 async function loadTreatments(base: string, token?: string, count = 120): Promise<Treatment[]> {
   const raw = await getJSON(base, '/api/v1/treatments.json?count=' + count, token);
-  return (Array.isArray(raw) ? raw : [])
-    .map((t: any) => ({ t: t.date || (t.created_at && Date.parse(t.created_at)) || null, type: t.eventType || '', carbs: num(t.carbs), insulin: num(t.insulin) }))
-    .filter((x: any) => !!x.t);
+  return (Array.isArray(raw) ? raw : []).map(normTreatment).filter((x): x is Treatment => x != null);
 }
 
 export interface NsData { entries: Entry[]; device: Device | null; profile: Profile | null; treatments: Treatment[] }
