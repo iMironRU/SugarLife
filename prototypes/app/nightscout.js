@@ -140,19 +140,31 @@
     };
   }
 
+  // treatments → болюсы, углеводы, старт сенсора
+  async function loadTreatments(base, token, count) {
+    const raw = await getJSON(base, '/api/v1/treatments.json?count=' + (count || 120), token);
+    return (Array.isArray(raw) ? raw : []).map(t => ({
+      t: t.date || (t.created_at && Date.parse(t.created_at)) || null,
+      type: t.eventType || '',
+      carbs: num(t.carbs),
+      insulin: num(t.insulin),
+    })).filter(x => x.t);
+  }
+
   // всё сразу; частичные ошибки не валят загрузку сахара
   async function loadAll(cfg) {
     const base = cfg.url, token = cfg.token;
-    const [entries, device, profile] = await Promise.all([
+    const [entries, device, profile, treatments] = await Promise.all([
       loadEntries(base, token, 288),
       loadDeviceStatus(base, token).catch(() => null),
       loadProfile(base, token).catch(() => null),
+      loadTreatments(base, token, 120).catch(() => null),
     ]);
-    return { entries, device, profile };
+    return { entries, device, profile, treatments };
   }
 
   window.Nightscout = {
-    getCfg, setCfg, ping, loadEntries, loadDeviceStatus, loadProfile, loadAll,
+    getCfg, setCfg, ping, loadEntries, loadDeviceStatus, loadProfile, loadTreatments, loadAll,
     arrowFor, MGDL_PER_MMOL,
   };
 })();

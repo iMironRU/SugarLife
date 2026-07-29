@@ -146,19 +146,46 @@ class Component extends DCLogic {
         bg: first ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'transparent',
       };
     }) : null;
-    // кривая глюкозы в системе координат графика (viewBox 402x300; y: 44→12 ммоль, 252→4)
+    // график (viewBox 402x300; ось Y: y=44→12 ммоль, y=252→4). Общая система координат
+    // для кривой глюкозы, столбиков углеводов и точек болюсов.
+    const nsTreat = NS && NS.treatments ? NS.treatments : null;
     const RANGE_MS = { '1H': 36e5, '3H': 3 * 36e5, '6H': 6 * 36e5, '12H': 12 * 36e5, '24H': 24 * 36e5, '3D': 3 * 24 * 36e5 };
-    let liveGluPath = null;
+    const chSpan = RANGE_MS[this.state.range] || 3 * 36e5;
+    const chT0 = Date.now() - chSpan;
+    const chX = (t) => ((t - chT0) / chSpan) * 402;
+    // авто-масштаб оси Y под данные (по умолчанию 12–4 ммоль, как в дизайне)
+    let axTop = 12, axBot = 4;
     if (nsLive) {
-      const span = RANGE_MS[this.state.range] || 3 * 36e5;
-      const t0 = Date.now() - span;
-      const pts = NS.entries.filter(e => e.t >= t0);
-      if (pts.length >= 2) {
-        const yFor = (v) => Math.max(2, Math.min(298, 44 + (12 - v) / 8 * 208));
-        const xFor = (t) => ((t - t0) / span) * 402;
-        liveGluPath = pts.map((e, i) => (i ? 'L' : 'M') + xFor(e.t).toFixed(1) + ',' + yFor(e.mmol).toFixed(1)).join(' ');
+      const vs = NS.entries.filter(e => e.t >= chT0).map(e => e.mmol);
+      if (vs.length) {
+        axTop = Math.max(10, Math.ceil(Math.max.apply(null, vs) + 0.5));
+        axBot = Math.min(5, Math.floor(Math.min.apply(null, vs) - 0.5));
+        if (axBot < 0) axBot = 0;
+        if (axTop - axBot < 4) axTop = axBot + 4;
       }
     }
+    const chY = (v) => Math.max(2, Math.min(298, 44 + (axTop - v) / (axTop - axBot) * 208));
+    const axVal = (i) => toUnits(axTop - (axTop - axBot) * i / 4); // i=0..4 сверху вниз
+    let liveGluPath = null;
+    if (nsLive) {
+      const pts = NS.entries.filter(e => e.t >= chT0);
+      if (pts.length >= 2) {
+        liveGluPath = pts.map((e, i) => (i ? 'L' : 'M') + chX(e.t).toFixed(1) + ',' + chY(e.mmol).toFixed(1)).join(' ');
+      }
+    }
+    // столбики углеводов и точки болюсов из treatments
+    let liveCarbBars = null, liveInsulinDots = null;
+    if (nsLive && nsTreat) {
+      liveCarbBars = nsTreat.filter(x => x.carbs > 0 && x.t >= chT0).map(x => {
+        const h = Math.max(8, Math.min(96, x.carbs * 2));
+        return { x: (chX(x.t) - 4.5).toFixed(1), y: (258 - h).toFixed(1), h: h.toFixed(1) };
+      });
+      liveInsulinDots = nsTreat.filter(x => x.insulin > 0 && x.t >= chT0).map(x => ({
+        cx: chX(x.t).toFixed(1), cy: '16', r: Math.max(2.5, Math.min(7, 2 + x.insulin * 0.6)).toFixed(1),
+      }));
+    }
+    const DEMO_CARBS = [{ x: '52', y: '196', h: '62' }, { x: '124', y: '162', h: '96' }, { x: '196', y: '212', h: '46' }, { x: '296', y: '182', h: '76' }];
+    const DEMO_INSULIN_PATH = "M0,244 L48,244 L48,222 L96,222 L96,236 L120,236 L120,206 L168,206 L168,232 L216,232 L216,218 L264,218 L264,238 L312,238 L312,214 L402,214";
     const DEMO_GLU1 = "M0,88 C14,86 24,90 40,90 C56,91 66,92 78,92 C88,92 96,86 108,80 C120,74 130,64 142,52 C154,40 164,26 178,20 C190,15 202,12 214,14 C228,17 240,22 254,26 C268,30 280,28 292,26";
     const DEMO_GLU2 = "M320,30 C330,42 340,58 352,58 C364,58 372,44 384,38 C392,34 396,34 402,36";
     const glucoseMmol = nsLive ? nsLive.latest.mmol : 5.8;
@@ -574,6 +601,24 @@ class Component extends DCLogic {
         cards: [['Шаги', '8 412', ''], ['Калории', '2 140', 'ккал']],
         stats: [['Тренировок', '3', ''], ['Ср. пульс', '96', 'уд/мин']] },
     };
+    // живые метрики глюкозы из entries (за ~24 ч; TIR по порогам из настроек приложения)
+    if (nsLive && NS.entries.length) {
+      const vals = NS.entries.map(e => e.mmol);
+      const n = vals.length;
+      const lo = this.state.low, hi = this.state.high;
+      const inR = vals.filter(v => v >= lo && v <= hi).length;
+      const above = vals.filter(v => v > hi).length;
+      const below = vals.filter(v => v < lo).length;
+      const avg = vals.reduce((a, b) => a + b, 0) / n;
+      const sd = Math.sqrt(vals.reduce((a, b) => a + (b - avg) * (b - avg), 0) / n);
+      const pct = (x) => String(Math.round(x / n * 100));
+      METRICS.glucose = {
+        title: 'Глюкоза', icon: 'ph-fill ph-drop', color: '#93c79b',
+        hero: ['В диапазоне', pct(inR), '%'],
+        cards: [['Выше диапазона', pct(above), '%'], ['Ниже диапазона', pct(below), '%']],
+        stats: [['Средняя глюкоза', toUnits(avg), unitLabel], ['Ст. отклонение', toUnits(sd), unitLabel]],
+      };
+    }
     const mKey = this.state.metric;
     const M = METRICS[mKey];
     const metricTabs = [
@@ -806,7 +851,10 @@ class Component extends DCLogic {
       syncedText: nsLive ? 'Обновлено ' + agoText(NS.updatedAt) : 'Демо-данные',
       gluPath: nsLive && liveGluPath ? liveGluPath : DEMO_GLU1,
       gluPath2: nsLive ? '' : DEMO_GLU2,
-      ax1: toUnits(12), ax2: toUnits(10), ax3: toUnits(8), ax4: toUnits(6), ax5: toUnits(4),
+      carbBars: (nsLive && liveCarbBars) ? liveCarbBars : DEMO_CARBS,
+      insulinDots: (nsLive && liveInsulinDots) ? liveInsulinDots : [],
+      insulinPath: (nsLive && liveInsulinDots) ? '' : DEMO_INSULIN_PATH,
+      ax1: axVal(0), ax2: axVal(1), ax3: axVal(2), ax4: axVal(3), ax5: axVal(4),
       glucoseBig: toUnits(glucoseBigMmol),
       notifyShort: notifyOn + '/' + alerts.length,
       integrShort: '↓' + sourcesOn + ' · ↑' + targetsOn,

@@ -40,7 +40,7 @@
       const res = await window.Nightscout.loadAll(cfg);
       const entries = res.entries || [];
       const latest = entries.length ? entries[entries.length - 1] : null;
-      data = { entries, latest, device: res.device || null, profile: res.profile || null, updatedAt: Date.now() };
+      data = { entries, latest, device: res.device || null, profile: res.profile || null, treatments: res.treatments || null, updatedAt: Date.now() };
       status = 'ok'; error = null;
       saveCache();
     } catch (e) {
