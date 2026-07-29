@@ -1,7 +1,9 @@
-/* Стор живых данных Nightscout: поллинг + кэш (localStorage) + офлайн.
-   Без конфига — данных нет, экраны показывают демо-наборы. */
+/* Стор живых данных Nightscout: initial по REST → живые апдейты по Socket.IO,
+   поллинг (REST) остаётся страховкой на случай обрыва сокета/CORS.
+   Кэш в localStorage (офлайн). Без конфига — данных нет, экраны показывают демо. */
 import { useSyncExternalStore } from 'react';
-import { getCfg, loadAll, type NsData, type Entry } from './nightscout';
+import { getCfg, loadAll, type NsData, type Entry, type Treatment, type Device } from './nightscout';
+import { connectSocket, disconnectSocket, type SocketData } from './nsSocket';
 
 const CACHE_KEY = 'sl.ns.cache.v1';
 const POLL_MS = 60000;
@@ -11,12 +13,14 @@ export interface StoreState {
   data: (NsData & { latest: Entry | null; updatedAt: number }) | null;
   status: Status;
   error: string | null;
+  live: boolean; // сокет подключён
 }
 
-let state: StoreState = { data: null, status: 'idle', error: null };
+let state: StoreState = { data: null, status: 'idle', error: null, live: false };
 const listeners = new Set<() => void>();
 let inflight = false;
 let started = false;
+let socketUrl: string | null = null;
 
 function emit() { for (const l of listeners) l(); }
 function set(patch: Partial<StoreState>) { state = { ...state, ...patch }; emit(); }
@@ -31,9 +35,44 @@ function saveCache() {
   try { localStorage.setItem(CACHE_KEY, JSON.stringify(state.data)); } catch { /* ignore */ }
 }
 
+// --- слияние дельт из сокета ---
+function mergeSocket(d: SocketData) {
+  const cur = state.data || { entries: [], device: null, profile: null, treatments: [], latest: null, updatedAt: 0 };
+  let entries = cur.entries;
+  if (d.entries && d.entries.length) {
+    const map = new Map<number, Entry>(cur.entries.map((e) => [e.t, e]));
+    for (const e of d.entries) map.set(e.t, e);
+    entries = [...map.values()].sort((a, b) => a.t - b.t).slice(-288);
+  }
+  let treatments = cur.treatments || [];
+  if (d.treatments && d.treatments.length) {
+    const key = (x: Treatment) => x.t + '|' + x.type;
+    const map = new Map<string, Treatment>((cur.treatments || []).map((x) => [key(x), x]));
+    for (const x of d.treatments) map.set(key(x), x);
+    treatments = [...map.values()].sort((a, b) => a.t - b.t).slice(-200);
+  }
+  const device: Device | null = d.device !== undefined ? d.device : cur.device;
+  const latest = entries.length ? entries[entries.length - 1] : cur.latest;
+  set({ data: { ...cur, entries, treatments, device, latest, updatedAt: Date.now() }, status: 'ok', error: null });
+  saveCache();
+}
+
+// подключить/переподключить/отключить сокет по конфигу
+function ensureSocket(cfg: ReturnType<typeof getCfg>) {
+  const want = cfg && cfg.enabled && cfg.url ? cfg.url : null;
+  if (want === socketUrl) return;
+  disconnectSocket();
+  socketUrl = want;
+  set({ live: false });
+  if (want) {
+    connectSocket(want, cfg!.token, mergeSocket, (connected) => set({ live: connected }));
+  }
+}
+
 export async function refresh() {
-  if (inflight) return;
   const cfg = getCfg();
+  ensureSocket(cfg);
+  if (inflight) return;
   if (!cfg || !cfg.enabled || !cfg.url) { set({ status: 'off', error: null }); return; }
   inflight = true;
   if (!state.data) set({ status: 'loading' });
