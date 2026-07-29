@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ==== Токены Nocturne (тёмная тема по умолчанию) ==== */
+:root {
+  --color-bg: #161826;
+  --color-text: #e9e9ed;
+  --color-neutral-100: #f3f5fe;
+  --color-neutral-300: #cfd3e5;
+  --color-neutral-400: #b2b6ca;
+  --color-neutral-500: #9397ab;
+  --color-neutral-600: #75798c;
+  --color-neutral-700: #595d6c;
+  --color-neutral-800: #3f424d;
+  --color-neutral-900: #292b31;
+  --color-accent: #9184d9;
+  --color-accent-300: #d2cefd;
+
+  /* Семантические цвета данных */
+  --c-glu: #93c79b; --c-glu-2: #8bb890; --c-glu-3: #6f9e79;
+  --c-carb: #e0b64f; --c-carb-2: #d8b463; --c-carb-3: #c1953f;
+  --c-ins: #63c0cc; --c-ins-2: #5aa9b4; --c-ins-3: #3f8b97;
+  --c-act: #a99ee6; --c-act-3: #6d5fb8;
+  --c-danger: #c96b7a; --c-danger-2: #d98a96;
+  --c-trend: #b0713d; --c-trend-2: #a8683a;
+  --c-avatar-bg: #efedf7; --c-avatar-fg: #2a2350;
+
+  --font-body: "Inter", system-ui, sans-serif;
+
+  /* ==== Проброс в Ionic ==== */
+  --ion-background-color: var(--color-bg);
+  --ion-background-color-rgb: 22, 24, 38;
+  --ion-text-color: var(--color-text);
+  --ion-text-color-rgb: 233, 233, 237;
+  --ion-font-family: var(--font-body);
+  --ion-color-primary: var(--color-accent);
+  --ion-color-primary-rgb: 145, 132, 217;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-shade: #7f74bf;
+  --ion-color-primary-tint: #9c90dd;
+  --ion-toolbar-background: var(--color-bg);
+  --ion-tab-bar-background: color-mix(in srgb, var(--color-neutral-900) 70%, var(--color-bg));
+  --ion-tab-bar-color: var(--color-neutral-500);
+  --ion-tab-bar-color-selected: var(--color-text);
+  --ion-item-background: var(--color-neutral-900);
+  --ion-border-color: var(--color-neutral-800);
+}
+
+/* Светлая тема */
+:root.light, :root[data-theme="light"] {
+  --color-bg: #f4f4f8;
+  --color-text: #14151c;
+  --color-neutral-900: #ffffff;
+  --color-neutral-800: #e5e5ef;
+  --color-neutral-700: #cfcfdc;
+  --color-neutral-600: #a2a2b4;
+  --color-neutral-500: #7c7c8e;
+  --color-neutral-400: #5f5f76;
+  --color-neutral-300: #3f3f56;
+  --color-neutral-100: #1b1c26;
+  --color-accent: #6152c8;
+  --color-accent-300: #4a3ea6;
+  --c-glu: #3f8b56; --c-glu-2: #5aa06d; --c-glu-3: #7fbd8f;
+  --c-carb: #a97b16; --c-carb-2: #c39533; --c-carb-3: #d8b463;
+  --c-ins: #1f7f8c; --c-ins-2: #3f97a3; --c-ins-3: #7cc0c9;
+  --c-act: #6152c8; --c-act-3: #9a8ee0;
+  --c-danger: #b44a5c; --c-danger-2: #9c3b4d;
+  --c-trend: #9a5f2e; --c-trend-2: #c08a56;
+  --c-avatar-bg: #e7e5f5; --c-avatar-fg: #2a2350;
+  --ion-background-color-rgb: 244, 244, 248;
+  --ion-text-color-rgb: 20, 21, 28;
+}
+
+/* Общее */
+body { font-family: var(--font-body); }
+.section-label {
+  font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--color-neutral-500); font-weight: 500;
+}
