@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/nocturne-157e783a-a620-454a-bd4d-d118bdfe4fed/styles.css">
+  <script src="_ds/nocturne-157e783a-a620-454a-bd4d-d118bdfe4fed/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+  <style>
+  :root{--c-glu:#93c79b;--c-glu-2:#8bb890;--c-glu-3:#6f9e79;--c-carb:#e0b64f;--c-carb-2:#d8b463;--c-carb-3:#c1953f;--c-ins:#63c0cc;--c-ins-2:#5aa9b4;--c-ins-3:#3f8b97;--c-act:#a99ee6;--c-act-3:#6d5fb8;--c-danger:#c96b7a;--c-danger-2:#d98a96;--c-trend:#b0713d;--c-trend-2:#a8683a;--c-scrim:#05060c;--c-avatar-bg:#efedf7;--c-avatar-fg:#2a2350;--c-desk:#0c0d16}
+  [data-theme="light"]{--color-bg:#f4f4f8;--color-text:#14151c;--color-neutral-900:#ffffff;--color-neutral-800:#e5e5ef;--color-neutral-700:#cfcfdc;--color-neutral-600:#a2a2b4;--color-neutral-500:#7c7c8e;--color-neutral-400:#5f5f76;--color-neutral-300:#3f3f56;--color-neutral-100:#1b1c26;--color-accent:#6152c8;--color-accent-300:#4a3ea6;--c-glu:#3f8b56;--c-glu-2:#5aa06d;--c-glu-3:#7fbd8f;--c-carb:#a97b16;--c-carb-2:#c39533;--c-carb-3:#d8b463;--c-ins:#1f7f8c;--c-ins-2:#3f97a3;--c-ins-3:#7cc0c9;--c-act:#6152c8;--c-act-3:#9a8ee0;--c-danger:#b44a5c;--c-danger-2:#9c3b4d;--c-trend:#9a5f2e;--c-trend-2:#c08a56;--c-scrim:#2f3040;--c-avatar-bg:#e7e5f5;--c-avatar-fg:#2a2350;--c-desk:#e9e9f0}
+  * { -webkit-tap-highlight-color: transparent; }
+  a { color: var(--color-accent-300); }
+  a:hover { color: var(--color-accent); }
+  </style>
+</helmet>
+
+<div data-theme="{{ themeAttr }}" style="min-height:100%;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);box-sizing:border-box;padding:56px 48px 90px">
+  <div style="max-width:1080px;margin:0 auto">
+
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px">
+      <div>
+        <div style="font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--color-neutral-500)">Приложение для диабетика</div>
+        <div style="font-size:52px;font-weight:600;line-height:1;letter-spacing:-.03em;margin-top:14px">Дизайн-код</div>
+        <div style="font-size:15px;color:var(--color-neutral-400);margin-top:14px;max-width:60ch;text-wrap:pretty">Одна система токенов на светлую и тёмную тему, единая геометрия, набор готовых элементов интерфейса. Всё, что рисуется в приложении, собирается из этих деталей.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <sc-for list="{{ themes }}" as="t" hint-placeholder-count="3">
+          <div onClick="{{ t.onClick }}" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-radius:16px;cursor:pointer;background:{{ t.bg }};border:1px solid {{ t.bd }};transition:background .16s">
+            <i class="{{ t.icon }}" style="font-size:17px;color:{{ t.col }}"></i>
+            <span style="font-size:13px;font-weight:500;color:{{ t.col }};white-space:nowrap">{{ t.label }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:12px;margin-top:40px">
+      <sc-for list="{{ facts }}" as="f" hint-placeholder-count="4">
+        <div style="border-radius:20px;background:var(--color-neutral-900);border:1px solid var(--color-neutral-800);padding:18px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500)">{{ f.label }}</div>
+          <div style="font-size:24px;font-weight:600;margin-top:10px;line-height:1.1">{{ f.value }}</div>
+          <div style="font-size:11px;color:var(--color-neutral-400);margin-top:6px">{{ f.note }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:56px">
+      <div style="font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--color-neutral-500)">01</div>
+      <div style="font-size:28px;font-weight:600;letter-spacing:-.02em">Поверхности и текст</div>
+    </div>
+    <div style="font-size:13px;color:var(--color-neutral-400);margin-top:10px;max-width:70ch">Ramp Nocturne переопределяется на светлой теме, поэтому один и тот же токен всегда означает одну роль: 900 — карточка, 800 — граница, 400 — второстепенный текст.</div>
+    <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;margin-top:18px">
+      <sc-for list="{{ surfaces }}" as="s" hint-placeholder-count="6">
+        <div style="border-radius:18px;overflow:hidden;border:1px solid var(--color-neutral-800)">
+          <div style="height:76px;background:{{ s.value }}"></div>
+          <div style="padding:14px 16px;background:var(--color-neutral-900);display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <div style="font-size:14px;font-weight:600">{{ s.name }}</div>
+              <div style="font-size:11px;color:var(--color-neutral-500);margin-top:4px;font-family:var(--font-body)">{{ s.token }}</div>
+            </div>
+            <div style="font-size:11px;color:var(--color-neutral-400);text-align:right;flex-shrink:0">{{ s.use }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:56px">
+      <div style="font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--color-neutral-500)">02</div>
+      <div style="font-size:28px;font-weight:600;letter-spacing:-.02em">Смысловые цвета</div>
+    </div>
+    <div style="font-size:13px;color:var(--color-neutral-400);margin-top:10px;max-width:70ch">Каждая сущность в приложении имеет собственный цвет и держит его везде: в шапке, в графике, в плитках и в шторках. Акцент интерфейса — только фиолетовый.</div>
+    <div style="border-radius:20px;overflow:hidden;background:var(--color-neutral-900);border:1px solid var(--color-neutral-800);margin-top:18px">
+      <sc-for list="{{ semantic }}" as="c" hint-placeholder-count="7">
+        <div style="display:flex;align-items:center;gap:16px;padding:16px 18px;border-bottom:1px solid var(--color-neutral-800)">
+          <div style="width:34px;height:34px;border-radius:11px;flex-shrink:0;background:{{ c.value }}"></div>
+          <div style="width:150px;flex-shrink:0">
+            <div style="font-size:14px;font-weight:600">{{ c.name }}</div>
+            <div style="font-size:11px;color:var(--color-neutral-500);margin-top:3px">{{ c.token }}</div>
+          </div>
+          <div style="flex:1;min-width:0;font-size:13px;color:var(--color-neutral-400)">{{ c.use }}</div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <div style="width:26px;height:26px;border-radius:8px;background:{{ c.tint }}"></div>
+            <div style="width:26px;height:26px;border-radius:8px;background:{{ c.value }}"></div>
+            <div style="width:26px;height:26px;border-radius:8px;background:{{ c.deep }}"></div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:56px">
+      <div style="font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--color-neutral-500)">03</div>
+      <div style="font-size:28px;font-weight:600;letter-spacing:-.02em">Типографика</div>
+    </div>
+    <div style="border-radius:20px;background:var(--color-neutral-900);border:1px solid var(--color-neutral-800);padding:26px;margin-top:18px;display:flex;flex-direction:column;gap:20px">
+      <sc-for list="{{ type }}" as="t" hint-placeholder-count="7">
+        <div style="display:flex;align-items:baseline;gap:20px">
+          <div style="width:132px;flex-shrink:0;font-size:11px;color:var(--color-neutral-500)">{{ t.role }}</div>
+          <div style="flex:1;min-width:0;font-size:{{ t.size }};font-weight:{{ t.weight }};color:{{ t.color }};letter-spacing:{{ t.ls }};line-height:1.15;text-transform:{{ t.tt }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.sample }}</div>
+          <div style="font-size:11px;color:var(--color-neutral-400);flex-shrink:0">{{ t.spec }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:56px">
+      <div style="font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--color-neutral-500)">04</div>
+      <div style="font-size:28px;font-weight:600;letter-spacing:-.02em">Геометрия и отступы</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px">
+      <div style="border-radius:20px;background:var(--color-neutral-900);border:1px solid var(--color-neutral-800);padding:22px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500)">Радиусы</div>
+        <div style="display:flex;gap:12px;margin-top:16px">
+          <sc-for list="{{ radii }}" as="r" hint-placeholder-count="5">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
+              <div style="width:100%;height:64px;border-radius:{{ r.value }};background:color-mix(in srgb, var(--color-accent) 16%, transparent);border:1px solid color-mix(in srgb, var(--color-accent) 45%, transparent)"></div>
+              <div style="font-size:10px;color:var(--color-neutral-400);text-align:center">{{ r.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="border-radius:20px;background:var(--color-neutral-900);border:1px solid var(--color-neutral-800);padding:22px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500)">Ритм</div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
+          <sc-for list="{{ spacing }}" as="p" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:14px">
+              <div style="height:12px;width:{{ p.value }};border-radius:4px;background:color-mix(in srgb, var(--color-accent) 55%, transparent);flex-shrink:0"></div>
+              <div style="font-size:12px;color:var(--color-neutral-300);flex-shrink:0">{{ p.value }}</div>
+              <div style="font-size:12px;color:var(--color-neutral-500);min-width:0">{{ p.use }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:56px">
+      <div style="font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--color-neutral-500)">05</div>
+      <div style="font-size:28px;font-weight:600;letter-spacing:-.02em">Элементы</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px">
+
+      <div style="border-radius:20px;background:var(--color-neutral-900);border:1px solid var(--color-neutral-800);padding:22px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500)">Кнопки</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+          <button type="button" style="width:100%;padding:16px;border-radius:16px;border:1px solid var(--color-accent);background:color-mix(in srgb, var(--color-accent) 16%, transparent);color:var(--color-text);font-size:15px;font-weight:600;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, transparent)">
+            <i class="ph-bold ph-lightning" style="font-size:18px"></i>Главное действие
+          </button>
+          <button type="button" style="width:100%;padding:15px;border-radius:16px;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300);font-size:14px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="border-color:var(--color-accent);color:var(--color-text)">
+            <i class="ph-bold ph-sliders" style="font-size:17px"></i>Вторичное действие
+          </button>
+          <button type="button" style="width:100%;padding:13px;border-radius:16px;border:1px dashed var(--color-neutral-700);background:transparent;color:var(--color-neutral-300);font-size:13px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="border-color:var(--color-accent);color:var(--color-text)">
+            <i class="ph-bold ph-plus" style="font-size:15px"></i>Добавить
+          </button>
+          <button type="button" style="width:100%;padding:14px;border-radius:16px;border:1px solid color-mix(in srgb, var(--c-danger) 55%, transparent);background:transparent;color:var(--c-danger-2);font-size:14px;font-weight:500;font-family:var(--font-body);cursor:pointer" style-hover="background:color-mix(in srgb, var(--c-danger) 14%, transparent)">Опасное действие</button>
+        </div>
+      </div>
+
+      <div style="border-radius:20px;background:var(--color-neutral-900);border:1px solid var(--color-neutral-800);padding:22px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500)">Выбор</div>
+        <div style="display:flex;gap:6px;background:var(--color-bg);border-radius:16px;padding:5px;margin-top:16px">
+          <sc-for list="{{ segs }}" as="g" hint-placeholder-count="2">
+            <div onClick="{{ g.onClick }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:44px;border-radius:12px;cursor:pointer;background:{{ g.bg }};border:1px solid {{ g.bd }};transition:background .16s">
+              <i class="{{ g.icon }}" style="font-size:16px;color:{{ g.col }}"></i>
+              <span style="font-size:13px;font-weight:500;color:{{ g.col }}">{{ g.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">
+          <sc-for list="{{ chips }}" as="c" hint-placeholder-count="4">
+            <div onClick="{{ c.onClick }}" style="padding:11px 15px;border-radius:14px;cursor:pointer;font-size:13px;font-weight:500;color:{{ c.col }};background:{{ c.bg }};border:1px solid {{ c.bd }};transition:background .16s">{{ c.label }}</div>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;margin-top:18px">
+          <div onClick="{{ toggle }}" style="width:48px;height:28px;border-radius:14px;flex-shrink:0;padding:3px;box-sizing:border-box;cursor:pointer;background:{{ track }};transition:background .16s">
+            <div style="width:22px;height:22px;border-radius:50%;background:{{ knob }};transform:{{ knobX }};transition:transform .18s cubic-bezier(.2,1.02,.28,1)"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div onClick="{{ dec }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-bg);border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 20%, transparent)">
+              <i class="ph-bold ph-minus" style="font-size:13px"></i>
+            </div>
+            <div style="min-width:40px;text-align:center;font-size:17px;font-weight:600">{{ value }}</div>
+            <div onClick="{{ inc }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-bg);border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 20%, transparent)">
+              <i class="ph-bold ph-plus" style="font-size:13px"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="border-radius:20px;background:var(--color-neutral-900);border:1px solid var(--color-neutral-800);padding:22px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500)">Строки списка</div>
+        <div style="border-radius:18px;overflow:hidden;background:var(--color-bg);margin-top:16px">
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+            <i class="ph ph-target" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+            <div style="flex:1;min-width:0;font-size:14px">Со значением</div>
+            <div style="font-size:13px;color:var(--color-neutral-400)">3,9–10,0</div>
+            <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer">
+            <i class="ph-fill ph-bell" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px">С пояснением</div>
+              <div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">вторая строка мелким</div>
+            </div>
+            <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer">
+            <div style="flex:1;min-width:0;font-size:14px">Выбранный вариант</div>
+            <i class="ph-fill ph-check-circle" style="font-size:19px;color:var(--color-accent)"></i>
+          </div>
+        </div>
+      </div>
+
+      <div style="border-radius:20px;background:var(--color-neutral-900);border:1px solid var(--color-neutral-800);padding:22px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500)">Карточки-итоги</div>
+        <div style="margin-top:16px;padding:18px;border-radius:20px;background:linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 20%, var(--color-neutral-900)), color-mix(in srgb, var(--color-accent) 7%, var(--color-neutral-900)));border:1px solid color-mix(in srgb, var(--color-accent) 45%, transparent)">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-400)">Рекомендовано</div>
+          <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px">
+            <span style="font-size:36px;font-weight:600;line-height:1">3,3</span>
+            <span style="font-size:13px;color:var(--color-neutral-300)">ед</span>
+          </div>
+          <div style="font-size:11px;color:var(--color-neutral-400);margin-top:12px">на еду 5,6 ед · коррекция 0,1 ед · − активный 2,4 ед</div>
+        </div>
+        <div style="margin-top:12px;padding:18px;border-radius:20px;background:linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 18%, var(--color-neutral-900)), color-mix(in srgb, var(--c-carb) 6%, var(--color-neutral-900)));border:1px solid color-mix(in srgb, var(--c-carb) 45%, transparent)">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-400)">Углеводы</div>
+          <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px">
+            <span style="font-size:36px;font-weight:600;line-height:1;color:var(--c-carb)">42</span>
+            <span style="font-size:13px;color:var(--color-neutral-300)">г</span>
+          </div>
+          <div style="font-size:11px;color:var(--color-neutral-400);margin-top:12px">цвет карточки повторяет цвет сущности</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:56px">
+      <div style="font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--color-neutral-500)">06</div>
+      <div style="font-size:28px;font-weight:600;letter-spacing:-.02em">Шторка</div>
+    </div>
+    <div style="font-size:13px;color:var(--color-neutral-400);margin-top:10px;max-width:70ch">Любое действие и любая настройка живут в шторке. Шапка всегда одинаковая: ручка, заголовок с подзаголовком, круглая кнопка закрытия. Контент скроллится, главная кнопка — внизу.</div>
+    <div style="display:grid;grid-template-columns:400px 1fr;gap:24px;margin-top:18px;align-items:start">
+      <div style="border-radius:28px 28px 0 0;background:var(--color-bg);border:1px solid var(--color-neutral-800);border-bottom:none;box-shadow:0 -24px 56px color-mix(in srgb, var(--c-scrim) 30%, transparent);overflow:hidden">
+        <div style="display:flex;justify-content:center;padding:10px 0 2px">
+          <div style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700)"></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px">
+          <div>
+            <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Заголовок шторки</div>
+            <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">Подзаголовок с контекстом</div>
+          </div>
+          <div style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300)">
+            <i class="ph-bold ph-x" style="font-size:15px"></i>
+          </div>
+        </div>
+        <div style="padding:14px 18px 22px">
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin-bottom:8px">Раздел</div>
+          <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900)">
+            <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800)">
+              <i class="ph ph-drop" style="font-size:18px;color:var(--color-accent)"></i>
+              <div style="flex:1;font-size:14px">Параметр</div>
+              <div style="font-size:13px;color:var(--color-neutral-400)">значение</div>
+              <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:13px 15px">
+              <i class="ph ph-clock" style="font-size:18px;color:var(--color-accent)"></i>
+              <div style="flex:1;font-size:14px">Время</div>
+              <div style="font-size:13px;color:var(--color-neutral-400)">Сейчас</div>
+              <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+            </div>
+          </div>
+          <button type="button" style="width:100%;margin-top:14px;padding:16px;border-radius:16px;border:1px solid var(--color-accent);background:color-mix(in srgb, var(--color-accent) 16%, transparent);color:var(--color-text);font-size:15px;font-weight:600;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, transparent)">
+            <i class="ph-bold ph-check" style="font-size:18px"></i>Подтвердить
+          </button>
+        </div>
+      </div>
+      <div style="border-radius:20px;background:var(--color-neutral-900);border:1px solid var(--color-neutral-800);overflow:hidden">
+        <sc-for list="{{ rules }}" as="r" hint-placeholder-count="7">
+          <div style="display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border-bottom:1px solid var(--color-neutral-800)">
+            <i class="{{ r.icon }}" style="font-size:18px;color:{{ r.color }};flex-shrink:0;margin-top:1px"></i>
+            <div style="min-width:0">
+              <div style="font-size:14px;font-weight:600">{{ r.title }}</div>
+              <div style="font-size:12px;color:var(--color-neutral-400);margin-top:4px;text-wrap:pretty">{{ r.text }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:56px">
+      <div style="font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--color-neutral-500)">07</div>
+      <div style="font-size:28px;font-weight:600;letter-spacing:-.02em">Правила</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px">
+      <div style="border-radius:20px;background:var(--color-neutral-900);border:1px solid color-mix(in srgb, var(--c-glu) 40%, transparent);padding:22px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <i class="ph-fill ph-check-circle" style="font-size:18px;color:var(--c-glu)"></i>
+          <div style="font-size:14px;font-weight:600">Так</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+          <sc-for list="{{ dos }}" as="d" hint-placeholder-count="4">
+            <div style="font-size:13px;color:var(--color-neutral-300);text-wrap:pretty">{{ d.text }}</div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="border-radius:20px;background:var(--color-neutral-900);border:1px solid color-mix(in srgb, var(--c-danger) 40%, transparent);padding:22px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <i class="ph-fill ph-x-circle" style="font-size:18px;color:var(--c-danger)"></i>
+          <div style="font-size:14px;font-weight:600">Не так</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+          <sc-for list="{{ donts }}" as="d" hint-placeholder-count="4">
+            <div style="font-size:13px;color:var(--color-neutral-300);text-wrap:pretty">{{ d.text }}</div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:56px;padding-top:24px;border-top:1px solid var(--color-neutral-800);display:flex;align-items:center;justify-content:space-between;gap:16px">
+      <div style="font-size:12px;color:var(--color-neutral-500)">Дизайн-код приложения для диабетика · база Nocturne</div>
+      <a href="Приложение диабетика.dc.html" style="font-size:13px;font-weight:500;text-decoration:none;display:flex;align-items:center;gap:8px">Открыть приложение<i class="ph-bold ph-arrow-right" style="font-size:14px"></i></a>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { theme: 'dark', seg: 'pump', chip: 'Активный', on: true, num: 4 };
+
+  renderVals() {
+    const mode = this.state.theme;
+    const sysLight = typeof window !== 'undefined' && window.matchMedia
+      && window.matchMedia('(prefers-color-scheme: light)').matches;
+    const themeAttr = mode === 'system' ? (sysLight ? 'light' : 'dark') : mode;
+
+    const pick = (on) => ({
+      bg: on ? 'color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-900))' : 'transparent',
+      bd: on ? 'color-mix(in srgb, var(--color-accent) 65%, transparent)' : 'var(--color-neutral-800)',
+      col: on ? 'var(--color-text)' : 'var(--color-neutral-400)',
+    });
+
+    const themes = [
+      { key: 'system', label: 'Системная', icon: 'ph-fill ph-circle-half' },
+      { key: 'light', label: 'Светлая', icon: 'ph-fill ph-sun' },
+      { key: 'dark', label: 'Тёмная', icon: 'ph-fill ph-moon' },
+    ].map(t => ({ ...t, ...pick(mode === t.key), onClick: () => this.setState({ theme: t.key }) }));
+
+    const segs = [
+      { key: 'pump', label: 'Помпа', icon: 'ph-fill ph-drop-half' },
+      { key: 'pen', label: 'Шприц-ручка', icon: 'ph-fill ph-syringe' },
+    ].map(g => ({ ...g, ...pick(this.state.seg === g.key), onClick: () => this.setState({ seg: g.key }) }));
+
+    const chips = ['Активный', 'Обычный', 'Ещё', 'Вариант'].map(label => ({
+      label, ...pick(this.state.chip === label), onClick: () => this.setState({ chip: label }),
+    }));
+
+    return {
+      themeAttr, themes, segs, chips,
+
+      facts: [
+        { label: 'Темы', value: '2', note: 'светлая и тёмная на одних токенах' },
+        { label: 'Смысловых цветов', value: '6', note: 'глюкоза, еда, инсулин, активность…' },
+        { label: 'Радиусы', value: '14–20', note: 'плюс круг для управления' },
+        { label: 'Мин. цель', value: '44 px', note: 'любая кнопка и строка' },
+      ],
+
+      surfaces: [
+        { name: 'Фон экрана', token: '--color-bg', value: 'var(--color-bg)', use: 'подложка' },
+        { name: 'Поверхность', token: '--color-neutral-900', value: 'var(--color-neutral-900)', use: 'карточки, списки' },
+        { name: 'Граница', token: '--color-neutral-800', value: 'var(--color-neutral-800)', use: 'разделители' },
+        { name: 'Акцент', token: '--color-accent', value: 'var(--color-accent)', use: 'действия, выбор' },
+        { name: 'Текст', token: '--color-text', value: 'var(--color-text)', use: 'основной' },
+        { name: 'Второстепенный', token: '--color-neutral-400', value: 'var(--color-neutral-400)', use: 'значения, подписи' },
+      ],
+
+      semantic: [
+        { name: 'Глюкоза', token: '--c-glu', use: 'в диапазоне, кривая нормы', value: 'var(--c-glu)',
+          tint: 'color-mix(in srgb, var(--c-glu) 20%, transparent)', deep: 'var(--c-glu-3)' },
+        { name: 'Углеводы', token: '--c-carb', use: 'еда, Х.Е., плитка приёма', value: 'var(--c-carb)',
+          tint: 'color-mix(in srgb, var(--c-carb) 20%, transparent)', deep: 'var(--c-carb-3)' },
+        { name: 'Инсулин', token: '--c-ins', use: 'болюс и базал', value: 'var(--c-ins)',
+          tint: 'color-mix(in srgb, var(--c-ins) 20%, transparent)', deep: 'var(--c-ins-3)' },
+        { name: 'Активность', token: '--c-act', use: 'шаги, тренировки', value: 'var(--c-act)',
+          tint: 'color-mix(in srgb, var(--c-act) 20%, transparent)', deep: 'var(--c-act-3)' },
+        { name: 'Тренд', token: '--c-trend', use: 'линия сахара на графике', value: 'var(--c-trend)',
+          tint: 'color-mix(in srgb, var(--c-trend) 20%, transparent)', deep: 'var(--c-trend-2)' },
+        { name: 'Опасность', token: '--c-danger', use: 'гипо, выход, отмена', value: 'var(--c-danger)',
+          tint: 'color-mix(in srgb, var(--c-danger) 20%, transparent)', deep: 'var(--c-danger-2)' },
+        { name: 'Затемнение', token: '--c-scrim', use: 'фон под шторкой', value: 'color-mix(in srgb, var(--c-scrim) 70%, transparent)',
+          tint: 'color-mix(in srgb, var(--c-scrim) 30%, transparent)', deep: 'var(--c-scrim)' },
+      ],
+
+      type: [
+        { role: 'Экран', sample: 'Мониторинг', size: '28px', weight: 600, ls: '-.02em', tt: 'none', spec: '28 / 600 / -2%', color: 'var(--color-text)' },
+        { role: 'Главное число', sample: '5,8', size: '44px', weight: 600, ls: '-.02em', tt: 'none', spec: '44 / 600', color: 'var(--color-text)' },
+        { role: 'Шторка', sample: 'Справочник инсулинов', size: '19px', weight: 600, ls: '-.01em', tt: 'none', spec: '19 / 600', color: 'var(--color-text)' },
+        { role: 'Значение блока', sample: '112 ед', size: '24px', weight: 600, ls: '0', tt: 'none', spec: '24 / 600', color: 'var(--color-text)' },
+        { role: 'Строка', sample: 'Целевой диапазон', size: '14px', weight: 400, ls: '0', tt: 'none', spec: '14 / 400', color: 'var(--color-text)' },
+        { role: 'Значение справа', sample: '3,9–10,0', size: '13px', weight: 400, ls: '0', tt: 'none', spec: '13 / 400', color: 'var(--color-neutral-400)' },
+        { role: 'Пояснение', sample: 'за 12 часов до замены', size: '11px', weight: 400, ls: '0', tt: 'none', spec: '11 / 400', color: 'var(--color-neutral-500)' },
+        { role: 'Раздел', sample: 'Уведомления', size: '12px', weight: 500, ls: '.08em', tt: 'uppercase', spec: '12 / 500 / +8%', color: 'var(--color-neutral-500)' },
+      ],
+
+      radii: [
+        { label: '14 чип', value: '14px' },
+        { label: '16 кнопка', value: '16px' },
+        { label: '18 список', value: '18px' },
+        { label: '20 карточка', value: '20px' },
+        { label: 'круг', value: '50%' },
+      ],
+
+      spacing: [
+        { value: '6px', use: 'внутри строки, между иконкой и текстом' },
+        { value: '10px', use: 'между чипами и кнопками' },
+        { value: '20px', use: 'поля экрана' },
+        { value: '26px', use: 'между разделами' },
+      ],
+
+      rules: [
+        { icon: 'ph-fill ph-arrow-square-down', color: 'var(--color-accent)', title: 'Шторка вместо экрана',
+          text: 'Ввод и настройка не увозят пользователя с экрана: контекст остаётся видимым за затемнением.' },
+        { icon: 'ph-fill ph-columns', color: 'var(--color-accent)', title: 'Итог сверху',
+          text: 'Сначала результат (сколько углеводов, сколько единиц), потом способ его получить.' },
+        { icon: 'ph-fill ph-hand-tap', color: 'var(--color-accent)', title: 'Одно главное действие',
+          text: 'Одна акцентная кнопка на шторку. Остальное — вторичные и строки списка.' },
+        { icon: 'ph-fill ph-ruler', color: 'var(--color-accent)', title: 'Единицы — ссылка',
+          text: 'Подпись единиц рядом с числом ведёт в настройку единиц: ммоль/л ↔ мг/дл, граммы ↔ Х.Е.' },
+        { icon: 'ph-fill ph-arrows-in-line-vertical', color: 'var(--color-accent)', title: 'Шапка сжимается',
+          text: 'Верхний блок имеет три состояния: полный на «Сегодня», средний на статичных экранах, строка при скролле.' },
+        { icon: 'ph-fill ph-plugs', color: 'var(--color-accent)', title: 'Устройство диктует интерфейс',
+          text: 'НМГ и глюкометр, помпа и шприц-ручка меняют содержимое экранов, а не только подписи.' },
+      ],
+
+      dos: [
+        { text: 'Брать цвет сущности из смысловых токенов и держать его во всех состояниях.' },
+        { text: 'Ставить значение справа в строке, а пояснение — мелким под названием.' },
+        { text: 'Держать хит-зону не меньше 44 px даже у маленьких иконок.' },
+        { text: 'Показывать активное состояние заливкой 26 % акцента и границей 65 %.' },
+      ],
+
+      donts: [
+        { text: 'Смешивать несколько акцентов на одном экране.' },
+        { text: 'Заливать большие площади насыщенным цветом — только тонкие линии и мягкие подложки.' },
+        { text: 'Прятать важное число в подпись: главное значение всегда крупное.' },
+        { text: 'Плодить новые радиусы и размеры текста вне шкалы.' },
+      ],
+
+      toggle: () => this.setState(s => ({ on: !s.on })),
+      track: this.state.on ? 'var(--color-accent)' : 'var(--color-neutral-800)',
+      knob: this.state.on ? 'var(--color-neutral-100)' : 'var(--color-neutral-600)',
+      knobX: this.state.on ? 'translateX(20px)' : 'translateX(0)',
+      value: String(this.state.num),
+      inc: () => this.setState(s => ({ num: Math.min(99, s.num + 1) })),
+      dec: () => this.setState(s => ({ num: Math.max(0, s.num - 1) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

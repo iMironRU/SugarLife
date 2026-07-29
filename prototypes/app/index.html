@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>SladkaЯ жизнь</title>
+<meta name="description" content="Приложение самоконтроля диабета 1 типа: мониторинг глюкозы, углеводы, инсулин, метрики.">
+<meta name="theme-color" content="#161826">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SugarLife">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="nocturne.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<style>@keyframes sheetUp { from { transform: translateY(101%); } to { transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+* { -webkit-tap-highlight-color: transparent; }
+a { color: var(--color-accent-300); }
+a:hover { color: var(--color-accent); }
+.noscroll { scrollbar-width: none; -ms-overflow-style: none; }
+.noscroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+html, body { height: 100%; }
+body { margin: 0; overflow: hidden; background: var(--color-bg); overscroll-behavior: none; }
+#root { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--color-bg); color: var(--color-text); }
+#root > div { flex: 1; min-height: 0; }
+</style>
+<style>
+:root{--c-glu:#93c79b;--c-glu-2:#8bb890;--c-glu-3:#6f9e79;--c-carb:#e0b64f;--c-carb-2:#d8b463;--c-carb-3:#c1953f;--c-ins:#63c0cc;--c-ins-2:#5aa9b4;--c-ins-3:#3f8b97;--c-act:#a99ee6;--c-act-3:#6d5fb8;--c-danger:#c96b7a;--c-danger-2:#d98a96;--c-trend:#b0713d;--c-trend-2:#a8683a;--c-scrim:#05060c;--c-avatar-bg:#efedf7;--c-avatar-fg:#2a2350;--c-desk:#0c0d16}
+[data-theme="light"]{--color-bg:#f4f4f8;--color-text:#14151c;--color-neutral-900:#ffffff;--color-neutral-800:#e5e5ef;--color-neutral-700:#cfcfdc;--color-neutral-600:#a2a2b4;--color-neutral-500:#7c7c8e;--color-neutral-400:#5f5f76;--color-neutral-300:#3f3f56;--color-neutral-100:#1b1c26;--color-accent:#6152c8;--color-accent-300:#4a3ea6;--c-glu:#3f8b56;--c-glu-2:#5aa06d;--c-glu-3:#7fbd8f;--c-carb:#a97b16;--c-carb-2:#c39533;--c-carb-3:#d8b463;--c-ins:#1f7f8c;--c-ins-2:#3f97a3;--c-ins-3:#7cc0c9;--c-act:#6152c8;--c-act-3:#9a8ee0;--c-danger:#b44a5c;--c-danger-2:#9c3b4d;--c-trend:#9a5f2e;--c-trend-2:#c08a56;--c-scrim:#2f3040;--c-avatar-bg:#e7e5f5;--c-avatar-fg:#2a2350;--c-desk:#e9e9f0}
+</style>
+</head>
+<body>
+<div id="root" data-theme="dark"></div>
+<template id="tpl">
+
+    <div style="height:100%;position:relative;overflow:hidden;display:flex;flex-direction:column;background:var(--color-bg);color:var(--color-text)">
+
+      <!-- ================= ВЕРХНИЙ БЛОК (живёт на всех экранах) ================= -->
+      <div style="flex-shrink:0;padding:{{ headPad }} 20px 0">
+
+        <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:22px">
+            <div style="display:flex;align-items:center;gap:6px;color:var(--color-neutral-400);font-size:12px">
+              <i class="ph-fill ph-heart" style="color:var(--c-danger);font-size:14px"></i>
+              <span>Синхронизировано &lt; 1 мин назад</span>
+            </div>
+            <button type="button" onClick="{{ toggleTheme }}" aria-label="Тема" style="width:34px;height:34px;border-radius:50%;border:1px solid var(--color-neutral-800);background:var(--color-neutral-900);color:var(--color-neutral-300);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" style-hover="border-color:var(--color-accent);color:var(--color-text)">
+              <i class="{{ themeIcon }}" style="font-size:15px"></i>
+            </button>
+          </div>
+        </sc-if>
+
+        <!-- ryad: pryamougolnik + krug v centre = tri knopki -->
+        <div style="position:relative;height:{{ rowH }};transition:height .22s cubic-bezier(.3,.9,.3,1)">
+
+          <!-- pryamougolnik s dvumya knopkami -->
+          <div style="position:absolute;left:0;right:0;top:{{ rectTop }};height:{{ rectH }};display:flex;border-radius:20px;overflow:hidden;border:1.5px solid color-mix(in srgb, var(--color-accent) 55%, transparent);background:linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 14%, transparent), color-mix(in srgb, var(--color-accent) 4%, transparent));transition:height .22s cubic-bezier(.3,.9,.3,1), top .22s cubic-bezier(.3,.9,.3,1)">
+
+            <!-- knopka 1: NMG -->
+            <button type="button" data-om-label="nmg" onClick="{{ openMon }}" style="flex:1;min-width:0;display:flex;flex-direction:{{ wingDir }};justify-content:center;align-items:{{ wingAlignL }};gap:{{ wingGap }};padding:0 20px 0 18px;background:transparent;border:0;cursor:pointer;font-family:var(--font-body);text-align:left;transition:background .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 12%, transparent)" style-active="background:color-mix(in srgb, var(--color-accent) 20%, transparent)">
+              <i class="{{ monIcon }}" style="font-size:{{ icoS }};color:var(--color-accent)"></i>
+              <div style="display:flex;align-items:center;gap:5px">
+                <div style="font-size:{{ nameS }};font-weight:600;color:var(--color-text)">{{ monLabel }}</div>
+                <div style="display:{{ monBadgeShow }};align-items:center;gap:3px;padding:2px 6px;border-radius:7px;background:color-mix(in srgb, var(--c-glu) 18%, transparent)">
+                  <div style="width:4px;height:4px;border-radius:50%;background:var(--c-glu)"></div>
+                  <span style="font-size:9px;font-weight:600;color:var(--c-glu);line-height:1">{{ monBadge }}</span>
+                </div>
+              </div>
+              <sc-if value="{{ full }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:10px;color:var(--color-neutral-400);line-height:1.2">{{ monSub }}</div>
+              </sc-if>
+              <div style="font-size:{{ valS }};font-weight:600;color:var(--color-text);line-height:1;margin-top:3px">{{ monValue }}</div>
+              <sc-if value="{{ full }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:10px;color:var(--color-neutral-400);line-height:1.2">{{ monSub2 }}</div>
+              </sc-if>
+            </button>
+
+            <!-- mesto pod krug -->
+            <div style="width:{{ gapW }};flex-shrink:0"></div>
+
+            <!-- knopka 2: pompa -->
+            <button type="button" onClick="{{ openIns }}" style="flex:1;min-width:0;display:flex;flex-direction:{{ wingDir }};justify-content:center;align-items:{{ wingAlignR }};gap:{{ wingGap }};padding:0 18px 0 20px;background:transparent;border:0;cursor:pointer;font-family:var(--font-body);text-align:right;transition:background .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 12%, transparent)" style-active="background:color-mix(in srgb, var(--color-accent) 20%, transparent)">
+              <i class="{{ pumpIcon }}" style="font-size:{{ icoS }};color:var(--color-accent)"></i>
+              <div style="font-size:{{ nameS }};font-weight:600;color:var(--color-text);margin-top:2px">{{ deviceLabel }}</div>
+              <sc-if value="{{ full }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:10px;color:var(--color-neutral-400);line-height:1.2">{{ rapid }}</div>
+              </sc-if>
+              <div style="font-size:{{ valS }};font-weight:600;color:var(--color-text);line-height:1;margin-top:3px">{{ insulinLeft }}</div>
+              <sc-if value="{{ full }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:10px;color:var(--color-neutral-400);line-height:1.2">{{ deviceSub }}</div>
+              </sc-if>
+            </button>
+          </div>
+
+          <!-- knopka 3: krug s saharom -->
+          <button type="button" onClick="{{ openGlucose }}" style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:{{ rowH }};height:{{ rowH }};padding:0;border-radius:50%;overflow:hidden;cursor:pointer;font-family:var(--font-body);border:2px solid var(--color-accent);box-shadow:0 0 0 8px var(--color-bg), 0 0 22px color-mix(in srgb, var(--color-accent) 22%, transparent), inset 0 0 30px color-mix(in srgb, var(--color-accent) 16%, transparent);background:radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--color-accent) 14%, transparent), var(--color-bg) 74%);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:box-shadow .16s, width .22s cubic-bezier(.3,.9,.3,1), height .22s cubic-bezier(.3,.9,.3,1)" style-hover="box-shadow:0 0 0 8px var(--color-bg), 0 0 30px color-mix(in srgb, var(--color-accent) 38%, transparent), inset 0 0 30px color-mix(in srgb, var(--color-accent) 22%, transparent)">
+            <svg viewBox="0 0 150 150" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;opacity:.35">
+              <path d="M0,96 C18,74 34,104 52,86 C72,66 90,100 110,82 C126,68 140,86 150,80" fill="none" style="stroke:var(--color-accent)" stroke-width="2"></path>
+            </svg>
+            <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center">
+              <div style="display:flex;align-items:center;gap:5px">
+                <span style="font-size:{{ valueS }};font-weight:600;line-height:1;letter-spacing:-.02em;color:var(--color-text)">{{ glucoseNow }}</span>
+                <i class="ph-bold ph-arrow-up-right" style="font-size:{{ arrowS }};color:var(--c-glu)"></i>
+              </div>
+              <div style="font-size:{{ unitS }};color:var(--color-neutral-300);margin-top:4px;display:{{ unitShow }}">{{ unitLabel }}</div>
+              <sc-if value="{{ full }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:10px;color:var(--color-neutral-400);margin-top:5px">3 мин назад</div>
+              </sc-if>
+            </div>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- ================= КОНТЕНТ ================= -->
+      <div class="noscroll" onScroll="{{ onScroll }}" style="flex:1;overflow:auto">
+
+        <!-- ---------- ЭКРАН «СЕГОДНЯ» ---------- -->
+        <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:0 20px 24px">
+
+            <!-- плитка еда / углеводы -->
+            <div onClick="{{ openFood }}" style="display:flex;align-items:stretch;border-radius:20px;overflow:hidden;cursor:pointer;border:1.5px solid color-mix(in srgb, var(--c-carb) 55%, transparent);background:linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 14%, transparent), color-mix(in srgb, var(--c-carb) 4%, transparent));margin-top:14px">
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:14px 0 14px 18px">
+                <div style="display:flex;align-items:baseline;gap:5px">
+                  <span style="font-size:11px;color:var(--color-neutral-400);width:12px">Б</span>
+                  <span style="font-size:13px;font-weight:600">62</span>
+                  <span style="font-size:10px;color:var(--color-neutral-400)">г</span>                </div>
+                <div style="display:flex;align-items:baseline;gap:5px">
+                  <span style="font-size:11px;color:var(--color-neutral-400);width:12px">Ж</span>
+                  <span style="font-size:13px;font-weight:600">48</span>
+                  <span style="font-size:10px;color:var(--color-neutral-400)">г</span>
+                </div>
+                <div style="display:flex;align-items:baseline;gap:5px">
+                  <span style="font-size:11px;color:var(--color-neutral-400);width:12px">У</span>
+                  <span style="font-size:13px;font-weight:600">{{ dayCarbs }}</span>
+                  <span style="font-size:10px;color:var(--color-neutral-400)">{{ carbUnitLabel }}</span>
+                </div>
+              </div>
+
+              <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 10px">
+                <div style="display:flex;align-items:baseline;gap:5px">
+                  <span style="font-size:40px;font-weight:600;line-height:1;letter-spacing:-.02em;color:var(--c-carb)">{{ activeCarbs }}</span>
+                  <span style="font-size:14px;color:var(--c-carb-2)">{{ carbUnitLabel }}</span>
+                </div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:5px">активные углеводы</div>
+                <div style="font-size:10px;color:var(--color-neutral-500);margin-top:3px">всего за день · {{ dayCarbs }} {{ carbUnitLabel }}</div>
+              </div>
+
+              <button type="button" style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:4px;padding:14px 18px 14px 0;background:transparent;border:0;cursor:pointer;font-family:var(--font-body);text-align:right;transition:background .16s" style-hover="background:color-mix(in srgb, var(--c-carb) 12%, transparent)" style-active="background:color-mix(in srgb, var(--c-carb) 20%, transparent)">
+                <i class="ph-bold ph-fork-knife" style="font-size:24px;color:var(--c-carb)"></i>
+                <div style="font-size:14px;font-weight:600;color:var(--color-text)">Еда</div>
+                <div style="font-size:10px;color:var(--color-neutral-400);line-height:1.2">4 приёма</div>
+              </button>
+            </div>
+
+          </div>
+        </sc-if>
+
+        <!-- ---------- ЭКРАН «МЕТРИКИ» ---------- -->
+        <sc-if value="{{ isMetrics }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:20px 20px 24px">
+
+            <!-- период -->
+            <div style="display:flex;background:var(--color-neutral-900);border-radius:12px;padding:4px;gap:2px">
+              <div style="flex:1;text-align:center;padding:9px 0;border-radius:9px;background:var(--color-neutral-100);color:var(--color-neutral-900);font-size:13px;font-weight:600">3 дня</div>
+              <div style="flex:1;text-align:center;padding:9px 0;color:var(--color-neutral-400);font-size:13px">7 дней</div>
+              <div style="flex:1;text-align:center;padding:9px 0;color:var(--color-neutral-400);font-size:13px">30 дней</div>
+              <div style="flex:1;text-align:center;padding:9px 0;color:var(--color-neutral-400);font-size:13px">90 дней</div>
+            </div>
+
+            <!-- переключение метрики -->
+            <div class="noscroll" style="display:flex;gap:8px;overflow:auto;margin-top:18px;padding-bottom:2px">
+              <sc-for list="{{ metricTabs }}" as="m" hint-placeholder-count="4">
+                <div onClick="{{ m.onClick }}" style="flex-shrink:0;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:15px;cursor:pointer;background:{{ m.bg }};border:1px solid {{ m.bd }}">
+                  <i class="{{ m.icon }}" style="font-size:15px;color:{{ m.dot }}"></i>
+                  <span style="font-size:13px;font-weight:500;white-space:nowrap;color:{{ m.col }}">{{ m.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:10px;margin-top:22px">
+              <i class="{{ mIcon }}" style="font-size:26px;color:{{ mColor }}"></i>
+              <span style="font-size:24px;font-weight:600">{{ mTitle }}</span>
+            </div>
+
+            <!-- большая плитка -->
+            <div style="position:relative;overflow:hidden;height:170px;border-radius:20px;background:color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));padding:16px;box-sizing:border-box;margin-top:14px">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between">
+                <div style="font-size:14px;color:var(--color-neutral-300)">{{ mHeroLabel }}</div>
+                <i class="ph-bold ph-caret-right" style="font-size:18px;color:var(--color-neutral-300)"></i>
+              </div>
+              <div style="margin-top:4px;display:flex;align-items:baseline;gap:4px">
+                <span style="font-size:42px;font-weight:700;line-height:1">{{ mHeroValue }}</span>
+                <span style="font-size:16px;font-weight:500;color:var(--color-neutral-300)">{{ mHeroUnit }}</span>
+              </div>
+              <svg viewBox="0 0 300 90" preserveAspectRatio="none" style="position:absolute;left:0;right:0;bottom:0;width:100%;height:96px">
+                <path d="{{ mHeroArea }}" fill="{{ mColor }}" fill-opacity="0.18"></path>
+                <path d="{{ mHeroLine }}" fill="none" stroke="{{ mColor }}" stroke-width="2.5"></path>
+              </svg>
+            </div>
+
+            <!-- две плитки -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+              <sc-for list="{{ mCards }}" as="c" hint-placeholder-count="2">
+                <div style="position:relative;overflow:hidden;height:150px;border-radius:20px;background:color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));padding:14px;box-sizing:border-box">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between">
+                    <span style="font-size:13px;color:var(--color-neutral-300)">{{ c.label }}</span>
+                    <i class="ph-bold ph-caret-right" style="font-size:16px;color:var(--color-neutral-300)"></i>
+                  </div>
+                  <div style="margin-top:4px;display:flex;align-items:baseline;gap:3px">
+                    <span style="font-size:32px;font-weight:700;line-height:1">{{ c.value }}</span>
+                    <span style="font-size:13px;font-weight:500;color:var(--color-neutral-300)">{{ c.unit }}</span>
+                  </div>
+                  <svg viewBox="0 0 160 70" preserveAspectRatio="none" style="position:absolute;left:0;right:0;bottom:0;width:100%;height:70px">
+                    <path d="{{ c.area }}" fill="{{ mColor }}" fill-opacity="0.16"></path>
+                    <path d="{{ c.line }}" fill="none" stroke="{{ mColor }}" stroke-width="2.5"></path>
+                  </svg>
+                </div>
+              </sc-for>
+            </div>
+
+            <!-- два показателя -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+              <sc-for list="{{ mStats }}" as="s" hint-placeholder-count="2">
+                <div style="border-radius:20px;background:color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));padding:14px">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between">
+                    <span style="font-size:13px;color:var(--color-neutral-300)">{{ s.label }}</span>
+                    <i class="ph-bold ph-caret-right" style="font-size:16px;color:var(--color-neutral-300)"></i>
+                  </div>
+                  <div style="margin-top:8px;display:flex;align-items:baseline;gap:5px">
+                    <span style="font-size:32px;font-weight:700;line-height:1">{{ s.value }}</span>
+                    <span style="font-size:12px;color:var(--color-neutral-300)">{{ s.unit }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+
+          </div>
+        </sc-if>
+
+        <!-- ---------- ЭКРАН «ПРОФИЛЬ» ---------- -->
+        <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:20px 20px 24px">
+
+            <div style="display:flex;align-items:center;gap:14px">
+              <div style="width:64px;height:64px;border-radius:50%;background:var(--c-avatar-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <i class="ph-fill ph-user" style="font-size:36px;color:var(--c-avatar-fg)"></i>
+              </div>
+              <div>
+                <div style="font-size:22px;font-weight:600;line-height:1.1;letter-spacing:-.01em">Алексей М.</div>
+                <div style="font-size:12px;color:var(--color-neutral-400);margin-top:5px">СД 1 типа · с 2014 года</div>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:20px">
+              <div style="border-radius:16px;background:color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));padding:12px">
+                <div style="font-size:11px;color:var(--color-neutral-400)">HbA1c</div>
+                <div style="font-size:22px;font-weight:600;margin-top:6px;line-height:1">6,8<span style="font-size:11px;font-weight:500;color:var(--color-neutral-300);margin-left:2px">%</span></div>
+              </div>
+              <div style="border-radius:16px;background:color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));padding:12px">
+                <div style="font-size:11px;color:var(--color-neutral-400)">Вес</div>
+                <div style="font-size:22px;font-weight:600;margin-top:6px;line-height:1">74<span style="font-size:11px;font-weight:500;color:var(--color-neutral-300);margin-left:2px">кг</span></div>
+              </div>
+              <div style="border-radius:16px;background:color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));padding:12px">
+                <div style="font-size:11px;color:var(--color-neutral-400)">СУИ</div>
+                <div style="font-size:22px;font-weight:600;margin-top:6px;line-height:1">1:8</div>
+              </div>
+            </div>
+
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:24px 0 8px">Оформление</div>
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ themes }}" as="t" hint-placeholder-count="3">
+                <div onClick="{{ t.onClick }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 8px;border-radius:16px;cursor:pointer;background:{{ t.bg }};border:1px solid {{ t.bd }};transition:background .16s">
+                  <i class="{{ t.icon }}" style="font-size:19px;color:{{ t.col }}"></i>
+                  <span style="font-size:12px;font-weight:500;color:{{ t.col }}">{{ t.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:24px 0 8px">Настройки</div>
+            <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900)">
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph ph-identification-card" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Персональные данные</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">Алексей М.</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <div onClick="{{ openNotify }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph-fill ph-bell-ringing" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Уведомления</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">{{ notifyShort }}</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <div onClick="{{ openUnits }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph ph-ruler" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Единицы измерения</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">{{ unitsShort }}</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <div onClick="{{ openIntegr }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph ph-plugs-connected" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Интеграции</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">{{ integrShort }}</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <div onClick="{{ openFiles }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph ph-file-arrow-down" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Экспорт в файл</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">{{ exportFmt }}</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph ph-share-network" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Врач и близкие</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">2 человека</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <div onClick="{{ openDs }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph ph-swatches" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Дизайн-код</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">{{ themeLabel }}</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+            </div>
+
+            <button type="button" style="width:100%;margin-top:24px;padding:14px;border-radius:16px;border:1px solid color-mix(in srgb, var(--c-danger) 55%, transparent);background:transparent;color:var(--c-danger-2);font-size:14px;font-weight:500;font-family:var(--font-body);cursor:pointer" style-hover="background:color-mix(in srgb, var(--c-danger) 14%, transparent)">Выйти из аккаунта</button>
+
+          </div>
+        </sc-if>
+
+        <!-- ---------- ЭКРАН «МОНИТОРИНГ» ---------- -->
+        <sc-if value="{{ isMon }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:20px 20px 24px">
+
+            <div style="font-size:28px;font-weight:600;line-height:1;letter-spacing:-.02em">Мониторинг</div>
+            <div style="font-size:12px;color:var(--color-neutral-400);margin-top:8px">Как измеряется глюкоза</div>
+
+            <div style="display:flex;gap:6px;background:var(--color-neutral-900);border-radius:16px;padding:5px;margin-top:16px">
+              <sc-for list="{{ monitors }}" as="m" hint-placeholder-count="2">
+                <div onClick="{{ m.onClick }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:40px;border-radius:12px;cursor:pointer;background:{{ m.bg }};border:1px solid {{ m.bd }};transition:background .16s">
+                  <i class="{{ m.icon }}" style="font-size:17px;color:{{ m.col }}"></i>
+                  <span style="font-size:13px;font-weight:500;color:{{ m.col }}">{{ m.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ isCgm }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:20px 0 8px">
+                <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500)">Датчики</div>
+                <div style="display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:9px;background:color-mix(in srgb, var(--c-glu) 16%, transparent)">
+                  <div style="width:6px;height:6px;border-radius:50%;background:var(--c-glu)"></div>
+                  <span style="font-size:11px;font-weight:500;color:var(--c-glu)">{{ sensorsActiveText }}</span>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ sensors }}" as="s" hint-placeholder-count="2">
+                  <div onClick="{{ s.onClick }}" style="border-radius:18px;padding:14px 16px;cursor:pointer;background:{{ s.bg }};border:1px solid {{ s.bd }}" style-hover="border-color:var(--color-accent)">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <i class="ph-fill ph-wave-sine" style="font-size:18px;color:{{ s.iconCol }};flex-shrink:0"></i>
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:14px;font-weight:600;color:var(--color-text)">{{ s.model }}</div>
+                        <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ s.serial }} · {{ s.placed }}</div>
+                      </div>
+                      <div style="font-size:11px;font-weight:500;padding:5px 9px;border-radius:9px;flex-shrink:0;color:{{ s.chipCol }};background:{{ s.chipBg }}">{{ s.status }}</div>
+                      <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+                    </div>
+                    <sc-if value="{{ s.active }}" hint-placeholder-val="{{ true }}">
+                      <div style="margin-top:12px;height:5px;border-radius:3px;background:var(--color-neutral-800);overflow:hidden">
+                        <div style="height:100%;width:{{ s.progress }};border-radius:3px;background:var(--color-accent)"></div>
+                      </div>
+                      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--color-neutral-500)">
+                        <span>{{ s.dayText }}</span>
+                        <span>{{ s.leftText }}</span>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <button type="button" onClick="{{ openAddSensor }}" style="width:100%;margin-top:10px;padding:14px;border-radius:16px;border:1px dashed var(--color-neutral-700);background:transparent;color:var(--color-neutral-300);font-size:13px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="border-color:var(--color-accent);color:var(--color-text)">
+                <i class="ph-bold ph-plus" style="font-size:15px"></i>Добавить датчик
+              </button>
+            </sc-if>
+
+            <sc-if value="{{ isBgm }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:10px;margin-top:12px">
+                <button type="button" onClick="{{ openSync }}" style="flex:1;min-width:0;padding:15px 12px;border-radius:18px;border:1px solid var(--color-accent);background:color-mix(in srgb, var(--color-accent) 14%, transparent);cursor:pointer;font-family:var(--font-body);display:flex;flex-direction:column;align-items:flex-start;gap:8px" style-hover="background:color-mix(in srgb, var(--color-accent) 24%, transparent)">
+                  <i class="ph-bold ph-bluetooth" style="font-size:20px;color:var(--color-accent)"></i>
+                  <div style="font-size:13px;font-weight:600;color:var(--color-text);text-align:left">Получить с глюкометра</div>
+                  <div style="font-size:10px;color:var(--color-neutral-400);text-align:left">Contour Plus One</div>
+                </button>
+                <button type="button" onClick="{{ openManual }}" style="flex:1;min-width:0;padding:15px 12px;border-radius:18px;border:1px solid var(--color-neutral-700);background:transparent;cursor:pointer;font-family:var(--font-body);display:flex;flex-direction:column;align-items:flex-start;gap:8px" style-hover="border-color:var(--color-accent);background:color-mix(in srgb, var(--color-accent) 12%, transparent)">
+                  <i class="ph-bold ph-pencil-simple" style="font-size:20px;color:var(--color-accent)"></i>
+                  <div style="font-size:13px;font-weight:600;color:var(--color-text);text-align:left">Ввести вручную</div>
+                  <div style="font-size:10px;color:var(--color-neutral-400);text-align:left">одно измерение</div>
+                </button>
+              </div>
+            </sc-if>
+
+            <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900);margin-top:12px">
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer;display:{{ monDeviceRowShow }}" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="{{ monIcon }}" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">{{ monDeviceLabel }}</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">{{ monDeviceValue }}</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph ph-target" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Целевой диапазон</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">{{ targetRange }}</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <div onClick="{{ openUnits }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph ph-ruler" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Единицы измерения</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">{{ unitsShort }}</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="{{ monExtraIcon }}" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">{{ monExtraLabel }}</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">{{ monExtraValue }}</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+            </div>
+
+            <div onClick="{{ openNotify }}" style="display:flex;align-items:center;gap:12px;padding:16px;border-radius:18px;background:var(--color-neutral-900);cursor:pointer;margin-top:12px" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, var(--color-neutral-900))">
+              <i class="ph-fill ph-bell-ringing" style="font-size:20px;color:var(--color-accent);flex-shrink:0"></i>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:14px">Пороги и оповещения</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ notifySummary }}</div>
+              </div>
+              <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+            </div>
+
+          </div>
+        </sc-if>
+
+        <!-- ---------- ЭКРАН «ДОСТАВКА ИНСУЛИНА» ---------- -->
+        <sc-if value="{{ isIns }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:20px 20px 24px">
+
+            <div style="font-size:28px;font-weight:600;line-height:1;letter-spacing:-.02em">Доставка инсулина</div>
+            <div style="font-size:12px;color:var(--color-neutral-400);margin-top:8px">Способ введения и препараты</div>
+
+            <div style="display:flex;gap:6px;background:var(--color-neutral-900);border-radius:16px;padding:5px;margin-top:16px">
+              <sc-for list="{{ methods }}" as="m" hint-placeholder-count="2">
+                <div onClick="{{ m.onClick }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:40px;border-radius:12px;cursor:pointer;background:{{ m.bg }};border:1px solid {{ m.bd }};transition:background .16s">
+                  <i class="{{ m.icon }}" style="font-size:17px;color:{{ m.col }}"></i>
+                  <span style="font-size:13px;font-weight:500;color:{{ m.col }}">{{ m.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <button type="button" onClick="{{ primaryAction }}" style="width:100%;margin-top:12px;padding:16px;border-radius:18px;border:1px solid var(--color-accent);background:color-mix(in srgb, var(--color-accent) 16%, transparent);cursor:pointer;font-family:var(--font-body);display:flex;align-items:center;gap:12px;text-align:left" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, transparent)">
+              <i class="{{ primaryIcon }}" style="font-size:22px;color:var(--color-accent);flex-shrink:0"></i>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:15px;font-weight:600;color:var(--color-text)">{{ primaryLabel }}</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ primarySub }}</div>
+              </div>
+              <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+            </button>
+
+            <sc-if value="{{ isPump }}" hint-placeholder-val="{{ true }}">
+              <button type="button" onClick="{{ openPump }}" style="width:100%;margin-top:10px;padding:16px;border-radius:18px;border:1px solid var(--color-neutral-700);background:transparent;cursor:pointer;font-family:var(--font-body);display:flex;align-items:center;gap:12px;text-align:left" style-hover="border-color:var(--color-accent);background:color-mix(in srgb, var(--color-accent) 12%, transparent)">
+                <i class="ph-fill ph-sliders" style="font-size:22px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14px;font-weight:600;color:var(--color-text)">Управление помпой</div>
+                  <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ pumpSummary }}</div>
+                </div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </button>
+            </sc-if>
+
+            <sc-if value="{{ isPen }}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{ openBolusRem }}" style="width:100%;margin-top:10px;padding:16px;border-radius:18px;border:1px solid var(--color-neutral-700);background:transparent;cursor:pointer;font-family:var(--font-body);display:flex;align-items:center;gap:12px;text-align:left" style-hover="border-color:var(--color-accent);background:color-mix(in srgb, var(--color-accent) 12%, transparent)">
+                <i class="ph-fill ph-bell-ringing" style="font-size:22px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14px;font-weight:600;color:var(--color-text)">Напоминания о болюсе</div>
+                  <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ bolusRemSummary }}</div>
+                </div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </button>
+            </sc-if>
+
+            <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900);margin-top:12px">
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="{{ deviceIcon }}" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">{{ deviceLabel }}</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">{{ deviceValue }}</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <div onClick="{{ openRapid }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph ph-drop" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">{{ rapidTitle }}</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">{{ rapid }}</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <sc-if value="{{ isPen }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ openBasal }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                  <i class="ph ph-moon-stars" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                  <div style="flex:1;min-width:0;font-size:14px">Базальный инсулин</div>
+                  <div style="font-size:13px;color:var(--color-neutral-400)">{{ basal }}</div>
+                  <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+                </div>
+              </sc-if>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph ph-percent" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Углеводный коэффициент</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">1 ед / 8 г</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph ph-arrows-down-up" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Фактор чувствительности</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">1 ед ↓ 2,2</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+            </div>
+
+          </div>
+        </sc-if>
+
+        <!-- ---------- ЭКРАН «ДИЗАЙН-КОД» ---------- -->
+        <sc-if value="{{ isDs }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:20px 20px 24px">
+
+            <div style="font-size:28px;font-weight:600;line-height:1;letter-spacing:-.02em">Дизайн-код</div>
+            <div style="font-size:12px;color:var(--color-neutral-400);margin-top:8px">Одна система токенов для светлой и тёмной темы</div>
+
+            <div style="display:flex;gap:8px;margin-top:16px">
+              <sc-for list="{{ themes }}" as="t" hint-placeholder-count="3">
+                <div onClick="{{ t.onClick }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:16px;cursor:pointer;background:{{ t.bg }};border:1px solid {{ t.bd }};transition:background .16s">
+                  <i class="{{ t.icon }}" style="font-size:18px;color:{{ t.col }}"></i>
+                  <span style="font-size:12px;font-weight:500;color:{{ t.col }}">{{ t.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:26px 0 10px">Поверхности и текст</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <sc-for list="{{ dsSurfaces }}" as="s" hint-placeholder-count="6">
+                <div style="border-radius:16px;overflow:hidden;border:1px solid var(--color-neutral-800)">
+                  <div style="height:52px;background:{{ s.value }}"></div>
+                  <div style="padding:10px 12px;background:var(--color-neutral-900)">
+                    <div style="font-size:12px;font-weight:600">{{ s.name }}</div>
+                    <div style="font-size:10px;color:var(--color-neutral-500);margin-top:3px">{{ s.token }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:26px 0 10px">Смысловые цвета</div>
+            <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900)">
+              <sc-for list="{{ dsSemantic }}" as="c" hint-placeholder-count="6">
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 15px;border-bottom:1px solid var(--color-neutral-800)">
+                  <div style="width:26px;height:26px;border-radius:9px;flex-shrink:0;background:{{ c.value }}"></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:13px">{{ c.name }}</div>
+                    <div style="font-size:10px;color:var(--color-neutral-500);margin-top:2px">{{ c.token }}</div>
+                  </div>
+                  <div style="font-size:11px;color:var(--color-neutral-400)">{{ c.use }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:26px 0 10px">Типографика</div>
+            <div style="border-radius:18px;background:var(--color-neutral-900);padding:16px;display:flex;flex-direction:column;gap:14px">
+              <sc-for list="{{ dsType }}" as="t" hint-placeholder-count="6">
+                <div style="display:flex;align-items:baseline;gap:12px">
+                  <div style="flex:1;min-width:0;font-size:{{ t.size }};font-weight:{{ t.weight }};color:{{ t.color }};line-height:1.15;letter-spacing:{{ t.ls }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.sample }}</div>
+                  <div style="font-size:10px;color:var(--color-neutral-500);flex-shrink:0">{{ t.spec }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:26px 0 10px">Радиусы</div>
+            <div style="display:flex;gap:10px">
+              <sc-for list="{{ dsRadii }}" as="r" hint-placeholder-count="5">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px">
+                  <div style="width:100%;height:52px;border-radius:{{ r.value }};background:color-mix(in srgb, var(--color-accent) 16%, var(--color-neutral-900));border:1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)"></div>
+                  <div style="font-size:10px;color:var(--color-neutral-400)">{{ r.label }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:26px 0 10px">Компоненты</div>
+
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <button type="button" style="width:100%;padding:16px;border-radius:16px;border:1px solid var(--color-accent);background:color-mix(in srgb, var(--color-accent) 16%, transparent);color:var(--color-text);font-size:15px;font-weight:600;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, transparent)">
+                <i class="ph-bold ph-lightning" style="font-size:18px"></i>Главное действие
+              </button>
+              <button type="button" style="width:100%;padding:15px;border-radius:16px;border:1px solid var(--color-neutral-700);background:transparent;color:var(--color-neutral-300);font-size:14px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="border-color:var(--color-accent);color:var(--color-text)">
+                <i class="ph-bold ph-sliders" style="font-size:17px"></i>Вторичное действие
+              </button>
+              <button type="button" style="width:100%;padding:14px;border-radius:16px;border:1px solid color-mix(in srgb, var(--c-danger) 55%, transparent);background:transparent;color:var(--c-danger-2);font-size:14px;font-weight:500;font-family:var(--font-body);cursor:pointer" style-hover="background:color-mix(in srgb, var(--c-danger) 14%, transparent)">Опасное действие</button>
+            </div>
+
+            <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900);margin-top:12px">
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph ph-target" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Строка со значением</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">значение</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <div onClick="{{ dsToggle }}" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer">
+                <i class="ph-fill ph-bell" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14px">Строка с переключателем</div>
+                  <div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">пояснение мелким</div>
+                </div>
+                <div style="width:44px;height:26px;border-radius:13px;flex-shrink:0;padding:3px;box-sizing:border-box;background:{{ dsTrack }};transition:background .16s">
+                  <div style="width:20px;height:20px;border-radius:50%;background:{{ dsKnob }};transform:{{ dsKnobX }};transition:transform .16s"></div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+                <div style="flex:1;min-width:0;font-size:14px">Степпер</div>
+                <div onClick="{{ dsDec }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-800))">
+                  <i class="ph-bold ph-minus" style="font-size:13px"></i>
+                </div>
+                <div style="min-width:38px;text-align:center;font-size:16px;font-weight:600">{{ dsValue }}</div>
+                <div onClick="{{ dsInc }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-800))">
+                  <i class="ph-bold ph-plus" style="font-size:13px"></i>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+              <sc-for list="{{ dsChips }}" as="c" hint-placeholder-count="3">
+                <div onClick="{{ c.onClick }}" style="padding:10px 14px;border-radius:14px;cursor:pointer;font-size:13px;font-weight:500;color:{{ c.col }};background:{{ c.bg }};border:1px solid {{ c.bd }}">{{ c.label }}</div>
+              </sc-for>
+            </div>
+
+            <div style="margin-top:12px;padding:16px;border-radius:20px;background:linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 20%, var(--color-neutral-900)), color-mix(in srgb, var(--color-accent) 7%, var(--color-neutral-900)));border:1px solid color-mix(in srgb, var(--color-accent) 45%, transparent)">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-400)">Акцентная карточка</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:8px">
+                <span style="font-size:34px;font-weight:600;line-height:1">3,3</span>
+                <span style="font-size:13px;color:var(--color-neutral-300)">ед</span>
+              </div>
+              <div style="font-size:11px;color:var(--color-neutral-400);margin-top:10px">Служебная строка с расчётом</div>
+            </div>
+
+            <div style="font-size:11px;color:var(--color-neutral-500);margin-top:20px;text-wrap:pretty">Сетка: отступ 20 px по краям, шаг 10–12 px между блоками, 24–26 px между разделами. Минимальная цель нажатия — 44 px.</div>
+
+          </div>
+        </sc-if>
+
+        <!-- ---------- ЗАГЛУШКА ---------- -->
+        <sc-if value="{{ isOther }}" hint-placeholder-val="{{ false }}">
+          <div style="height:100%;min-height:640px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--color-neutral-500);padding:0 40px;text-align:center">
+            <i class="ph ph-flask" style="font-size:44px"></i>
+            <div style="font-size:15px">Раздел в разработке</div>
+          </div>
+        </sc-if>
+
+      </div>
+
+      <!-- ================= ШТОРКА «ГЛЮКОЗА» ================= -->
+      <sc-if value="{{ isSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Глюкоза</div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+            <div class="noscroll" style="overflow:auto">
+          <div style="padding:8px 0 26px">
+
+            <!-- верхние плитки -->
+            <div style="display:flex;gap:10px;padding:0 16px;align-items:stretch">
+              <button type="button" style="flex:1;min-width:0;border:0;cursor:default;font-family:var(--font-body);border-radius:22px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 46%, var(--color-neutral-900)), color-mix(in srgb, var(--color-accent) 30%, var(--color-neutral-900)))">
+                <span style="font-size:44px;font-weight:600;line-height:1;letter-spacing:-.02em;color:var(--color-text)">{{ glucoseBig }}</span>
+                <i class="ph-bold ph-arrow-line-down" style="font-size:34px;color:var(--color-text)"></i>
+              </button>
+              <div style="width:132px;flex-shrink:0;border-radius:22px;overflow:hidden;display:flex;background:var(--color-neutral-900)">
+                <div style="flex:1;min-width:0;padding:10px 8px 10px 10px;background:color-mix(in srgb, var(--c-glu-3) 26%, var(--color-neutral-900));display:flex;flex-direction:column;gap:3px">
+                  <div style="display:flex;align-items:center;gap:4px">
+                    <i class="ph-bold ph-wave-sine" style="font-size:13px;color:var(--c-carb)"></i>
+                    <span style="font-size:12px;font-weight:600;color:var(--c-carb)">32.1</span>
+                  </div>
+                  <div style="font-size:11px;color:var(--color-neutral-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">4NBF808…</div>
+                  <div style="font-size:13px;font-weight:600;color:var(--color-text)">16 / 23</div>
+                </div>
+                <div style="width:30px;display:flex;align-items:center;justify-content:center">
+                  <i class="ph ph-notebook" style="font-size:17px;color:var(--color-neutral-300)"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- фильтр слоёв графика -->
+            <div class="noscroll" style="display:flex;gap:7px;overflow:auto;margin-top:14px;padding:0 16px 2px">
+              <sc-for list="{{ layers }}" as="l" hint-placeholder-count="4">
+                <div onClick="{{ l.toggle }}" style="flex-shrink:0;display:flex;align-items:center;gap:7px;padding:8px 13px;border-radius:14px;cursor:pointer;background:{{ l.bg }};border:1px solid {{ l.bd }}">
+                  <div style="width:9px;height:9px;border-radius:50%;background:{{ l.dot }}"></div>
+                  <span style="font-size:12px;font-weight:500;white-space:nowrap;color:{{ l.col }}">{{ l.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <!-- график -->
+            <div style="margin-top:10px;height:300px;position:relative">
+              <svg viewBox="0 0 402 300" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">
+                <rect x="0" y="96" width="402" height="104" style="fill:var(--c-glu-3)" fill-opacity="0.10"></rect>
+                <line x1="0" y1="96" x2="402" y2="96" style="stroke:var(--c-glu-3)" stroke-opacity="0.35" stroke-width="1"></line>
+                <line x1="0" y1="200" x2="402" y2="200" style="stroke:var(--c-glu-3)" stroke-opacity="0.35" stroke-width="1"></line>
+                <g stroke="var(--color-neutral-700)" stroke-opacity="0.5" stroke-width="1">
+                  <line x1="18" y1="0" x2="18" y2="258"></line>
+                  <line x1="94" y1="0" x2="94" y2="258"></line>
+                  <line x1="170" y1="0" x2="170" y2="258"></line>
+                  <line x1="246" y1="0" x2="246" y2="258"></line>
+                  <line x1="322" y1="0" x2="322" y2="258"></line>
+                  <line x1="0" y1="44" x2="402" y2="44"></line>
+                  <line x1="0" y1="96" x2="402" y2="96"></line>
+                  <line x1="0" y1="148" x2="402" y2="148"></line>
+                  <line x1="0" y1="200" x2="402" y2="200"></line>
+                  <line x1="0" y1="252" x2="402" y2="252"></line>
+                </g>
+                <sc-if value="{{ lCarbs }}" hint-placeholder-val="{{ true }}">
+                  <g style="fill:var(--c-carb-2)" fill-opacity="0.55">
+                    <rect x="52" y="196" width="9" height="62" rx="3"></rect>
+                    <rect x="124" y="162" width="9" height="96" rx="3"></rect>
+                    <rect x="196" y="212" width="9" height="46" rx="3"></rect>
+                    <rect x="296" y="182" width="9" height="76" rx="3"></rect>
+                  </g>
+                </sc-if>
+                <sc-if value="{{ lInsulin }}" hint-placeholder-val="{{ true }}">
+                  <path d="M0,244 L48,244 L48,222 L96,222 L96,236 L120,236 L120,206 L168,206 L168,232 L216,232 L216,218 L264,218 L264,238 L312,238 L312,214 L402,214" fill="none" style="stroke:var(--c-ins)" stroke-width="2" stroke-opacity="0.85"></path>
+                </sc-if>
+                <sc-if value="{{ lActivity }}" hint-placeholder-val="{{ false }}">
+                  <path d="M0,252 C40,250 60,232 92,230 C124,228 140,246 176,244 C212,242 236,220 272,224 C310,228 350,246 402,242 L402,258 L0,258 Z" style="fill:var(--color-accent)" fill-opacity="0.20"></path>
+                </sc-if>
+                <sc-if value="{{ lGlucose }}" hint-placeholder-val="{{ true }}">
+                  <path d="M0,88 C14,86 24,90 40,90 C56,91 66,92 78,92 C88,92 96,86 108,80 C120,74 130,64 142,52 C154,40 164,26 178,20 C190,15 202,12 214,14 C228,17 240,22 254,26 C268,30 280,28 292,26" fill="none" style="stroke:var(--c-trend)" stroke-width="3" stroke-linecap="round"></path>
+                  <path d="M320,30 C330,42 340,58 352,58 C364,58 372,44 384,38 C392,34 396,34 402,36" fill="none" style="stroke:var(--c-trend)" stroke-width="3" stroke-linecap="round"></path>
+                </sc-if>
+              </svg>
+              <div style="position:absolute;left:20px;top:0;right:0;height:300px;font-size:11px;color:var(--color-neutral-400)">
+                <span style="position:absolute;top:44px;transform:translateY(-50%)">{{ ax1 }}</span>
+                <span style="position:absolute;top:96px;transform:translateY(-50%)">{{ ax2 }}</span>
+                <span style="position:absolute;top:148px;transform:translateY(-50%)">{{ ax3 }}</span>
+                <span style="position:absolute;top:200px;transform:translateY(-50%)">{{ ax4 }}</span>
+                <span style="position:absolute;top:252px;transform:translateY(-50%)">{{ ax5 }}</span>
+              </div>
+              <div style="position:absolute;left:0;right:0;bottom:16px;display:flex;justify-content:space-between;padding:0 6px;font-size:11px;color:var(--color-neutral-400)">
+                <span>09:30</span><span>10:00</span><span>10:30</span><span>11:00</span><span>11:30</span><span>12:00</span>
+              </div>
+            </div>
+
+            <!-- диапазоны -->
+            <div style="margin:0 16px;display:flex;align-items:center;gap:4px;background:var(--color-neutral-900);border-radius:22px;padding:5px">
+              <div style="width:44px;height:34px;border-radius:17px;background:color-mix(in srgb, var(--color-accent) 22%, var(--color-neutral-800));display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer">
+                <i class="ph ph-calendar-blank" style="font-size:17px;color:var(--color-text)"></i>
+              </div>
+              <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="6">
+                <div onClick="{{ r.onClick }}" style="flex:1;min-width:0;height:34px;border-radius:17px;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;background:{{ r.bg }}">
+                  <sc-if value="{{ r.active }}" hint-placeholder-val="{{ false }}">
+                    <i class="ph ph-clock" style="font-size:14px;color:var(--color-text)"></i>
+                  </sc-if>
+                  <span style="font-size:13px;font-weight:500;color:{{ r.col }}">{{ r.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <!-- список измерений -->
+            <div style="margin:14px 16px 0;border-radius:20px;overflow:hidden;background:var(--color-neutral-900)">
+              <sc-for list="{{ readings }}" as="m" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 18px;background:{{ m.bg }};border-bottom:1px solid var(--color-neutral-800)">
+                  <span style="font-size:14px;font-weight:{{ m.weight }};color:{{ m.col }}">{{ m.time }}</span>
+                  <div style="display:flex;align-items:center;gap:14px">
+                    <span style="font-size:15px;font-weight:{{ m.weight }};color:{{ m.col }}">{{ m.value }}</span>
+                    <i class="{{ m.arrow }}" style="font-size:17px;color:{{ m.arrowCol }}"></i>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+
+          </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «СПРАВОЧНИК ИНСУЛИНОВ» ================= -->
+      <sc-if value="{{ isInsulinSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:41;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div>
+                <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Справочник инсулинов</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ insulinSlotTitle }}</div>
+              </div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div style="padding:10px 18px 0;flex-shrink:0">
+              <div style="display:flex;align-items:center;gap:9px;height:42px;padding:0 14px;border-radius:14px;background:var(--color-neutral-900);border:1px solid var(--color-neutral-800)">
+                <i class="ph ph-magnifying-glass" style="font-size:16px;color:var(--color-neutral-500)"></i>
+                <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Название или действующее вещество" style="flex:1;min-width:0;background:transparent;border:0;outline:none;color:var(--color-text);font-size:13px;font-family:var(--font-body)">
+              </div>
+              <div class="noscroll" style="display:flex;gap:7px;overflow:auto;margin-top:10px;padding-bottom:2px">
+                <sc-for list="{{ insulinFilters }}" as="f" hint-placeholder-count="5">
+                  <div onClick="{{ f.onClick }}" style="flex-shrink:0;padding:8px 13px;border-radius:13px;cursor:pointer;font-size:12px;font-weight:500;white-space:nowrap;color:{{ f.col }};background:{{ f.bg }};border:1px solid {{ f.bd }}">{{ f.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:12px 18px 26px">
+              <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900)">
+                <sc-for list="{{ insulinList }}" as="i" hint-placeholder-count="6">
+                  <div onClick="{{ i.onClick }}" style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer;background:{{ i.rowBg }}" style-hover="background:color-mix(in srgb, var(--color-accent) 12%, transparent)">
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:14px;font-weight:500;color:var(--color-text)">{{ i.name }}</div>
+                      <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ i.sub }}</div>
+                    </div>
+                    <div style="font-size:11px;color:var(--color-neutral-500);text-align:right;flex-shrink:0">{{ i.timing }}</div>
+                    <i class="{{ i.check }}" style="font-size:18px;color:{{ i.checkCol }};flex-shrink:0"></i>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ insulinEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:26px 0;text-align:center;color:var(--color-neutral-500);font-size:13px">Ничего не найдено</div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «УВЕДОМЛЕНИЯ» ================= -->
+      <sc-if value="{{ isNotifySheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:41;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Уведомления</div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:12px 18px 26px">
+
+              <sc-if value="{{ isCgm }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin-bottom:8px">Пороги</div>
+                <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900)">
+                  <sc-for list="{{ thresholds }}" as="t" hint-placeholder-count="2">
+                    <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800)">
+                      <i class="{{ t.icon }}" style="font-size:19px;color:{{ t.iconCol }};flex-shrink:0"></i>
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:14px">{{ t.label }}</div>
+                        <div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">ммоль/л</div>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+                        <div onClick="{{ t.dec }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-800))">
+                          <i class="ph-bold ph-minus" style="font-size:13px;color:var(--color-text)"></i>
+                        </div>
+                        <div style="min-width:38px;text-align:center;font-size:15px;font-weight:600">{{ t.value }}</div>
+                        <div onClick="{{ t.inc }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-800))">
+                          <i class="ph-bold ph-plus" style="font-size:13px;color:var(--color-text)"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isBgm }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin-bottom:8px">Напоминания об измерении</div>
+                <div style="font-size:11px;color:var(--color-neutral-500);margin-bottom:10px;text-wrap:pretty">Глюкометр не следит за сахаром непрерывно — пороговых оповещений нет, только напоминания.</div>
+                <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900)">
+                  <sc-for list="{{ reminders }}" as="r" hint-placeholder-count="4">
+                    <div onClick="{{ r.toggle }}" style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer">
+                      <div style="font-size:15px;font-weight:600;min-width:48px;color:{{ r.timeCol }}">{{ r.time }}</div>
+                      <div style="flex:1;min-width:0;font-size:13px;color:var(--color-neutral-300)">{{ r.label }}</div>
+                      <div style="width:44px;height:26px;border-radius:13px;flex-shrink:0;padding:3px;box-sizing:border-box;background:{{ r.trackBg }};transition:background .16s">
+                        <div style="width:20px;height:20px;border-radius:50%;background:{{ r.knobBg }};transform:{{ r.knobX }};transition:transform .16s"></div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <button type="button" style="width:100%;margin-top:10px;padding:13px;border-radius:16px;border:1px dashed var(--color-neutral-700);background:transparent;color:var(--color-neutral-300);font-size:13px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="border-color:var(--color-accent);color:var(--color-text)">
+                  <i class="ph-bold ph-plus" style="font-size:15px"></i>Добавить напоминание
+                </button>
+              </sc-if>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:20px 0 8px">Оповещения</div>
+              <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900)">
+                <sc-for list="{{ alerts }}" as="a" hint-placeholder-count="5">
+                  <div onClick="{{ a.toggle }}" style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer">
+                    <i class="{{ a.icon }}" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:14px">{{ a.label }}</div>
+                      <div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">{{ a.sub }}</div>
+                    </div>
+                    <div style="width:44px;height:26px;border-radius:13px;flex-shrink:0;padding:3px;box-sizing:border-box;background:{{ a.trackBg }};transition:background .16s">
+                      <div style="width:20px;height:20px;border-radius:50%;background:{{ a.knobBg }};transform:{{ a.knobX }};transition:transform .16s"></div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:20px 0 8px">Тихие часы</div>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 15px;border-radius:18px;background:var(--color-neutral-900)">
+                <i class="ph ph-moon" style="font-size:19px;color:var(--color-accent)"></i>
+                <div style="flex:1;font-size:14px">Ночной режим</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">23:00–07:00</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «ИНТЕГРАЦИИ» ================= -->
+      <sc-if value="{{ isIntegrSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:41;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div>
+                <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Интеграции</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">Откуда данные приходят и куда уходят</div>
+              </div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:12px 18px 26px">
+
+              <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+                <i class="ph-bold ph-arrow-square-in" style="font-size:14px;color:var(--color-accent)"></i>
+                <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500)">Получаем данные</div>
+              </div>
+              <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900)">
+                <sc-for list="{{ sources }}" as="s" hint-placeholder-count="3">
+                  <div onClick="{{ s.toggle }}" style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer">
+                    <i class="{{ s.icon }}" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:14px">{{ s.label }}</div>
+                      <div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">{{ s.sub }}</div>
+                    </div>
+                    <div style="width:44px;height:26px;border-radius:13px;flex-shrink:0;padding:3px;box-sizing:border-box;background:{{ s.trackBg }};transition:background .16s">
+                      <div style="width:20px;height:20px;border-radius:50%;background:{{ s.knobBg }};transform:{{ s.knobX }};transition:transform .16s"></div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:7px;margin:20px 0 8px">
+                <i class="ph-bold ph-arrow-square-out" style="font-size:14px;color:var(--color-accent)"></i>
+                <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500)">Отправляем данные</div>
+              </div>
+              <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900)">
+                <sc-for list="{{ targets }}" as="s" hint-placeholder-count="4">
+                  <div onClick="{{ s.toggle }}" style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer">
+                    <i class="{{ s.icon }}" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:14px">{{ s.label }}</div>
+                      <div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">{{ s.sub }}</div>
+                    </div>
+                    <div style="width:44px;height:26px;border-radius:13px;flex-shrink:0;padding:3px;box-sizing:border-box;background:{{ s.trackBg }};transition:background .16s">
+                      <div style="width:20px;height:20px;border-radius:50%;background:{{ s.knobBg }};transform:{{ s.knobX }};transition:transform .16s"></div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-radius:18px;background:var(--color-neutral-900);margin-top:12px;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, var(--color-neutral-900))">
+                <i class="ph ph-arrows-clockwise" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Автосинхронизация</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">каждый час</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «ЭКСПОРТ В ФАЙЛ» ================= -->
+      <sc-if value="{{ isFilesSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:41;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div>
+                <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Экспорт в файл</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">Отчёт для врача или архива</div>
+              </div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:12px 18px 26px">
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin-bottom:8px">Формат</div>
+              <div style="display:flex;gap:8px">
+                <sc-for list="{{ exportFormats }}" as="f" hint-placeholder-count="3">
+                  <div onClick="{{ f.onClick }}" style="flex:1;text-align:center;padding:11px 0;border-radius:14px;cursor:pointer;font-size:13px;font-weight:500;color:{{ f.col }};background:{{ f.bg }};border:1px solid {{ f.bd }}">{{ f.label }}</div>
+                </sc-for>
+              </div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:20px 0 8px">Период</div>
+              <div style="display:flex;gap:6px;background:var(--color-neutral-900);border-radius:14px;padding:4px">
+                <sc-for list="{{ exportPeriods }}" as="p" hint-placeholder-count="4">
+                  <div onClick="{{ p.onClick }}" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;font-size:12px;font-weight:500;color:{{ p.col }};background:{{ p.bg }}">{{ p.label }}</div>
+                </sc-for>
+              </div>
+
+              <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900);margin-top:12px">
+                <sc-for list="{{ exportParts }}" as="p" hint-placeholder-count="4">
+                  <div onClick="{{ p.toggle }}" style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer">
+                    <i class="{{ p.icon }}" style="font-size:18px;color:var(--color-accent);flex-shrink:0"></i>
+                    <div style="flex:1;min-width:0;font-size:14px">{{ p.label }}</div>
+                    <i class="{{ p.check }}" style="font-size:19px;color:{{ p.checkCol }}"></i>
+                  </div>
+                </sc-for>
+              </div>
+
+              <button type="button" style="width:100%;margin-top:14px;padding:15px;border-radius:16px;border:1px solid var(--color-accent);background:transparent;color:var(--color-text);font-size:14px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--color-accent) 16%, transparent)">
+                <i class="ph-bold ph-export" style="font-size:17px"></i>Выгрузить {{ exportFmt }}
+              </button>
+              <div style="font-size:11px;color:var(--color-neutral-500);margin-top:12px;text-wrap:pretty">Последняя выгрузка: 24 июля, 21:40</div>
+
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «ДАТЧИК» ================= -->
+      <sc-if value="{{ isSensorSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:41;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div>
+                <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">{{ curSensor.model }}</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ curSensor.serial }} · {{ curSensor.status }}</div>
+              </div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:12px 18px 26px">
+
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <div style="border-radius:16px;background:color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));padding:12px">
+                  <div style="font-size:11px;color:var(--color-neutral-400)">Осталось</div>
+                  <div style="font-size:20px;font-weight:600;margin-top:6px;line-height:1">{{ curSensor.leftShort }}</div>
+                </div>
+                <div style="border-radius:16px;background:color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));padding:12px">
+                  <div style="font-size:11px;color:var(--color-neutral-400)">Сигнал</div>
+                  <div style="font-size:20px;font-weight:600;margin-top:6px;line-height:1">{{ curSensor.signal }}</div>
+                </div>
+                <div style="border-radius:16px;background:color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));padding:12px">
+                  <div style="font-size:11px;color:var(--color-neutral-400)">Батарея</div>
+                  <div style="font-size:20px;font-weight:600;margin-top:6px;line-height:1">{{ curSensor.battery }}</div>
+                </div>
+              </div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:20px 0 8px">Детали</div>
+              <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900)">
+                <sc-for list="{{ sensorDetails }}" as="d" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800)">
+                    <i class="{{ d.icon }}" style="font-size:18px;color:var(--color-accent);flex-shrink:0"></i>
+                    <div style="flex:1;min-width:0;font-size:14px">{{ d.label }}</div>
+                    <div style="font-size:13px;color:var(--color-neutral-400)">{{ d.value }}</div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <sc-if value="{{ curSensor.active }}" hint-placeholder-val="{{ true }}">
+                <button type="button" style="width:100%;margin-top:14px;padding:15px;border-radius:16px;border:1px solid var(--color-accent);background:transparent;color:var(--color-text);font-size:14px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--color-accent) 16%, transparent)">
+                  <i class="ph-bold ph-crosshair" style="font-size:17px"></i>Калибровать
+                </button>
+                <button type="button" style="width:100%;margin-top:10px;padding:15px;border-radius:16px;border:1px solid color-mix(in srgb, var(--c-danger) 55%, transparent);background:transparent;color:var(--c-danger-2);font-size:14px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--c-danger) 14%, transparent)">
+                  <i class="ph-bold ph-stop-circle" style="font-size:17px"></i>Остановить датчик
+                </button>
+              </sc-if>
+
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «НОВЫЙ ДАТЧИК» ================= -->
+      <sc-if value="{{ isAddSensorSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:41;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div>
+                <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Новый датчик</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">Установка и прогрев</div>
+              </div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:12px 18px 26px">
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin-bottom:8px">Модель</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <sc-for list="{{ sensorModels }}" as="m" hint-placeholder-count="4">
+                  <div onClick="{{ m.onClick }}" style="padding:10px 14px;border-radius:14px;cursor:pointer;font-size:13px;font-weight:500;color:{{ m.col }};background:{{ m.bg }};border:1px solid {{ m.bd }}">{{ m.label }}</div>
+                </sc-for>
+              </div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:20px 0 8px">Серийный номер</div>
+              <div style="display:flex;align-items:center;gap:9px;height:46px;padding:0 14px;border-radius:14px;background:var(--color-neutral-900);border:1px solid var(--color-neutral-800)">
+                <i class="ph ph-barcode" style="font-size:17px;color:var(--color-neutral-500)"></i>
+                <input value="{{ newSerial }}" onChange="{{ onSerial }}" placeholder="Например, 4NBF80812" style="flex:1;min-width:0;background:transparent;border:0;outline:none;color:var(--color-text);font-size:14px;font-family:var(--font-body)">
+                <i class="ph ph-qr-code" style="font-size:19px;color:var(--color-accent);cursor:pointer"></i>
+              </div>
+
+              <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900);margin-top:14px">
+                <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                  <i class="ph ph-map-pin" style="font-size:18px;color:var(--color-accent);flex-shrink:0"></i>
+                  <div style="flex:1;min-width:0;font-size:14px">Место установки</div>
+                  <div style="font-size:13px;color:var(--color-neutral-400)">Левая рука</div>
+                  <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                  <i class="ph ph-clock" style="font-size:18px;color:var(--color-accent);flex-shrink:0"></i>
+                  <div style="flex:1;min-width:0;font-size:14px">Начало работы</div>
+                  <div style="font-size:13px;color:var(--color-neutral-400)">Сейчас</div>
+                  <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+                </div>
+              </div>
+
+              <div style="font-size:11px;color:var(--color-neutral-500);margin-top:12px;text-wrap:pretty">После установки датчик прогревается около 2 часов — значения появятся не сразу.</div>
+
+              <button type="button" onClick="{{ closeSheet }}" style="width:100%;margin-top:14px;padding:15px;border-radius:16px;border:1px solid var(--color-accent);background:transparent;color:var(--color-text);font-size:14px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--color-accent) 16%, transparent)">
+                <i class="ph-bold ph-play-circle" style="font-size:17px"></i>Начать прогрев
+              </button>
+
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «СИНХРОНИЗАЦИЯ С ГЛЮКОМЕТРОМ» ================= -->
+      <sc-if value="{{ isSyncSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:41;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div>
+                <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Глюкометр</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">Contour Plus One · Bluetooth</div>
+              </div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:12px 18px 26px">
+
+              <div style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:18px;background:color-mix(in srgb, var(--color-accent) 12%, var(--color-neutral-900));border:1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)">
+                <i class="ph-fill ph-bluetooth-connected" style="font-size:26px;color:var(--color-accent)"></i>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14px;font-weight:600">Устройство найдено</div>
+                  <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">Последняя синхронизация: сегодня, 09:12</div>
+                </div>
+              </div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:20px 0 8px">Новые измерения в памяти</div>
+              <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900)">
+                <sc-for list="{{ pendingReadings }}" as="p" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800)">
+                    <span style="font-size:13px;color:var(--color-neutral-300)">{{ p.time }}</span>
+                    <div style="display:flex;align-items:center;gap:12px">
+                      <span style="font-size:15px;font-weight:600">{{ p.value }}</span>
+                      <span style="font-size:11px;color:var(--color-neutral-500)">{{ p.tag }}</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <button type="button" onClick="{{ closeSheet }}" style="width:100%;margin-top:14px;padding:15px;border-radius:16px;border:1px solid var(--color-accent);background:transparent;color:var(--color-text);font-size:14px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--color-accent) 16%, transparent)">
+                <i class="ph-bold ph-download-simple" style="font-size:17px"></i>Загрузить 4 измерения
+              </button>
+
+              <div style="font-size:11px;color:var(--color-neutral-500);margin-top:12px;text-wrap:pretty">Держите глюкометр включённым рядом с телефоном. Если устройство не находится, включите Bluetooth в его настройках.</div>
+
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «РУЧНОЙ ВВОД» ================= -->
+      <sc-if value="{{ isManualSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:41;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div>
+                <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Ввести вручную</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">Измерение глюкометром</div>
+              </div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:12px 18px 26px">
+
+              <div style="display:flex;align-items:center;justify-content:center;gap:18px;padding:22px 0 6px">
+                <div onClick="{{ manualDec }}" style="width:44px;height:44px;border-radius:50%;background:var(--color-neutral-900);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-hover="background:color-mix(in srgb, var(--color-accent) 24%, var(--color-neutral-900))">
+                  <i class="ph-bold ph-minus" style="font-size:17px;color:var(--color-text)"></i>
+                </div>
+                <div style="min-width:120px;display:flex;flex-direction:column;align-items:center;gap:6px">
+                  <input value="{{ manualValue }}" onChange="{{ onManualInput }}" inputmode="decimal" style="width:132px;text-align:center;background:transparent;border:0;border-bottom:1px solid var(--color-neutral-800);outline:none;color:var(--color-text);font-family:var(--font-body);font-size:52px;font-weight:600;line-height:1.1;letter-spacing:-.02em;padding:0 0 4px" style-focus="border-bottom-color:var(--color-accent)">
+                  <a href="#units" onClick="{{ openUnits }}" style="font-size:13px;color:var(--color-accent-300);text-decoration:none;border-bottom:1px dashed color-mix(in srgb, var(--color-accent) 55%, transparent);padding-bottom:1px;cursor:pointer">{{ unitLabel }}</a>
+                </div>
+                <div onClick="{{ manualInc }}" style="width:44px;height:44px;border-radius:50%;background:var(--color-neutral-900);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-hover="background:color-mix(in srgb, var(--color-accent) 24%, var(--color-neutral-900))">
+                  <i class="ph-bold ph-plus" style="font-size:17px;color:var(--color-text)"></i>
+                </div>
+              </div>
+              <div style="text-align:center;font-size:11px;color:var(--color-neutral-500);margin-bottom:18px">нажмите на единицы, чтобы изменить</div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin-bottom:8px">Метка</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <sc-for list="{{ manualTags }}" as="t" hint-placeholder-count="5">
+                  <div onClick="{{ t.onClick }}" style="padding:10px 14px;border-radius:14px;cursor:pointer;font-size:13px;font-weight:500;color:{{ t.col }};background:{{ t.bg }};border:1px solid {{ t.bd }}">{{ t.label }}</div>
+                </sc-for>
+              </div>
+
+              <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900);margin-top:14px">
+                <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                  <i class="ph ph-clock" style="font-size:18px;color:var(--color-accent);flex-shrink:0"></i>
+                  <div style="flex:1;min-width:0;font-size:14px">Время</div>
+                  <div style="font-size:13px;color:var(--color-neutral-400)">Сейчас · 14:02</div>
+                  <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                  <i class="ph ph-note" style="font-size:18px;color:var(--color-accent);flex-shrink:0"></i>
+                  <div style="flex:1;min-width:0;font-size:14px">Заметка</div>
+                  <div style="font-size:13px;color:var(--color-neutral-500)">нет</div>
+                  <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+                </div>
+              </div>
+
+              <button type="button" onClick="{{ closeSheet }}" style="width:100%;margin-top:14px;padding:15px;border-radius:16px;border:1px solid var(--color-accent);background:transparent;color:var(--color-text);font-size:14px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--color-accent) 16%, transparent)">
+                <i class="ph-bold ph-check" style="font-size:17px"></i>Сохранить измерение
+              </button>
+
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «ЕДИНИЦЫ ИЗМЕРЕНИЯ» ================= -->
+      <sc-if value="{{ isUnitsSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:46;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeUnits }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeUnits }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div>
+                <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Единицы измерения</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">Глюкоза и углеводы во всём приложении</div>
+              </div>
+              <button type="button" onClick="{{ closeUnits }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:12px 18px 26px">
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin-bottom:8px">Глюкоза</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ unitOptions }}" as="u" hint-placeholder-count="2">
+                  <div onClick="{{ u.onClick }}" style="border-radius:20px;padding:16px;cursor:pointer;background:{{ u.bg }};border:1px solid {{ u.bd }}" style-hover="border-color:var(--color-accent)">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:15px;font-weight:600;color:var(--color-text)">{{ u.title }}</div>
+                        <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ u.sub }}</div>
+                      </div>
+                      <i class="{{ u.check }}" style="font-size:20px;color:{{ u.checkCol }}"></i>
+                    </div>
+                    <div style="display:flex;align-items:flex-end;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid var(--color-neutral-800)">
+                      <div>
+                        <div style="font-size:10px;color:var(--color-neutral-500);margin-bottom:4px">норма</div>
+                        <div style="display:flex;align-items:baseline;gap:3px">
+                          <span style="font-size:24px;font-weight:600;line-height:1;color:var(--c-glu)">{{ u.normal }}</span>
+                          <span style="font-size:10px;color:var(--color-neutral-400)">{{ u.unit }}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div style="font-size:10px;color:var(--color-neutral-500);margin-bottom:4px">гипо</div>
+                        <div style="display:flex;align-items:baseline;gap:3px">
+                          <span style="font-size:24px;font-weight:600;line-height:1;color:var(--c-danger-2)">{{ u.low }}</span>
+                          <span style="font-size:10px;color:var(--color-neutral-400)">{{ u.unit }}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div style="font-size:10px;color:var(--color-neutral-500);margin-bottom:4px">гипер</div>
+                        <div style="display:flex;align-items:baseline;gap:3px">
+                          <span style="font-size:24px;font-weight:600;line-height:1;color:var(--c-carb)">{{ u.high }}</span>
+                          <span style="font-size:10px;color:var(--color-neutral-400)">{{ u.unit }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="font-size:11px;color:var(--color-neutral-500);margin-top:10px;text-wrap:pretty">{{ u.scale }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font-size:11px;color:var(--color-neutral-500);margin-top:14px;text-wrap:pretty">Пересчёт: 1 ммоль/л ≈ 18 мг/дл. Изменение единиц не правит историю — только то, как она показана.</div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:24px 0 8px">Углеводы</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ carbUnitOptions }}" as="u" hint-placeholder-count="2">
+                  <div onClick="{{ u.onClick }}" style="border-radius:20px;padding:16px;cursor:pointer;background:{{ u.bg }};border:1px solid {{ u.bd }}" style-hover="border-color:var(--c-carb)">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:15px;font-weight:600;color:var(--color-text)">{{ u.title }}</div>
+                        <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ u.sub }}</div>
+                      </div>
+                      <i class="{{ u.check }}" style="font-size:20px;color:{{ u.checkCol }}"></i>
+                    </div>
+                    <div style="display:flex;align-items:flex-end;gap:18px;margin-top:14px;padding-top:14px;border-top:1px solid var(--color-neutral-800)">
+                      <div>
+                        <div style="font-size:10px;color:var(--color-neutral-500);margin-bottom:4px">каша</div>
+                        <div style="display:flex;align-items:baseline;gap:3px">
+                          <span style="font-size:24px;font-weight:600;line-height:1;color:var(--c-carb)">{{ u.ex1 }}</span>
+                          <span style="font-size:10px;color:var(--color-neutral-400)">{{ u.unit }}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div style="font-size:10px;color:var(--color-neutral-500);margin-bottom:4px">яблоко</div>
+                        <div style="display:flex;align-items:baseline;gap:3px">
+                          <span style="font-size:24px;font-weight:600;line-height:1;color:var(--c-carb)">{{ u.ex2 }}</span>
+                          <span style="font-size:10px;color:var(--color-neutral-400)">{{ u.unit }}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div style="font-size:10px;color:var(--color-neutral-500);margin-bottom:4px">за день</div>
+                        <div style="display:flex;align-items:baseline;gap:3px">
+                          <span style="font-size:24px;font-weight:600;line-height:1;color:var(--c-carb)">{{ u.ex3 }}</span>
+                          <span style="font-size:10px;color:var(--color-neutral-400)">{{ u.unit }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="font-size:11px;color:var(--color-neutral-500);margin-top:10px;text-wrap:pretty">{{ u.scale }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font-size:11px;color:var(--color-neutral-500);margin-top:14px;text-wrap:pretty">1 Х.Е. = 12 г углеводов.</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «УПРАВЛЕНИЕ ПОМПОЙ» ================= -->
+      <sc-if value="{{ isPumpSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:41;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div>
+                <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Помпа</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">MiniMed 780G · {{ pumpStateLabel }}</div>
+              </div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:12px 18px 26px">
+
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <div style="border-radius:16px;background:color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));padding:12px">
+                  <div style="font-size:11px;color:var(--color-neutral-400)">Резервуар</div>
+                  <div style="font-size:20px;font-weight:600;margin-top:6px;line-height:1">112<span style="font-size:11px;font-weight:500;color:var(--color-neutral-300);margin-left:2px">ед</span></div>
+                </div>
+                <div style="border-radius:16px;background:color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));padding:12px">
+                  <div style="font-size:11px;color:var(--color-neutral-400)">Активный</div>
+                  <div style="font-size:20px;font-weight:600;margin-top:6px;line-height:1">2,4<span style="font-size:11px;font-weight:500;color:var(--color-neutral-300);margin-left:2px">ед</span></div>
+                </div>
+                <div style="border-radius:16px;background:color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));padding:12px">
+                  <div style="font-size:11px;color:var(--color-neutral-400)">Батарея</div>
+                  <div style="font-size:20px;font-weight:600;margin-top:6px;line-height:1">64<span style="font-size:11px;font-weight:500;color:var(--color-neutral-300);margin-left:2px">%</span></div>
+                </div>
+              </div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:20px 0 8px">Базальная скорость</div>
+              <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:18px;background:var(--color-neutral-900)">
+                <div onClick="{{ basalDec }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-800))">
+                  <i class="ph-bold ph-minus" style="font-size:14px;color:var(--color-text)"></i>
+                </div>
+                <div style="flex:1;text-align:center">
+                  <div style="display:flex;align-items:baseline;justify-content:center;gap:5px">
+                    <span style="font-size:28px;font-weight:600;line-height:1">{{ basalRate }}</span>
+                    <span style="font-size:12px;color:var(--color-neutral-300)">ед/ч</span>
+                  </div>
+                  <div style="font-size:10px;color:var(--color-neutral-500);margin-top:4px">профиль «Будни»</div>
+                </div>
+                <div onClick="{{ basalInc }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-800))">
+                  <i class="ph-bold ph-plus" style="font-size:14px;color:var(--color-text)"></i>
+                </div>
+              </div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:20px 0 8px">Временная база</div>
+              <div style="display:flex;gap:8px">
+                <sc-for list="{{ tempBasal }}" as="t" hint-placeholder-count="4">
+                  <div onClick="{{ t.onClick }}" style="flex:1;text-align:center;padding:11px 0;border-radius:14px;cursor:pointer;font-size:13px;font-weight:500;color:{{ t.col }};background:{{ t.bg }};border:1px solid {{ t.bd }}">{{ t.label }}</div>
+                </sc-for>
+              </div>
+
+              <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900);margin-top:14px">
+                <div onClick="{{ openBolus }}" style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                  <i class="ph ph-syringe" style="font-size:18px;color:var(--color-accent);flex-shrink:0"></i>
+                  <div style="flex:1;min-width:0;font-size:14px">Подать болюс</div>
+                  <div style="font-size:13px;color:var(--color-neutral-400)">калькулятор</div>
+                  <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                  <i class="ph ph-clock-countdown" style="font-size:18px;color:var(--color-accent);flex-shrink:0"></i>
+                  <div style="flex:1;min-width:0;font-size:14px">Замена резервуара</div>
+                  <div style="font-size:13px;color:var(--color-neutral-400)">через 2 дн</div>
+                  <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                  <i class="ph ph-robot" style="font-size:18px;color:var(--color-accent);flex-shrink:0"></i>
+                  <div style="flex:1;min-width:0;font-size:14px">Авторежим SmartGuard</div>
+                  <div style="font-size:13px;color:var(--color-neutral-400)">включён</div>
+                  <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+                </div>
+              </div>
+
+              <button type="button" onClick="{{ togglePump }}" style="width:100%;margin-top:14px;padding:15px;border-radius:16px;border:1px solid {{ pumpBtnBd }};background:transparent;color:{{ pumpBtnCol }};font-size:14px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--color-accent) 12%, transparent)">
+                <i class="{{ pumpBtnIcon }}" style="font-size:17px"></i>{{ pumpBtnLabel }}
+              </button>
+
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «ИНЪЕКЦИЯ» ================= -->
+      <sc-if value="{{ isShotSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:41;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div>
+                <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Инъекция</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ shotInsulin }} · NovoPen 6</div>
+              </div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:12px 18px 26px">
+
+              <div style="display:flex;gap:6px;background:var(--color-neutral-900);border-radius:16px;padding:5px">
+                <sc-for list="{{ shotKinds }}" as="k" hint-placeholder-count="2">
+                  <div onClick="{{ k.onClick }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:40px;border-radius:12px;cursor:pointer;background:{{ k.bg }};border:1px solid {{ k.bd }}">
+                    <i class="{{ k.icon }}" style="font-size:16px;color:{{ k.col }}"></i>
+                    <span style="font-size:13px;font-weight:500;color:{{ k.col }}">{{ k.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="display:flex;align-items:center;justify-content:center;gap:18px;padding:22px 0 6px">
+                <div onClick="{{ shotDec }}" style="width:44px;height:44px;border-radius:50%;background:var(--color-neutral-900);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-hover="background:color-mix(in srgb, var(--color-accent) 24%, var(--color-neutral-900))">
+                  <i class="ph-bold ph-minus" style="font-size:17px;color:var(--color-text)"></i>
+                </div>
+                <div style="min-width:120px;display:flex;flex-direction:column;align-items:center;gap:6px">
+                  <input value="{{ shotUnits }}" onChange="{{ onShotInput }}" inputmode="decimal" style="width:132px;text-align:center;background:transparent;border:0;border-bottom:1px solid var(--color-neutral-800);outline:none;color:var(--color-text);font-family:var(--font-body);font-size:52px;font-weight:600;line-height:1.1;letter-spacing:-.02em;padding:0 0 4px" style-focus="border-bottom-color:var(--color-accent)">
+                  <div style="font-size:13px;color:var(--color-neutral-300)">единиц</div>
+                </div>
+                <div onClick="{{ shotInc }}" style="width:44px;height:44px;border-radius:50%;background:var(--color-neutral-900);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-hover="background:color-mix(in srgb, var(--color-accent) 24%, var(--color-neutral-900))">
+                  <i class="ph-bold ph-plus" style="font-size:17px;color:var(--color-text)"></i>
+                </div>
+              </div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:14px 0 8px">Место инъекции</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <sc-for list="{{ shotSites }}" as="s" hint-placeholder-count="4">
+                  <div onClick="{{ s.onClick }}" style="padding:10px 14px;border-radius:14px;cursor:pointer;font-size:13px;font-weight:500;color:{{ s.col }};background:{{ s.bg }};border:1px solid {{ s.bd }}">{{ s.label }}</div>
+                </sc-for>
+              </div>
+
+              <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900);margin-top:14px">
+                <div onClick="{{ openRapid }}" style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                  <i class="ph ph-drop" style="font-size:18px;color:var(--color-accent);flex-shrink:0"></i>
+                  <div style="flex:1;min-width:0;font-size:14px">Препарат</div>
+                  <div style="font-size:13px;color:var(--color-neutral-400)">{{ shotInsulin }}</div>
+                  <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                  <i class="ph ph-clock" style="font-size:18px;color:var(--color-accent);flex-shrink:0"></i>
+                  <div style="flex:1;min-width:0;font-size:14px">Время</div>
+                  <div style="font-size:13px;color:var(--color-neutral-400)">Сейчас · 14:20</div>
+                  <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+                </div>
+              </div>
+
+              <button type="button" onClick="{{ closeSheet }}" style="width:100%;margin-top:14px;padding:15px;border-radius:16px;border:1px solid var(--color-accent);background:transparent;color:var(--color-text);font-size:14px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--color-accent) 16%, transparent)">
+                <i class="ph-bold ph-check" style="font-size:17px"></i>Записать инъекцию
+              </button>
+
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «БОЛЮС» ================= -->
+      <sc-if value="{{ isBolusSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:42;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:94%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div>
+                <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Болюс</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ rapid }} · активный инсулин 2,4 ед</div>
+              </div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:12px 18px 26px">
+
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 15px;border-radius:18px;background:var(--color-neutral-900)">
+                  <i class="ph-fill ph-hexagon" style="font-size:19px;color:var(--c-carb);flex-shrink:0"></i>
+                  <div style="flex:1;min-width:0;font-size:13px;color:var(--color-neutral-300)">Углеводы</div>
+                  <div onClick="{{ carbsDec }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-800))">
+                    <i class="ph-bold ph-minus" style="font-size:13px"></i>
+                  </div>
+                  <input value="{{ bolusCarbs }}" onChange="{{ onCarbsInput }}" inputmode="numeric" style="width:56px;text-align:center;background:transparent;border:0;border-bottom:1px solid var(--color-neutral-800);outline:none;color:var(--color-text);font-family:var(--font-body);font-size:19px;font-weight:600;padding-bottom:2px" style-focus="border-bottom-color:var(--color-accent)">
+                  <span style="font-size:11px;color:var(--color-neutral-400);width:10px">г</span>
+                  <div onClick="{{ carbsInc }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-800))">
+                    <i class="ph-bold ph-plus" style="font-size:13px"></i>
+                  </div>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 15px;border-radius:18px;background:var(--color-neutral-900)">
+                  <i class="ph-fill ph-drop" style="font-size:19px;color:var(--c-glu);flex-shrink:0"></i>
+                  <div style="flex:1;min-width:0;font-size:13px;color:var(--color-neutral-300)">Глюкоза</div>
+                  <div onClick="{{ bgDec }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-800))">
+                    <i class="ph-bold ph-minus" style="font-size:13px"></i>
+                  </div>
+                  <input value="{{ bolusBg }}" onChange="{{ onBgInput }}" inputmode="decimal" style="width:56px;text-align:center;background:transparent;border:0;border-bottom:1px solid var(--color-neutral-800);outline:none;color:var(--color-text);font-family:var(--font-body);font-size:19px;font-weight:600;padding-bottom:2px" style-focus="border-bottom-color:var(--color-accent)">
+                  <span style="font-size:11px;color:var(--color-neutral-400);width:10px"></span>
+                  <div onClick="{{ bgInc }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-800))">
+                    <i class="ph-bold ph-plus" style="font-size:13px"></i>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:14px;padding:16px;border-radius:20px;background:linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 20%, var(--color-neutral-900)), color-mix(in srgb, var(--color-accent) 7%, var(--color-neutral-900)));border:1px solid color-mix(in srgb, var(--color-accent) 45%, transparent)">
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-400)">Рекомендовано</div>
+                <div style="display:flex;align-items:baseline;gap:6px;margin-top:8px">
+                  <span style="font-size:34px;font-weight:600;line-height:1">{{ bolusSuggested }}</span>
+                  <span style="font-size:13px;color:var(--color-neutral-300)">ед</span>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px">
+                  <span style="font-size:11px;color:var(--color-neutral-400)">на еду {{ bolusFood }} ед</span>
+                  <span style="font-size:11px;color:var(--color-neutral-400)">коррекция {{ bolusCorr }} ед</span>
+                  <span style="font-size:11px;color:var(--color-neutral-400)">− активный 2,4 ед</span>
+                </div>
+              </div>
+
+              <div style="display:flex;align-items:center;justify-content:center;gap:18px;padding:20px 0 6px">
+                <div onClick="{{ bolusDec }}" style="width:44px;height:44px;border-radius:50%;background:var(--color-neutral-900);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-hover="background:color-mix(in srgb, var(--color-accent) 24%, var(--color-neutral-900))">
+                  <i class="ph-bold ph-minus" style="font-size:17px;color:var(--color-text)"></i>
+                </div>
+                <div style="min-width:120px;display:flex;flex-direction:column;align-items:center;gap:6px">
+                  <input value="{{ bolusFinal }}" onChange="{{ onBolusInput }}" inputmode="decimal" style="width:132px;text-align:center;background:transparent;border:0;border-bottom:1px solid var(--color-neutral-800);outline:none;color:var(--color-text);font-family:var(--font-body);font-size:52px;font-weight:600;line-height:1.1;letter-spacing:-.02em;padding:0 0 4px" style-focus="border-bottom-color:var(--color-accent)">
+                  <div style="font-size:13px;color:var(--color-neutral-300)">единиц к подаче</div>
+                </div>
+                <div onClick="{{ bolusInc }}" style="width:44px;height:44px;border-radius:50%;background:var(--color-neutral-900);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-hover="background:color-mix(in srgb, var(--color-accent) 24%, var(--color-neutral-900))">
+                  <i class="ph-bold ph-plus" style="font-size:17px;color:var(--color-text)"></i>
+                </div>
+              </div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:10px 0 8px">Тип подачи</div>
+              <div style="display:flex;gap:8px">
+                <sc-for list="{{ bolusModes }}" as="b" hint-placeholder-count="3">
+                  <div onClick="{{ b.onClick }}" style="flex:1;text-align:center;padding:11px 0;border-radius:14px;cursor:pointer;font-size:12px;font-weight:500;color:{{ b.col }};background:{{ b.bg }};border:1px solid {{ b.bd }}">{{ b.label }}</div>
+                </sc-for>
+              </div>
+
+              <button type="button" onClick="{{ closeSheet }}" style="width:100%;margin-top:14px;padding:16px;border-radius:16px;border:1px solid var(--color-accent);background:color-mix(in srgb, var(--color-accent) 16%, transparent);color:var(--color-text);font-size:15px;font-weight:600;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--color-accent) 26%, transparent)">
+                <i class="ph-bold ph-syringe" style="font-size:18px"></i>Подать {{ bolusFinal }} ед
+              </button>
+              <div style="font-size:11px;color:var(--color-neutral-500);margin-top:10px;text-wrap:pretty">Помпа подтвердит подачу на устройстве.</div>
+
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «ЕДА» ================= -->
+      <sc-if value="{{ isFoodSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:42;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:94%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div>
+                <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Еда</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">Запись приёма пищи</div>
+              </div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:14px 18px 26px">
+
+              <!-- итог — всегда сверху -->
+              <div style="padding:16px;border-radius:20px;background:linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 18%, var(--color-neutral-900)), color-mix(in srgb, var(--c-carb) 6%, var(--color-neutral-900)));border:1px solid color-mix(in srgb, var(--c-carb) 45%, transparent)">
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+                  <div>
+                    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-400)">Углеводы</div>
+                    <div style="display:flex;align-items:baseline;gap:6px;margin-top:8px">
+                      <span style="font-size:36px;font-weight:600;line-height:1;color:var(--c-carb)">{{ mealCarbsDisp }}</span>
+                      <a href="#carb-units" onClick="{{ openCarbUnits }}" style="font-size:13px;color:var(--c-carb);text-decoration:none;border-bottom:1px dashed color-mix(in srgb, var(--c-carb) 60%, transparent);cursor:pointer">{{ carbUnitLabel }}</a>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:14px">
+                    <div style="text-align:right">
+                      <div style="font-size:10px;color:var(--color-neutral-500)">Б</div>
+                      <div style="font-size:17px;font-weight:600;margin-top:3px">{{ mealProt }}</div>
+                    </div>
+                    <div style="text-align:right">
+                      <div style="font-size:10px;color:var(--color-neutral-500)">Ж</div>
+                      <div style="font-size:17px;font-weight:600;margin-top:3px">{{ mealFat }}</div>
+                    </div>
+                    <div style="text-align:right">
+                      <div style="font-size:10px;color:var(--color-neutral-500)">ккал</div>
+                      <div style="font-size:17px;font-weight:600;margin-top:3px">{{ mealKcal }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:12px">Болюс на еду: {{ mealBolus }} ед · КУ 1 ед / 8 г</div>
+              </div>
+
+              <div style="display:flex;gap:6px;background:var(--color-neutral-900);border-radius:16px;padding:5px;margin-top:14px">
+                <sc-for list="{{ foodModes }}" as="m" hint-placeholder-count="2">
+                  <div onClick="{{ m.onClick }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:40px;border-radius:12px;cursor:pointer;background:{{ m.bg }};border:1px solid {{ m.bd }}">
+                    <i class="{{ m.icon }}" style="font-size:16px;color:{{ m.col }}"></i>
+                    <span style="font-size:13px;font-weight:500;color:{{ m.col }}">{{ m.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:18px 0 8px">Приём пищи</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <sc-for list="{{ mealTypes }}" as="t" hint-placeholder-count="4">
+                  <div onClick="{{ t.onClick }}" style="padding:10px 14px;border-radius:14px;cursor:pointer;font-size:13px;font-weight:500;color:{{ t.col }};background:{{ t.bg }};border:1px solid {{ t.bd }}">{{ t.label }}</div>
+                </sc-for>
+              </div>
+
+              <!-- режим: блюдо -->
+              <sc-if value="{{ foodByDish }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:9px;height:42px;padding:0 14px;border-radius:14px;background:var(--color-neutral-900);border:1px solid var(--color-neutral-800);margin-top:14px">
+                  <i class="ph ph-magnifying-glass" style="font-size:16px;color:var(--color-neutral-500)"></i>
+                  <input value="{{ dishQuery }}" onChange="{{ onDishQuery }}" placeholder="Найти блюдо" style="flex:1;min-width:0;background:transparent;border:0;outline:none;color:var(--color-text);font-size:13px;font-family:var(--font-body)">
+                  <i class="ph ph-barcode" style="font-size:18px;color:var(--c-carb);cursor:pointer"></i>
+                </div>
+                <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900);margin-top:12px">
+                  <sc-for list="{{ dishes }}" as="d" hint-placeholder-count="5">
+                    <div onClick="{{ d.onClick }}" style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer;background:{{ d.rowBg }}" style-hover="background:color-mix(in srgb, var(--c-carb) 12%, transparent)">
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:14px;font-weight:500;color:var(--color-text)">{{ d.name }}</div>
+                        <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">{{ d.portion }} · {{ d.kcal }} ккал</div>
+                      </div>
+                      <div style="font-size:13px;font-weight:600;color:var(--c-carb);flex-shrink:0">{{ d.carbs }} г</div>
+                      <i class="{{ d.check }}" style="font-size:18px;color:{{ d.checkCol }};flex-shrink:0"></i>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 15px;border-radius:18px;background:var(--color-neutral-900);margin-top:10px">
+                  <div style="flex:1;min-width:0;font-size:13px;color:var(--color-neutral-300)">Порций</div>
+                  <div onClick="{{ portionDec }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s" style-hover="background:color-mix(in srgb, var(--c-carb) 26%, var(--color-neutral-800))">
+                    <i class="ph-bold ph-minus" style="font-size:13px"></i>
+                  </div>
+                  <div style="min-width:38px;text-align:center;font-size:17px;font-weight:600">{{ portions }}</div>
+                  <div onClick="{{ portionInc }}" style="width:34px;height:34px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s" style-hover="background:color-mix(in srgb, var(--c-carb) 26%, var(--color-neutral-800))">
+                    <i class="ph-bold ph-plus" style="font-size:13px"></i>
+                  </div>
+                </div>
+              </sc-if>
+
+              <!-- режим: БЖУ вручную -->
+              <sc-if value="{{ foodByMacros }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:14px;padding:16px;border-radius:20px;background:var(--color-neutral-900);border:1px solid color-mix(in srgb, var(--c-carb) 40%, transparent)">
+                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-400)">Углеводы — главное</div>
+                  <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:12px">
+                    <div onClick="{{ carbInDec }}" style="width:42px;height:42px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-hover="background:color-mix(in srgb, var(--c-carb) 26%, var(--color-neutral-800))">
+                      <i class="ph-bold ph-minus" style="font-size:16px"></i>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                      <input value="{{ carbInValue }}" onChange="{{ carbInInput }}" inputmode="numeric" style="width:118px;text-align:center;background:transparent;border:0;border-bottom:1px solid var(--color-neutral-800);outline:none;color:var(--c-carb);font-family:var(--font-body);font-size:46px;font-weight:600;line-height:1.1;letter-spacing:-.02em;padding:0 0 4px" style-focus="border-bottom-color:var(--c-carb)">
+                      <a href="#carb-units" onClick="{{ openCarbUnits }}" style="font-size:12px;color:var(--color-neutral-300);text-decoration:none;border-bottom:1px dashed var(--color-neutral-700);cursor:pointer">{{ carbUnitLabel }}</a>
+                    </div>
+                    <div onClick="{{ carbInInc }}" style="width:42px;height:42px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-hover="background:color-mix(in srgb, var(--c-carb) 26%, var(--color-neutral-800))">
+                      <i class="ph-bold ph-plus" style="font-size:16px"></i>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex;gap:10px;margin-top:10px">
+                  <sc-for list="{{ macroInputs }}" as="m" hint-placeholder-count="2">
+                    <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:11px 13px;border-radius:16px;background:var(--color-neutral-900)">
+                      <div style="font-size:12px;font-weight:600;color:{{ m.color }}">{{ m.short }}</div>
+                      <input value="{{ m.value }}" onChange="{{ m.onInput }}" inputmode="numeric" style="flex:1;min-width:0;text-align:center;background:transparent;border:0;outline:none;color:var(--color-text);font-family:var(--font-body);font-size:16px;font-weight:600">
+                      <span style="font-size:10px;color:var(--color-neutral-500)">г</span>
+                      <div onClick="{{ m.dec }}" style="width:26px;height:26px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-hover="background:color-mix(in srgb, var(--c-carb) 26%, var(--color-neutral-800))">
+                        <i class="ph-bold ph-minus" style="font-size:11px"></i>
+                      </div>
+                      <div onClick="{{ m.inc }}" style="width:26px;height:26px;border-radius:50%;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-hover="background:color-mix(in srgb, var(--c-carb) 26%, var(--color-neutral-800))">
+                        <i class="ph-bold ph-plus" style="font-size:11px"></i>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+
+              <button type="button" onClick="{{ closeSheet }}" style="width:100%;margin-top:16px;padding:16px;border-radius:16px;border:1px solid var(--c-carb);background:color-mix(in srgb, var(--c-carb) 16%, transparent);color:var(--color-text);font-size:15px;font-weight:600;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--c-carb) 26%, transparent)">
+                <i class="ph-bold ph-check" style="font-size:18px"></i>Записать еду
+              </button>
+
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= ШТОРКА «НАПОМИНАНИЯ О БОЛЮСЕ» ================= -->
+      <sc-if value="{{ isBolusRemSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:42;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer;transition:background .16s"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div>
+                <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Напоминания о болюсе</div>
+                <div style="font-size:11px;color:var(--color-neutral-400);margin-top:3px">Шприц-ручка не сообщает об инъекциях сама</div>
+              </div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300);transition:background .16s, border-color .16s" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+
+            <div class="noscroll" style="overflow:auto;padding:12px 18px 26px">
+
+              <div onClick="{{ toggleBolusRem }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;background:var(--color-neutral-900);cursor:pointer">
+                <i class="ph-fill ph-bell-ringing" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14px">Напоминать о болюсе</div>
+                  <div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">перед приёмами пищи</div>
+                </div>
+                <div style="width:44px;height:26px;border-radius:13px;flex-shrink:0;padding:3px;box-sizing:border-box;background:{{ bolusRemTrack }};transition:background .16s">
+                  <div style="width:20px;height:20px;border-radius:50%;background:{{ bolusRemKnob }};transform:{{ bolusRemX }};transition:transform .16s"></div>
+                </div>
+              </div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:20px 0 8px">Сколько раз в день</div>
+              <div style="display:flex;gap:6px;background:var(--color-neutral-900);border-radius:14px;padding:4px">
+                <sc-for list="{{ bolusRemCounts }}" as="c" hint-placeholder-count="5">
+                  <div onClick="{{ c.onClick }}" style="flex:1;text-align:center;padding:10px 0;border-radius:11px;cursor:pointer;font-size:13px;font-weight:500;color:{{ c.col }};background:{{ c.bg }}">{{ c.label }}</div>
+                </sc-for>
+              </div>
+
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-neutral-500);margin:20px 0 8px">Время напоминаний</div>
+              <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900)">
+                <sc-for list="{{ bolusRemTimes }}" as="t" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                    <div style="font-size:15px;font-weight:600;min-width:48px;color:{{ t.col }}">{{ t.time }}</div>
+                    <div style="flex:1;min-width:0;font-size:13px;color:var(--color-neutral-300)">{{ t.label }}</div>
+                    <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="border-radius:18px;overflow:hidden;background:var(--color-neutral-900);margin-top:12px">
+                <div onClick="{{ toggleRemMissed }}" style="display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer">
+                  <i class="ph-fill ph-clock-countdown" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:14px">Если болюс не записан</div>
+                    <div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">повторить через 30 мин</div>
+                  </div>
+                  <div style="width:44px;height:26px;border-radius:13px;flex-shrink:0;padding:3px;box-sizing:border-box;background:{{ remMissedTrack }};transition:background .16s">
+                    <div style="width:20px;height:20px;border-radius:50%;background:{{ remMissedKnob }};transform:{{ remMissedX }};transition:transform .16s"></div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ================= НИЖНЯЯ ПАНЕЛЬ ================= -->
+      <div style="padding:10px 8px 30px;border-top:1px solid var(--color-neutral-800);background:color-mix(in srgb, var(--color-neutral-900) 70%, var(--color-bg));display:flex;justify-content:space-around;align-items:flex-start">
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+          <div onClick="{{ n.onClick }}" style="display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;flex:1;padding-top:4px">
+            <i class="{{ n.iconClass }}" style="font-size:{{ n.iconSize }};color:{{ n.col }}"></i>
+            <div style="font-size:{{ n.labelSize }};font-weight:{{ n.labelWeight }};color:{{ n.col }}">{{ n.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+    </div>
+
+</template>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
