@@ -47,7 +47,8 @@
   width: 150px; height: 150px; border-radius: 50%; padding: 0; cursor: pointer; z-index: 2;
   border: 2px solid var(--color-accent); font-family: var(--font-body);
   box-shadow: 0 0 0 8px var(--color-bg), 0 0 22px color-mix(in srgb, var(--color-accent) 22%, transparent), inset 0 0 30px color-mix(in srgb, var(--color-accent) 16%, transparent);
-  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--color-accent) 14%, transparent), var(--color-bg) 74%);
+  /* центр непрозрачный (подмешан фон), чтобы сквозь круг не просвечивала граница подложки */
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--color-accent) 14%, var(--color-bg)), var(--color-bg) 74%);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
 .circle-val { display: flex; align-items: center; gap: 6px; }
