@@ -117,6 +117,51 @@ class Component extends DCLogic {
       bg: first ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'transparent',
     }));
 
+    // ===== Живые данные Nightscout (если настроены), иначе демо =====
+    const NS = (window.Store && window.Store.data) || null;
+    const nsLive = NS && NS.latest ? NS : null;
+    const nsCfg = window.Nightscout ? window.Nightscout.getCfg() : null;
+    const nsStat = window.Store ? window.Store.status : 'off';
+    const agoText = (t) => {
+      const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+      if (m < 1) return 'только что';
+      if (m < 60) return m + ' мин назад';
+      const h = Math.floor(m / 60);
+      return h + ' ч назад';
+    };
+    const hhmm = (t) => {
+      const d = new Date(t);
+      return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    };
+    // список последних измерений из живых данных
+    const liveReadings = nsLive ? NS.entries.slice(-6).reverse().map((e, i) => {
+      const first = i === 0;
+      return {
+        time: hhmm(e.t), arrow: window.Nightscout.arrowFor(e.dir), value: toUnits(e.mmol),
+        weight: first ? 600 : 400,
+        col: first ? 'var(--color-text)' : 'var(--color-neutral-300)',
+        arrowCol: first ? 'var(--color-text)' : 'var(--color-neutral-500)',
+        bg: first ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'transparent',
+      };
+    }) : null;
+    // кривая глюкозы в системе координат графика (viewBox 402x300; y: 44→12 ммоль, 252→4)
+    const RANGE_MS = { '1H': 36e5, '3H': 3 * 36e5, '6H': 6 * 36e5, '12H': 12 * 36e5, '24H': 24 * 36e5, '3D': 3 * 24 * 36e5 };
+    let liveGluPath = null;
+    if (nsLive) {
+      const span = RANGE_MS[this.state.range] || 3 * 36e5;
+      const t0 = Date.now() - span;
+      const pts = NS.entries.filter(e => e.t >= t0);
+      if (pts.length >= 2) {
+        const yFor = (v) => Math.max(2, Math.min(298, 44 + (12 - v) / 8 * 208));
+        const xFor = (t) => ((t - t0) / span) * 402;
+        liveGluPath = pts.map((e, i) => (i ? 'L' : 'M') + xFor(e.t).toFixed(1) + ',' + yFor(e.mmol).toFixed(1)).join(' ');
+      }
+    }
+    const DEMO_GLU1 = "M0,88 C14,86 24,90 40,90 C56,91 66,92 78,92 C88,92 96,86 108,80 C120,74 130,64 142,52 C154,40 164,26 178,20 C190,15 202,12 214,14 C228,17 240,22 254,26 C268,30 280,28 292,26";
+    const DEMO_GLU2 = "M320,30 C330,42 340,58 352,58 C364,58 372,44 384,38 C392,34 396,34 402,36";
+    const glucoseMmol = nsLive ? nsLive.latest.mmol : 5.8;
+    const glucoseBigMmol = nsLive ? nsLive.latest.mmol : 12.8;
+
     const sBack = "M0,16 C22,7 40,22 62,15 C82,9 92,17 100,13 L100,40 L0,40 Z";
     const sFront = "M0,24 C22,17 44,29 64,22 C82,17 94,25 100,21 L100,40 L0,40 Z";
     const flatBack = "M0,22 C25,19 75,25 100,21 L100,40 L0,40 Z";
@@ -743,9 +788,14 @@ class Component extends DCLogic {
       monSummary: isCgm ? 'НМГ · Guardian 4' : 'Глюкометр · Contour Plus One',
       insSummary: isPen ? 'Шприц-ручка · NovoPen 6' : 'Помпа · MiniMed 780G',
       targetRange: toUnits(this.state.low) + '–' + toUnits(this.state.high),
-      glucoseNow: toUnits(5.8),
+      glucoseNow: toUnits(glucoseMmol),
+      glucoseArrow: nsLive ? window.Nightscout.arrowFor(nsLive.latest.dir) : 'ph-bold ph-arrow-up-right',
+      glucoseAgo: nsLive ? agoText(nsLive.latest.t) : '3 мин назад',
+      syncedText: nsLive ? 'Обновлено ' + agoText(NS.updatedAt) : 'Демо-данные',
+      gluPath: nsLive && liveGluPath ? liveGluPath : DEMO_GLU1,
+      gluPath2: nsLive ? '' : DEMO_GLU2,
       ax1: toUnits(12), ax2: toUnits(10), ax3: toUnits(8), ax4: toUnits(6), ax5: toUnits(4),
-      glucoseBig: toUnits(12.8),
+      glucoseBig: toUnits(glucoseBigMmol),
       notifyShort: notifyOn + '/' + alerts.length,
       integrShort: '↓' + sourcesOn + ' · ↑' + targetsOn,
       isInsulinSheet: this.state.sheet === 'insulin',
@@ -774,7 +824,46 @@ class Component extends DCLogic {
       deviceSub: isPen ? 'картридж' : 'резервуар · 2 дн',
       openGlucose: () => this.setState({ sheet: 'glucose' }),
       closeSheet: () => this.setState({ sheet: null }),
-      ranges, readings, layers, metricTabs,
+      ranges, readings: liveReadings || readings, layers, metricTabs,
+
+      // ===== Конфиг-шторка Nightscout =====
+      isNsSheet: this.state.sheet === 'ns',
+      openNs: () => this.setState({ sheet: 'ns', nsUrlDraft: (nsCfg && nsCfg.url) || '', nsTokenDraft: (nsCfg && nsCfg.token) || '', nsMsg: '' }),
+      nsUrl: this.state.nsUrlDraft !== undefined ? this.state.nsUrlDraft : ((nsCfg && nsCfg.url) || ''),
+      onNsUrl: (e) => this.setState({ nsUrlDraft: e.target.value }),
+      nsToken: this.state.nsTokenDraft !== undefined ? this.state.nsTokenDraft : ((nsCfg && nsCfg.token) || ''),
+      onNsToken: (e) => this.setState({ nsTokenDraft: e.target.value }),
+      nsEnabled: !!(nsCfg && nsCfg.enabled),
+      nsTrack: (nsCfg && nsCfg.enabled) ? 'var(--color-accent)' : 'var(--color-neutral-800)',
+      nsKnob: (nsCfg && nsCfg.enabled) ? 'var(--color-neutral-100)' : 'var(--color-neutral-600)',
+      nsKnobX: (nsCfg && nsCfg.enabled) ? 'translateX(18px)' : 'translateX(0)',
+      nsToggle: () => {
+        const c = window.Nightscout.getCfg() || {};
+        window.Nightscout.setCfg(Object.assign({}, c, { enabled: !c.enabled, url: c.url || this.state.nsUrlDraft || '', token: c.token || this.state.nsTokenDraft || '' }));
+        window.Store.refresh();
+        this.setState({});
+      },
+      nsSave: () => {
+        const url = (this.state.nsUrlDraft || '').trim();
+        const token = (this.state.nsTokenDraft || '').trim();
+        window.Nightscout.setCfg({ url, token, enabled: true });
+        this.setState({ nsMsg: 'Проверяю подключение…' });
+        window.Nightscout.ping(url, token).then((res) => {
+          this.setState({ nsMsg: res.ok ? ('Подключено · Nightscout ' + (res.version || '') + ' · сахар ' + toUnits(res.latestMmol)) : 'Ответ есть, но нет данных сахара' });
+          window.Store.refresh();
+        }).catch((e) => this.setState({ nsMsg: 'Ошибка: ' + (e && e.message || e) }));
+      },
+      nsStatusText: !nsCfg || !nsCfg.enabled ? 'Выключено'
+        : nsStat === 'ok' ? ('Подключено · обновлено ' + (NS ? agoText(NS.updatedAt) : '—'))
+        : nsStat === 'loading' ? 'Подключение…'
+        : nsStat === 'stale' ? 'Нет связи · показаны кэш/демо'
+        : nsStat === 'error' ? ('Ошибка связи' + (window.Store && window.Store.error ? ' · ' + window.Store.error : ''))
+        : '—',
+      nsMsg: this.state.nsMsg || '',
+      nsRowValue: !nsCfg || !nsCfg.enabled ? 'выкл'
+        : nsStat === 'ok' ? 'подключено'
+        : nsStat === 'loading' ? 'подключение…'
+        : (nsStat === 'error' || nsStat === 'stale') ? 'нет связи' : '—',
       themeAttr, themes,
       isDarkTheme: themeAttr !== 'light',
       isDs: tab === 'ds',
@@ -806,6 +895,8 @@ window.addEventListener('DOMContentLoaded', () => {
   const app = new Component();
   window.__app = app;
   window.DC.mount(app, document.getElementById('tpl'), document.getElementById('root'));
+
+  if (window.Store) window.Store.start();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch((e) => console.warn('SW:', e));

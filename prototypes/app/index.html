@@ -57,7 +57,7 @@ body { margin: 0; overflow: hidden; background: var(--color-bg); overscroll-beha
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:22px">
             <div style="display:flex;align-items:center;gap:6px;color:var(--color-neutral-400);font-size:12px">
               <i class="ph-fill ph-heart" style="color:var(--c-danger);font-size:14px"></i>
-              <span>Синхронизировано &lt; 1 мин назад</span>
+              <span>{{ syncedText }}</span>
             </div>
             <button type="button" onClick="{{ toggleTheme }}" aria-label="Тема" style="width:34px;height:34px;border-radius:50%;border:1px solid var(--color-neutral-800);background:var(--color-neutral-900);color:var(--color-neutral-300);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" style-hover="border-color:var(--color-accent);color:var(--color-text)">
               <i class="{{ themeIcon }}" style="font-size:15px"></i>
@@ -115,11 +115,11 @@ body { margin: 0; overflow: hidden; background: var(--color-bg); overscroll-beha
             <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center">
               <div style="display:flex;align-items:center;gap:5px">
                 <span style="font-size:{{ valueS }};font-weight:600;line-height:1;letter-spacing:-.02em;color:var(--color-text)">{{ glucoseNow }}</span>
-                <i class="ph-bold ph-arrow-up-right" style="font-size:{{ arrowS }};color:var(--c-glu)"></i>
+                <i class="{{ glucoseArrow }}" style="font-size:{{ arrowS }};color:var(--c-glu)"></i>
               </div>
               <div style="font-size:{{ unitS }};color:var(--color-neutral-300);margin-top:4px;display:{{ unitShow }}">{{ unitLabel }}</div>
               <sc-if value="{{ full }}" hint-placeholder-val="{{ true }}">
-                <div style="font-size:10px;color:var(--color-neutral-400);margin-top:5px">3 мин назад</div>
+                <div style="font-size:10px;color:var(--color-neutral-400);margin-top:5px">{{ glucoseAgo }}</div>
               </sc-if>
             </div>
           </button>
@@ -317,6 +317,12 @@ body { margin: 0; overflow: hidden; background: var(--color-bg); overscroll-beha
                 <i class="ph ph-plugs-connected" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
                 <div style="flex:1;min-width:0;font-size:14px">Интеграции</div>
                 <div style="font-size:13px;color:var(--color-neutral-400)">{{ integrShort }}</div>
+                <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
+              </div>
+              <div onClick="{{ openNs }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+                <i class="ph-fill ph-cloud-arrow-down" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0;font-size:14px">Nightscout</div>
+                <div style="font-size:13px;color:var(--color-neutral-400)">{{ nsRowValue }}</div>
                 <i class="ph-bold ph-caret-right" style="font-size:14px;color:var(--color-neutral-600)"></i>
               </div>
               <div onClick="{{ openFiles }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-neutral-800);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
@@ -751,8 +757,8 @@ body { margin: 0; overflow: hidden; background: var(--color-bg); overscroll-beha
                   <path d="M0,252 C40,250 60,232 92,230 C124,228 140,246 176,244 C212,242 236,220 272,224 C310,228 350,246 402,242 L402,258 L0,258 Z" style="fill:var(--color-accent)" fill-opacity="0.20"></path>
                 </sc-if>
                 <sc-if value="{{ lGlucose }}" hint-placeholder-val="{{ true }}">
-                  <path d="M0,88 C14,86 24,90 40,90 C56,91 66,92 78,92 C88,92 96,86 108,80 C120,74 130,64 142,52 C154,40 164,26 178,20 C190,15 202,12 214,14 C228,17 240,22 254,26 C268,30 280,28 292,26" fill="none" style="stroke:var(--c-trend)" stroke-width="3" stroke-linecap="round"></path>
-                  <path d="M320,30 C330,42 340,58 352,58 C364,58 372,44 384,38 C392,34 396,34 402,36" fill="none" style="stroke:var(--c-trend)" stroke-width="3" stroke-linecap="round"></path>
+                  <path d="{{ gluPath }}" fill="none" style="stroke:var(--c-trend)" stroke-width="3" stroke-linecap="round"></path>
+                  <path d="{{ gluPath2 }}" fill="none" style="stroke:var(--c-trend)" stroke-width="3" stroke-linecap="round"></path>
                 </sc-if>
               </svg>
               <div style="position:absolute;left:20px;top:0;right:0;height:300px;font-size:11px;color:var(--color-neutral-400)">
@@ -1865,6 +1871,56 @@ body { margin: 0; overflow: hidden; background: var(--color-bg); overscroll-beha
         </div>
       </sc-if>
 
+      <!-- ================= ШТОРКА «NIGHTSCOUT» ================= -->
+      <sc-if value="{{ isNsSheet }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;justify-content:flex-end">
+          <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:color-mix(in srgb, var(--c-scrim) 58%, transparent);backdrop-filter:blur(3px)"></div>
+          <div style="position:relative;max-height:92%;display:flex;flex-direction:column;border-radius:28px 28px 0 0;background:var(--color-bg);border-top:1px solid var(--color-neutral-800);box-shadow:0 -1px 0 color-mix(in srgb, var(--color-neutral-100) 8%, transparent), 0 -24px 56px color-mix(in srgb, var(--c-scrim) 55%, transparent);animation:sheetUp .34s cubic-bezier(.2,1.02,.28,1)">
+            <div style="display:flex;justify-content:center;padding:10px 0 2px;flex-shrink:0">
+              <div onClick="{{ closeSheet }}" style="width:44px;height:5px;border-radius:3px;background:var(--color-neutral-700);cursor:pointer"></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px 4px;flex-shrink:0">
+              <div style="font-size:19px;font-weight:600;letter-spacing:-.01em">Nightscout</div>
+              <button type="button" onClick="{{ closeSheet }}" aria-label="Закрыть" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--color-neutral-800);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-900);color:var(--color-neutral-300)" style-hover="background:color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900))">
+                <i class="ph-bold ph-x" style="font-size:15px"></i>
+              </button>
+            </div>
+            <div class="noscroll" style="overflow:auto;padding:8px 18px 26px">
+              <div style="font-size:13px;color:var(--color-neutral-400);line-height:1.5;margin-bottom:16px">Читаем сахар и тренд напрямую из вашего Nightscout. Только чтение. Адрес и токен хранятся локально на устройстве.</div>
+
+              <div style="font-size:11px;color:var(--color-neutral-500);margin:0 2px 6px;text-transform:uppercase;letter-spacing:.08em">Адрес сайта</div>
+              <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--color-neutral-800);border-radius:14px;padding:12px 14px;background:var(--color-neutral-900);margin-bottom:14px">
+                <i class="ph ph-link" style="font-size:17px;color:var(--color-neutral-500);flex-shrink:0"></i>
+                <input value="{{ nsUrl }}" onChange="{{ onNsUrl }}" inputmode="url" placeholder="https://ваш-сайт.nightscout…" style="flex:1;min-width:0;background:transparent;border:0;outline:none;color:var(--color-text);font-size:14px;font-family:var(--font-body)">
+              </div>
+
+              <div style="font-size:11px;color:var(--color-neutral-500);margin:0 2px 6px;text-transform:uppercase;letter-spacing:.08em">Токен доступа · если требуется</div>
+              <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--color-neutral-800);border-radius:14px;padding:12px 14px;background:var(--color-neutral-900);margin-bottom:18px">
+                <i class="ph ph-key" style="font-size:17px;color:var(--color-neutral-500);flex-shrink:0"></i>
+                <input value="{{ nsToken }}" onChange="{{ onNsToken }}" placeholder="read-only токен (необязательно)" style="flex:1;min-width:0;background:transparent;border:0;outline:none;color:var(--color-text);font-size:14px;font-family:var(--font-body)">
+              </div>
+
+              <button type="button" onClick="{{ nsSave }}" style="width:100%;padding:15px;border-radius:16px;border:1px solid var(--color-accent);background:color-mix(in srgb, var(--color-accent) 14%, transparent);color:var(--color-text);font-size:15px;font-weight:600;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="background:color-mix(in srgb, var(--color-accent) 24%, transparent)">
+                <i class="ph-bold ph-plugs-connected" style="font-size:19px"></i>Проверить и подключить
+              </button>
+
+              <div style="min-height:18px;font-size:13px;color:var(--color-neutral-300);margin-top:12px;text-align:center">{{ nsMsg }}</div>
+
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:16px;background:var(--color-neutral-900);margin-top:8px">
+                <i class="ph-fill ph-cloud-arrow-down" style="font-size:19px;color:var(--color-accent);flex-shrink:0"></i>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14px">Синхронизация</div>
+                  <div style="font-size:11px;color:var(--color-neutral-400);margin-top:2px">{{ nsStatusText }}</div>
+                </div>
+                <div onClick="{{ nsToggle }}" style="width:44px;height:26px;border-radius:13px;background:{{ nsTrack }};position:relative;cursor:pointer;flex-shrink:0;transition:background .18s">
+                  <div style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:{{ nsKnob }};transform:{{ nsKnobX }};transition:transform .18s"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
       <!-- ================= НИЖНЯЯ ПАНЕЛЬ ================= -->
       <div style="padding:10px 8px 30px;border-top:1px solid var(--color-neutral-800);background:color-mix(in srgb, var(--color-neutral-900) 70%, var(--color-bg));display:flex;justify-content:space-around;align-items:flex-start">
         <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
@@ -1879,6 +1935,8 @@ body { margin: 0; overflow: hidden; background: var(--color-bg); overscroll-beha
 
 </template>
 <script src="engine.js"></script>
+<script src="nightscout.js"></script>
+<script src="store.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
