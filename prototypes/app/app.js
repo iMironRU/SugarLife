@@ -767,6 +767,7 @@ class Component extends DCLogic {
       primaryAction: isPen ? () => this.setState({ sheet: 'shot' }) : () => this.setState({ sheet: 'bolus', bolusFinal: suggested }),
       primaryIcon: isPen ? 'ph-fill ph-syringe' : 'ph-fill ph-lightning',
       primaryLabel: isPen ? 'Зарегистрировать инъекцию' : 'Ввести болюс',
+      quickBolusLabel: isPen ? 'Инъекция' : 'Болюс',
       primarySub: isPen ? 'последняя: 4 ед в 12:40' : 'калькулятор по углеводам и сахару',
       isBolusRemSheet: this.state.sheet === 'bolusRem',
       openBolusRem: () => this.setState({ sheet: 'bolusRem' }),
