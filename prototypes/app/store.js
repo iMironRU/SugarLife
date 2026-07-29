@@ -37,9 +37,10 @@
     status = data ? status : 'loading';
     notify();
     try {
-      const entries = await window.Nightscout.loadEntries(cfg.url, cfg.token, 288);
+      const res = await window.Nightscout.loadAll(cfg);
+      const entries = res.entries || [];
       const latest = entries.length ? entries[entries.length - 1] : null;
-      data = { entries, latest, updatedAt: Date.now() };
+      data = { entries, latest, device: res.device || null, profile: res.profile || null, updatedAt: Date.now() };
       status = 'ok'; error = null;
       saveCache();
     } catch (e) {
