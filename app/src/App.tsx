@@ -3,15 +3,19 @@ import {
   IonApp, IonIcon, IonLabel, IonRouterOutlet, IonTabBar, IonTabButton, IonTabs,
 } from '@ionic/react';
 import { IonReactHashRouter } from '@ionic/react-router';
-import { barChart, pulse, home, water, personCircle } from 'ionicons/icons';
+import { barChart, pulse, home, water, personCircle, medkit } from 'ionicons/icons';
 
 import Today from './pages/Today';
 import Profile from './pages/Profile';
 import Metrics from './pages/Metrics';
 import Mon from './pages/Mon';
-import Placeholder from './pages/Placeholder';
+import Ins from './pages/Ins';
+import { useStore } from './data/store';
+import { detectTherapy } from './data/therapy';
 
 export default function App() {
+  const { data } = useStore();
+  const insIcon = detectTherapy(data) === 'pen' ? medkit : water;
   return (
     <IonApp>
       <IonReactHashRouter>
@@ -20,7 +24,7 @@ export default function App() {
             <Route exact path="/today" component={Today} />
             <Route exact path="/metrics" component={Metrics} />
             <Route exact path="/mon" component={Mon} />
-            <Route exact path="/ins" render={() => <Placeholder title="Инсулин" icon="💉" />} />
+            <Route exact path="/ins" component={Ins} />
             <Route exact path="/profile" component={Profile} />
             <Route exact path="/"><Redirect to="/today" /></Route>
           </IonRouterOutlet>
@@ -39,7 +43,7 @@ export default function App() {
               <IonLabel>Сегодня</IonLabel>
             </IonTabButton>
             <IonTabButton tab="ins" href="/ins">
-              <IonIcon icon={water} />
+              <IonIcon icon={insIcon} />
               <IonLabel>Инсулин</IonLabel>
             </IonTabButton>
             <IonTabButton tab="profile" href="/profile">
