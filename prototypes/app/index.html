@@ -28,6 +28,16 @@ html, body { height: 100%; }
 body { margin: 0; overflow: hidden; background: var(--color-bg); overscroll-behavior: none; }
 #root { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--color-bg); color: var(--color-text); }
 #root > div { flex: 1; min-height: 0; }
+/* Десктоп: приложение колонкой по центру «стола», а не на весь экран */
+@media (min-width: 480px) {
+  body { background: var(--c-desk); display: flex; align-items: center; justify-content: center; }
+  #root {
+    position: relative; inset: auto;
+    width: 402px; height: 100dvh; max-height: 874px;
+    border-radius: 22px; overflow: hidden;
+    box-shadow: 0 0 0 1px var(--color-neutral-800), 0 24px 60px rgba(0,0,0,.45);
+  }
+}
 </style>
 <style>
 :root{--c-glu:#93c79b;--c-glu-2:#8bb890;--c-glu-3:#6f9e79;--c-carb:#e0b64f;--c-carb-2:#d8b463;--c-carb-3:#c1953f;--c-ins:#63c0cc;--c-ins-2:#5aa9b4;--c-ins-3:#3f8b97;--c-act:#a99ee6;--c-act-3:#6d5fb8;--c-danger:#c96b7a;--c-danger-2:#d98a96;--c-trend:#b0713d;--c-trend-2:#a8683a;--c-scrim:#05060c;--c-avatar-bg:#efedf7;--c-avatar-fg:#2a2350;--c-desk:#0c0d16}
