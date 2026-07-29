@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useStore } from '../data/store';
 import { toUnits, agoText } from '../data/units';
 import { arrowChar } from '../data/nightscout';
-import GlucoseChart from '../components/GlucoseChart';
+import GlucoseTimeChart from '../components/GlucoseTimeChart';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
@@ -66,7 +66,7 @@ export default function Mon() {
           </div>
 
           {/* график */}
-          <GlucoseChart entries={entries} windowH={win} />
+          <GlucoseTimeChart entries={entries} windowH={win} />
 
           {/* последние измерения */}
           <div className="section-label sec">Последние измерения</div>

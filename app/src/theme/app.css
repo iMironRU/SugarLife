@@ -230,6 +230,20 @@ ion-toggle {
 
 .metric-note { font-size: 11px; color: var(--color-neutral-500); margin: 16px 2px 0; line-height: 1.5; }
 
+/* AGP / TIR */
+.agp-card { border-radius: 20px; padding: 12px; margin-top: 12px; background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900)); }
+.agp-empty { padding: 30px; text-align: center; color: var(--color-neutral-500); font-size: 13px; }
+.tir { display: flex; gap: 16px; align-items: stretch; padding: 6px 4px; }
+.tir-bar { width: 38px; height: 180px; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; background: var(--color-neutral-800); flex-shrink: 0; }
+.tir-seg { width: 100%; min-height: 0; }
+.tir-legend { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 11px; }
+.tir-row { display: flex; align-items: center; gap: 8px; }
+.tir-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.tir-name { font-size: 13px; flex: 1; min-width: 0; }
+.tir-range { font-size: 11px; color: var(--color-neutral-500); margin-right: 6px; }
+.tir-pct { font-size: 15px; font-weight: 600; min-width: 40px; text-align: right; }
+.stat-grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+
 /* ===== НМГ (мониторинг) ===== */
 .mon-head { display: flex; align-items: flex-start; justify-content: space-between; }
 .mon-title { font-size: 28px; font-weight: 600; letter-spacing: -.02em; }
