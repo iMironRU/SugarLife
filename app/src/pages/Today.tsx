@@ -1,4 +1,6 @@
-import { IonPage, IonContent } from '@ionic/react';
+import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { useHistory } from 'react-router-dom';
+import { pulse, flash, moon } from 'ionicons/icons';
 import { useStore } from '../data/store';
 import { toUnits, agoText } from '../data/units';
 import { arrowChar } from '../data/nightscout';
@@ -7,6 +9,7 @@ import { useTheme } from '../theme/useTheme';
 export default function Today() {
   const { data, status } = useStore();
   const { theme, toggle } = useTheme();
+  const history = useHistory();
   const live = data && data.latest ? data : null;
   const dev = live?.device || null;
 
@@ -18,40 +21,49 @@ export default function Today() {
 
   return (
     <IonPage>
-      <IonContent fullscreen className="today-content">
+      <IonContent fullscreen>
         <div className="screen">
           {/* строка синхронизации + тема */}
           <div className="sync-row">
             <span className="sync"><span className="heart">♥</span> {synced}</span>
-            <button className="theme-btn" onClick={toggle} aria-label="Тема">{theme === 'light' ? '☾' : '☾'}</button>
+            <button className="theme-btn" onClick={toggle} aria-label="Тема">
+              <IonIcon icon={moon} />
+            </button>
           </div>
 
-          {/* верхний блок: крылья + круг */}
+          {/* верхний блок: три кнопки — НМГ | круг | Помпа */}
           <div className="hero">
-            <div className="wing">
-              <div className="wing-ico" style={{ color: 'var(--color-accent)' }}>∿</div>
-              <div className="wing-title">НМГ</div>
-              <div className="wing-sub">датчик</div>
-              <div className="wing-val">7 дн</div>
-              <div className="wing-sub">осталось</div>
+            <div className="hero-rect">
+              <button className="hero-btn hero-nmg" onClick={() => history.push('/mon')}>
+                <span className="wing-ico"><IonIcon icon={pulse} /></span>
+                <span className="wing-head">
+                  <span className="wing-title">НМГ</span>
+                  <span className="badge"><span className="dot" />×1</span>
+                </span>
+                <span className="wing-sub">датчик</span>
+                <span className="wing-val">7 дн</span>
+                <span className="wing-sub">осталось</span>
+              </button>
+
+              <div className="hero-gap" />
+
+              <button className="hero-btn hero-pump" onClick={() => history.push('/ins')}>
+                <span className="wing-ico"><IonIcon icon={flash} /></span>
+                <span className="wing-title">Помпа</span>
+                <span className="wing-sub">Fiasp</span>
+                <span className="wing-val">{reservoir}</span>
+                <span className="wing-sub">резервуар</span>
+              </button>
             </div>
 
-            <div className="circle">
-              <div className="circle-val">
+            <button className="hero-circle" aria-label="Глюкоза">
+              <span className="circle-val">
                 <span>{glucose}</span>
                 <span className="circle-arrow">{arrow}</span>
-              </div>
-              <div className="circle-unit">ммоль/л</div>
-              <div className="circle-ago">{ago}</div>
-            </div>
-
-            <div className="wing wing-r">
-              <div className="wing-ico" style={{ color: 'var(--color-accent)' }}>⌁</div>
-              <div className="wing-title">Помпа</div>
-              <div className="wing-sub">Fiasp</div>
-              <div className="wing-val">{reservoir}</div>
-              <div className="wing-sub">резервуар</div>
-            </div>
+              </span>
+              <span className="circle-unit">ммоль/л</span>
+              <span className="circle-ago">{ago}</span>
+            </button>
           </div>
 
           {/* плитка еды */}
