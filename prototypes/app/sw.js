@@ -1,6 +1,6 @@
 /* SugarLife PWA service worker — офлайн-кэш.
    Локальные ресурсы кэшируются заранее (precache), сторонние (Inter, Phosphor) — по мере запроса. */
-const VERSION = 'sugarlife-v3';
+const VERSION = 'sugarlife-v4';
 const CORE = [
   './',
   'index.html',
