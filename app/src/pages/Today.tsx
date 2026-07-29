@@ -8,7 +8,7 @@ import { useTheme } from '../theme/useTheme';
 
 export default function Today() {
   const { data, status } = useStore();
-  const { theme, toggle } = useTheme();
+  const { toggle } = useTheme();
   const history = useHistory();
   const live = data && data.latest ? data : null;
   const dev = live?.device || null;
