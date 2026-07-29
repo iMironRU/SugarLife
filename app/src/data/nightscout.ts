@@ -6,7 +6,7 @@ export interface Entry { t: number; mgdl: number; mmol: number; dir: string }
 export interface Device {
   iob: number | null; cob: number | null; reservoir: number | null;
   pumpBattery: number | null; status: string | null; baseBasal: number | null;
-  tempRate: number | null; lastBolus: number | null; at: number | null;
+  tempRate: number | null; lastBolus: number | null; uploaderBattery: number | null; at: number | null;
 }
 export interface Profile {
   name: string; ic: number | null; isf: number | null; basal: number | null;
@@ -108,6 +108,7 @@ export function normDeviceDoc(d: any): Device | null {
     baseBasal: num(ext.BaseBasalRate),
     tempRate: num(ext.TempBasalAbsoluteRate),
     lastBolus: num(ext.LastBolusAmount),
+    uploaderBattery: num(d.uploaderBattery, d.uploader?.battery),
     at: d.date || (d.mills) || (d.created_at && Date.parse(d.created_at)) || null,
   };
 }

@@ -230,6 +230,45 @@ ion-toggle {
 
 .metric-note { font-size: 11px; color: var(--color-neutral-500); margin: 16px 2px 0; line-height: 1.5; }
 
+/* ===== НМГ (мониторинг) ===== */
+.mon-head { display: flex; align-items: flex-start; justify-content: space-between; }
+.mon-title { font-size: 28px; font-weight: 600; letter-spacing: -.02em; }
+.mon-sub { font-size: 12px; color: var(--color-neutral-400); margin-top: 2px; }
+.mon-now { display: flex; align-items: baseline; gap: 6px; }
+.mon-now-val { font-size: 30px; font-weight: 600; letter-spacing: -.02em; }
+.mon-now-arrow { font-size: 18px; color: var(--c-glu); font-weight: 700; }
+.mon-now-ago { font-size: 11px; color: var(--color-neutral-400); margin-left: 4px; }
+
+.mon-status { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 18px; }
+.mon-stat {
+  border-radius: 16px; padding: 14px 12px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));
+}
+.mon-stat ion-icon { font-size: 20px; }
+.mon-stat-val { font-size: 16px; font-weight: 600; }
+.mon-stat-label { font-size: 10px; color: var(--color-neutral-400); }
+
+.win-chips { display: flex; gap: 6px; margin-top: 18px; }
+.win-chip {
+  flex: 1; height: 34px; border-radius: 12px; border: 1px solid var(--color-neutral-800);
+  background: transparent; color: var(--color-neutral-400); font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: var(--font-body);
+}
+.win-chip.on { background: color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-900)); border-color: color-mix(in srgb, var(--color-accent) 60%, transparent); color: var(--color-text); }
+
+.chart { position: relative; height: 200px; margin-top: 14px; padding-left: 22px; }
+.chart-svg { width: 100%; height: 190px; display: block; }
+.chart-y { position: absolute; left: 0; top: 0; height: 190px; width: 22px; font-size: 10px; color: var(--color-neutral-400); }
+.chart-y span { position: absolute; transform: translateY(-50%); left: 0; }
+.chart-x { display: flex; justify-content: space-between; padding: 4px 0 0 0; font-size: 10px; color: var(--color-neutral-400); }
+
+.reading-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--color-neutral-800); }
+.reading-row:last-child { border-bottom: 0; }
+.reading-time { font-size: 14px; flex: 1; }
+.reading-val { font-size: 15px; margin-right: 14px; }
+.reading-arrow { font-size: 15px; color: var(--color-neutral-400); }
+.mon-empty { padding: 16px; font-size: 13px; color: var(--color-neutral-500); text-align: center; }
+
 /* Заглушка */
 .placeholder {
   height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
