@@ -144,6 +144,16 @@ export function normTreatment(t: any): Treatment | null {
   };
 }
 
+// События (без Temp Basal) за период: болюсы, углеводы, замены датчика/канюли/резервуара/батареи.
+// Лёгкий запрос — исключаем частые Temp Basal.
+export async function loadEventsRange(base: string, token: string | undefined, days: number): Promise<Treatment[]> {
+  const since = Date.now() - days * 86400e3;
+  const iso = new Date(since).toISOString();
+  const path = `/api/v1/treatments.json?count=100000&find[eventType][$ne]=${encodeURIComponent('Temp Basal')}&find[created_at][$gte]=${encodeURIComponent(iso)}`;
+  const raw = await getJSON(base, path, token, 20000);
+  return (Array.isArray(raw) ? raw : []).map(normTreatment).filter((x): x is Treatment => x != null).sort((a, b) => a.t - b.t);
+}
+
 // Загрузка treatments за период (дней)
 export async function loadTreatmentsRange(base: string, token: string | undefined, days: number): Promise<Treatment[]> {
   const since = Date.now() - days * 86400e3;

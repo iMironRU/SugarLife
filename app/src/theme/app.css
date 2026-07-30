@@ -299,6 +299,22 @@ ion-toggle {
 .mon-stat-val { font-size: 16px; font-weight: 600; }
 .mon-stat-label { font-size: 10px; color: var(--color-neutral-400); }
 
+.sensor-card {
+  margin-top: 10px; border-radius: 20px; padding: 16px;
+  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));
+}
+.sensor-main { display: flex; align-items: center; gap: 12px; }
+.sensor-main ion-icon { font-size: 26px; color: var(--color-accent); }
+.sensor-day { font-size: 20px; font-weight: 600; }
+.sensor-when { font-size: 12px; color: var(--color-neutral-400); margin-top: 2px; }
+.sensor-ages { display: flex; gap: 8px; margin-top: 14px; }
+.age-pill {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 10px 6px; border-radius: 14px; background: var(--color-neutral-900);
+}
+.age-pill span { font-size: 10px; color: var(--color-neutral-400); }
+.age-pill b { font-size: 15px; font-weight: 600; }
+
 .win-chips { display: flex; gap: 6px; margin-top: 18px; }
 .win-chip {
   flex: 1; height: 34px; border-radius: 12px; border: 1px solid var(--color-neutral-800);
