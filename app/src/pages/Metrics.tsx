@@ -1,11 +1,10 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { chevronForward, water, nutrition, medkit } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
-import { useStore } from '../data/store';
 import { useEntries } from '../data/db';
-import { getCfg, loadTreatmentsRange, type Treatment } from '../data/nightscout';
+import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment } from '../data/nightscout';
 import { stats } from '../data/agp';
-import { insulinStats, carbStats } from '../data/treatmentStats';
+import { basalDelivered, bolusStats, carbStats } from '../data/treatmentStats';
 import { fmt } from '../data/units';
 import TirBar from '../components/TirBar';
 import AgpChart from '../components/AgpChart';
@@ -22,28 +21,30 @@ const PERIODS: { days: number; label: string }[] = [
 const r0 = (v: number) => String(Math.round(v));
 
 export default function Metrics() {
-  const { data } = useStore();
   const [days, setDays] = useState(3);
   const [metric, setMetric] = useState<MetricKey>('glucose');
-  const [rangeTreat, setRangeTreat] = useState<Treatment[] | null>(null);
+  const [events, setEvents] = useState<Treatment[]>([]);
+  const [tempBasals, setTempBasals] = useState<Treatment[]>([]);
 
   const cfg = getCfg();
   const enabled = !!(cfg && cfg.enabled && cfg.url);
+  const basalDays = Math.min(days, 14); // базал усредняем по свежему окну (без тяжёлой выборки за 90 дней)
 
-  // глюкоза — из локальной БД (накопленная история), лечения — из Nightscout за период
+  // глюкоза — из локальной БД; болюсы/углеводы — из событий; базал — из temp basal
   const entries = useEntries(days * 86400e3);
   useEffect(() => {
     let cancel = false;
     if (enabled) {
-      loadTreatmentsRange(cfg!.url, cfg!.token, days).then((t) => { if (!cancel) setRangeTreat(t); }).catch(() => { if (!cancel) setRangeTreat(null); });
-    } else setRangeTreat(null);
+      loadEventsRange(cfg!.url, cfg!.token, days).then((e) => { if (!cancel) setEvents(e); }).catch(() => { if (!cancel) setEvents([]); });
+      loadTreatmentsRange(cfg!.url, cfg!.token, basalDays).then((t) => { if (!cancel) setTempBasals(t); }).catch(() => { if (!cancel) setTempBasals([]); });
+    } else { setEvents([]); setTempBasals([]); }
     return () => { cancel = true; };
-  }, [days, enabled, cfg?.url]);
+  }, [days, basalDays, enabled, cfg?.url]);
 
-  const treatments = rangeTreat || data?.treatments || [];
   const s = entries.length ? stats(entries) : null;
-  const is = insulinStats(treatments, days);
-  const cs = carbStats(treatments, days);
+  const bs = bolusStats(events, days);
+  const basalPerDay = basalDelivered(tempBasals) / Math.max(1, basalDays);
+  const cs = carbStats(events, days);
 
   const carbsDef: MetricDef = {
     title: 'Углеводы', color: 'var(--c-carb)', icon: nutrition,
@@ -54,10 +55,10 @@ export default function Metrics() {
   };
   const insDef: MetricDef = {
     title: 'Инсулин', color: 'var(--c-ins)', icon: medkit,
-    hero: ['Всего за день', fmt(is.tddPerDay), 'ед'],
-    cards: [['Базал', fmt(is.basalPerDay), 'ед'], ['Болюс', fmt(is.bolusPerDay), 'ед']],
-    stats: [['Ср. болюс', fmt(is.avgBolus), 'ед'], ['Болюсов/день', String(is.bolusCount), '']],
-    note: 'Базал оценивается интегрированием temp basal; у петли это основная подача.',
+    hero: ['Всего за день', fmt(basalPerDay + bs.perDay), 'ед'],
+    cards: [['Базал', fmt(basalPerDay), 'ед'], ['Болюс', fmt(bs.perDay), 'ед']],
+    stats: [['Ср. болюс', fmt(bs.avg), 'ед'], ['Болюсов/день', String(bs.count), '']],
+    note: 'Болюсы — из событий Nightscout; базал оценивается интегрированием temp basal за свежее окно.',
   };
 
   const chips: { key: MetricKey; label: string; color: string; icon: string }[] = [

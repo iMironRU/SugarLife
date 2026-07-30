@@ -1,13 +1,21 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { pulse, batteryHalf, wifi, cloudOffline } from 'ionicons/icons';
-import { useState } from 'react';
+import { pulse, batteryHalf, wifi, cloudOffline, hardwareChipOutline } from 'ionicons/icons';
+import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
 import { useEntries } from '../data/db';
 import { toUnits, agoText } from '../data/units';
-import { arrowChar } from '../data/nightscout';
+import { arrowChar, getCfg, loadEventsRange, type Treatment } from '../data/nightscout';
+import { deviceAges, type Age } from '../data/treatmentStats';
 import GlucoseTimeChart from '../components/GlucoseTimeChart';
 
 const WINDOWS = [1, 3, 6, 12, 24];
+
+const ageText = (a: Age) => a.days >= 1 ? a.days + ' дн' : a.hours + ' ч';
+const fmtWhen = (ms: number) => {
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)} в ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
 
 export default function Mon() {
   const { data, status, live } = useStore();
@@ -15,6 +23,17 @@ export default function Mon() {
   const entries = useEntries(24 * 3600e3);
   const latest = data?.latest || null;
   const dev = data?.device || null;
+
+  const cfg = getCfg();
+  const [events, setEvents] = useState<Treatment[]>([]);
+  useEffect(() => {
+    let cancel = false;
+    if (cfg?.enabled && cfg.url) {
+      loadEventsRange(cfg.url, cfg.token, 30).then((e) => { if (!cancel) setEvents(e); }).catch(() => {});
+    }
+    return () => { cancel = true; };
+  }, [cfg?.url, cfg?.enabled]);
+  const ages = deviceAges(events);
 
   const now = Date.now();
   const minsAgo = latest ? Math.round((now - latest.t) / 60000) : null;
@@ -59,6 +78,27 @@ export default function Mon() {
             </div>
           </div>
 
+          {/* датчик и расходники */}
+          {ages.sensor && (
+            <>
+              <div className="section-label sec">Датчик</div>
+              <div className="sensor-card">
+                <div className="sensor-main">
+                  <IonIcon icon={hardwareChipOutline} />
+                  <div>
+                    <div className="sensor-day">День {ages.sensor.days + 1}</div>
+                    <div className="sensor-when">установлен {fmtWhen(ages.sensor.at)}</div>
+                  </div>
+                </div>
+                <div className="sensor-ages">
+                  {ages.site && <div className="age-pill"><span>Канюля</span><b>{ageText(ages.site)}</b></div>}
+                  {ages.reservoir && <div className="age-pill"><span>Резервуар</span><b>{ageText(ages.reservoir)}</b></div>}
+                  {ages.battery && <div className="age-pill"><span>Батарея</span><b>{ageText(ages.battery)}</b></div>}
+                </div>
+              </div>
+            </>
+          )}
+
           {/* период */}
           <div className="win-chips">
             {WINDOWS.map((w) => (
@@ -84,7 +124,7 @@ export default function Mon() {
             {!readings.length && <div className="mon-empty">Нет данных. Подключите Nightscout в профиле.</div>}
           </div>
 
-          <div className="metric-note">Данные датчика (модель, возраст, калибровка) ваш Nightscout не передаёт — добавим ручной учёт сенсора позже. Здесь — всё, что есть вживую: сахар, график, свежесть, батарея телефона петли.</div>
+          <div className="metric-note">Возраст датчика и расходников — из событий замен в Nightscout (Sensor/Site/Insulin/Battery Change). Сахар, тренд и свежесть — вживую.</div>
         </div>
       </IonContent>
     </IonPage>
