@@ -12,6 +12,7 @@ import Mon from './pages/Mon';
 import Ins from './pages/Ins';
 import Connect from './pages/Connect';
 import Loader from './pages/Loader';
+import InstallPrompt from './components/InstallPrompt';
 import { useStore } from './data/store';
 import { detectTherapy } from './data/therapy';
 
@@ -60,6 +61,7 @@ export default function App() {
           </IonTabBar>
         </IonTabs>
       </IonReactHashRouter>
+      <InstallPrompt />
     </IonApp>
   );
 }
