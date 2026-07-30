@@ -1,18 +1,19 @@
 import { IonPage, IonContent, IonIcon, useIonViewWillLeave } from '@ionic/react';
 import {
   personCircle, chevronForward, cloudDownloadOutline, downloadOutline,
-  ellipse, sunny, moon,
+  optionsOutline, ellipse, sunny, moon,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
 import { getCfg, setCfg } from '../data/nightscout';
 import { stats } from '../data/agp';
 import { detectTherapy, therapyLabel } from '../data/therapy';
-import { fmt, toUnits, unitLabel, useUnit, setUnit, type Unit } from '../data/units';
+import { fmt, toUnits, unitLabel, useUnit } from '../data/units';
 import { countEntries } from '../data/db';
 import { exportGlucoseCsv } from '../data/export';
 import { useTheme } from '../theme/useTheme';
 import NightscoutModal from '../components/NightscoutModal';
+import UnitsModal from '../components/UnitsModal';
 
 const DASH = '—';
 
@@ -21,10 +22,11 @@ export default function Profile() {
   const { theme, setTheme } = useTheme();
   const unit = useUnit();
   const [nsOpen, setNsOpen] = useState(false);
+  const [unitsOpen, setUnitsOpen] = useState(false);
   const [count, setCount] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
-  useIonViewWillLeave(() => setNsOpen(false));
+  useIonViewWillLeave(() => { setNsOpen(false); setUnitsOpen(false); });
 
   useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
 
@@ -59,11 +61,6 @@ export default function Profile() {
   const gs = data?.entries?.length ? stats(data.entries) : null;
   const gmi = gs ? fmt(gs.gmi) : DASH;
   const mean = gs ? toUnits(gs.mean) : DASH;
-
-  const units: { key: Unit; label: string }[] = [
-    { key: 'mmol', label: 'ммоль/л' },
-    { key: 'mgdl', label: 'мг/дл' },
-  ];
   const ic = data?.profile?.ic != null ? '1:' + fmt(data.profile.ic) : DASH;
   const therapy = therapyLabel(detectTherapy(data));
   const name = data?.profile?.name || 'Профиль';
@@ -94,16 +91,6 @@ export default function Profile() {
             <div className="stat"><div className="stat-label">СУИ</div><div className="stat-val">{ic}</div></div>
           </div>
 
-          {/* единицы */}
-          <div className="section-label sec">Единицы глюкозы</div>
-          <div className="theme-chips">
-            {units.map((u) => (
-              <button key={u.key} className={'theme-chip' + (unit === u.key ? ' on' : '')} onClick={() => setUnit(u.key)}>
-                <span>{u.label}</span>
-              </button>
-            ))}
-          </div>
-
           {/* оформление */}
           <div className="section-label sec">Оформление</div>
           <div className="theme-chips">
@@ -127,6 +114,12 @@ export default function Profile() {
               <span className="list-value">{nsValue}</span>
               <IonIcon icon={chevronForward} className="list-chev" />
             </button>
+            <button className="list-row" onClick={() => setUnitsOpen(true)}>
+              <IonIcon icon={optionsOutline} className="list-ico" />
+              <span className="list-title">Единицы измерения</span>
+              <span className="list-value">{unitLabel(unit)}</span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </button>
             <button className="list-row" onClick={doExport} disabled={exporting}>
               <IonIcon icon={downloadOutline} className="list-ico" />
               <span className="list-title">Экспорт глюкозы в CSV</span>
@@ -144,6 +137,7 @@ export default function Profile() {
         </div>
 
         <NightscoutModal isOpen={nsOpen} onClose={() => setNsOpen(false)} />
+        <UnitsModal isOpen={unitsOpen} onClose={() => setUnitsOpen(false)} />
       </IonContent>
     </IonPage>
   );
