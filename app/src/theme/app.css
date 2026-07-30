@@ -14,6 +14,24 @@
   html body ion-modal { --width: 100%; --max-width: 100%; }
 }
 
+/* ===== Гейт подключения / лоадер ===== */
+.connect {
+  height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 32px 26px; text-align: center; background: var(--color-bg); color: var(--color-text);
+}
+.b-ring {
+  width: 96px; height: 96px; border-radius: 50%; border: 2px solid var(--color-accent); flex-shrink: 0;
+  box-shadow: 0 0 0 8px var(--color-bg), 0 0 26px color-mix(in srgb, var(--color-accent) 35%, transparent), inset 0 0 34px color-mix(in srgb, var(--color-accent) 18%, transparent);
+  display: flex; align-items: center; justify-content: center;
+}
+.b-ring span { font-size: 30px; font-weight: 600; letter-spacing: -.02em; }
+.b-spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--color-neutral-800); border-top-color: var(--color-accent); animation: bspin .8s linear infinite; }
+@keyframes bspin { to { transform: rotate(360deg); } }
+.connect-title { font-size: 26px; font-weight: 600; letter-spacing: -.02em; margin: 6px 0 0; }
+.connect-desc { font-size: 13px; color: var(--color-neutral-400); line-height: 1.5; max-width: 320px; }
+.connect-form { width: 100%; max-width: 360px; margin-top: 8px; }
+.connect-msg { min-height: 18px; font-size: 13px; color: var(--color-neutral-300); margin-top: 12px; }
+
 /* Экраны */
 .screen { padding: 4px 20px 24px; }
 
@@ -72,6 +90,19 @@
 .circle-arrow { font-size: 24px; color: var(--c-glu); font-weight: 700; }
 .circle-unit { font-size: 12px; color: var(--color-neutral-300); margin-top: 4px; }
 .circle-ago { font-size: 10px; color: var(--color-neutral-400); margin-top: 5px; }
+
+.today-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+.today-stat {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: 16px;
+  border-radius: 20px; cursor: pointer; font-family: var(--font-body); text-align: left;
+  border: 1.5px solid color-mix(in srgb, var(--color-accent) 38%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 12%, transparent), color-mix(in srgb, var(--color-accent) 3%, transparent));
+  color: var(--color-text);
+}
+.today-stat ion-icon { font-size: 24px; }
+.today-stat-val { font-size: 30px; font-weight: 600; letter-spacing: -.02em; line-height: 1; }
+.today-stat-val i { font-size: 13px; font-weight: 400; color: var(--color-neutral-400); font-style: normal; }
+.today-stat-label { font-size: 12px; color: var(--color-neutral-400); }
 
 /* Плитка еды */
 .food-tile {

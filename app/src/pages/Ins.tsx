@@ -126,13 +126,13 @@ export default function Ins() {
             <button className="list-row" disabled>
               <IonIcon icon={flash} className="list-ico" />
               <span className="list-title">Быстрый инсулин</span>
-              <span className="list-value">Fiasp</span>
+              <span className="list-value">—</span>
               <IonIcon icon={chevronForward} className="list-chev" />
             </button>
             <button className="list-row" disabled>
               <IonIcon icon={water} className="list-ico" />
               <span className="list-title">Базальный инсулин</span>
-              <span className="list-value">Tresiba</span>
+              <span className="list-value">—</span>
               <IonIcon icon={chevronForward} className="list-chev" />
             </button>
           </div>

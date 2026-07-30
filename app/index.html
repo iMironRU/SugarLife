@@ -7,9 +7,37 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>SladkaЯ жизнь</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #161826; }
+      #boot {
+        position: fixed; inset: 0; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 22px;
+        background: #161826; color: #e9e9ed; font-family: "Inter", system-ui, sans-serif;
+      }
+      #boot .b-ring {
+        width: 96px; height: 96px; border-radius: 50%;
+        border: 2px solid #9184d9;
+        box-shadow: 0 0 0 8px #161826, 0 0 26px rgba(145, 132, 217, .35), inset 0 0 34px rgba(145, 132, 217, .18);
+        display: flex; align-items: center; justify-content: center;
+      }
+      #boot .b-ring span { font-size: 30px; font-weight: 600; letter-spacing: -.02em; color: #e9e9ed; }
+      #boot .b-spin {
+        width: 26px; height: 26px; border-radius: 50%;
+        border: 3px solid #3f424d; border-top-color: #9184d9;
+        animation: bspin .8s linear infinite;
+      }
+      @keyframes bspin { to { transform: rotate(360deg); } }
+      #boot .b-title { font-size: 15px; color: #9397ab; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot">
+        <div class="b-ring"><span>5,8</span></div>
+        <div class="b-spin"></div>
+        <div class="b-title">SladkaЯ жизнь</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

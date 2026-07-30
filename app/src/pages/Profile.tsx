@@ -7,11 +7,16 @@ import {
 import { useState } from 'react';
 import { useStore } from '../data/store';
 import { getCfg } from '../data/nightscout';
+import { stats } from '../data/agp';
+import { detectTherapy, therapyLabel } from '../data/therapy';
+import { fmt } from '../data/units';
 import { useTheme } from '../theme/useTheme';
 import NightscoutModal from '../components/NightscoutModal';
 
+const DASH = '—';
+
 export default function Profile() {
-  const { status } = useStore();
+  const { status, data } = useStore();
   const { theme, setTheme } = useTheme();
   const [nsOpen, setNsOpen] = useState(false);
   useIonViewWillLeave(() => setNsOpen(false));
@@ -20,7 +25,12 @@ export default function Profile() {
   const nsValue = !cfg || !cfg.enabled ? 'выкл'
     : status === 'ok' ? 'подключено'
     : status === 'loading' ? 'подключение…'
-    : (status === 'error' || status === 'stale') ? 'нет связи' : '—';
+    : (status === 'error' || status === 'stale') ? 'нет связи' : DASH;
+
+  const gs = data?.entries?.length ? stats(data.entries) : null;
+  const gmi = gs ? fmt(gs.gmi) : DASH;
+  const ic = data?.profile?.ic != null ? '1:' + fmt(data.profile.ic) : DASH;
+  const therapy = therapyLabel(detectTherapy(data));
 
   const themes: { key: 'system' | 'light' | 'dark'; label: string; icon: string }[] = [
     { key: 'system', label: 'Системная', icon: ellipse },
@@ -29,12 +39,12 @@ export default function Profile() {
   ];
 
   const rows = [
-    { icon: personOutline, title: 'Персональные данные', value: 'Алексей М.', onClick: undefined },
-    { icon: notificationsOutline, title: 'Уведомления', value: '4/5', onClick: undefined },
-    { icon: optionsOutline, title: 'Единицы измерения', value: 'ммоль/л · г', onClick: undefined },
+    { icon: personOutline, title: 'Персональные данные', value: DASH, onClick: undefined },
+    { icon: notificationsOutline, title: 'Уведомления', value: DASH, onClick: undefined },
+    { icon: optionsOutline, title: 'Единицы измерения', value: 'ммоль/л', onClick: undefined },
     { icon: cloudDownloadOutline, title: 'Nightscout', value: nsValue, onClick: () => setNsOpen(true) },
-    { icon: cloudDownloadOutline, title: 'Экспорт в файл', value: 'PDF', onClick: undefined },
-    { icon: shareSocialOutline, title: 'Врач и близкие', value: '2 человека', onClick: undefined },
+    { icon: cloudDownloadOutline, title: 'Экспорт в файл', value: DASH, onClick: undefined },
+    { icon: shareSocialOutline, title: 'Врач и близкие', value: DASH, onClick: undefined },
   ];
 
   return (
@@ -45,16 +55,16 @@ export default function Profile() {
           <div className="profile-head">
             <div className="avatar"><IonIcon icon={personCircle} /></div>
             <div>
-              <div className="profile-name">Алексей М.</div>
-              <div className="profile-sub">СД 1 типа · с 2014 года</div>
+              <div className="profile-name">Мой профиль</div>
+              <div className="profile-sub">{therapy} · Nightscout</div>
             </div>
           </div>
 
           {/* показатели */}
           <div className="stat-row">
-            <div className="stat"><div className="stat-label">HbA1c</div><div className="stat-val">6,8<span>%</span></div></div>
-            <div className="stat"><div className="stat-label">Вес</div><div className="stat-val">74<span>кг</span></div></div>
-            <div className="stat"><div className="stat-label">СУИ</div><div className="stat-val">1:8</div></div>
+            <div className="stat"><div className="stat-label">GMI (≈HbA1c)</div><div className="stat-val">{gmi}<span>%</span></div></div>
+            <div className="stat"><div className="stat-label">Вес</div><div className="stat-val">{DASH}</div></div>
+            <div className="stat"><div className="stat-label">СУИ</div><div className="stat-val">{ic}</div></div>
           </div>
 
           {/* оформление */}
