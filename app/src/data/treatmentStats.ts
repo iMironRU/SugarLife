@@ -13,6 +13,51 @@ export function basalDelivered(ts: Treatment[]): number {
   return total;
 }
 
+/*
+ * Суточная доза инсулина честно: на помпе Medtronic через AAPS весь инсулин
+ * (базал + коррекции петли) идёт через temp basal, дискретные болюсы — отдельно.
+ * Nightscout за многие дни залит частично (аплоадер офлайн) → усредняем ТОЛЬКО
+ * по дням с достаточным покрытием, иначе полупустые дни занижают среднее.
+ */
+const COVERAGE_MIN = 0.7; // день учитываем, если покрыт temp basal ≥70% суток
+export interface InsulinDaily {
+  basalPerDay: number; bolusPerDay: number; tddPerDay: number;
+  bolusAvg: number; bolusCount: number;
+  coveredDays: number; totalDays: number;
+}
+export function insulinDaily(tempBasals: Treatment[], boluses: Treatment[]): InsulinDaily {
+  const tb = tempBasals.filter((t) => t.type === 'Temp Basal' && t.rate != null).sort((a, b) => a.t - b.t);
+  const dayKey = (ms: number) => { const d = new Date(ms); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
+  // интегрируем temp basal по календарным дням + считаем покрытие
+  const days = new Map<string, { basal: number; covMs: number; bolus: number }>();
+  const get = (k: string) => { let v = days.get(k); if (!v) { v = { basal: 0, covMs: 0, bolus: 0 }; days.set(k, v); } return v; };
+  for (let i = 0; i < tb.length; i++) {
+    let segMs = i < tb.length - 1 ? tb[i + 1].t - tb[i].t : (tb[i].duration ? tb[i].duration! * 60000 : 0);
+    if (tb[i].duration != null) segMs = Math.min(segMs || tb[i].duration! * 60000, tb[i].duration! * 60000);
+    segMs = Math.max(0, segMs);
+    const d = get(dayKey(tb[i].t));
+    d.basal += (tb[i].rate as number) * (segMs / 3600000);
+    d.covMs += segMs;
+  }
+  // болюсы раскладываем по тем же дням
+  const bo = boluses.filter((t) => t.insulin && t.insulin > 0);
+  for (const b of bo) get(dayKey(b.t)).bolus += b.insulin || 0;
+
+  const covered = [...days.values()].filter((d) => d.covMs >= COVERAGE_MIN * 86400e3);
+  const n = covered.length;
+  const basalPerDay = n ? covered.reduce((a, d) => a + d.basal, 0) / n : 0;
+  const bolusPerDay = n ? covered.reduce((a, d) => a + d.bolus, 0) / n : 0;
+  // средний болюс и число болюсов/день — по болюсам в покрытых днях
+  const covKeys = new Set([...days.entries()].filter(([, d]) => d.covMs >= COVERAGE_MIN * 86400e3).map(([k]) => k));
+  const covBoluses = bo.filter((b) => covKeys.has(dayKey(b.t)));
+  const bolusAvg = covBoluses.length ? covBoluses.reduce((a, b) => a + (b.insulin || 0), 0) / covBoluses.length : 0;
+  return {
+    basalPerDay, bolusPerDay, tddPerDay: basalPerDay + bolusPerDay,
+    bolusAvg, bolusCount: n ? Math.round(covBoluses.length / n) : 0,
+    coveredDays: n, totalDays: days.size,
+  };
+}
+
 // Болюсы из событий (insulin > 0)
 export function bolusStats(events: Treatment[], days: number) {
   const b = events.filter((t) => t.insulin && t.insulin > 0);
