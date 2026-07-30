@@ -58,10 +58,14 @@
   background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
   color: var(--color-text); transition: background .16s;
 }
-.hero-nmg { align-items: flex-start; text-align: left; padding: 0 20px 0 18px; }
-.hero-pump { align-items: flex-end; text-align: right; padding: 0 18px 0 20px; }
+.hero-btn { overflow: hidden; }
+.hero-nmg { align-items: flex-start; text-align: left; padding: 0 18px 0 16px; }
+.hero-pump { align-items: flex-end; text-align: right; padding: 0 16px 0 18px; }
 .hero-btn:active { background: color-mix(in srgb, var(--color-accent) 20%, transparent); }
-.hero-gap { width: 146px; flex-shrink: 0; }
+.hero-gap { width: 150px; flex-shrink: 0; }
+/* текст крыльев — одна строка, без переноса под круг */
+.wing-head, .wing-title, .wing-sub, .wing-val { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-glu); box-shadow: 0 0 6px var(--c-glu); flex-shrink: 0; }
 
 .wing-ico { font-size: 22px; line-height: 1; margin-bottom: 5px; color: var(--color-accent); display: flex; }
 .wing-ico ion-icon { font-size: 22px; color: var(--color-accent); }

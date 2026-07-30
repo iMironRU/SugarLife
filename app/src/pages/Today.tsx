@@ -9,6 +9,16 @@ import CircleSparkline from '../components/CircleSparkline';
 
 const DASH = '—';
 
+// Короткий статус помпы, чтобы влезал в крыло
+function shortStatus(s?: string | null): string {
+  if (!s) return DASH;
+  const l = s.toLowerCase();
+  if (l.includes('приостан') || l.includes('пауза') || l.includes('suspend') || l.includes('stop')) return 'Пауза';
+  if (l.includes('замкнут') || l.includes('closed')) return 'Цикл вкл';
+  if (l.includes('открыт') || l.includes('open')) return 'Цикл выкл';
+  return s;
+}
+
 export default function Today() {
   const { data, live } = useStore();
   const { toggle } = useTheme();
@@ -23,7 +33,7 @@ export default function Today() {
   const fresh = minsAgo == null ? DASH : minsAgo < 1 ? 'сейчас' : minsAgo + ' мин';
 
   const reservoir = dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : DASH;
-  const pumpStatus = dev?.status || DASH;
+  const pumpStatus = shortStatus(dev?.status);
   const cob = dev?.cob != null ? String(Math.round(dev.cob)) : DASH;
   const iob = dev?.iob != null ? fmt(dev.iob) : DASH;
 
@@ -43,7 +53,7 @@ export default function Today() {
                 <span className="wing-ico"><IonIcon icon={pulse} /></span>
                 <span className="wing-head">
                   <span className="wing-title">НМГ</span>
-                  {live && <span className="badge"><span className="dot" />live</span>}
+                  {live && <span className="live-dot" title="реальное время" />}
                 </span>
                 <span className="wing-sub">обновлено</span>
                 <span className="wing-val">{fresh}</span>
