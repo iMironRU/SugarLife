@@ -1,6 +1,8 @@
 import type { Entry } from '../data/nightscout';
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+const LOW = 3.9, HIGH = 10.0;
+const inRange = (v: number) => v >= LOW && v <= HIGH;
 
 function smoothPath(pts: { x: number; y: number }[]): string {
   if (pts.length < 2) return '';
@@ -15,7 +17,7 @@ function smoothPath(pts: { x: number; y: number }[]): string {
   return d;
 }
 
-// Фоновый мини-график сахара за последний час внутри круга.
+// Фоновый мини-график сахара за час внутри круга, по центру, «светофором», приглушённый.
 export default function CircleSparkline({ entries, windowH = 1 }: { entries: Entry[]; windowH?: number }) {
   const W = 150, H = 150;
   const now = Date.now();
@@ -25,28 +27,37 @@ export default function CircleSparkline({ entries, windowH = 1 }: { entries: Ent
 
   const vals = pts.map((p) => p.mmol);
   let vmin = Math.min(...vals), vmax = Math.max(...vals);
-  if (vmax - vmin < 1) { const m = (vmin + vmax) / 2; vmin = m - 0.75; vmax = m + 0.75; } // не даём линии быть плоской
-  const yTop = 84, yBot = 140; // рисуем в нижней части круга, за цифрой
+  if (vmax - vmin < 1) { const m = (vmin + vmax) / 2; vmin = m - 0.9; vmax = m + 0.9; }
+
+  // по центру круга
+  const yTop = 42, yBot = 108;
   const x = (t: number) => ((t - t0) / (now - t0)) * W;
   const y = (v: number) => yBot - ((clamp(v, vmin, vmax) - vmin) / (vmax - vmin)) * (yBot - yTop);
 
   const P = pts.map((p) => ({ x: x(p.t), y: y(p.mmol) }));
   const line = smoothPath(P);
   const area = `${line} L${W},${H} L0,${H} Z`;
-  const id = 'csClip';
+
+  // «светофор»: цвет по значению через вертикальный градиент (верх=высоко, низ=низко)
+  const col = (v: number) => (inRange(v) ? 'var(--c-glu)' : 'var(--c-danger)');
+  const off = (v: number) => clamp((vmax - v) / (vmax - vmin), 0, 1) * 100;
+  const stops: { o: number; c: string }[] = [{ o: 0, c: col(vmax) }];
+  if (HIGH < vmax && HIGH > vmin) { const o = off(HIGH); stops.push({ o, c: col(HIGH + 0.01) }, { o, c: col(HIGH - 0.01) }); }
+  if (LOW < vmax && LOW > vmin) { const o = off(LOW); stops.push({ o, c: col(LOW + 0.01) }, { o, c: col(LOW - 0.01) }); }
+  stops.push({ o: 100, c: col(vmin) });
+  stops.sort((a, b) => a.o - b.o);
 
   return (
     <svg className="circle-spark" viewBox="0 0 150 150" preserveAspectRatio="none" aria-hidden="true">
       <defs>
-        <clipPath id={id}><circle cx="75" cy="75" r="72" /></clipPath>
-        <linearGradient id="csFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--c-glu)" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="var(--c-glu)" stopOpacity="0" />
+        <clipPath id="csClip"><circle cx="75" cy="75" r="72" /></clipPath>
+        <linearGradient id="csGrad" x1="0" y1="0" x2="0" y2="1">
+          {stops.map((s, i) => <stop key={i} offset={`${s.o}%`} stopColor={s.c} />)}
         </linearGradient>
       </defs>
-      <g clipPath={`url(#${id})`}>
-        <path d={area} fill="url(#csFill)" />
-        <path d={line} fill="none" stroke="var(--c-glu)" strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round" />
+      <g clipPath="url(#csClip)">
+        <path d={area} fill="url(#csGrad)" fillOpacity="0.08" />
+        <path d={line} fill="none" stroke="url(#csGrad)" strokeOpacity="0.4" strokeWidth="1.8" strokeLinecap="round" />
       </g>
     </svg>
   );
