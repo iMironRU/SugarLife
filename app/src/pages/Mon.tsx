@@ -2,6 +2,7 @@ import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { pulse, batteryHalf, wifi, cloudOffline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '../data/store';
+import { useEntries } from '../data/db';
 import { toUnits, agoText } from '../data/units';
 import { arrowChar } from '../data/nightscout';
 import GlucoseTimeChart from '../components/GlucoseTimeChart';
@@ -11,7 +12,7 @@ const WINDOWS = [1, 3, 6, 12, 24];
 export default function Mon() {
   const { data, status, live } = useStore();
   const [win, setWin] = useState(3);
-  const entries = data?.entries || [];
+  const entries = useEntries(24 * 3600e3);
   const latest = data?.latest || null;
   const dev = data?.device || null;
 
