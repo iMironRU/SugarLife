@@ -39,7 +39,8 @@
 .connect-msg { min-height: 18px; font-size: 13px; color: var(--color-neutral-300); margin-top: 12px; }
 
 /* Экраны */
-.screen { padding: 4px 20px 24px; }
+/* верхний safe-area: контент не под статус-баром/островом (iOS standalone/нативка) */
+.screen { padding: calc(env(safe-area-inset-top, 0px) + 8px) 20px 24px; }
 
 .sync-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0 16px; }
 .sync { font-size: 12px; color: var(--color-neutral-400); }
@@ -136,7 +137,7 @@
 .food-title { font-size: 14px; font-weight: 600; }
 
 /* ===== Профиль ===== */
-.screen-pad { padding-top: 16px; }
+.screen-pad { padding-top: calc(env(safe-area-inset-top, 0px) + 16px); }
 .sec { margin: 24px 2px 8px; }
 
 .profile-head { display: flex; align-items: center; gap: 14px; }
