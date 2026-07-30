@@ -13,6 +13,14 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>SladkaЯ жизнь</title>
+    <script>
+      // Ловим событие установки до монтирования React, чтобы не пропустить его.
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__bip = e;
+        window.dispatchEvent(new Event('bip-ready'));
+      });
+    </script>
     <style>
       html, body { margin: 0; height: 100%; background: #161826; }
       #boot {
