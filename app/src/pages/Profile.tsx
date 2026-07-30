@@ -88,7 +88,7 @@ export default function Profile() {
           <div className="stat-row">
             <div className="stat"><div className="stat-label">GMI (≈HbA1c)</div><div className="stat-val">{gmi}<span>%</span></div></div>
             <div className="stat"><div className="stat-label">Ср. сахар</div><div className="stat-val">{mean}<span>{unitLabel()}</span></div></div>
-            <div className="stat"><div className="stat-label">СУИ</div><div className="stat-val">{ic}</div></div>
+            <div className="stat"><div className="stat-label">СУИ</div><div className="stat-val">{ic}<span></span></div></div>
           </div>
 
           {/* оформление */}
