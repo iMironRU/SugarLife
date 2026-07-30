@@ -7,7 +7,9 @@ const config: CapacitorConfig = {
   backgroundColor: '#161826',
   ios: {
     backgroundColor: '#161826',
-    contentInset: 'always',
+    // контент во весь экран (как в PWA); верхний отступ даёт CSS env(safe-area-inset-top),
+    // иначе с 'always' safe-area складывается дважды и сверху слишком большой зазор
+    contentInset: 'never',
   },
   android: {
     backgroundColor: '#161826',
