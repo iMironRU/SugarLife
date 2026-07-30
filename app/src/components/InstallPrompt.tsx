@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { IonIcon } from '@ionic/react';
+import { Capacitor } from '@capacitor/core';
 import { downloadOutline, shareOutline, addOutline, close } from 'ionicons/icons';
 
 interface BIPEvent extends Event {
@@ -24,6 +25,7 @@ export default function InstallPrompt() {
   const [evt, setEvt] = useState<BIPEvent | null>(null);
 
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) return; // в нативном приложении баннер не нужен
     if (isStandalone()) return;
     const raw = localStorage.getItem(KEY);
     if (raw === 'installed') return;
