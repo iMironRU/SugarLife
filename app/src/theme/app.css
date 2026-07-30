@@ -25,6 +25,12 @@
   display: flex; align-items: center; justify-content: center;
 }
 .b-ring span { font-size: 30px; font-weight: 600; letter-spacing: -.02em; }
+.b-drop { flex-shrink: 0; filter: drop-shadow(0 0 16px color-mix(in srgb, var(--color-accent) 45%, transparent)); }
+.b-drop.pulse { animation: bpulse 1.8s ease-in-out infinite; }
+@keyframes bpulse {
+  0%, 100% { filter: drop-shadow(0 0 12px color-mix(in srgb, var(--color-accent) 32%, transparent)); transform: scale(1); }
+  50% { filter: drop-shadow(0 0 26px color-mix(in srgb, var(--color-accent) 62%, transparent)); transform: scale(1.045); }
+}
 .b-spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--color-neutral-800); border-top-color: var(--color-accent); animation: bspin .8s linear infinite; }
 @keyframes bspin { to { transform: rotate(360deg); } }
 .connect-title { font-size: 26px; font-weight: 600; letter-spacing: -.02em; margin: 6px 0 0; }
