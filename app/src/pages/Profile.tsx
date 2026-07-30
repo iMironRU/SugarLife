@@ -6,7 +6,7 @@ import {
 } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '../data/store';
-import { getCfg } from '../data/nightscout';
+import { getCfg, setCfg } from '../data/nightscout';
 import { stats } from '../data/agp';
 import { detectTherapy, therapyLabel } from '../data/therapy';
 import { fmt } from '../data/units';
@@ -26,6 +26,14 @@ export default function Profile() {
     : status === 'ok' ? 'подключено'
     : status === 'loading' ? 'подключение…'
     : (status === 'error' || status === 'stale') ? 'нет связи' : DASH;
+
+  const reset = () => {
+    if (!window.confirm('Сбросить настройки? Адрес Nightscout и локальная история глюкозы будут удалены с этого устройства.')) return;
+    setCfg(null);
+    try { localStorage.removeItem('sl.ns.cache.v1'); } catch { /* ignore */ }
+    try { indexedDB.deleteDatabase('sugarlife'); } catch { /* ignore */ }
+    location.reload();
+  };
 
   const gs = data?.entries?.length ? stats(data.entries) : null;
   const gmi = gs ? fmt(gs.gmi) : DASH;
@@ -94,7 +102,7 @@ export default function Profile() {
             ))}
           </div>
 
-          <button className="logout">Выйти из аккаунта</button>
+          <button className="logout" onClick={reset}>Сбросить настройки</button>
         </div>
 
         <NightscoutModal isOpen={nsOpen} onClose={() => setNsOpen(false)} />
