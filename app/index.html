@@ -28,13 +28,15 @@
         align-items: center; justify-content: center; gap: 22px;
         background: #161826; color: #e9e9ed; font-family: "Inter", system-ui, sans-serif;
       }
-      #boot .b-ring {
-        width: 96px; height: 96px; border-radius: 50%;
-        border: 2px solid #9184d9;
-        box-shadow: 0 0 0 8px #161826, 0 0 26px rgba(145, 132, 217, .35), inset 0 0 34px rgba(145, 132, 217, .18);
-        display: flex; align-items: center; justify-content: center;
+      #boot .b-drop {
+        width: 96px; height: 96px;
+        filter: drop-shadow(0 0 16px rgba(145, 132, 217, .5));
+        animation: bpulse 1.8s ease-in-out infinite;
       }
-      #boot .b-ring span { font-size: 30px; font-weight: 600; letter-spacing: -.02em; color: #e9e9ed; }
+      @keyframes bpulse {
+        0%, 100% { filter: drop-shadow(0 0 12px rgba(145, 132, 217, .35)); transform: scale(1); }
+        50% { filter: drop-shadow(0 0 26px rgba(145, 132, 217, .62)); transform: scale(1.045); }
+      }
       #boot .b-spin {
         width: 26px; height: 26px; border-radius: 50%;
         border: 3px solid #3f424d; border-top-color: #9184d9;
@@ -47,9 +49,20 @@
   <body>
     <div id="root">
       <div id="boot">
-        <div class="b-ring"><span>5,8</span></div>
+        <svg class="b-drop" viewBox="0 0 512 512" aria-hidden="true">
+          <defs>
+            <linearGradient id="bdrop" x1="256" y1="104" x2="256" y2="412" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#e6e2ff" />
+              <stop offset="0.45" stop-color="#b7aef0" />
+              <stop offset="1" stop-color="#8375d3" />
+            </linearGradient>
+          </defs>
+          <path d="M256 104 C256 104 372 250 372 330 a116 116 0 1 1 -232 0 C140 250 256 104 256 104 Z" fill="url(#bdrop)" />
+          <ellipse cx="212" cy="292" rx="30" ry="52" fill="#ffffff" opacity="0.28" transform="rotate(-24 212 292)" />
+          <path d="M176 344 h34 l16 -40 l22 78 l20 -58 l14 20 h30" fill="none" stroke="#161826" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />
+        </svg>
         <div class="b-spin"></div>
-        <div class="b-title">SladkaЯ жизнь</div>
+        <div class="b-title">СладкаЯ жизнь</div>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>

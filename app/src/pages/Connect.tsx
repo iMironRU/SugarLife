@@ -4,6 +4,7 @@ import { linkOutline, keyOutline, gitNetworkOutline } from 'ionicons/icons';
 import { getCfg, setCfg, ping } from '../data/nightscout';
 import { refresh } from '../data/store';
 import { toUnits } from '../data/units';
+import BrandDrop from '../components/BrandDrop';
 
 export default function Connect() {
   const c = getCfg();
@@ -34,7 +35,7 @@ export default function Connect() {
 
   return (
     <div className="connect">
-      <div className="b-ring"><span>5,8</span></div>
+      <BrandDrop size={92} />
       <h1 className="connect-title">SladkaЯ жизнь</h1>
       <p className="connect-desc">Подключите Nightscout, чтобы видеть сахар, тренд и метрики. Только чтение. Адрес и токен хранятся на устройстве.</p>
 
