@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useEntries } from '../data/db';
 import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment } from '../data/nightscout';
 import { stats } from '../data/agp';
-import { basalDelivered, bolusStats, carbStats } from '../data/treatmentStats';
+import { carbStats, insulinDaily } from '../data/treatmentStats';
 import { fmt } from '../data/units';
 import TirBar from '../components/TirBar';
 import AgpChart from '../components/AgpChart';
@@ -42,8 +42,7 @@ export default function Metrics() {
   }, [days, basalDays, enabled, cfg?.url]);
 
   const s = entries.length ? stats(entries) : null;
-  const bs = bolusStats(events, days);
-  const basalPerDay = basalDelivered(tempBasals) / Math.max(1, basalDays);
+  const id = insulinDaily(tempBasals, events);
   const cs = carbStats(events, days);
 
   const carbsDef: MetricDef = {
@@ -53,12 +52,15 @@ export default function Metrics() {
     stats: [['Ср. за приём', r0(cs.avgPerMeal), 'г'], ['Приёмов пищи', String(cs.mealCount), '']],
     note: cs.hasData ? undefined : 'Углеводы не логируются в ваш Nightscout — тут будет 0. Появятся, если объявлять еду в петле/приложении.',
   };
+  const noData = id.coveredDays === 0;
   const insDef: MetricDef = {
     title: 'Инсулин', color: 'var(--c-ins)', icon: medkit,
-    hero: ['Всего за день', fmt(basalPerDay + bs.perDay), 'ед'],
-    cards: [['Базал', fmt(basalPerDay), 'ед'], ['Болюс', fmt(bs.perDay), 'ед']],
-    stats: [['Ср. болюс', fmt(bs.avg), 'ед'], ['Болюсов/день', String(bs.count), '']],
-    note: 'Болюсы — из событий Nightscout; базал оценивается интегрированием temp basal за свежее окно.',
+    hero: ['В среднем в день', noData ? '—' : fmt(id.tddPerDay), 'ед'],
+    cards: [['Базал', noData ? '—' : fmt(id.basalPerDay), 'ед'], ['Болюс', noData ? '—' : fmt(id.bolusPerDay), 'ед']],
+    stats: [['Ср. болюс', noData ? '—' : fmt(id.bolusAvg), 'ед'], ['Болюсов/день', noData ? '—' : String(id.bolusCount), '']],
+    note: noData
+      ? 'Недостаточно данных: в Nightscout нет дней с полной выгрузкой temp basal за выбранный период.'
+      : `Среднее по ${id.coveredDays} дн. с полными данными (из ${id.totalDays}). У вас помпа Medtronic через AAPS: базал и коррекции петли идут через temp basal — поэтому доза выше «обычного базала». Дни с неполной выгрузкой в Nightscout не учитываются, иначе среднее занижается.`,
   };
 
   const chips: { key: MetricKey; label: string; color: string; icon: string }[] = [
