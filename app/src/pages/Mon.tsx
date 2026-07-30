@@ -5,12 +5,11 @@ import { useStore } from '../data/store';
 import { useEntries } from '../data/db';
 import { toUnits, agoText } from '../data/units';
 import { arrowChar, getCfg, loadEventsRange, type Treatment } from '../data/nightscout';
-import { deviceAges, type Age } from '../data/treatmentStats';
+import { deviceAges } from '../data/treatmentStats';
 import GlucoseTimeChart from '../components/GlucoseTimeChart';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
-const ageText = (a: Age) => a.days >= 1 ? a.days + ' дн' : a.hours + ' ч';
 const fmtWhen = (ms: number) => {
   const d = new Date(ms);
   const p = (n: number) => String(n).padStart(2, '0');
@@ -90,11 +89,6 @@ export default function Mon() {
                     <div className="sensor-when">установлен {fmtWhen(ages.sensor.at)}</div>
                   </div>
                 </div>
-                <div className="sensor-ages">
-                  {ages.site && <div className="age-pill"><span>Канюля</span><b>{ageText(ages.site)}</b></div>}
-                  {ages.reservoir && <div className="age-pill"><span>Резервуар</span><b>{ageText(ages.reservoir)}</b></div>}
-                  {ages.battery && <div className="age-pill"><span>Батарея</span><b>{ageText(ages.battery)}</b></div>}
-                </div>
               </div>
             </>
           )}
@@ -124,7 +118,7 @@ export default function Mon() {
             {!readings.length && <div className="mon-empty">Нет данных. Подключите Nightscout в профиле.</div>}
           </div>
 
-          <div className="metric-note">Возраст датчика и расходников — из событий замен в Nightscout (Sensor/Site/Insulin/Battery Change). Сахар, тренд и свежесть — вживую.</div>
+          <div className="metric-note">День датчика — из события замены сенсора в Nightscout (Sensor Change). Сахар, тренд и свежесть — вживую.</div>
         </div>
       </IonContent>
     </IonPage>

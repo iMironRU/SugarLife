@@ -1,11 +1,14 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { water, batteryHalf, pulse, flash, add, remove, chevronForward, syncCircle } from 'ionicons/icons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
 import { detectTherapy, therapyLabel } from '../data/therapy';
+import { getCfg, loadEventsRange, type Treatment } from '../data/nightscout';
+import { deviceAges, type Age } from '../data/treatmentStats';
 import { fmt, toUnits } from '../data/units';
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
+const ageText = (a: Age) => a.days >= 1 ? a.days + ' дн' : a.hours + ' ч';
 
 export default function Ins() {
   const { data } = useStore();
@@ -14,6 +17,19 @@ export default function Ins() {
   const latest = data?.latest || null;
   const therapy = detectTherapy(data);
   const isPen = therapy === 'pen';
+
+  // расходники помпы — из событий замен в Nightscout
+  const cfg = getCfg();
+  const [events, setEvents] = useState<Treatment[]>([]);
+  useEffect(() => {
+    let cancel = false;
+    if (cfg?.enabled && cfg.url) {
+      loadEventsRange(cfg.url, cfg.token, 30).then((e) => { if (!cancel) setEvents(e); }).catch(() => {});
+    }
+    return () => { cancel = true; };
+  }, [cfg?.url, cfg?.enabled]);
+  const ages = deviceAges(events);
+  const hasSupplies = !isPen && (ages.site || ages.reservoir || ages.battery);
 
   // калькулятор болюса из профиля
   const IC = profile?.ic ?? 8;
@@ -91,6 +107,18 @@ export default function Ins() {
                 <div className="basal-row"><span>Активный инсулин</span><b>{dev?.iob != null ? fmt(dev.iob) + ' ед' : '—'}</b></div>
               </div>
             </div>
+          )}
+
+          {/* расходники помпы */}
+          {hasSupplies && (
+            <>
+              <div className="section-label sec">Расходники</div>
+              <div className="sensor-ages sensor-ages-solo">
+                {ages.site && <div className="age-pill"><span>Канюля</span><b>{ageText(ages.site)}</b></div>}
+                {ages.reservoir && <div className="age-pill"><span>Резервуар</span><b>{ageText(ages.reservoir)}</b></div>}
+                {ages.battery && <div className="age-pill"><span>Батарея</span><b>{ageText(ages.battery)}</b></div>}
+              </div>
+            </>
           )}
 
           {/* калькулятор болюса */}
