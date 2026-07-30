@@ -5,6 +5,7 @@ import { useStore } from '../data/store';
 import { toUnits, agoText, fmt } from '../data/units';
 import { arrowChar } from '../data/nightscout';
 import { useTheme } from '../theme/useTheme';
+import CircleSparkline from '../components/CircleSparkline';
 
 const DASH = '—';
 
@@ -60,12 +61,15 @@ export default function Today() {
             </div>
 
             <button className="hero-circle" onClick={() => history.push('/mon')} aria-label="Глюкоза">
-              <span className="circle-val">
-                <span>{glucose}</span>
-                {arrow && <span className="circle-arrow">{arrow}</span>}
+              <CircleSparkline entries={data?.entries || []} />
+              <span className="circle-inner">
+                <span className="circle-val">
+                  <span>{glucose}</span>
+                  {arrow && <span className="circle-arrow">{arrow}</span>}
+                </span>
+                <span className="circle-unit">ммоль/л</span>
+                <span className="circle-ago">{ago}</span>
               </span>
-              <span className="circle-unit">ммоль/л</span>
-              <span className="circle-ago">{ago}</span>
             </button>
           </div>
 
