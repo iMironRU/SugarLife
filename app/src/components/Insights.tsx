@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { IonIcon } from '@ionic/react';
 import {
   checkmarkCircle, informationCircle, warning, alertCircle,
   medkitOutline, pulseOutline, restaurantOutline, waterOutline, helpCircleOutline,
+  chevronForward,
 } from 'ionicons/icons';
 import type { Analysis, Insight, Severity } from '../data/analysis';
 
@@ -24,11 +26,47 @@ const READY = {
   not: { label: 'Пока не готов', color: 'var(--c-danger)', desc: 'Сейчас Autotune выдаст недостоверный результат. Сначала стоит закрыть пробелы ниже.' },
 };
 
+function Card({ it }: { it: Insight }) {
+  return (
+    <div className="insight" style={{ borderLeftColor: SEV_COLOR[it.severity] }}>
+      <div className="insight-top">
+        <IonIcon icon={SEV_ICON[it.severity]} style={{ color: SEV_COLOR[it.severity] }} className="insight-sev" />
+        <span className="insight-title">{it.title}</span>
+        <IonIcon icon={KIND_ICON[it.kind]} className="insight-kind" />
+      </div>
+      <div className="insight-msg">{it.message}</div>
+      {it.question && (
+        <div className="insight-q"><IonIcon icon={helpCircleOutline} /><span>{it.question}</span></div>
+      )}
+    </div>
+  );
+}
+
+function Group({ title, items, color, defaultOpen = false }: { title: string; items: Insight[]; color: string; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  if (!items.length) return null;
+  return (
+    <div className="ins-group">
+      <button className={'ins-group-btn' + (open ? ' open' : '')} onClick={() => setOpen((o) => !o)}>
+        <span className="ins-group-dot" style={{ background: color }} />
+        <span>{title}</span>
+        <span className="ins-group-count">{items.length}</span>
+        <IonIcon icon={chevronForward} className="chev" />
+      </button>
+      {open && <div className="insights" style={{ marginTop: 10 }}>{items.map((it) => <Card key={it.id} it={it} />)}</div>}
+    </div>
+  );
+}
+
 export default function Insights({ analysis }: { analysis: Analysis | null }) {
   if (!analysis) {
     return <div className="metric-note" style={{ marginTop: 30 }}>Собираю аналитику…</div>;
   }
   const r = READY[analysis.readiness.level];
+
+  const attention = analysis.insights.filter((i) => i.severity === 'bad' || i.severity === 'warn');
+  const notes = analysis.insights.filter((i) => i.severity === 'info');
+  const ok = analysis.insights.filter((i) => i.severity === 'good');
 
   return (
     <>
@@ -50,23 +88,26 @@ export default function Insights({ analysis }: { analysis: Analysis | null }) {
         <div className="ready-foot">Autotune анализирует историю и предлагает правки терапии. Он ничего не меняет сам — только советует, решение за тобой и врачом.</div>
       </div>
 
-      {/* инсайты */}
-      <div className="section-label sec">Что улучшить</div>
-      <div className="insights">
-        {analysis.insights.map((it) => (
-          <div key={it.id} className="insight" style={{ borderLeftColor: SEV_COLOR[it.severity] }}>
-            <div className="insight-top">
-              <IonIcon icon={SEV_ICON[it.severity]} style={{ color: SEV_COLOR[it.severity] }} className="insight-sev" />
-              <span className="insight-title">{it.title}</span>
-              <IonIcon icon={KIND_ICON[it.kind]} className="insight-kind" />
-            </div>
-            <div className="insight-msg">{it.message}</div>
-            {it.question && (
-              <div className="insight-q"><IonIcon icon={helpCircleOutline} /><span>{it.question}</span></div>
-            )}
+      {/* приоритет: что требует внимания */}
+      <div className="section-label sec">Требует внимания</div>
+      {attention.length ? (
+        <div className="insights">{attention.map((it) => <Card key={it.id} it={it} />)}</div>
+      ) : (
+        <div className="insight" style={{ borderLeftColor: 'var(--c-glu)' }}>
+          <div className="insight-top">
+            <IonIcon icon={checkmarkCircle} style={{ color: 'var(--c-glu)' }} className="insight-sev" />
+            <span className="insight-title">Ничего срочного</span>
           </div>
-        ))}
+          <div className="insight-msg">Всё важное в порядке — ниже только заметки и то, что уже хорошо.</div>
+        </div>
+      )}
+
+      {/* остальное — свёрнуто */}
+      <div className="ins-groups">
+        <Group title="Заметки" items={notes} color="var(--color-accent)" />
+        <Group title="В норме" items={ok} color="var(--c-glu)" />
       </div>
+
       <div className="metric-note">Аналитика за {analysis.windowDays} дн. по данным Nightscout. Подсказки — не медицинское назначение; любые изменения терапии обсуждай с врачом.</div>
     </>
   );
