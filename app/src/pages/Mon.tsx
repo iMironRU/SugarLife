@@ -3,7 +3,7 @@ import { pulse, batteryHalf, wifi, cloudOffline, hardwareChipOutline } from 'ion
 import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
 import { useEntries } from '../data/db';
-import { toUnits, agoText } from '../data/units';
+import { toUnits, agoText, useUnit } from '../data/units';
 import { arrowChar, getCfg, loadEventsRange, type Treatment } from '../data/nightscout';
 import { deviceAges } from '../data/treatmentStats';
 import GlucoseTimeChart from '../components/GlucoseTimeChart';
@@ -18,6 +18,7 @@ const fmtWhen = (ms: number) => {
 
 export default function Mon() {
   const { data, status, live } = useStore();
+  useUnit(); // перерисовка при смене единиц
   const [win, setWin] = useState(3);
   const entries = useEntries(24 * 3600e3);
   const latest = data?.latest || null;

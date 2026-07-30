@@ -5,7 +5,7 @@ import { useEntries } from '../data/db';
 import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment } from '../data/nightscout';
 import { stats } from '../data/agp';
 import { carbStats, insulinDaily } from '../data/treatmentStats';
-import { fmt } from '../data/units';
+import { fmt, toUnits, unitLabel, useUnit } from '../data/units';
 import TirBar from '../components/TirBar';
 import AgpChart from '../components/AgpChart';
 
@@ -23,6 +23,7 @@ const r0 = (v: number) => String(Math.round(v));
 export default function Metrics() {
   const [days, setDays] = useState(3);
   const [metric, setMetric] = useState<MetricKey>('glucose');
+  useUnit(); // перерисовка при смене единиц
   const [events, setEvents] = useState<Treatment[]>([]);
   const [tempBasals, setTempBasals] = useState<Treatment[]>([]);
 
@@ -98,10 +99,10 @@ export default function Metrics() {
                 <div className="metric-title"><IonIcon icon={water} style={{ color: 'var(--c-glu)', fontSize: 26 }} /><span>Время в диапазоне</span></div>
                 <div className="agp-card"><TirBar s={s} /></div>
                 <div className="stat-grid4">
-                  <div className="stat"><div className="stat-label">Среднее</div><div className="stat-val">{fmt(s.mean)}<span>ммоль/л</span></div></div>
+                  <div className="stat"><div className="stat-label">Среднее</div><div className="stat-val">{toUnits(s.mean)}<span>{unitLabel()}</span></div></div>
                   <div className="stat"><div className="stat-label">GMI (≈HbA1c)</div><div className="stat-val">{fmt(s.gmi)}<span>%</span></div></div>
                   <div className="stat"><div className="stat-label">Вариабельность CV</div><div className="stat-val" style={{ color: s.cv > 36 ? 'var(--c-danger)' : undefined }}>{Math.round(s.cv)}<span>%</span></div></div>
-                  <div className="stat"><div className="stat-label">Ст. отклонение</div><div className="stat-val">{fmt(s.sd)}<span>ммоль/л</span></div></div>
+                  <div className="stat"><div className="stat-label">Ст. отклонение</div><div className="stat-val">{toUnits(s.sd)}<span>{unitLabel()}</span></div></div>
                 </div>
                 <div className="metric-title" style={{ marginTop: 22 }}><span style={{ fontSize: 20 }}>AGP · типовой день</span></div>
                 <div className="agp-card"><AgpChart entries={entries} /></div>
