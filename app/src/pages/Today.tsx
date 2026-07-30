@@ -2,7 +2,7 @@ import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { pulse, flash, moon, nutrition, medkit } from 'ionicons/icons';
 import { useStore } from '../data/store';
-import { toUnits, agoText, fmt } from '../data/units';
+import { toUnits, agoText, fmt, unitLabel, useUnit } from '../data/units';
 import { arrowChar } from '../data/nightscout';
 import { useTheme } from '../theme/useTheme';
 import CircleSparkline from '../components/CircleSparkline';
@@ -22,6 +22,7 @@ function shortStatus(s?: string | null): string {
 export default function Today() {
   const { data, live } = useStore();
   const { toggle } = useTheme();
+  useUnit(); // перерисовка при смене единиц
   const history = useHistory();
   const latest = data?.latest || null;
   const dev = data?.device || null;
@@ -77,7 +78,7 @@ export default function Today() {
                   <span>{glucose}</span>
                   {arrow && <span className="circle-arrow">{arrow}</span>}
                 </span>
-                <span className="circle-unit">ммоль/л</span>
+                <span className="circle-unit">{unitLabel()}</span>
                 <span className="circle-ago">{ago}</span>
               </span>
             </button>

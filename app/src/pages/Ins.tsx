@@ -5,7 +5,7 @@ import { useStore } from '../data/store';
 import { detectTherapy, therapyLabel } from '../data/therapy';
 import { getCfg, loadEventsRange, type Treatment } from '../data/nightscout';
 import { deviceAges, type Age } from '../data/treatmentStats';
-import { fmt, toUnits } from '../data/units';
+import { fmt, toUnits, unitLabel, useUnit } from '../data/units';
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
 const ageText = (a: Age) => a.days >= 1 ? a.days + ' дн' : a.hours + ' ч';
@@ -17,6 +17,8 @@ export default function Ins() {
   const latest = data?.latest || null;
   const therapy = detectTherapy(data);
   const isPen = therapy === 'pen';
+  const unit = useUnit();
+  const gluShort = (mmol: number) => (unit === 'mgdl' ? String(Math.round(mmol * 18)) : fmt(mmol));
 
   // расходники помпы — из событий замен в Nightscout
   const cfg = getCfg();
@@ -134,7 +136,7 @@ export default function Ins() {
             </div>
             <div className="bolus-input">
               <span>Текущий сахар</span>
-              <b className="bolus-bg">{toUnits(bg)} <i>ммоль/л</i></b>
+              <b className="bolus-bg">{toUnits(bg)} <i>{unitLabel()}</i></b>
             </div>
             <div className="bolus-result">
               <div className="bolus-rec-label">Рекомендовано</div>
@@ -144,7 +146,7 @@ export default function Ins() {
               </div>
             </div>
             <div className="bolus-note">
-              {profile ? `Профиль «${profile.name}»: СУИ 1:${fmt(IC)} · ISF ${fmt(ISF)} · цель ${toUnits(TARGET)}` : 'Профиль не загружен — значения по умолчанию.'}
+              {profile ? `Профиль «${profile.name}»: СУИ 1:${fmt(IC)} · ISF ${gluShort(ISF)} · цель ${toUnits(TARGET)} ${unitLabel()}` : 'Профиль не загружен — значения по умолчанию.'}
             </div>
           </div>
 

@@ -8,7 +8,7 @@ import { useStore } from '../data/store';
 import { getCfg, setCfg } from '../data/nightscout';
 import { stats } from '../data/agp';
 import { detectTherapy, therapyLabel } from '../data/therapy';
-import { fmt } from '../data/units';
+import { fmt, toUnits, unitLabel, useUnit, setUnit, type Unit } from '../data/units';
 import { countEntries } from '../data/db';
 import { exportGlucoseCsv } from '../data/export';
 import { useTheme } from '../theme/useTheme';
@@ -19,6 +19,7 @@ const DASH = '—';
 export default function Profile() {
   const { status, data } = useStore();
   const { theme, setTheme } = useTheme();
+  const unit = useUnit();
   const [nsOpen, setNsOpen] = useState(false);
   const [count, setCount] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -57,7 +58,12 @@ export default function Profile() {
 
   const gs = data?.entries?.length ? stats(data.entries) : null;
   const gmi = gs ? fmt(gs.gmi) : DASH;
-  const mean = gs ? fmt(gs.mean) : DASH;
+  const mean = gs ? toUnits(gs.mean) : DASH;
+
+  const units: { key: Unit; label: string }[] = [
+    { key: 'mmol', label: 'ммоль/л' },
+    { key: 'mgdl', label: 'мг/дл' },
+  ];
   const ic = data?.profile?.ic != null ? '1:' + fmt(data.profile.ic) : DASH;
   const therapy = therapyLabel(detectTherapy(data));
   const name = data?.profile?.name || 'Профиль';
@@ -84,8 +90,18 @@ export default function Profile() {
           {/* показатели */}
           <div className="stat-row">
             <div className="stat"><div className="stat-label">GMI (≈HbA1c)</div><div className="stat-val">{gmi}<span>%</span></div></div>
-            <div className="stat"><div className="stat-label">Ср. сахар</div><div className="stat-val">{mean}<span>ммоль/л</span></div></div>
+            <div className="stat"><div className="stat-label">Ср. сахар</div><div className="stat-val">{mean}<span>{unitLabel()}</span></div></div>
             <div className="stat"><div className="stat-label">СУИ</div><div className="stat-val">{ic}</div></div>
+          </div>
+
+          {/* единицы */}
+          <div className="section-label sec">Единицы глюкозы</div>
+          <div className="theme-chips">
+            {units.map((u) => (
+              <button key={u.key} className={'theme-chip' + (unit === u.key ? ' on' : '')} onClick={() => setUnit(u.key)}>
+                <span>{u.label}</span>
+              </button>
+            ))}
           </div>
 
           {/* оформление */}
@@ -121,7 +137,7 @@ export default function Profile() {
           {exportMsg && <div className="metric-note" style={{ marginTop: 8 }}>{exportMsg}</div>}
 
           <div className="metric-note" style={{ marginTop: 14 }}>
-            Единицы — ммоль/л. Данные хранятся только на этом устройстве, без облака и аккаунта.
+            Данные хранятся только на этом устройстве, без облака и аккаунта.
           </div>
 
           <button className="logout" onClick={reset}>Сбросить настройки</button>
