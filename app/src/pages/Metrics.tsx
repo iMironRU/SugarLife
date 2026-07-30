@@ -1,8 +1,9 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { chevronForward, water, nutrition, medkit, sparklesOutline } from 'ionicons/icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useEntries, getSince } from '../data/db';
-import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment } from '../data/nightscout';
+import { useStore } from '../data/store';
+import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment, type Entry } from '../data/nightscout';
 import { stats } from '../data/agp';
 import { carbStats, insulinDaily } from '../data/treatmentStats';
 import { analyze, type Analysis } from '../data/analysis';
@@ -26,10 +27,12 @@ const r0 = (v: number) => String(Math.round(v));
 export default function Metrics() {
   const [days, setDays] = useState(3);
   const [metric, setMetric] = useState<MetricKey>('overview');
-  useUnit(); // перерисовка при смене единиц
+  const unit = useUnit(); // перерисовка/пересчёт при смене единиц
+  const { data: sdata } = useStore();
+  const uploaderBattery = sdata?.device?.uploaderBattery ?? null;
   const [events, setEvents] = useState<Treatment[]>([]);
   const [tempBasals, setTempBasals] = useState<Treatment[]>([]);
-  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [rawAnalysis, setRawAnalysis] = useState<{ ent: Entry[]; ev: Treatment[]; cov: { covered: number; total: number } } | null>(null);
 
   const cfg = getCfg();
   const enabled = !!(cfg && cfg.enabled && cfg.url);
@@ -51,7 +54,7 @@ export default function Metrics() {
   useEffect(() => {
     if (metric !== 'overview') return;
     let cancel = false;
-    if (!enabled) { setAnalysis(null); return; }
+    if (!enabled) { setRawAnalysis(null); return; }
     (async () => {
       try {
         const [ent, ev, tb] = await Promise.all([
@@ -62,13 +65,19 @@ export default function Metrics() {
         if (cancel) return;
         // покрытие базала — только по окну temp basal (без дней из 30-дневных болюсов)
         const idA = insulinDaily(tb, []);
-        setAnalysis(analyze(ent, ev, ANALYSIS_DAYS, { covered: idA.coveredDays, total: idA.totalDays }));
+        setRawAnalysis({ ent, ev, cov: { covered: idA.coveredDays, total: idA.totalDays } });
       } catch {
-        if (!cancel) setAnalysis(null);
+        if (!cancel) setRawAnalysis(null);
       }
     })();
     return () => { cancel = true; };
   }, [metric, enabled, cfg?.url]);
+
+  // пересчёт инсайтов — быстрый, без сети; зависит от единиц и заряда телефона
+  const analysis = useMemo<Analysis | null>(
+    () => (rawAnalysis ? analyze(rawAnalysis.ent, rawAnalysis.ev, ANALYSIS_DAYS, { basalCoverage: rawAnalysis.cov, uploaderBattery }) : null),
+    [rawAnalysis, unit, uploaderBattery],
+  );
 
   const s = entries.length ? stats(entries) : null;
   const id = insulinDaily(tempBasals, events);

@@ -1,7 +1,7 @@
 import { IonIcon } from '@ionic/react';
 import {
   checkmarkCircle, informationCircle, warning, alertCircle,
-  medkitOutline, pulseOutline, restaurantOutline, helpCircleOutline,
+  medkitOutline, pulseOutline, restaurantOutline, waterOutline, helpCircleOutline,
 } from 'ionicons/icons';
 import type { Analysis, Insight, Severity } from '../data/analysis';
 
@@ -15,7 +15,7 @@ const SEV_ICON: Record<Severity, string> = {
   good: checkmarkCircle, info: informationCircle, warn: warning, bad: alertCircle,
 };
 const KIND_ICON: Record<Insight['kind'], string> = {
-  device: medkitOutline, data: pulseOutline, habit: restaurantOutline,
+  device: medkitOutline, data: pulseOutline, habit: restaurantOutline, glucose: waterOutline,
 };
 
 const READY = {
