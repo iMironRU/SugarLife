@@ -4,6 +4,8 @@
 import { useSyncExternalStore } from 'react';
 import { getCfg, loadAll, type NsData, type Entry, type Treatment, type Device } from './nightscout';
 import { connectSocket, disconnectSocket, type SocketData } from './nsSocket';
+import { putEntries } from './db';
+import { backfill } from './backfill';
 
 const CACHE_KEY = 'sl.ns.cache.v1';
 const POLL_MS = 60000;
@@ -55,6 +57,7 @@ function mergeSocket(d: SocketData) {
   const latest = entries.length ? entries[entries.length - 1] : cur.latest;
   set({ data: { ...cur, entries, treatments, device, latest, updatedAt: Date.now() }, status: 'ok', error: null });
   saveCache();
+  if (d.entries && d.entries.length) putEntries(d.entries);
 }
 
 // подключить/переподключить/отключить сокет по конфигу
@@ -82,6 +85,8 @@ export async function refresh() {
     const latest = entries.length ? entries[entries.length - 1] : null;
     set({ data: { ...res, entries, latest, updatedAt: Date.now() }, status: 'ok', error: null });
     saveCache();
+    putEntries(entries);
+    backfill(); // фоновая докачка истории в БД
   } catch (e: any) {
     set({ status: state.data ? 'stale' : 'error', error: String(e?.message || e) });
   } finally {

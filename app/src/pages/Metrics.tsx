@@ -2,7 +2,8 @@ import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { chevronForward, water, nutrition, medkit } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useStore } from '../data/store';
-import { getCfg, loadEntriesRange, loadTreatmentsRange, type Entry, type Treatment } from '../data/nightscout';
+import { useEntries } from '../data/db';
+import { getCfg, loadTreatmentsRange, type Treatment } from '../data/nightscout';
 import { stats } from '../data/agp';
 import { insulinStats, carbStats } from '../data/treatmentStats';
 import { fmt } from '../data/units';
@@ -24,22 +25,21 @@ export default function Metrics() {
   const { data } = useStore();
   const [days, setDays] = useState(3);
   const [metric, setMetric] = useState<MetricKey>('glucose');
-  const [rangeEntries, setRangeEntries] = useState<Entry[] | null>(null);
   const [rangeTreat, setRangeTreat] = useState<Treatment[] | null>(null);
 
   const cfg = getCfg();
   const enabled = !!(cfg && cfg.enabled && cfg.url);
 
+  // глюкоза — из локальной БД (накопленная история), лечения — из Nightscout за период
+  const entries = useEntries(days * 86400e3);
   useEffect(() => {
     let cancel = false;
     if (enabled) {
-      loadEntriesRange(cfg!.url, cfg!.token, days).then((e) => { if (!cancel) setRangeEntries(e); }).catch(() => { if (!cancel) setRangeEntries(null); });
       loadTreatmentsRange(cfg!.url, cfg!.token, days).then((t) => { if (!cancel) setRangeTreat(t); }).catch(() => { if (!cancel) setRangeTreat(null); });
-    } else { setRangeEntries(null); setRangeTreat(null); }
+    } else setRangeTreat(null);
     return () => { cancel = true; };
   }, [days, enabled, cfg?.url]);
 
-  const entries = rangeEntries || data?.entries || [];
   const treatments = rangeTreat || data?.treatments || [];
   const s = entries.length ? stats(entries) : null;
   const is = insulinStats(treatments, days);

@@ -78,6 +78,15 @@ export async function loadEntriesRange(base: string, token: string | undefined, 
   return loadEntries(base, token, count);
 }
 
+// Загрузка entries по диапазону времени [from, to) (мс) — для наполнения локальной БД.
+export async function loadEntriesWindow(base: string, token: string | undefined, from: number, to: number): Promise<Entry[]> {
+  const path = `/api/v1/entries.json?count=100000&find[date][$gte]=${from}&find[date][$lt]=${to}`;
+  const raw = await getJSON(base, path, token, 25000);
+  return (Array.isArray(raw) ? raw : [])
+    .map(normSgv).filter((e): e is Entry => e != null)
+    .sort((a, b) => a.t - b.t);
+}
+
 async function loadEntries(base: string, token?: string, count = 288): Promise<Entry[]> {
   const raw = await getJSON(base, '/api/v1/entries.json?count=' + count, token);
   return (Array.isArray(raw) ? raw : [])
