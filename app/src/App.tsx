@@ -10,12 +10,19 @@ import Profile from './pages/Profile';
 import Metrics from './pages/Metrics';
 import Mon from './pages/Mon';
 import Ins from './pages/Ins';
+import Connect from './pages/Connect';
+import Loader from './pages/Loader';
 import { useStore } from './data/store';
 import { detectTherapy } from './data/therapy';
 
 export default function App() {
-  const { data } = useStore();
+  const { data, status } = useStore();
   const insIcon = detectTherapy(data) === 'pen' ? medkit : water;
+
+  // Гейт: не подключён → только форма; подключён, но данных ещё нет → лоадер.
+  if (status === 'off') return <IonApp><Connect /></IonApp>;
+  if (!data && (status === 'idle' || status === 'loading')) return <IonApp><Loader /></IonApp>;
+
   return (
     <IonApp>
       <IonReactHashRouter>
