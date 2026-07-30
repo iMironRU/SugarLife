@@ -1,15 +1,16 @@
 import { IonPage, IonContent, IonIcon, useIonViewWillLeave } from '@ionic/react';
 import {
-  personCircle, chevronForward, notificationsOutline, optionsOutline,
-  cloudDownloadOutline, shareSocialOutline, personOutline,
+  personCircle, chevronForward, cloudDownloadOutline, downloadOutline,
   ellipse, sunny, moon,
 } from 'ionicons/icons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
 import { getCfg, setCfg } from '../data/nightscout';
 import { stats } from '../data/agp';
 import { detectTherapy, therapyLabel } from '../data/therapy';
 import { fmt } from '../data/units';
+import { countEntries } from '../data/db';
+import { exportGlucoseCsv } from '../data/export';
 import { useTheme } from '../theme/useTheme';
 import NightscoutModal from '../components/NightscoutModal';
 
@@ -19,7 +20,12 @@ export default function Profile() {
   const { status, data } = useStore();
   const { theme, setTheme } = useTheme();
   const [nsOpen, setNsOpen] = useState(false);
+  const [count, setCount] = useState<number | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportMsg, setExportMsg] = useState<string | null>(null);
   useIonViewWillLeave(() => setNsOpen(false));
+
+  useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
 
   const cfg = getCfg();
   const nsValue = !cfg || !cfg.enabled ? 'выкл'
@@ -35,24 +41,31 @@ export default function Profile() {
     location.reload();
   };
 
+  const doExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    setExportMsg(null);
+    try {
+      const n = await exportGlucoseCsv();
+      setExportMsg(n ? `Файл готов · ${n} записей` : 'Нет данных для экспорта');
+    } catch {
+      setExportMsg('Не удалось выгрузить');
+    }
+    setExporting(false);
+    window.setTimeout(() => setExportMsg(null), 4000);
+  };
+
   const gs = data?.entries?.length ? stats(data.entries) : null;
   const gmi = gs ? fmt(gs.gmi) : DASH;
+  const mean = gs ? fmt(gs.mean) : DASH;
   const ic = data?.profile?.ic != null ? '1:' + fmt(data.profile.ic) : DASH;
   const therapy = therapyLabel(detectTherapy(data));
+  const name = data?.profile?.name || 'Профиль';
 
   const themes: { key: 'system' | 'light' | 'dark'; label: string; icon: string }[] = [
     { key: 'system', label: 'Системная', icon: ellipse },
     { key: 'light', label: 'Светлая', icon: sunny },
     { key: 'dark', label: 'Тёмная', icon: moon },
-  ];
-
-  const rows = [
-    { icon: personOutline, title: 'Персональные данные', value: DASH, onClick: undefined },
-    { icon: notificationsOutline, title: 'Уведомления', value: DASH, onClick: undefined },
-    { icon: optionsOutline, title: 'Единицы измерения', value: 'ммоль/л', onClick: undefined },
-    { icon: cloudDownloadOutline, title: 'Nightscout', value: nsValue, onClick: () => setNsOpen(true) },
-    { icon: cloudDownloadOutline, title: 'Экспорт в файл', value: DASH, onClick: undefined },
-    { icon: shareSocialOutline, title: 'Врач и близкие', value: DASH, onClick: undefined },
   ];
 
   return (
@@ -63,7 +76,7 @@ export default function Profile() {
           <div className="profile-head">
             <div className="avatar"><IonIcon icon={personCircle} /></div>
             <div>
-              <div className="profile-name">Мой профиль</div>
+              <div className="profile-name">{name}</div>
               <div className="profile-sub">{therapy} · Nightscout</div>
             </div>
           </div>
@@ -71,7 +84,7 @@ export default function Profile() {
           {/* показатели */}
           <div className="stat-row">
             <div className="stat"><div className="stat-label">GMI (≈HbA1c)</div><div className="stat-val">{gmi}<span>%</span></div></div>
-            <div className="stat"><div className="stat-label">Вес</div><div className="stat-val">{DASH}</div></div>
+            <div className="stat"><div className="stat-label">Ср. сахар</div><div className="stat-val">{mean}<span>ммоль/л</span></div></div>
             <div className="stat"><div className="stat-label">СУИ</div><div className="stat-val">{ic}</div></div>
           </div>
 
@@ -92,14 +105,23 @@ export default function Profile() {
           {/* настройки */}
           <div className="section-label sec">Настройки</div>
           <div className="list">
-            {rows.map((r, i) => (
-              <button key={i} className="list-row" onClick={r.onClick} disabled={!r.onClick}>
-                <IonIcon icon={r.icon} className="list-ico" />
-                <span className="list-title">{r.title}</span>
-                <span className="list-value">{r.value}</span>
-                <IonIcon icon={chevronForward} className="list-chev" />
-              </button>
-            ))}
+            <button className="list-row" onClick={() => setNsOpen(true)}>
+              <IonIcon icon={cloudDownloadOutline} className="list-ico" />
+              <span className="list-title">Nightscout</span>
+              <span className="list-value">{nsValue}</span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </button>
+            <button className="list-row" onClick={doExport} disabled={exporting}>
+              <IonIcon icon={downloadOutline} className="list-ico" />
+              <span className="list-title">Экспорт глюкозы в CSV</span>
+              <span className="list-value">{exporting ? 'выгрузка…' : count != null ? `${count} зап.` : DASH}</span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </button>
+          </div>
+          {exportMsg && <div className="metric-note" style={{ marginTop: 8 }}>{exportMsg}</div>}
+
+          <div className="metric-note" style={{ marginTop: 14 }}>
+            Единицы — ммоль/л. Данные хранятся только на этом устройстве, без облака и аккаунта.
           </div>
 
           <button className="logout" onClick={reset}>Сбросить настройки</button>
