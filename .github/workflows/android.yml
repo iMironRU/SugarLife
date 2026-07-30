@@ -1,0 +1,68 @@
+name: Android APK
+
+on:
+  workflow_dispatch:        # запуск вручную (Actions → Android APK → Run workflow)
+  push:
+    tags: ['v*']            # и на теги вида v1.2.3
+
+permissions:
+  contents: write           # нужно для публикации в Releases
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build web
+        working-directory: app
+        run: |
+          npm ci
+          npm run build
+
+      - name: Capacitor sync (android)
+        working-directory: app
+        run: npx cap sync android
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: yes | sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || true
+
+      - name: Build debug APK
+        working-directory: app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Rename APK
+        run: cp app/android/app/build/outputs/apk/debug/app-debug.apk sugarlife-debug.apk
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sugarlife-debug-apk
+          path: sugarlife-debug.apk
+
+      - name: Publish to Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'android-latest' }}
+          name: SugarLife Android (debug)
+          prerelease: true
+          files: sugarlife-debug.apk
+          body: |
+            Debug-сборка «СладкаяЖизнь» для тестов на Android.
+
+            Установка: скачай `sugarlife-debug.apk` → на телефоне разреши установку
+            из неизвестных источников → открой файл. Не для продакшена.
