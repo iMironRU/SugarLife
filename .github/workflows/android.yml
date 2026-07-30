@@ -23,8 +23,10 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Build web
+      - name: Build web (relative base for native)
         working-directory: app
+        env:
+          CAP: '1'
         run: |
           npm ci
           npm run build
