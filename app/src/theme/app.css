@@ -211,6 +211,35 @@
 .field ion-input { --padding-start: 0; --padding-end: 0; font-size: 14px; }
 .connect-btn { --border-radius: 16px; margin-top: 4px; font-weight: 600; }
 .sheet-msg { min-height: 18px; font-size: 13px; color: var(--color-neutral-300); text-align: center; margin: 12px 0; }
+.sheet-subtitle { font-size: 11px; color: var(--color-neutral-400); margin-top: 3px; }
+.sheet-note { font-size: 11px; color: var(--color-neutral-500); margin-top: 14px; text-wrap: pretty; }
+
+/* Карточки выбора единиц — как в макете */
+.unit-opts { display: flex; flex-direction: column; gap: 10px; }
+.unit-opt {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  border-radius: 20px; padding: 16px;
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+  transition: border-color .16s, background .16s;
+}
+.unit-opt.on {
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-neutral-900));
+  border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
+.unit-opt-head { display: flex; align-items: center; gap: 10px; }
+.unit-opt-head > div { flex: 1; min-width: 0; }
+.unit-opt-title { font-size: 15px; font-weight: 600; color: var(--color-text); }
+.unit-opt-sub { font-size: 11px; color: var(--color-neutral-400); margin-top: 3px; }
+.unit-opt-check { font-size: 22px; flex-shrink: 0; }
+.unit-opt-ex {
+  display: flex; align-items: flex-end; gap: 16px;
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--color-neutral-800);
+}
+.unit-ex { display: flex; flex-direction: column; }
+.unit-ex-lbl { font-size: 10px; color: var(--color-neutral-500); margin-bottom: 4px; }
+.unit-ex-val { font-size: 24px; font-weight: 600; line-height: 1; display: flex; align-items: baseline; gap: 3px; }
+.unit-ex-val i { font-size: 10px; font-style: normal; color: var(--color-neutral-400); }
+.unit-opt-scale { font-size: 11px; color: var(--color-neutral-500); margin-top: 10px; text-wrap: pretty; }
 .sync-toggle {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 16px; border-radius: 16px; background: var(--color-neutral-900);
