@@ -1,27 +1,22 @@
 /* Живые метрики из treatments: болюсы, углеводы, базал, возрасты устройств. */
 import type { Treatment, DevPoint } from './nightscout';
 
-// Статистика резервуара из истории devicestatus (заправка + «застрял»).
-// Прогноз «на сколько хватит» считаем отдельно — по 90-дневному среднему расходу (TDD).
+// Статистика резервуара из истории devicestatus.
+// ВАЖНО: значение резервуара у Medtronic через AAPS ненадёжно (AAPS плохо считывает
+// остаток) — скачки вверх это чаще глюк/дозаправка, а не замена. Поэтому замену
+// резервуара берём из события Insulin Change (deviceAges), а не из скачка значения.
+// Здесь считаем только текущий остаток и «залипание» (для флага «не расходуется»).
 export interface ReservoirStats {
   current: number | null;
-  lastRefill: { at: number; from: number; to: number } | null; // последняя заправка (скачок вверх)
-  flatHours: number;                              // сколько часов резервуар держит значение
+  flatHours: number; // сколько часов резервуар держит значение
 }
 export function reservoirStats(points: DevPoint[]): ReservoirStats {
   const s = points.filter((p) => p.reservoir != null).sort((a, b) => a.t - b.t) as (DevPoint & { reservoir: number })[];
-  if (s.length < 2) return { current: s[0]?.reservoir ?? null, lastRefill: null, flatHours: 0 };
+  if (s.length < 2) return { current: s[0]?.reservoir ?? null, flatHours: 0 };
   const last = s[s.length - 1];
-  let refillIdx = -1;
   let lastChangeT = s[0].t;
-  for (let i = 1; i < s.length; i++) {
-    const d = s[i].reservoir - s[i - 1].reservoir;
-    if (d >= 15) refillIdx = i;
-    if (d !== 0) lastChangeT = s[i].t;
-  }
-  const lastRefill: ReservoirStats['lastRefill'] = refillIdx >= 0
-    ? { at: s[refillIdx].t, from: s[refillIdx - 1].reservoir, to: s[refillIdx].reservoir } : null;
-  return { current: last.reservoir, lastRefill, flatHours: (last.t - lastChangeT) / 3600e3 };
+  for (let i = 1; i < s.length; i++) if (s[i].reservoir !== s[i - 1].reservoir) lastChangeT = s[i].t;
+  return { current: last.reservoir, flatHours: (last.t - lastChangeT) / 3600e3 };
 }
 
 
