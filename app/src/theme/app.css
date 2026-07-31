@@ -14,6 +14,11 @@
   html body ion-modal { --width: 100%; --max-width: 100%; }
 }
 
+/* Резервируем место под полосу прокрутки всегда — иначе при появлении полосы
+   (например, разворот «Обзора») контент ужимается и «прыгают» размеры круга/карточек.
+   На телефонах полоса оверлейная — правило безвредно. */
+ion-content::part(scroll) { scrollbar-gutter: stable; }
+
 /* ===== Гейт подключения / лоадер ===== */
 .connect {
   height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
