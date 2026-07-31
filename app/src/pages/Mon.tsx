@@ -1,5 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { pulse, batteryHalf, wifi, cloudOffline, hardwareChipOutline } from 'ionicons/icons';
+import { pulse, wifi, cloudOffline, hardwareChipOutline } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
 import { useEntries } from '../data/db';
@@ -22,7 +22,6 @@ export default function Mon() {
   const [win, setWin] = useState(3);
   const entries = useEntries(24 * 3600e3);
   const latest = data?.latest || null;
-  const dev = data?.device || null;
 
   const cfg = getCfg();
   const [events, setEvents] = useState<Treatment[]>([]);
@@ -70,11 +69,6 @@ export default function Mon() {
               <IonIcon icon={pulse} style={{ color: stale ? 'var(--c-danger)' : 'var(--c-glu)' }} />
               <div className="mon-stat-val">{minsAgo != null ? (minsAgo < 1 ? 'сейчас' : minsAgo + ' мин') : '—'}</div>
               <div className="mon-stat-label">{stale ? 'нет данных' : 'обновлено'}</div>
-            </div>
-            <div className="mon-stat">
-              <IonIcon icon={batteryHalf} style={{ color: 'var(--color-accent)' }} />
-              <div className="mon-stat-val">{dev?.uploaderBattery != null ? dev.uploaderBattery + '%' : '—'}</div>
-              <div className="mon-stat-label">телефон</div>
             </div>
           </div>
 

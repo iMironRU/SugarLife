@@ -209,6 +209,23 @@ async function loadDeviceStatus(base: string, token?: string): Promise<Device | 
   return normDeviceDoc(Array.isArray(raw) ? raw[0] : null);
 }
 
+export interface DevPoint { t: number; reservoir: number | null; pumpBattery: number | null; uploaderBattery: number | null; }
+
+// История devicestatus (резервуар/батареи во времени) — для расхода инсулина и заправок.
+export async function loadDeviceStatusRange(base: string, token: string | undefined, count = 2000): Promise<DevPoint[]> {
+  const raw = await getJSON(base, '/api/v1/devicestatus.json?count=' + count, token, 25000);
+  if (!Array.isArray(raw)) return [];
+  return raw.map((d: any) => {
+    const pump = d.pump || {};
+    return {
+      t: d.date || Date.parse(d.created_at) || 0,
+      reservoir: num(pump.reservoir),
+      pumpBattery: num(pump.battery?.percent),
+      uploaderBattery: num(d.uploaderBattery, d.uploader?.battery),
+    };
+  }).filter((p: DevPoint) => p.t > 0).sort((a: DevPoint, b: DevPoint) => a.t - b.t);
+}
+
 async function loadProfile(base: string, token?: string): Promise<Profile | null> {
   const raw = await getJSON(base, '/api/v1/profile.json', token);
   const doc = Array.isArray(raw) ? raw[0] : raw;

@@ -9,6 +9,7 @@ import { fmt, toUnits, unitLabel, useUnit } from '../data/units';
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
 const ageText = (a: Age) => a.days >= 1 ? a.days + ' дн' : a.hours + ' ч';
+const SHOW_BOLUS_CALC = false; // временно скрыт калькулятор болюса
 
 export default function Ins() {
   const { data } = useStore();
@@ -124,32 +125,36 @@ export default function Ins() {
             </>
           )}
 
-          {/* калькулятор болюса */}
-          <div className="section-label sec">Калькулятор болюса</div>
-          <div className="bolus-card">
-            <div className="bolus-input">
-              <span>Углеводы</span>
-              <div className="stepper">
-                <button onClick={() => setCarbs((c) => Math.max(0, c - 5))}><IonIcon icon={remove} /></button>
-                <b>{carbs}<i>г</i></b>
-                <button onClick={() => setCarbs((c) => Math.min(300, c + 5))}><IonIcon icon={add} /></button>
+          {/* калькулятор болюса — временно скрыт (SHOW_BOLUS_CALC) */}
+          {SHOW_BOLUS_CALC && (
+            <>
+              <div className="section-label sec">Калькулятор болюса</div>
+              <div className="bolus-card">
+                <div className="bolus-input">
+                  <span>Углеводы</span>
+                  <div className="stepper">
+                    <button onClick={() => setCarbs((c) => Math.max(0, c - 5))}><IonIcon icon={remove} /></button>
+                    <b>{carbs}<i>г</i></b>
+                    <button onClick={() => setCarbs((c) => Math.min(300, c + 5))}><IonIcon icon={add} /></button>
+                  </div>
+                </div>
+                <div className="bolus-input">
+                  <span>Текущий сахар</span>
+                  <b className="bolus-bg">{toUnits(bg)} <i>{unitLabel()}</i></b>
+                </div>
+                <div className="bolus-result">
+                  <div className="bolus-rec-label">Рекомендовано</div>
+                  <div className="bolus-rec"><b>{fmt(suggested)}</b><span>ед</span></div>
+                  <div className="bolus-breakdown">
+                    на еду {fmt(round1(food))} · коррекция {fmt(round1(corr))} · − активный {fmt(round1(IOB))}
+                  </div>
+                </div>
+                <div className="bolus-note">
+                  {profile ? `Профиль «${profile.name}»: СУИ 1:${fmt(IC)} · ISF ${gluShort(ISF)} · цель ${toUnits(TARGET)} ${unitLabel()}` : 'Профиль не загружен — значения по умолчанию.'}
+                </div>
               </div>
-            </div>
-            <div className="bolus-input">
-              <span>Текущий сахар</span>
-              <b className="bolus-bg">{toUnits(bg)} <i>{unitLabel()}</i></b>
-            </div>
-            <div className="bolus-result">
-              <div className="bolus-rec-label">Рекомендовано</div>
-              <div className="bolus-rec"><b>{fmt(suggested)}</b><span>ед</span></div>
-              <div className="bolus-breakdown">
-                на еду {fmt(round1(food))} · коррекция {fmt(round1(corr))} · − активный {fmt(round1(IOB))}
-              </div>
-            </div>
-            <div className="bolus-note">
-              {profile ? `Профиль «${profile.name}»: СУИ 1:${fmt(IC)} · ISF ${gluShort(ISF)} · цель ${toUnits(TARGET)} ${unitLabel()}` : 'Профиль не загружен — значения по умолчанию.'}
-            </div>
-          </div>
+            </>
+          )}
 
           {/* настройки инсулина */}
           <div className="section-label sec">Инсулины</div>
@@ -169,7 +174,7 @@ export default function Ins() {
           </div>
 
           <div className="metric-note">
-            Режим определяется автоматически из Nightscout. У вас — {therapyLabel(therapy).toLowerCase()}: инсулин идёт базалом, дискретных болюсов почти нет. Калькулятор считает по вашему профилю. {writable
+            Режим определяется автоматически из Nightscout. У вас — {therapyLabel(therapy).toLowerCase()}: инсулин идёт базалом, дискретных болюсов почти нет. {writable
               ? 'Подача болюса (запись в Nightscout) — в планах.'
               : 'Запись в Nightscout выключена: нет токена с правом записи, поэтому калькулятор работает только на чтение (подать/записать нельзя).'}
           </div>
