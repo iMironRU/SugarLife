@@ -1,21 +1,17 @@
 /* Живые метрики из treatments: болюсы, углеводы, базал, возрасты устройств. */
 import type { Treatment, DevPoint } from './nightscout';
 
-// Статистика резервуара из истории devicestatus.
+// Статистика резервуара из истории devicestatus (заправка + «застрял»).
+// Прогноз «на сколько хватит» считаем отдельно — по 90-дневному среднему расходу (TDD).
 export interface ReservoirStats {
   current: number | null;
-  ratePerDay: number | null;                     // расход ед/день
-  daysLeft: number | null;                        // на сколько дней хватит
   lastRefill: { at: number; from: number; to: number } | null; // последняя заправка (скачок вверх)
   flatHours: number;                              // сколько часов резервуар держит значение
 }
 export function reservoirStats(points: DevPoint[]): ReservoirStats {
   const s = points.filter((p) => p.reservoir != null).sort((a, b) => a.t - b.t) as (DevPoint & { reservoir: number })[];
-  if (s.length < 2) return { current: s[0]?.reservoir ?? null, ratePerDay: null, daysLeft: null, lastRefill: null, flatHours: 0 };
+  if (s.length < 2) return { current: s[0]?.reservoir ?? null, lastRefill: null, flatHours: 0 };
   const last = s[s.length - 1];
-  const current = last.reservoir;
-
-  // последняя заправка (скачок резервуара вверх) + время последнего изменения (для «застрял»)
   let refillIdx = -1;
   let lastChangeT = s[0].t;
   for (let i = 1; i < s.length; i++) {
@@ -25,21 +21,7 @@ export function reservoirStats(points: DevPoint[]): ReservoirStats {
   }
   const lastRefill: ReservoirStats['lastRefill'] = refillIdx >= 0
     ? { at: s[refillIdx].t, from: s[refillIdx - 1].reservoir, to: s[refillIdx].reservoir } : null;
-
-  // Расход считаем по ТЕКУЩЕМУ циклу резервуара (после последней заправки, если ей ≥4ч),
-  // иначе по всему окну. Иначе долгий «залипший» участок до заправки занижает скорость.
-  const postRefillH = refillIdx >= 0 ? (last.t - s[refillIdx].t) / 3600e3 : 0;
-  const startI = refillIdx >= 0 && postRefillH >= 4 ? refillIdx : 0;
-  let consumed = 0;
-  for (let i = startI + 1; i < s.length; i++) {
-    const d = s[i].reservoir - s[i - 1].reservoir;
-    if (d < 0) consumed += -d;
-  }
-  const spanH = (last.t - s[startI].t) / 3600e3;
-  const ratePerDay = spanH > 2 ? (consumed / spanH) * 24 : null;
-  const daysLeft = ratePerDay && ratePerDay > 0.5 ? current / ratePerDay : null;
-  const flatHours = (last.t - lastChangeT) / 3600e3;
-  return { current, ratePerDay, daysLeft, lastRefill, flatHours };
+  return { current: last.reservoir, lastRefill, flatHours: (last.t - lastChangeT) / 3600e3 };
 }
 
 

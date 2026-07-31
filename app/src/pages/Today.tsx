@@ -54,9 +54,10 @@ export default function Today() {
   const ages = deviceAges(events);
   const rstat = reservoirStats(devHist);
 
-  // данные для «Обзора» (аналитика за 14 дн): глюкоза из БД + покрытие базала
+  // данные для «Обзора» + средний суточный расход (TDD) за 90 дн для «хватит инсулина»
   const [anaEnt, setAnaEnt] = useState<Entry[]>([]);
   const [anaCov, setAnaCov] = useState<{ covered: number; total: number } | null>(null);
+  const [tdd, setTdd] = useState<number | null>(null);
   useEffect(() => {
     let cancel = false;
     if (cfg?.enabled && cfg.url) {
@@ -64,12 +65,13 @@ export default function Today() {
         try {
           const [ent, tb] = await Promise.all([
             getSince(Date.now() - ANALYSIS_DAYS * 86400e3),
-            loadTreatmentsRange(cfg!.url, cfg!.token, ANALYSIS_DAYS),
+            loadTreatmentsRange(cfg!.url, cfg!.token, 90), // 90 дн — устойчивый средний расход
           ]);
           if (cancel) return;
           const id = insulinDaily(tb, []);
           setAnaEnt(ent);
           setAnaCov({ covered: id.coveredDays, total: id.totalDays });
+          setTdd(id.tddPerDay > 5 ? id.tddPerDay : null);
         } catch { /* ignore */ }
       })();
     }
@@ -94,7 +96,8 @@ export default function Today() {
   // статус-полоска
   const phone = dev?.uploaderBattery;
   const sensorDay = ages.sensor ? ages.sensor.days + 1 : null;
-  const daysLeft = rstat.daysLeft;
+  // на сколько хватит: остаток резервуара ÷ средний суточный расход за 90 дн
+  const daysLeft = dev?.reservoir != null && tdd ? dev.reservoir / tdd : null;
 
   // подсветки резервуара
   const stuck = rstat.flatHours > 8 && !isPaused(dev?.status) && (rstat.current ?? 0) > 0;
