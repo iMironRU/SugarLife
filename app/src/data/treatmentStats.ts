@@ -1,5 +1,34 @@
 /* Живые метрики из treatments: болюсы, углеводы, базал, возрасты устройств. */
-import type { Treatment } from './nightscout';
+import type { Treatment, DevPoint } from './nightscout';
+
+// Статистика резервуара из истории devicestatus.
+export interface ReservoirStats {
+  current: number | null;
+  ratePerDay: number | null;                     // расход ед/день
+  daysLeft: number | null;                        // на сколько дней хватит
+  lastRefill: { at: number; from: number; to: number } | null; // последняя заправка (скачок вверх)
+  flatHours: number;                              // сколько часов резервуар держит значение
+}
+export function reservoirStats(points: DevPoint[]): ReservoirStats {
+  const s = points.filter((p) => p.reservoir != null).sort((a, b) => a.t - b.t) as (DevPoint & { reservoir: number })[];
+  if (s.length < 2) return { current: s[0]?.reservoir ?? null, ratePerDay: null, daysLeft: null, lastRefill: null, flatHours: 0 };
+  const current = s[s.length - 1].reservoir;
+  let consumed = 0;
+  let lastRefill: ReservoirStats['lastRefill'] = null;
+  let lastChangeT = s[0].t;
+  for (let i = 1; i < s.length; i++) {
+    const d = s[i].reservoir - s[i - 1].reservoir;
+    if (d < 0) consumed += -d;
+    else if (d >= 15) lastRefill = { at: s[i].t, from: s[i - 1].reservoir, to: s[i].reservoir };
+    if (d !== 0) lastChangeT = s[i].t;
+  }
+  const spanH = (s[s.length - 1].t - s[0].t) / 3600e3;
+  const ratePerDay = spanH > 2 ? (consumed / spanH) * 24 : null;
+  const daysLeft = ratePerDay && ratePerDay > 0.5 ? current / ratePerDay : null;
+  const flatHours = (s[s.length - 1].t - lastChangeT) / 3600e3;
+  return { current, ratePerDay, daysLeft, lastRefill, flatHours };
+}
+
 
 // Проинтегрированный базал (ед) из temp basal: rate × длительность сегмента.
 export function basalDelivered(ts: Treatment[]): number {

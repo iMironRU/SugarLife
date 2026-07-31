@@ -1,9 +1,14 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
-import { pulse, flash, moon, nutrition, medkit } from 'ionicons/icons';
+import {
+  pulse, flash, moon, nutrition, medkit,
+  phonePortraitOutline, hardwareChipOutline, waterOutline, warningOutline, refreshOutline,
+} from 'ionicons/icons';
+import { useEffect, useState } from 'react';
 import { useStore } from '../data/store';
 import { toUnits, agoText, fmt, unitLabel, useUnit } from '../data/units';
-import { arrowChar } from '../data/nightscout';
+import { arrowChar, getCfg, loadEventsRange, loadDeviceStatusRange, type Treatment, type DevPoint } from '../data/nightscout';
+import { deviceAges, reservoirStats } from '../data/treatmentStats';
 import { useTheme } from '../theme/useTheme';
 import CircleSparkline from '../components/CircleSparkline';
 
@@ -18,6 +23,8 @@ function shortStatus(s?: string | null): string {
   if (l.includes('открыт') || l.includes('open')) return 'Цикл выкл';
   return s;
 }
+const isPaused = (s?: string | null) => shortStatus(s) === 'Пауза';
+const fmtDays = (d: number) => (d < 10 ? d.toFixed(1).replace('.', ',') : String(Math.round(d)));
 
 export default function Today() {
   const { data, live } = useStore();
@@ -26,6 +33,21 @@ export default function Today() {
   const history = useHistory();
   const latest = data?.latest || null;
   const dev = data?.device || null;
+
+  // события (для дня датчика) + история резервуара (расход/заправки)
+  const cfg = getCfg();
+  const [events, setEvents] = useState<Treatment[]>([]);
+  const [devHist, setDevHist] = useState<DevPoint[]>([]);
+  useEffect(() => {
+    let cancel = false;
+    if (cfg?.enabled && cfg.url) {
+      loadEventsRange(cfg.url, cfg.token, 30).then((e) => { if (!cancel) setEvents(e); }).catch(() => {});
+      loadDeviceStatusRange(cfg.url, cfg.token, 2000).then((d) => { if (!cancel) setDevHist(d); }).catch(() => {});
+    }
+    return () => { cancel = true; };
+  }, [cfg?.url, cfg?.enabled]);
+  const ages = deviceAges(events);
+  const rstat = reservoirStats(devHist);
 
   const glucose = latest ? toUnits(latest.mmol) : DASH;
   const arrow = latest ? arrowChar(latest.dir) : '';
@@ -37,6 +59,15 @@ export default function Today() {
   const pumpStatus = shortStatus(dev?.status);
   const cob = dev?.cob != null ? String(Math.round(dev.cob)) : DASH;
   const iob = dev?.iob != null ? fmt(dev.iob) : DASH;
+
+  // статус-полоска
+  const phone = dev?.uploaderBattery;
+  const sensorDay = ages.sensor ? ages.sensor.days + 1 : null;
+  const daysLeft = rstat.daysLeft;
+
+  // подсветки резервуара
+  const stuck = rstat.flatHours > 8 && !isPaused(dev?.status) && (rstat.current ?? 0) > 0;
+  const refill = rstat.lastRefill && Date.now() - rstat.lastRefill.at < 3 * 86400e3 ? rstat.lastRefill : null;
 
   return (
     <IonPage>
@@ -97,6 +128,45 @@ export default function Today() {
               <div className="today-stat-label">активный инсулин</div>
             </button>
           </div>
+
+          {/* статус: телефон · датчик · инсулин */}
+          <div className="today-status">
+            <div className="tstat">
+              <IonIcon icon={phonePortraitOutline} style={{ color: phone != null && phone <= 20 ? 'var(--c-danger)' : 'var(--color-accent)' }} />
+              <div className="tstat-val">{phone != null ? phone + '%' : DASH}</div>
+              <div className="tstat-label">телефон</div>
+            </div>
+            <div className="tstat" onClick={() => history.push('/mon')}>
+              <IonIcon icon={hardwareChipOutline} style={{ color: 'var(--color-accent)' }} />
+              <div className="tstat-val">{sensorDay != null ? 'день ' + sensorDay : DASH}</div>
+              <div className="tstat-label">датчик</div>
+            </div>
+            <div className="tstat" onClick={() => history.push('/ins')}>
+              <IonIcon icon={waterOutline} style={{ color: 'var(--c-ins)' }} />
+              <div className="tstat-val">{daysLeft != null ? '~' + fmtDays(daysLeft) + ' дн' : DASH}</div>
+              <div className="tstat-label">хватит инсулина</div>
+            </div>
+          </div>
+
+          {/* подсветки резервуара */}
+          {stuck && (
+            <div className="today-alert warn">
+              <IonIcon icon={warningOutline} />
+              <div>
+                <b>Резервуар не меняется {Math.round(rstat.flatHours)} ч</b>
+                <span>А помпа не на паузе — инсулин должен расходоваться. Проверь подачу (окклюзия, катетер, датчик резервуара).</span>
+              </div>
+            </div>
+          )}
+          {refill && (
+            <div className="today-alert info">
+              <IonIcon icon={refreshOutline} />
+              <div>
+                <b>Резервуар заправлен {agoText(refill.at)}</b>
+                <span>{Math.round(refill.from)} → {Math.round(refill.to)} ед — вероятно, замена резервуара.</span>
+              </div>
+            </div>
+          )}
         </div>
       </IonContent>
     </IonPage>
