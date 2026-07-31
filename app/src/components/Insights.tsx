@@ -3,7 +3,6 @@ import { IonIcon } from '@ionic/react';
 import {
   checkmarkCircle, informationCircle, warning, alertCircle,
   medkitOutline, pulseOutline, restaurantOutline, waterOutline, helpCircleOutline,
-  chevronForward,
 } from 'ionicons/icons';
 import type { Analysis, Insight, Severity } from '../data/analysis';
 
@@ -42,31 +41,25 @@ function Card({ it }: { it: Insight }) {
   );
 }
 
-function Group({ title, items, color, defaultOpen = false }: { title: string; items: Insight[]; color: string; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
-  if (!items.length) return null;
-  return (
-    <div className="ins-group">
-      <button className={'ins-group-btn' + (open ? ' open' : '')} onClick={() => setOpen((o) => !o)}>
-        <span className="ins-group-dot" style={{ background: color }} />
-        <span>{title}</span>
-        <span className="ins-group-count">{items.length}</span>
-        <IonIcon icon={chevronForward} className="chev" />
-      </button>
-      {open && <div className="insights" style={{ marginTop: 10 }}>{items.map((it) => <Card key={it.id} it={it} />)}</div>}
-    </div>
-  );
-}
+type TabKey = 'attention' | 'notes' | 'ok';
 
 export default function Insights({ analysis }: { analysis: Analysis | null }) {
+  const [tab, setTab] = useState<TabKey>('attention');
   if (!analysis) {
-    return <div className="metric-note" style={{ marginTop: 30 }}>Собираю аналитику…</div>;
+    return <div className="metric-note" style={{ marginTop: 18 }}>Собираю аналитику…</div>;
   }
   const r = READY[analysis.readiness.level];
 
   const attention = analysis.insights.filter((i) => i.severity === 'bad' || i.severity === 'warn');
   const notes = analysis.insights.filter((i) => i.severity === 'info');
   const ok = analysis.insights.filter((i) => i.severity === 'good');
+
+  const tabs: { key: TabKey; label: string; items: Insight[]; color: string; empty: string }[] = [
+    { key: 'attention', label: 'Требует внимания', items: attention, color: attention.some((i) => i.severity === 'bad') ? 'var(--c-danger)' : 'var(--c-carb)', empty: 'Ничего срочного — всё важное в порядке.' },
+    { key: 'notes', label: 'Заметки', items: notes, color: 'var(--color-accent)', empty: 'Заметок нет.' },
+    { key: 'ok', label: 'В норме', items: ok, color: 'var(--c-glu)', empty: 'Пока нет подтверждённо хороших пунктов.' },
+  ];
+  const active = tabs.find((t) => t.key === tab)!;
 
   return (
     <>
@@ -88,25 +81,25 @@ export default function Insights({ analysis }: { analysis: Analysis | null }) {
         <div className="ready-foot">Autotune анализирует историю и предлагает правки терапии. Он ничего не меняет сам — только советует, решение за тобой и врачом.</div>
       </div>
 
-      {/* приоритет: что требует внимания */}
-      <div className="section-label sec">Требует внимания</div>
-      {attention.length ? (
-        <div className="insights">{attention.map((it) => <Card key={it.id} it={it} />)}</div>
-      ) : (
-        <div className="insight" style={{ borderLeftColor: 'var(--c-glu)' }}>
-          <div className="insight-top">
-            <IonIcon icon={checkmarkCircle} style={{ color: 'var(--c-glu)' }} className="insight-sev" />
-            <span className="insight-title">Ничего срочного</span>
-          </div>
-          <div className="insight-msg">Всё важное в порядке — ниже только заметки и то, что уже хорошо.</div>
-        </div>
-      )}
-
-      {/* остальное — свёрнуто */}
-      <div className="ins-groups">
-        <Group title="Заметки" items={notes} color="var(--color-accent)" />
-        <Group title="В норме" items={ok} color="var(--c-glu)" />
+      {/* вкладки по важности */}
+      <div className="ins-tabs">
+        {tabs.map((t) => {
+          const on = tab === t.key;
+          return (
+            <button key={t.key} className={'ins-tab' + (on ? ' on' : '')} onClick={() => setTab(t.key)}
+              style={on ? { borderColor: `color-mix(in srgb, ${t.color} 60%, transparent)`, background: `color-mix(in srgb, ${t.color} 16%, var(--color-neutral-900))` } : undefined}>
+              <span>{t.label}</span>
+              <span className="ins-tab-count" style={t.items.length ? { color: t.color } : undefined}>{t.items.length}</span>
+            </button>
+          );
+        })}
       </div>
+
+      {active.items.length ? (
+        <div className="insights">{active.items.map((it) => <Card key={it.id} it={it} />)}</div>
+      ) : (
+        <div className="metric-note" style={{ marginTop: 14 }}>{active.empty}</div>
+      )}
 
       <div className="metric-note">Аналитика за {analysis.windowDays} дн. по данным Nightscout. Подсказки — не медицинское назначение; любые изменения терапии обсуждай с врачом.</div>
     </>
