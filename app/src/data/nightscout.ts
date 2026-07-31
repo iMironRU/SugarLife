@@ -72,6 +72,48 @@ export async function ping(base: string, token?: string) {
   };
 }
 
+// Разрешает ли право создавать/менять treatments (shiro-стиль api:treatments:create).
+function grantsTreatmentWrite(p: string): boolean {
+  if (!p) return false;
+  if (p === '*' || p === '*:*:*') return true;
+  const [a = '', b = '', c = ''] = p.split(':');
+  return (a === 'api' || a === '*') && (b === 'treatments' || b === '*') && (c === 'create' || c === 'update' || c === '*');
+}
+
+function collectPerms(j: any): string[] {
+  const out: string[] = [];
+  const pushGroups = (g: any) => { if (Array.isArray(g)) for (const arr of g) if (Array.isArray(arr)) out.push(...arr); };
+  pushGroups(j?.permissionGroups);
+  if (Array.isArray(j?.permissions)) out.push(...j.permissions);
+  // запасной путь: разобрать JWT из ответа
+  if (typeof j?.token === 'string' && j.token.split('.').length === 3) {
+    try {
+      const payload = JSON.parse(atob(j.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      if (Array.isArray(payload?.permissions)) out.push(...payload.permissions);
+      pushGroups(payload?.permissionGroups);
+      if (typeof payload?.scope === 'string') out.push(...payload.scope.split(/\s+/));
+    } catch { /* ignore */ }
+  }
+  return out;
+}
+
+// Есть ли у токена право записи в Nightscout (создавать treatments).
+// Fail-closed: нет токена / невалидный / неопределённо → false (только чтение).
+export async function checkWrite(base: string, token?: string): Promise<boolean> {
+  const t = (token || '').trim();
+  if (!t) return false;
+  const url = String(base || '').trim().replace(/\/+$/, '') + '/api/v2/authorization/request/' + encodeURIComponent(t);
+  try {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 12000);
+    const r = await fetch(url, { headers: { Accept: 'application/json' }, signal: ctrl.signal });
+    clearTimeout(to);
+    if (!r.ok) return false;
+    const j = await r.json();
+    return collectPerms(j).some(grantsTreatmentWrite);
+  } catch { return false; }
+}
+
 // Загрузка entries за период (дней). count ограничен, для длинных периодов — выборка.
 export async function loadEntriesRange(base: string, token: string | undefined, days: number): Promise<Entry[]> {
   const count = Math.min(days * 300, 8000);

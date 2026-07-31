@@ -1,10 +1,10 @@
 import {
   IonModal, IonContent, IonInput, IonToggle, IonButton, IonIcon,
 } from '@ionic/react';
-import { linkOutline, keyOutline, closeOutline, gitNetworkOutline } from 'ionicons/icons';
+import { linkOutline, keyOutline, closeOutline, gitNetworkOutline, lockClosed, createOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { getCfg, setCfg, ping } from '../data/nightscout';
-import { refresh } from '../data/store';
+import { refresh, useStore } from '../data/store';
 import { toUnits } from '../data/units';
 
 export default function NightscoutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -12,6 +12,8 @@ export default function NightscoutModal({ isOpen, onClose }: { isOpen: boolean; 
   const [token, setToken] = useState('');
   const [enabled, setEnabled] = useState(false);
   const [msg, setMsg] = useState('');
+  const { writable, status } = useStore();
+  const connected = status === 'ok' || status === 'stale';
 
   useEffect(() => {
     if (!isOpen) return;
@@ -53,7 +55,7 @@ export default function NightscoutModal({ isOpen, onClose }: { isOpen: boolean; 
           <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
         </div>
 
-        <p className="sheet-desc">Читаем сахар и тренд напрямую из вашего Nightscout. Только чтение. Адрес и токен хранятся локально на устройстве.</p>
+        <p className="sheet-desc">Читаем сахар и тренд напрямую из вашего Nightscout. Для записи (еда, болюсы) нужен токен с правом записи. Адрес и токен хранятся локально на устройстве.</p>
 
         <div className="field-label">Адрес сайта</div>
         <div className="field">
@@ -61,10 +63,10 @@ export default function NightscoutModal({ isOpen, onClose }: { isOpen: boolean; 
           <IonInput value={url} onIonInput={(e) => setUrl(e.detail.value ?? '')} placeholder="https://ваш-сайт.nightscout…" inputmode="url" autocapitalize="off" />
         </div>
 
-        <div className="field-label">Токен доступа · если требуется</div>
+        <div className="field-label">Токен доступа · нужен для записи (еда, болюсы)</div>
         <div className="field">
           <IonIcon icon={keyOutline} className="field-ico" />
-          <IonInput value={token} onIonInput={(e) => setToken(e.detail.value ?? '')} placeholder="read-only токен (необязательно)" autocapitalize="off" />
+          <IonInput value={token} onIonInput={(e) => setToken(e.detail.value ?? '')} placeholder="токен с ролью записи (careportal/admin)" autocapitalize="off" />
         </div>
 
         <IonButton expand="block" className="connect-btn" onClick={save}>
@@ -73,6 +75,21 @@ export default function NightscoutModal({ isOpen, onClose }: { isOpen: boolean; 
         </IonButton>
 
         <div className="sheet-msg">{msg}</div>
+
+        {/* режим доступа */}
+        {connected && (
+          <div className={'ns-access' + (writable ? ' rw' : '')}>
+            <IonIcon icon={writable ? createOutline : lockClosed} />
+            <div>
+              <div className="ns-access-title">{writable ? 'Чтение и запись' : 'Только чтение'}</div>
+              <div className="ns-access-sub">
+                {writable
+                  ? 'Токен даёт право записи — доступны объявление еды, болюсы и запись в Nightscout.'
+                  : 'Ввод данных (еда, болюсы, запись) выключен. Добавьте токен с правом записи, чтобы включить.'}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="sync-toggle">
           <div>
