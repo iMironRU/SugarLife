@@ -1,7 +1,7 @@
 import { IonPage, IonContent, IonIcon, useIonViewWillLeave } from '@ionic/react';
 import {
   personCircle, chevronForward, cloudDownloadOutline, downloadOutline,
-  optionsOutline, ellipse, sunny, moon,
+  optionsOutline, ellipse, sunny, moon, refreshOutline,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
@@ -12,6 +12,7 @@ import { fmt, toUnits, unitLabel, useUnit } from '../data/units';
 import { countEntries } from '../data/db';
 import { exportGlucoseCsv } from '../data/export';
 import { useTheme } from '../theme/useTheme';
+import { APP_VERSION, APP_BUILD, isNative, checkWebUpdate } from '../data/appUpdate';
 import NightscoutModal from '../components/NightscoutModal';
 import UnitsModal from '../components/UnitsModal';
 
@@ -26,6 +27,8 @@ export default function Profile() {
   const [count, setCount] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   useIonViewWillLeave(() => { setNsOpen(false); setUnitsOpen(false); });
 
   useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
@@ -42,6 +45,18 @@ export default function Profile() {
     try { localStorage.removeItem('sl.ns.cache.v1'); } catch { /* ignore */ }
     try { indexedDB.deleteDatabase('sugarlife'); } catch { /* ignore */ }
     location.reload();
+  };
+
+  const doUpdate = async () => {
+    if (updating) return;
+    setUpdating(true);
+    setUpdateMsg(null);
+    const r = await checkWebUpdate();
+    setUpdating(false);
+    if (r === 'current') setUpdateMsg('У вас последняя версия.');
+    else if (r === 'error') setUpdateMsg('Не удалось проверить обновление.');
+    // 'updated' → приложение перезагрузится само
+    if (r === 'current') window.setTimeout(() => setUpdateMsg(null), 4000);
   };
 
   const doExport = async () => {
@@ -132,6 +147,20 @@ export default function Profile() {
           <div className="metric-note" style={{ marginTop: 14 }}>
             Данные хранятся только на этом устройстве, без облака и аккаунта.
           </div>
+
+          {/* о приложении: версия + сборка + обновление */}
+          <div className="section-label sec">О приложении</div>
+          <div className="about">
+            <div className="about-info">
+              <div className="about-ver">Версия {APP_VERSION}</div>
+              <div className="about-build">сборка {APP_BUILD}{isNative ? ' · нативное' : ' · PWA'}</div>
+            </div>
+            <button className="about-update" onClick={doUpdate} disabled={updating}>
+              <IonIcon icon={refreshOutline} className={updating ? 'spin' : ''} />
+              {updating ? 'Проверяю…' : 'Обновиться'}
+            </button>
+          </div>
+          {updateMsg && <div className="metric-note" style={{ marginTop: 8 }}>{updateMsg}</div>}
 
           <button className="logout" onClick={reset}>Сбросить настройки</button>
         </div>
