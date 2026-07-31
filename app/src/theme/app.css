@@ -211,6 +211,14 @@
 }
 .field-ico { font-size: 17px; color: var(--color-neutral-500); flex-shrink: 0; }
 .field ion-input { --padding-start: 0; --padding-end: 0; font-size: 14px; }
+.field-copy {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 9px; border: none; cursor: pointer;
+  background: var(--color-neutral-800); color: var(--color-neutral-300);
+  transition: background .15s, color .15s;
+}
+.field-copy ion-icon { font-size: 17px; }
+.field-copy.ok { color: var(--c-glu); }
 .connect-btn { --border-radius: 16px; margin-top: 4px; font-weight: 600; }
 .sheet-msg { min-height: 18px; font-size: 13px; color: var(--color-neutral-300); text-align: center; margin: 12px 0; }
 .sheet-subtitle { font-size: 11px; color: var(--color-neutral-400); margin-top: 3px; }

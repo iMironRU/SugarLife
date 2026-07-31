@@ -1,7 +1,7 @@
 import {
   IonModal, IonContent, IonInput, IonToggle, IonButton, IonIcon,
 } from '@ionic/react';
-import { linkOutline, keyOutline, closeOutline, gitNetworkOutline, lockClosed, createOutline } from 'ionicons/icons';
+import { linkOutline, keyOutline, closeOutline, gitNetworkOutline, lockClosed, createOutline, copyOutline, checkmarkOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { getCfg, setCfg, ping } from '../data/nightscout';
 import { refresh, useStore } from '../data/store';
@@ -14,6 +14,34 @@ export default function NightscoutModal({ isOpen, onClose }: { isOpen: boolean; 
   const [msg, setMsg] = useState('');
   const { writable, status } = useStore();
   const connected = status === 'ok' || status === 'stale';
+  const [copied, setCopied] = useState(false);
+
+  const copyUrl = async () => {
+    const u = url.trim();
+    if (!u) return;
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(u);
+      ok = true;
+    } catch {
+      // запасной путь для старых WebView без async-clipboard
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = u;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch { ok = false; }
+    }
+    if (ok) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -61,6 +89,11 @@ export default function NightscoutModal({ isOpen, onClose }: { isOpen: boolean; 
         <div className="field">
           <IonIcon icon={linkOutline} className="field-ico" />
           <IonInput value={url} onIonInput={(e) => setUrl(e.detail.value ?? '')} placeholder="https://ваш-сайт.nightscout…" inputmode="url" autocapitalize="off" />
+          {url.trim() && (
+            <button className={'field-copy' + (copied ? ' ok' : '')} onClick={copyUrl} aria-label="Скопировать адрес">
+              <IonIcon icon={copied ? checkmarkOutline : copyOutline} />
+            </button>
+          )}
         </div>
 
         <div className="field-label">Токен доступа · нужен для записи (еда, болюсы)</div>
