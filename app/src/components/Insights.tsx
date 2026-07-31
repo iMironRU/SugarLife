@@ -42,7 +42,15 @@ export default function Insights({ analysis }: { analysis: Analysis | null }) {
   const [tab, setTab] = useState<TabKey>('attention');
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   if (!analysis) {
-    return <div className="metric-note" style={{ marginTop: 6 }}>Собираю аналитику…</div>;
+    return (
+      <div className="ins-loading">
+        <span className="ins-spin" />
+        <div>
+          <b>Считаю аналитику…</b>
+          <span>Смотрю глюкозу, базал и расходники за последние дни.</span>
+        </div>
+      </div>
+    );
   }
   const toggle = (id: string) => setOpenIds((s) => {
     const n = new Set(s);

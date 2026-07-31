@@ -99,6 +99,9 @@ export default function Today() {
   const sensorDay = ages.sensor ? ages.sensor.days + 1 : null;
   // на сколько хватит: остаток резервуара ÷ средний суточный расход за 90 дн
   const daysLeft = dev?.reservoir != null && tdd ? dev.reservoir / tdd : null;
+  const connected = !!(cfg?.enabled && cfg.url);
+  const insulinComputing = connected && tdd === null && dev?.reservoir != null; // ещё считаем расход
+  const daysLeftText = daysLeft != null ? '~' + fmtDays(daysLeft) + ' дн' : insulinComputing ? '…' : DASH;
 
   // подсветки резервуара
   const stuck = rstat.flatHours > 8 && !isPaused(dev?.status) && (rstat.current ?? 0) > 0;
@@ -179,7 +182,7 @@ export default function Today() {
             </div>
             <div className="tstat" onClick={() => history.push('/ins')}>
               <IonIcon icon={waterOutline} style={{ color: 'var(--c-ins)' }} />
-              <div className="tstat-val">{daysLeft != null ? '~' + fmtDays(daysLeft) + ' дн' : DASH}</div>
+              <div className="tstat-val">{daysLeftText}</div>
               <div className="tstat-label">хватит инсулина</div>
             </div>
           </div>
