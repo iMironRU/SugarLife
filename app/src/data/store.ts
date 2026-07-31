@@ -2,7 +2,7 @@
    поллинг (REST) остаётся страховкой на случай обрыва сокета/CORS.
    Кэш в localStorage (офлайн). Без конфига — данных нет, экраны показывают демо. */
 import { useSyncExternalStore } from 'react';
-import { getCfg, loadAll, type NsData, type Entry, type Treatment, type Device } from './nightscout';
+import { getCfg, loadAll, checkWrite, type NsData, type Entry, type Treatment, type Device } from './nightscout';
 import { connectSocket, disconnectSocket, type SocketData } from './nsSocket';
 import { putEntries } from './db';
 import { backfill } from './backfill';
@@ -16,13 +16,15 @@ export interface StoreState {
   status: Status;
   error: string | null;
   live: boolean; // сокет подключён
+  writable: boolean; // токен даёт право записи (еда/болюсы)
 }
 
-let state: StoreState = { data: null, status: 'idle', error: null, live: false };
+let state: StoreState = { data: null, status: 'idle', error: null, live: false, writable: false };
 const listeners = new Set<() => void>();
 let inflight = false;
 let started = false;
 let socketUrl: string | null = null;
+let writeCheckedToken: string | undefined | null = null; // null = ещё не проверяли
 
 function emit() { for (const l of listeners) l(); }
 function set(patch: Partial<StoreState>) { state = { ...state, ...patch }; emit(); }
@@ -72,11 +74,23 @@ function ensureSocket(cfg: ReturnType<typeof getCfg>) {
   }
 }
 
+// Проверка права записи только при смене токена/URL (не на каждый поллинг).
+function ensureWriteCheck(cfg: ReturnType<typeof getCfg>) {
+  const key = cfg && cfg.enabled && cfg.url ? (cfg.token || '') : undefined;
+  if (key === writeCheckedToken) return;
+  writeCheckedToken = key;
+  if (!key || !cfg) { set({ writable: false }); return; }
+  checkWrite(cfg.url, cfg.token).then((w) => {
+    if (writeCheckedToken === key) set({ writable: w });
+  }).catch(() => { if (writeCheckedToken === key) set({ writable: false }); });
+}
+
 export async function refresh() {
   const cfg = getCfg();
   ensureSocket(cfg);
+  ensureWriteCheck(cfg);
   if (inflight) return;
-  if (!cfg || !cfg.enabled || !cfg.url) { set({ status: 'off', error: null }); return; }
+  if (!cfg || !cfg.enabled || !cfg.url) { set({ status: 'off', error: null, writable: false }); return; }
   inflight = true;
   if (!state.data) set({ status: 'loading' });
   try {
@@ -113,4 +127,9 @@ function getSnapshot() { return state; }
 
 export function useStore(): StoreState {
   return useSyncExternalStore(subscribe, getSnapshot);
+}
+
+// Право записи в Nightscout. Гейтить им весь ввод (еда/болюсы/запись).
+export function useWritable(): boolean {
+  return useSyncExternalStore(subscribe, () => state.writable);
 }

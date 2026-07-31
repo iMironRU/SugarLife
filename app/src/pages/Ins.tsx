@@ -1,7 +1,7 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { water, batteryHalf, pulse, flash, add, remove, chevronForward, syncCircle } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
-import { useStore } from '../data/store';
+import { useStore, useWritable } from '../data/store';
 import { detectTherapy, therapyLabel } from '../data/therapy';
 import { getCfg, loadEventsRange, type Treatment } from '../data/nightscout';
 import { deviceAges, type Age } from '../data/treatmentStats';
@@ -18,6 +18,7 @@ export default function Ins() {
   const therapy = detectTherapy(data);
   const isPen = therapy === 'pen';
   const unit = useUnit();
+  const writable = useWritable();
   const gluShort = (mmol: number) => (unit === 'mgdl' ? String(Math.round(mmol * 18)) : fmt(mmol));
 
   // расходники помпы — из событий замен в Nightscout
@@ -168,7 +169,9 @@ export default function Ins() {
           </div>
 
           <div className="metric-note">
-            Режим определяется автоматически из Nightscout. У вас — {therapyLabel(therapy).toLowerCase()}: инсулин идёт базалом, дискретных болюсов почти нет. Калькулятор считает по вашему профилю. Подача (запись в Nightscout) — в планах.
+            Режим определяется автоматически из Nightscout. У вас — {therapyLabel(therapy).toLowerCase()}: инсулин идёт базалом, дискретных болюсов почти нет. Калькулятор считает по вашему профилю. {writable
+              ? 'Подача болюса (запись в Nightscout) — в планах.'
+              : 'Запись в Nightscout выключена: нет токена с правом записи, поэтому калькулятор работает только на чтение (подать/записать нельзя).'}
           </div>
         </div>
       </IonContent>

@@ -249,6 +249,19 @@
 .sync-toggle-title { font-size: 14px; }
 .sync-toggle-sub { font-size: 11px; color: var(--color-neutral-400); margin-top: 2px; }
 
+/* режим доступа Nightscout (чтение / чтение+запись) */
+.ns-access {
+  display: flex; align-items: flex-start; gap: 11px; margin: 4px 0 14px;
+  padding: 13px 14px; border-radius: 16px;
+  background: color-mix(in srgb, var(--color-neutral-500) 12%, var(--color-neutral-900));
+  border: 1px solid var(--color-neutral-800);
+}
+.ns-access.rw { background: color-mix(in srgb, var(--c-glu) 12%, var(--color-neutral-900)); border-color: color-mix(in srgb, var(--c-glu) 40%, transparent); }
+.ns-access > ion-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; color: var(--color-neutral-400); }
+.ns-access.rw > ion-icon { color: var(--c-glu); }
+.ns-access-title { font-size: 14px; font-weight: 600; }
+.ns-access-sub { font-size: 11.5px; color: var(--color-neutral-400); line-height: 1.4; margin-top: 3px; text-wrap: pretty; }
+
 /* --- Аналитика / инсайты --- */
 .ready-card {
   margin-top: 4px; border-radius: 20px; padding: 16px;
