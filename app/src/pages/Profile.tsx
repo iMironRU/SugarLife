@@ -12,7 +12,7 @@ import { fmt, toUnits, unitLabel, useUnit } from '../data/units';
 import { countEntries } from '../data/db';
 import { exportGlucoseCsv } from '../data/export';
 import { useTheme } from '../theme/useTheme';
-import { APP_VERSION, APP_BUILD, isNative, checkWebUpdate } from '../data/appUpdate';
+import { APP_VERSION, APP_BUILD, isNative, platform, checkWebUpdate, checkNativeUpdate, openApkDownload } from '../data/appUpdate';
 import NightscoutModal from '../components/NightscoutModal';
 import UnitsModal from '../components/UnitsModal';
 
@@ -29,6 +29,7 @@ export default function Profile() {
   const [exportMsg, setExportMsg] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
+  const [apkUrl, setApkUrl] = useState<string | null>(null);
   useIonViewWillLeave(() => { setNsOpen(false); setUnitsOpen(false); });
 
   useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
@@ -51,12 +52,35 @@ export default function Profile() {
     if (updating) return;
     setUpdating(true);
     setUpdateMsg(null);
+    setApkUrl(null);
+
+    // Нативный Android — проверяем новый APK в релизах.
+    if (isNative && platform === 'android') {
+      const r = await checkNativeUpdate();
+      setUpdating(false);
+      if (r === 'error') { setUpdateMsg('Не удалось проверить обновление.'); return; }
+      if (r.hasUpdate && r.apkUrl) {
+        setApkUrl(r.apkUrl);
+        setUpdateMsg('Доступна новая сборка' + (r.build ? ` (${r.build})` : '') + '.');
+      } else {
+        setUpdateMsg('У вас последняя сборка.');
+        window.setTimeout(() => setUpdateMsg(null), 4000);
+      }
+      return;
+    }
+    // Нативный iOS — самообновления нет, только App Store.
+    if (isNative) {
+      setUpdating(false);
+      setUpdateMsg('На iOS обновление приходит через App Store.');
+      return;
+    }
+
+    // Веб/PWA — обновляем оболочку через service worker.
     const r = await checkWebUpdate();
     setUpdating(false);
-    if (r === 'current') setUpdateMsg('У вас последняя версия.');
+    if (r === 'current') { setUpdateMsg('У вас последняя версия.'); window.setTimeout(() => setUpdateMsg(null), 4000); }
     else if (r === 'error') setUpdateMsg('Не удалось проверить обновление.');
     // 'updated' → приложение перезагрузится само
-    if (r === 'current') window.setTimeout(() => setUpdateMsg(null), 4000);
   };
 
   const doExport = async () => {
@@ -155,10 +179,17 @@ export default function Profile() {
               <div className="about-ver">Версия {APP_VERSION}</div>
               <div className="about-build">сборка {APP_BUILD}{isNative ? ' · нативное' : ' · PWA'}</div>
             </div>
-            <button className="about-update" onClick={doUpdate} disabled={updating}>
-              <IonIcon icon={refreshOutline} className={updating ? 'spin' : ''} />
-              {updating ? 'Проверяю…' : 'Обновиться'}
-            </button>
+            {apkUrl ? (
+              <button className="about-update accent" onClick={() => openApkDownload(apkUrl)}>
+                <IonIcon icon={downloadOutline} />
+                Скачать APK
+              </button>
+            ) : (
+              <button className="about-update" onClick={doUpdate} disabled={updating}>
+                <IonIcon icon={refreshOutline} className={updating ? 'spin' : ''} />
+                {updating ? 'Проверяю…' : 'Обновиться'}
+              </button>
+            )}
           </div>
           {updateMsg && <div className="metric-note" style={{ marginTop: 8 }}>{updateMsg}</div>}
 
