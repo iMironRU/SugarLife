@@ -1,9 +1,16 @@
 name: Android APK
 
 on:
-  workflow_dispatch:        # запуск вручную (Actions → Android APK → Run workflow)
   push:
-    tags: ['v*']            # и на теги вида v1.2.3
+    branches: [main]        # авто-пересборка APK на каждый мерж в main
+    paths:                  # только когда меняется само приложение
+      - 'app/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:        # и запуск вручную (Actions → Android APK → Run workflow)
+
+concurrency:                # не копить параллельные сборки — оставляем последнюю
+  group: android-apk
+  cancel-in-progress: true
 
 permissions:
   contents: write           # нужно для публикации в Releases
