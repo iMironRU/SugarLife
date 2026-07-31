@@ -101,7 +101,8 @@ export default function Today() {
 
   // подсветки резервуара
   const stuck = rstat.flatHours > 8 && !isPaused(dev?.status) && (rstat.current ?? 0) > 0;
-  const refill = rstat.lastRefill && Date.now() - rstat.lastRefill.at < 3 * 86400e3 ? rstat.lastRefill : null;
+  // замена резервуара — по событию Insulin Change (надёжно), а не по скачку значения
+  const resChange = ages.reservoir && ages.reservoir.days < 2 ? ages.reservoir : null;
 
   return (
     <IonPage>
@@ -192,12 +193,12 @@ export default function Today() {
               </div>
             </div>
           )}
-          {refill && (
+          {resChange && (
             <div className="today-alert info">
               <IonIcon icon={refreshOutline} />
               <div>
-                <b>Резервуар заправлен {agoText(refill.at)}</b>
-                <span>{Math.round(refill.from)} → {Math.round(refill.to)} ед — вероятно, замена резервуара.</span>
+                <b>Резервуар заменён {agoText(resChange.at)}</b>
+                <span>Свежий резервуар — отсчёт срока пошёл заново.</span>
               </div>
             </div>
           )}
