@@ -4,13 +4,18 @@ import {
   pulse, flash, moon, nutrition, medkit,
   phonePortraitOutline, hardwareChipOutline, waterOutline, warningOutline, refreshOutline,
 } from 'ionicons/icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../data/store';
+import { getSince } from '../data/db';
 import { toUnits, agoText, fmt, unitLabel, useUnit } from '../data/units';
-import { arrowChar, getCfg, loadEventsRange, loadDeviceStatusRange, type Treatment, type DevPoint } from '../data/nightscout';
-import { deviceAges, reservoirStats } from '../data/treatmentStats';
+import { arrowChar, getCfg, loadEventsRange, loadDeviceStatusRange, loadTreatmentsRange, type Treatment, type DevPoint, type Entry } from '../data/nightscout';
+import { deviceAges, reservoirStats, insulinDaily } from '../data/treatmentStats';
+import { analyze, type Analysis } from '../data/analysis';
 import { useTheme } from '../theme/useTheme';
 import CircleSparkline from '../components/CircleSparkline';
+import Insights from '../components/Insights';
+
+const ANALYSIS_DAYS = 14;
 
 const DASH = '—';
 
@@ -29,7 +34,7 @@ const fmtDays = (d: number) => (d < 10 ? d.toFixed(1).replace('.', ',') : String
 export default function Today() {
   const { data, live } = useStore();
   const { toggle } = useTheme();
-  useUnit(); // перерисовка при смене единиц
+  const unit = useUnit(); // перерисовка/пересчёт при смене единиц
   const history = useHistory();
   const latest = data?.latest || null;
   const dev = data?.device || null;
@@ -48,6 +53,32 @@ export default function Today() {
   }, [cfg?.url, cfg?.enabled]);
   const ages = deviceAges(events);
   const rstat = reservoirStats(devHist);
+
+  // данные для «Обзора» (аналитика за 14 дн): глюкоза из БД + покрытие базала
+  const [anaEnt, setAnaEnt] = useState<Entry[]>([]);
+  const [anaCov, setAnaCov] = useState<{ covered: number; total: number } | null>(null);
+  useEffect(() => {
+    let cancel = false;
+    if (cfg?.enabled && cfg.url) {
+      (async () => {
+        try {
+          const [ent, tb] = await Promise.all([
+            getSince(Date.now() - ANALYSIS_DAYS * 86400e3),
+            loadTreatmentsRange(cfg!.url, cfg!.token, ANALYSIS_DAYS),
+          ]);
+          if (cancel) return;
+          const id = insulinDaily(tb, []);
+          setAnaEnt(ent);
+          setAnaCov({ covered: id.coveredDays, total: id.totalDays });
+        } catch { /* ignore */ }
+      })();
+    }
+    return () => { cancel = true; };
+  }, [cfg?.url, cfg?.enabled]);
+  const analysis = useMemo<Analysis | null>(
+    () => (anaCov ? analyze(anaEnt, events, ANALYSIS_DAYS, { basalCoverage: anaCov, uploaderBattery: dev?.uploaderBattery ?? null }) : null),
+    [anaEnt, anaCov, events, dev?.uploaderBattery, unit],
+  );
 
   const glucose = latest ? toUnits(latest.mmol) : DASH;
   const arrow = latest ? arrowChar(latest.dir) : '';
@@ -167,6 +198,10 @@ export default function Today() {
               </div>
             </div>
           )}
+
+          {/* Обзор: готовность к Autotune + инсайты по вкладкам */}
+          <div className="section-label" style={{ marginTop: 22 }}>Обзор</div>
+          <Insights analysis={analysis} />
         </div>
       </IonContent>
     </IonPage>

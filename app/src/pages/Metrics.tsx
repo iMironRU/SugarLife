@@ -1,19 +1,15 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { chevronForward, water, nutrition, medkit, sparklesOutline } from 'ionicons/icons';
-import { useEffect, useMemo, useState } from 'react';
-import { useEntries, getSince } from '../data/db';
-import { useStore } from '../data/store';
-import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment, type Entry } from '../data/nightscout';
+import { chevronForward, water, nutrition, medkit } from 'ionicons/icons';
+import { useEffect, useState } from 'react';
+import { useEntries } from '../data/db';
+import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment } from '../data/nightscout';
 import { stats } from '../data/agp';
 import { carbStats, insulinDaily } from '../data/treatmentStats';
-import { analyze, type Analysis } from '../data/analysis';
 import { fmt, toUnits, unitLabel, useUnit } from '../data/units';
 import TirBar from '../components/TirBar';
 import AgpChart from '../components/AgpChart';
-import Insights from '../components/Insights';
 
-type MetricKey = 'overview' | 'glucose' | 'carbs' | 'insulin';
-const ANALYSIS_DAYS = 14;
+type MetricKey = 'glucose' | 'carbs' | 'insulin';
 type Cell = [string, string, string];
 interface MetricDef { title: string; color: string; icon: string; hero: Cell; cards: [Cell, Cell]; stats: [Cell, Cell]; note?: string; }
 
@@ -26,13 +22,10 @@ const r0 = (v: number) => String(Math.round(v));
 
 export default function Metrics() {
   const [days, setDays] = useState(3);
-  const [metric, setMetric] = useState<MetricKey>('overview');
-  const unit = useUnit(); // перерисовка/пересчёт при смене единиц
-  const { data: sdata } = useStore();
-  const uploaderBattery = sdata?.device?.uploaderBattery ?? null;
+  const [metric, setMetric] = useState<MetricKey>('glucose');
+  useUnit(); // перерисовка при смене единиц
   const [events, setEvents] = useState<Treatment[]>([]);
   const [tempBasals, setTempBasals] = useState<Treatment[]>([]);
-  const [rawAnalysis, setRawAnalysis] = useState<{ ent: Entry[]; ev: Treatment[]; cov: { covered: number; total: number } } | null>(null);
 
   const cfg = getCfg();
   const enabled = !!(cfg && cfg.enabled && cfg.url);
@@ -48,36 +41,6 @@ export default function Metrics() {
     } else { setEvents([]); setTempBasals([]); }
     return () => { cancel = true; };
   }, [days, basalDays, enabled, cfg?.url]);
-
-  // Аналитика «Обзор» — по фиксированному окну (устойчивый вердикт готовности),
-  // события за 30 дн. нужны для возрастов расходников (последняя замена могла быть давно).
-  useEffect(() => {
-    if (metric !== 'overview') return;
-    let cancel = false;
-    if (!enabled) { setRawAnalysis(null); return; }
-    (async () => {
-      try {
-        const [ent, ev, tb] = await Promise.all([
-          getSince(Date.now() - ANALYSIS_DAYS * 86400e3),
-          loadEventsRange(cfg!.url, cfg!.token, 30),
-          loadTreatmentsRange(cfg!.url, cfg!.token, ANALYSIS_DAYS),
-        ]);
-        if (cancel) return;
-        // покрытие базала — только по окну temp basal (без дней из 30-дневных болюсов)
-        const idA = insulinDaily(tb, []);
-        setRawAnalysis({ ent, ev, cov: { covered: idA.coveredDays, total: idA.totalDays } });
-      } catch {
-        if (!cancel) setRawAnalysis(null);
-      }
-    })();
-    return () => { cancel = true; };
-  }, [metric, enabled, cfg?.url]);
-
-  // пересчёт инсайтов — быстрый, без сети; зависит от единиц и заряда телефона
-  const analysis = useMemo<Analysis | null>(
-    () => (rawAnalysis ? analyze(rawAnalysis.ent, rawAnalysis.ev, ANALYSIS_DAYS, { basalCoverage: rawAnalysis.cov, uploaderBattery }) : null),
-    [rawAnalysis, unit, uploaderBattery],
-  );
 
   const s = entries.length ? stats(entries) : null;
   const id = insulinDaily(tempBasals, events);
@@ -102,7 +65,6 @@ export default function Metrics() {
   };
 
   const chips: { key: MetricKey; label: string; color: string; icon: string }[] = [
-    { key: 'overview', label: 'Обзор', color: 'var(--color-accent)', icon: sparklesOutline },
     { key: 'glucose', label: 'Глюкоза', color: 'var(--c-glu)', icon: water },
     { key: 'carbs', label: 'Углеводы', color: 'var(--c-carb)', icon: nutrition },
     { key: 'insulin', label: 'Инсулин', color: 'var(--c-ins)', icon: medkit },
@@ -112,13 +74,11 @@ export default function Metrics() {
     <IonPage>
       <IonContent fullscreen>
         <div className="screen screen-pad">
-          {metric !== 'overview' && (
-            <div className="period">
-              {PERIODS.map((p) => (
-                <button key={p.days} className={'period-seg' + (days === p.days ? ' on' : '')} onClick={() => setDays(p.days)}>{p.label}</button>
-              ))}
-            </div>
-          )}
+          <div className="period">
+            {PERIODS.map((p) => (
+              <button key={p.days} className={'period-seg' + (days === p.days ? ' on' : '')} onClick={() => setDays(p.days)}>{p.label}</button>
+            ))}
+          </div>
 
           <div className="metric-chips">
             {chips.map((c) => {
@@ -133,13 +93,7 @@ export default function Metrics() {
             })}
           </div>
 
-          {metric === 'overview' ? (
-            enabled ? (
-              <Insights analysis={analysis} />
-            ) : (
-              <div className="metric-note" style={{ marginTop: 30 }}>Нет данных. Подключите Nightscout в профиле.</div>
-            )
-          ) : metric === 'glucose' ? (
+          {metric === 'glucose' ? (
             s ? (
               <>
                 <div className="metric-title"><IonIcon icon={water} style={{ color: 'var(--c-glu)', fontSize: 26 }} /><span>Время в диапазоне</span></div>
