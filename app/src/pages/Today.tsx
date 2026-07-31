@@ -1,7 +1,7 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import {
-  pulse, flash, moon, nutrition, medkit,
+  pulse, flash, moon, nutrition, medkit, chevronForward,
   phonePortraitOutline, hardwareChipOutline, waterOutline, warningOutline, refreshOutline,
 } from 'ionicons/icons';
 import { useEffect, useMemo, useState } from 'react';
@@ -58,6 +58,7 @@ export default function Today() {
   const [anaEnt, setAnaEnt] = useState<Entry[]>([]);
   const [anaCov, setAnaCov] = useState<{ covered: number; total: number } | null>(null);
   const [tdd, setTdd] = useState<number | null>(null);
+  const [obzorOpen, setObzorOpen] = useState(true);
   useEffect(() => {
     let cancel = false;
     if (cfg?.enabled && cfg.url) {
@@ -203,9 +204,12 @@ export default function Today() {
             </div>
           )}
 
-          {/* Обзор: готовность к Autotune + инсайты по вкладкам */}
-          <div className="section-label" style={{ marginTop: 22 }}>Обзор</div>
-          <Insights analysis={analysis} />
+          {/* Обзор: инсайты по вкладкам (сворачиваемый) */}
+          <button className="section-toggle" onClick={() => setObzorOpen((o) => !o)}>
+            <span className="section-label">Обзор</span>
+            <IonIcon icon={chevronForward} className={'section-chev' + (obzorOpen ? ' open' : '')} />
+          </button>
+          {obzorOpen && <Insights analysis={analysis} />}
         </div>
       </IonContent>
     </IonPage>
