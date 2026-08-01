@@ -1,23 +1,27 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import {
-  nutrition, medkit, chevronForward,
+  restaurantOutline,
   phonePortraitOutline, hardwareChipOutline, waterOutline, warningOutline, refreshOutline,
 } from 'ionicons/icons';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../data/store';
-import { getSince } from '../data/db';
-import { agoText, fmt, useUnit } from '../data/units';
-import { getCfg, loadEventsRange, loadDeviceStatusRange, loadTreatmentsRange, type Treatment, type DevPoint, type Entry } from '../data/nightscout';
+import { agoText, useUnit } from '../data/units';
+import { reportContentScroll } from '../data/panel';
+import { getCfg, loadEventsRange, loadDeviceStatusRange, loadTreatmentsRange, type Treatment, type DevPoint } from '../data/nightscout';
 import { deviceAges, reservoirStats, insulinDaily } from '../data/treatmentStats';
-import { analyze, type Analysis } from '../data/analysis';
-import Insights from '../components/Insights';
-
-const ANALYSIS_DAYS = 14;
 
 const DASH = '—';
 
-// Короткий статус помпы, чтобы влезал в крыло
+// склонение «приём/приёма/приёмов»
+function mealsWord(n: number): string {
+  const d = n % 10, dd = n % 100;
+  if (d === 1 && dd !== 11) return 'приём';
+  if (d >= 2 && d <= 4 && (dd < 10 || dd >= 20)) return 'приёма';
+  return 'приёмов';
+}
+
+// Короткий статус помпы
 function shortStatus(s?: string | null): string {
   if (!s) return DASH;
   const l = s.toLowerCase();
@@ -31,88 +35,76 @@ const fmtDays = (d: number) => (d < 10 ? d.toFixed(1).replace('.', ',') : String
 
 export default function Today() {
   const { data } = useStore();
-  const unit = useUnit(); // перерисовка/пересчёт при смене единиц
+  useUnit(); // перерисовка при смене единиц
   const history = useHistory();
   const dev = data?.device || null;
 
-  // события (для дня датчика) + история резервуара (расход/заправки)
+  // события (день датчика + углеводы за сегодня) + история резервуара
   const cfg = getCfg();
   const [events, setEvents] = useState<Treatment[]>([]);
   const [devHist, setDevHist] = useState<DevPoint[]>([]);
+  const [tdd, setTdd] = useState<number | null>(null);
   useEffect(() => {
     let cancel = false;
     if (cfg?.enabled && cfg.url) {
-      loadEventsRange(cfg.url, cfg.token, 30).then((e) => { if (!cancel) setEvents(e); }).catch(() => {});
+      loadEventsRange(cfg.url, cfg.token, 50).then((e) => { if (!cancel) setEvents(e); }).catch(() => {});
       loadDeviceStatusRange(cfg.url, cfg.token, 2000).then((d) => { if (!cancel) setDevHist(d); }).catch(() => {});
+      // средний суточный расход за 90 дн — для «хватит инсулина»
+      loadTreatmentsRange(cfg.url, cfg.token, 90).then((tb) => {
+        if (cancel) return;
+        const id = insulinDaily(tb, []);
+        setTdd(id.tddPerDay > 5 ? id.tddPerDay : null);
+      }).catch(() => {});
     }
     return () => { cancel = true; };
   }, [cfg?.url, cfg?.enabled]);
   const ages = deviceAges(events);
   const rstat = reservoirStats(devHist);
 
-  // данные для «Обзора» + средний суточный расход (TDD) за 90 дн для «хватит инсулина»
-  const [anaEnt, setAnaEnt] = useState<Entry[]>([]);
-  const [anaCov, setAnaCov] = useState<{ covered: number; total: number } | null>(null);
-  const [tdd, setTdd] = useState<number | null>(null);
-  const [obzorOpen, setObzorOpen] = useState(true);
-  useEffect(() => {
-    let cancel = false;
-    if (cfg?.enabled && cfg.url) {
-      (async () => {
-        try {
-          const [ent, tb] = await Promise.all([
-            getSince(Date.now() - ANALYSIS_DAYS * 86400e3),
-            loadTreatmentsRange(cfg!.url, cfg!.token, 90), // 90 дн — устойчивый средний расход
-          ]);
-          if (cancel) return;
-          const id = insulinDaily(tb, []);
-          setAnaEnt(ent);
-          setAnaCov({ covered: id.coveredDays, total: id.totalDays });
-          setTdd(id.tddPerDay > 5 ? id.tddPerDay : null);
-        } catch { /* ignore */ }
-      })();
-    }
-    return () => { cancel = true; };
-  }, [cfg?.url, cfg?.enabled]);
-  const analysis = useMemo<Analysis | null>(
-    () => (anaCov ? analyze(anaEnt, events, ANALYSIS_DAYS, { basalCoverage: anaCov, uploaderBattery: dev?.uploaderBattery ?? null }) : null),
-    [anaEnt, anaCov, events, dev?.uploaderBattery, unit],
-  );
-
-  const cob = dev?.cob != null ? String(Math.round(dev.cob)) : DASH;
-  const iob = dev?.iob != null ? fmt(dev.iob) : DASH;
+  // углеводы за сегодня (с локальной полуночи)
+  const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+  const todayCarbs = events.filter((e) => (e.carbs ?? 0) > 0 && e.t >= dayStart.getTime());
+  const dayCarbs = Math.round(todayCarbs.reduce((a, b) => a + (b.carbs || 0), 0));
+  const mealCount = todayCarbs.length;
+  const cob = dev?.cob != null ? Math.round(dev.cob) : null;
 
   // статус-полоска
   const phone = dev?.uploaderBattery;
   const sensorDay = ages.sensor ? ages.sensor.days + 1 : null;
-  // на сколько хватит: остаток резервуара ÷ средний суточный расход за 90 дн
   const daysLeft = dev?.reservoir != null && tdd ? dev.reservoir / tdd : null;
   const connected = !!(cfg?.enabled && cfg.url);
-  const insulinComputing = connected && tdd === null && dev?.reservoir != null; // ещё считаем расход
+  const insulinComputing = connected && tdd === null && dev?.reservoir != null;
   const daysLeftText = daysLeft != null ? '~' + fmtDays(daysLeft) + ' дн' : insulinComputing ? '…' : DASH;
 
   // подсветки резервуара
   const stuck = rstat.flatHours > 8 && !isPaused(dev?.status) && (rstat.current ?? 0) > 0;
-  // замена резервуара — по событию Insulin Change (надёжно), а не по скачку значения
   const resChange = ages.reservoir && ages.reservoir.days < 2 ? ages.reservoir : null;
 
   return (
     <IonPage>
-      <IonContent fullscreen>
+      <IonContent fullscreen scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen">
-          {/* живые показатели: активные углеводы и активный инсулин */}
-          <div className="today-stats">
-            <button className="today-stat" onClick={() => history.push('/ins')}>
-              <IonIcon icon={nutrition} style={{ color: 'var(--c-carb)' }} />
-              <div className="today-stat-val">{cob}<i> г</i></div>
-              <div className="today-stat-label">активные углеводы</div>
-            </button>
-            <button className="today-stat" onClick={() => history.push('/ins')}>
-              <IonIcon icon={medkit} style={{ color: 'var(--c-ins)' }} />
-              <div className="today-stat-val">{iob}<i> ед</i></div>
-              <div className="today-stat-label">активный инсулин</div>
-            </button>
-          </div>
+          {/* панель углеводов (по макету): Б/Ж/У · активные · Еда.
+              Б/Ж пусто — Nightscout не отдаёт белки/жиры, фейк не рисуем. */}
+          <button className="carb-panel" onClick={() => history.push('/ins')}>
+            <div className="carb-macros">
+              <div className="carb-macro"><span className="cm-k">Б</span><span className="cm-v">{DASH}</span></div>
+              <div className="carb-macro"><span className="cm-k">Ж</span><span className="cm-v">{DASH}</span></div>
+              <div className="carb-macro"><span className="cm-k">У</span><span className="cm-v">{dayCarbs}</span><span className="cm-u">г</span></div>
+            </div>
+
+            <div className="carb-center">
+              <div className="carb-big">{cob != null ? cob : DASH}<span>г</span></div>
+              <div className="carb-lbl">активные углеводы</div>
+              <div className="carb-sub">всего за день · {dayCarbs} г</div>
+            </div>
+
+            <div className="carb-food">
+              <IonIcon icon={restaurantOutline} />
+              <div className="carb-food-t">Еда</div>
+              <div className="carb-food-s">{mealCount} {mealsWord(mealCount)}</div>
+            </div>
+          </button>
 
           {/* статус: телефон · датчик · инсулин */}
           <div className="today-status">
@@ -152,13 +144,6 @@ export default function Today() {
               </div>
             </div>
           )}
-
-          {/* Обзор: инсайты по вкладкам (сворачиваемый) */}
-          <button className="section-toggle" onClick={() => setObzorOpen((o) => !o)}>
-            <span className="section-label">Обзор</span>
-            <IonIcon icon={chevronForward} className={'section-chev' + (obzorOpen ? ' open' : '')} />
-          </button>
-          {obzorOpen && <Insights analysis={analysis} />}
         </div>
       </IonContent>
     </IonPage>
