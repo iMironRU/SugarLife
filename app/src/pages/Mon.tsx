@@ -4,7 +4,7 @@ import { pulse, wifi, cloudOffline, hardwareChipOutline } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
 import { useEntries } from '../data/db';
-import { toUnits, agoText, useUnit } from '../data/units';
+import { toUnits, useUnit } from '../data/units';
 import { arrowChar, getCfg, loadEventsRange, type Treatment } from '../data/nightscout';
 import { deviceAges } from '../data/treatmentStats';
 import GlucoseTimeChart from '../components/GlucoseTimeChart';
@@ -45,21 +45,7 @@ export default function Mon() {
     <IonPage>
       <IonContent fullscreen scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
-          <div className="mon-head">
-            <div>
-              <div className="mon-title">НМГ</div>
-              <div className="mon-sub">{live ? 'реальное время' : status === 'off' ? 'демо' : 'поллинг'}</div>
-            </div>
-            {latest && (
-              <div className="mon-now">
-                <span className="mon-now-val">{toUnits(latest.mmol)}</span>
-                <span className="mon-now-arrow">{arrowChar(latest.dir)}</span>
-                <span className="mon-now-ago">{agoText(latest.t)}</span>
-              </div>
-            )}
-          </div>
-
-          {/* статус источника */}
+          {/* статус источника (сахар/тренд — уже в верхней панели, не дублируем) */}
           <div className="mon-status">
             <div className="mon-stat">
               <IonIcon icon={live ? wifi : cloudOffline} style={{ color: live ? 'var(--c-glu)' : 'var(--color-neutral-500)' }} />
