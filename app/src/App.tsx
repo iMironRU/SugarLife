@@ -14,6 +14,7 @@ import Connect from './pages/Connect';
 import Loader from './pages/Loader';
 import InstallPrompt from './components/InstallPrompt';
 import HeroPanel from './components/HeroPanel';
+import TabSwipe from './components/TabSwipe';
 import { useStore } from './data/store';
 import { detectTherapy } from './data/therapy';
 
@@ -30,6 +31,7 @@ export default function App() {
       <IonReactHashRouter>
         <div className="app-shell">
           <HeroPanel />
+          <TabSwipe />
           <div className="app-body">
           <IonTabs>
           <IonRouterOutlet>

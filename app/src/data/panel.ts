@@ -19,3 +19,13 @@ export function usePanelScrolled(): boolean {
     () => scrolled,
   );
 }
+
+// Обработчик onIonScroll для экранов. ВАЖНО: вкладки остаются смонтированными,
+// и уходящая (скрытая) вкладка может прислать событие скролла со своим старым
+// scrollTop — оно бы залипило панель в «строке». Поэтому реагируем только на
+// событие от ВИДИМОГО ion-content (у скрытого display:none → offsetParent === null).
+export function reportContentScroll(e: { target: EventTarget | null; detail: { scrollTop: number } }): void {
+  const el = e.target as HTMLElement | null;
+  if (!el || el.offsetParent === null) return;
+  setPanelScrolled(e.detail.scrollTop > 10);
+}
