@@ -224,6 +224,33 @@ ion-content { --background: var(--color-bg); }
 .today-stat-val i { font-size: 13px; font-weight: 400; color: var(--color-neutral-400); font-style: normal; }
 .today-stat-label { font-size: 12px; color: var(--color-neutral-400); }
 
+/* ===== Панель углеводов (по макету): Б/Ж/У · активные · Еда ===== */
+.carb-panel {
+  width: 100%; margin-top: 6px; display: flex; align-items: stretch; overflow: hidden;
+  border-radius: 20px; cursor: pointer; font-family: var(--font-body); color: var(--color-text);
+  border: 1.5px solid color-mix(in srgb, var(--c-carb) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 14%, transparent), color-mix(in srgb, var(--c-carb) 4%, transparent));
+  transition: background .16s;
+}
+.carb-panel:active { background: linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 20%, transparent), color-mix(in srgb, var(--c-carb) 7%, transparent)); }
+
+.carb-macros { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 14px 0 14px 18px; }
+.carb-macro { display: flex; align-items: baseline; gap: 5px; }
+.cm-k { font-size: 11px; color: var(--color-neutral-400); width: 12px; }
+.cm-v { font-size: 13px; font-weight: 600; }
+.cm-u { font-size: 10px; color: var(--color-neutral-400); }
+
+.carb-center { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 10px; }
+.carb-big { display: flex; align-items: baseline; gap: 5px; font-size: 40px; font-weight: 600; line-height: 1; letter-spacing: -.02em; color: var(--c-carb); }
+.carb-big span { font-size: 14px; font-weight: 500; color: var(--c-carb-2); }
+.carb-lbl { font-size: 11px; color: var(--color-neutral-400); margin-top: 5px; }
+.carb-sub { font-size: 10px; color: var(--color-neutral-500); margin-top: 3px; }
+
+.carb-food { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 4px; padding: 14px 18px 14px 0; text-align: right; }
+.carb-food ion-icon { font-size: 24px; color: var(--c-carb); }
+.carb-food-t { font-size: 14px; font-weight: 600; color: var(--color-text); }
+.carb-food-s { font-size: 10px; color: var(--color-neutral-400); line-height: 1.2; }
+
 /* статус-полоска: телефон · датчик · инсулин */
 .today-status { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 12px; }
 .tstat {
