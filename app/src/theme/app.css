@@ -52,14 +52,19 @@ ion-content::part(scroll)::-webkit-scrollbar { width: 0; height: 0; }
 /* ===== Общая верхняя панель: НМГ | круг | Помпа — живёт на ВСЕХ экранах =====
    Три состояния плавно перетекают (0.22s):
    .is-full (Сегодня) → .is-compact (прочие) → .is-line (прочие + прокрутка). */
-.app-shell { display: flex; flex-direction: column; height: 100%; }
-/* Ionic оборачивает IonTabs в .ion-page с position:absolute;inset:0 — он бы
-   накрыл панель. Заставляем этот враппер жить во flex-потоке под панелью.
-   Селектор — только прямой ребёнок, маршрутные .ion-page глубже не трогаем. */
-.app-shell > .ion-page { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; }
+/* Один фон на всё приложение (панель + все экраны) — Ionic-палитра тянет свой
+   чёрный --ion-background-color, поэтому единый цвет задаём явно из --color-bg. */
+ion-app { background: var(--color-bg); }
+ion-content { --background: var(--color-bg); }
+
+.app-shell { display: flex; flex-direction: column; height: 100%; background: var(--color-bg); }
+/* Панель — во flex-потоке сверху; ниже — контейнер, дающий абсолютной .ion-page
+   (её создаёт Ionic вокруг IonTabs) нормальный блок для inset:0, вместо того
+   чтобы она накрывала панель. Никаких переопределений внутренностей Ionic. */
+.app-body { position: relative; flex: 1 1 auto; min-height: 0; }
 
 .hero-panel {
-  flex-shrink: 0; background: var(--color-bg);
+  flex-shrink: 0; background: transparent;
   padding: calc(env(safe-area-inset-top, 0px) + 48px) 20px 0;
   transition: padding-top .22s cubic-bezier(.3,.9,.3,1);
 }
