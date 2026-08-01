@@ -4,13 +4,15 @@ import { water, batteryHalf, pulse, flash, add, remove, chevronForward, syncCirc
 import { useState, useEffect } from 'react';
 import { useStore, useWritable } from '../data/store';
 import { detectTherapy, therapyLabel } from '../data/therapy';
-import { getCfg, loadEventsRange, type Treatment } from '../data/nightscout';
+import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment } from '../data/nightscout';
 import { deviceAges, type Age } from '../data/treatmentStats';
 import { fmt, toUnits, unitLabel, useUnit } from '../data/units';
+import InsulinTimeChart from '../components/InsulinTimeChart';
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
 const ageText = (a: Age) => a.days >= 1 ? a.days + ' дн' : a.hours + ' ч';
 const SHOW_BOLUS_CALC = false; // временно скрыт калькулятор болюса
+const WINDOWS = [1, 3, 6, 12, 24];
 
 export default function Ins() {
   const { data } = useStore();
@@ -35,6 +37,20 @@ export default function Ins() {
   }, [cfg?.url, cfg?.enabled]);
   const ages = deviceAges(events);
   const hasSupplies = !isPen && (ages.site || ages.reservoir || ages.battery);
+
+  // подача инсулина за 24 ч (temp basal + болюсы) для графика
+  const [win, setWin] = useState(3);
+  const [treatments, setTreatments] = useState<Treatment[]>([]);
+  useEffect(() => {
+    let cancel = false;
+    if (cfg?.enabled && cfg.url) {
+      loadTreatmentsRange(cfg.url, cfg.token, 1).then((t) => { if (!cancel) setTreatments(t); }).catch(() => {});
+    }
+    return () => { cancel = true; };
+  }, [cfg?.url, cfg?.enabled]);
+  const tempBasals = treatments.filter((t) => t.type === 'Temp Basal');
+  const boluses = treatments.filter((t) => t.type !== 'Temp Basal' && (t.insulin ?? 0) > 0);
+  const baseBasal = dev?.baseBasal ?? profile?.basal ?? null;
 
   // калькулятор болюса из профиля
   const IC = profile?.ic ?? 8;
@@ -100,6 +116,20 @@ export default function Ins() {
                     <b>{dev?.lastBolus != null ? fmt(dev.lastBolus) + ' ед' : '—'}</b>
                   </div>
                 </div>
+              </div>
+
+              {/* график подачи инсулина (базал + болюсы) */}
+              <div className="section-label sec">Подача инсулина</div>
+              <div className="win-chips">
+                {WINDOWS.map((w) => (
+                  <button key={w} className={'win-chip' + (win === w ? ' on' : '')} onClick={() => setWin(w)}>{w}ч</button>
+                ))}
+              </div>
+              <InsulinTimeChart tempBasals={tempBasals} boluses={boluses} windowH={win} baseBasal={baseBasal} />
+              <div className="chart-legend">
+                <span className="lg-item"><i className="lg-dot" style={{ background: 'var(--c-ins)' }} />базал, ед/ч</span>
+                <span className="lg-item"><i className="lg-dot" style={{ background: 'var(--c-carb)' }} />болюс, ед</span>
+                <span className="lg-item"><i className="lg-dash" />базовая скорость</span>
               </div>
             </>
           )}

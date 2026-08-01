@@ -681,6 +681,12 @@ ion-toggle {
 }
 .win-chip.on { background: color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-900)); border-color: color-mix(in srgb, var(--color-accent) 60%, transparent); color: var(--color-text); }
 
+/* легенда графика подачи инсулина */
+.chart-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; padding: 0 2px; }
+.lg-item { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--color-neutral-400); }
+.lg-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+.lg-dash { width: 12px; height: 0; border-top: 1.5px dashed color-mix(in srgb, var(--c-ins) 70%, transparent); flex-shrink: 0; }
+
 .chart { position: relative; height: 200px; margin-top: 14px; padding-left: 22px; }
 .chart-svg { width: 100%; height: 190px; display: block; }
 .chart-y { position: absolute; left: 0; top: 0; height: 190px; width: 22px; font-size: 10px; color: var(--color-neutral-400); }
