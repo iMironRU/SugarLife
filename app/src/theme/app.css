@@ -93,8 +93,8 @@ ion-content { --background: var(--color-bg); }
   background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
   color: var(--color-text); transition: background .16s; overflow: hidden;
 }
-.hp-wing-l { align-items: flex-start; text-align: left; padding: 0 20px 0 18px; }
-.hp-wing-r { align-items: flex-end; text-align: right; padding: 0 18px 0 20px; }
+.hp-wing-l { align-items: flex-start; text-align: left; padding: 0 10px 0 16px; }
+.hp-wing-r { align-items: flex-end; text-align: right; padding: 0 16px 0 10px; }
 .hp-wing:active { background: color-mix(in srgb, var(--color-accent) 20%, transparent); }
 .is-line .hp-wing { flex-direction: row; align-items: center; gap: 6px; }
 .is-line .hp-wing-l { padding: 0 8px 0 12px; }
