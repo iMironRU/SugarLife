@@ -1,8 +1,7 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { reportContentScroll } from '../data/panel';
-import { pulse, wifi, cloudOffline, hardwareChipOutline } from 'ionicons/icons';
+import { hardwareChipOutline } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
-import { useStore } from '../data/store';
 import { useEntries } from '../data/db';
 import { toUnits, useUnit } from '../data/units';
 import { arrowChar, getCfg, loadEventsRange, type Treatment } from '../data/nightscout';
@@ -18,11 +17,9 @@ const fmtWhen = (ms: number) => {
 };
 
 export default function Mon() {
-  const { data, status, live } = useStore();
   useUnit(); // перерисовка при смене единиц
   const [win, setWin] = useState(3);
   const entries = useEntries(24 * 3600e3);
-  const latest = data?.latest || null;
 
   const cfg = getCfg();
   const [events, setEvents] = useState<Treatment[]>([]);
@@ -35,31 +32,14 @@ export default function Mon() {
   }, [cfg?.url, cfg?.enabled]);
   const ages = deviceAges(events);
 
-  const now = Date.now();
-  const minsAgo = latest ? Math.round((now - latest.t) / 60000) : null;
-  const stale = minsAgo != null && minsAgo > 15;
-
   const readings = entries.slice(-8).reverse();
 
   return (
     <IonPage>
       <IonContent fullscreen scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
-          {/* статус источника (сахар/тренд — уже в верхней панели, не дублируем) */}
-          <div className="mon-status">
-            <div className="mon-stat">
-              <IonIcon icon={live ? wifi : cloudOffline} style={{ color: live ? 'var(--c-glu)' : 'var(--color-neutral-500)' }} />
-              <div className="mon-stat-val">{live ? 'Онлайн' : status === 'off' ? '—' : 'Поллинг'}</div>
-              <div className="mon-stat-label">связь</div>
-            </div>
-            <div className="mon-stat">
-              <IonIcon icon={pulse} style={{ color: stale ? 'var(--c-danger)' : 'var(--c-glu)' }} />
-              <div className="mon-stat-val">{minsAgo != null ? (minsAgo < 1 ? 'сейчас' : minsAgo + ' мин') : '—'}</div>
-              <div className="mon-stat-label">{stale ? 'нет данных' : 'обновлено'}</div>
-            </div>
-          </div>
-
-          {/* датчик и расходники */}
+          {/* сахар/тренд/свежесть — в верхней панели; здесь детали датчика и график */}
+          {/* датчик (при втором датчике здесь будет переключатель) */}
           {ages.sensor && (
             <>
               <div className="section-label sec">Датчик</div>
