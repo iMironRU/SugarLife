@@ -16,8 +16,9 @@ export const platform = Capacitor.getPlatform(); // 'web' | 'android' | 'ios'
 
 const REPO = 'iMironRU/SugarLife';
 const ANDROID_TAG = 'android-latest';
-// Самохостинг OTA-бандла на GitHub Pages (тот же origin, что и PWA).
-const OTA_BASE = 'https://imironru.github.io/SugarLife/v2/ota';
+// Самохостинг OTA-бандла на GitHub Pages (канонический домен, без редиректа
+// с *.github.io — важно для нативного HTTP-загрузчика Capgo).
+const OTA_BASE = 'https://imiron.ru/SugarLife/v2/ota';
 
 export type UpdateResult = 'updated' | 'current' | 'error';
 

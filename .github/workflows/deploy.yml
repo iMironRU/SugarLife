@@ -55,7 +55,7 @@ jobs:
           mkdir -p prototypes/v2/ota
           (cd app/dist && zip -qr "../../prototypes/v2/ota/bundle-$SHA.zip" .)
           cat > prototypes/v2/ota/manifest.json <<EOF
-          { "build": "$SHA", "version": "$VER-$SHA", "url": "https://imironru.github.io/SugarLife/v2/ota/bundle-$SHA.zip" }
+          { "build": "$SHA", "version": "$VER-$SHA", "url": "https://imiron.ru/SugarLife/v2/ota/bundle-$SHA.zip" }
           EOF
           echo "OTA manifest:"; cat prototypes/v2/ota/manifest.json
 
