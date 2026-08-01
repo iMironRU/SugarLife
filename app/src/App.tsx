@@ -13,6 +13,7 @@ import Ins from './pages/Ins';
 import Connect from './pages/Connect';
 import Loader from './pages/Loader';
 import InstallPrompt from './components/InstallPrompt';
+import HeroPanel from './components/HeroPanel';
 import { useStore } from './data/store';
 import { detectTherapy } from './data/therapy';
 
@@ -27,7 +28,9 @@ export default function App() {
   return (
     <IonApp>
       <IonReactHashRouter>
-        <IonTabs>
+        <div className="app-shell">
+          <HeroPanel />
+          <IonTabs>
           <IonRouterOutlet>
             <Route exact path="/today" component={Today} />
             <Route exact path="/metrics" component={Metrics} />
@@ -59,7 +62,8 @@ export default function App() {
               <IonLabel>Профиль</IonLabel>
             </IonTabButton>
           </IonTabBar>
-        </IonTabs>
+          </IonTabs>
+        </div>
       </IonReactHashRouter>
       <InstallPrompt />
     </IonApp>

@@ -46,7 +46,103 @@ ion-content::part(scroll)::-webkit-scrollbar { width: 0; height: 0; }
 
 /* Экраны */
 /* верхний safe-area: контент не под статус-баром/островом (iOS standalone/нативка) */
-.screen { padding: calc(env(safe-area-inset-top, 0px) + 8px) 20px 24px; }
+/* верхний safe-area держит общая панель (HeroPanel), поэтому экраны его НЕ добавляют */
+.screen { padding: 8px 20px 24px; }
+
+/* ===== Общая верхняя панель: НМГ | круг | Помпа — живёт на ВСЕХ экранах =====
+   Три состояния плавно перетекают (0.22s):
+   .is-full (Сегодня) → .is-compact (прочие) → .is-line (прочие + прокрутка). */
+.app-shell { display: flex; flex-direction: column; height: 100%; }
+/* Ionic оборачивает IonTabs в .ion-page с position:absolute;inset:0 — он бы
+   накрыл панель. Заставляем этот враппер жить во flex-потоке под панелью.
+   Селектор — только прямой ребёнок, маршрутные .ion-page глубже не трогаем. */
+.app-shell > .ion-page { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; }
+
+.hero-panel {
+  flex-shrink: 0; background: var(--color-bg);
+  padding: calc(env(safe-area-inset-top, 0px) + 48px) 20px 0;
+  transition: padding-top .22s cubic-bezier(.3,.9,.3,1);
+}
+.hero-panel.is-compact { padding-top: calc(env(safe-area-inset-top, 0px) + 16px); }
+.hero-panel.is-line { padding-top: calc(env(safe-area-inset-top, 0px) + 10px); }
+
+.hp-sync { display: flex; justify-content: space-between; align-items: center; padding: 0 0 22px; }
+.hp-synctext { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-400); }
+
+.hp-row { position: relative; height: 150px; transition: height .22s cubic-bezier(.3,.9,.3,1); }
+.is-compact .hp-row { height: 92px; }
+.is-line .hp-row { height: 54px; }
+
+.hp-rect {
+  position: absolute; left: 0; right: 0; top: 10px; height: 130px;
+  display: flex; border-radius: 20px; overflow: hidden;
+  border: 1.5px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 14%, transparent), color-mix(in srgb, var(--color-accent) 4%, transparent));
+  transition: height .22s cubic-bezier(.3,.9,.3,1), top .22s cubic-bezier(.3,.9,.3,1);
+}
+.is-compact .hp-rect { top: 7px; height: 78px; }
+.is-line .hp-rect { top: 4px; height: 46px; }
+
+.hp-wing {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 3px;
+  background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
+  color: var(--color-text); transition: background .16s; overflow: hidden;
+}
+.hp-wing-l { align-items: flex-start; text-align: left; padding: 0 20px 0 18px; }
+.hp-wing-r { align-items: flex-end; text-align: right; padding: 0 18px 0 20px; }
+.hp-wing:active { background: color-mix(in srgb, var(--color-accent) 20%, transparent); }
+.is-line .hp-wing { flex-direction: row; align-items: center; gap: 6px; }
+.is-line .hp-wing-l { padding: 0 8px 0 12px; }
+.is-line .hp-wing-r { padding: 0 12px 0 8px; }
+.is-line .hp-name { flex-shrink: 0; }
+.is-line .live-dot { display: none; }
+
+.hp-head, .hp-name, .hp-sub, .hp-val { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hp-head { display: flex; align-items: center; gap: 5px; }
+.hp-ico { display: flex; line-height: 1; margin-bottom: 5px; color: var(--color-accent); font-size: 24px; }
+.hp-ico ion-icon { font-size: 24px; color: var(--color-accent); }
+.is-compact .hp-ico, .is-compact .hp-ico ion-icon { font-size: 17px; }
+.is-line .hp-ico, .is-line .hp-ico ion-icon { font-size: 15px; }
+.is-line .hp-ico { margin-bottom: 0; }
+.hp-name { font-size: 14px; font-weight: 600; color: var(--color-text); }
+.is-compact .hp-name { font-size: 12px; }
+.is-line .hp-name { font-size: 11px; }
+.hp-val { font-size: 15px; font-weight: 600; color: var(--color-text); line-height: 1; margin-top: 3px; }
+.is-compact .hp-val { font-size: 14px; }
+.is-line .hp-val { font-size: 12px; margin-top: 0; }
+/* подписи-детали (обновлено / резервуар / статус) — только в полном режиме */
+.hp-sub { display: block; font-size: 10px; color: var(--color-neutral-400); line-height: 1.4; }
+.is-compact .hp-sub, .is-line .hp-sub { display: none; }
+
+.hp-gap { flex-shrink: 0; width: 146px; transition: width .22s cubic-bezier(.3,.9,.3,1); }
+.is-compact .hp-gap { width: 96px; }
+.is-line .hp-gap { width: 58px; }
+
+.hp-circle {
+  position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+  width: 150px; height: 150px; border-radius: 50%; padding: 0; cursor: pointer; z-index: 2;
+  border: 2px solid var(--color-accent); font-family: var(--font-body); overflow: hidden;
+  box-shadow: 0 0 0 8px var(--color-bg), 0 0 22px color-mix(in srgb, var(--color-accent) 22%, transparent), inset 0 0 30px color-mix(in srgb, var(--color-accent) 16%, transparent);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--color-accent) 14%, var(--color-bg)), var(--color-bg) 74%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: width .22s cubic-bezier(.3,.9,.3,1), height .22s cubic-bezier(.3,.9,.3,1), box-shadow .16s;
+}
+.is-compact .hp-circle { width: 92px; height: 92px; }
+.is-line .hp-circle { width: 54px; height: 54px; }
+.hp-circle .circle-spark { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.hp-circle-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+.hp-circle-val { display: flex; align-items: center; gap: 6px; }
+.hp-value { font-size: 44px; font-weight: 600; letter-spacing: -.02em; line-height: 1; color: var(--color-text); transition: font-size .22s cubic-bezier(.3,.9,.3,1); }
+.is-compact .hp-value { font-size: 27px; }
+.is-line .hp-value { font-size: 17px; }
+.hp-arrow { font-size: 22px; color: var(--c-glu); font-weight: 700; }
+.is-compact .hp-arrow { font-size: 15px; }
+.is-line .hp-arrow { font-size: 11px; }
+.hp-unit { font-size: 12px; color: var(--color-neutral-300); margin-top: 4px; }
+.is-compact .hp-unit { font-size: 9px; }
+.is-line .hp-unit { display: none; }
+.hp-ago { font-size: 10px; color: var(--color-neutral-400); margin-top: 5px; }
+.is-compact .hp-ago, .is-line .hp-ago { display: none; }
 
 .sync-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0 16px; }
 .sync { font-size: 12px; color: var(--color-neutral-400); }
@@ -169,7 +265,7 @@ ion-content::part(scroll)::-webkit-scrollbar { width: 0; height: 0; }
 .food-title { font-size: 14px; font-weight: 600; }
 
 /* ===== Профиль ===== */
-.screen-pad { padding-top: calc(env(safe-area-inset-top, 0px) + 16px); }
+.screen-pad { padding-top: 6px; }
 .sec { margin: 24px 2px 8px; }
 
 /* сворачиваемый заголовок секции */
