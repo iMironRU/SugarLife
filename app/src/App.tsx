@@ -30,6 +30,7 @@ export default function App() {
       <IonReactHashRouter>
         <div className="app-shell">
           <HeroPanel />
+          <div className="app-body">
           <IonTabs>
           <IonRouterOutlet>
             <Route exact path="/today" component={Today} />
@@ -63,6 +64,7 @@ export default function App() {
             </IonTabButton>
           </IonTabBar>
           </IonTabs>
+          </div>
         </div>
       </IonReactHashRouter>
       <InstallPrompt />
