@@ -1,5 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { setPanelScrolled } from '../data/panel';
+import { reportContentScroll } from '../data/panel';
 import { chevronForward, water, nutrition, medkit } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useEntries } from '../data/db';
@@ -73,7 +73,7 @@ export default function Metrics() {
 
   return (
     <IonPage>
-      <IonContent fullscreen scrollEvents onIonScroll={(e) => setPanelScrolled(e.detail.scrollTop > 10)}>
+      <IonContent fullscreen scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
           <div className="period">
             {PERIODS.map((p) => (

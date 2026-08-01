@@ -1,5 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { setPanelScrolled } from '../data/panel';
+import { reportContentScroll } from '../data/panel';
 import { water, batteryHalf, pulse, flash, add, remove, chevronForward, syncCircle } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore, useWritable } from '../data/store';
@@ -50,7 +50,7 @@ export default function Ins() {
 
   return (
     <IonPage>
-      <IonContent fullscreen scrollEvents onIonScroll={(e) => setPanelScrolled(e.detail.scrollTop > 10)}>
+      <IonContent fullscreen scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
           <div className="mon-head">
             <div>
