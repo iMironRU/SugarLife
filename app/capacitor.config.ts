@@ -14,6 +14,17 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: '#161826',
   },
+  plugins: {
+    // OTA-обновление JS-бандла (Capgo) в РУЧНОМ режиме, самохостинг на GitHub Pages.
+    // autoUpdate:false — обновляемся только по кнопке в Профиле (checkOtaUpdate).
+    // statsUrl:'' — не звоним на серверы Capgo (офлайн/без облака).
+    // resetWhenUpdate:true — при установке нового APK сбрасываем старый OTA-бандл.
+    CapacitorUpdater: {
+      autoUpdate: false,
+      statsUrl: '',
+      resetWhenUpdate: true,
+    },
+  },
 };
 
 export default config;

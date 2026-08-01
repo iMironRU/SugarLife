@@ -12,7 +12,7 @@ import { fmt, toUnits, unitLabel, useUnit } from '../data/units';
 import { countEntries } from '../data/db';
 import { exportGlucoseCsv } from '../data/export';
 import { useTheme } from '../theme/useTheme';
-import { APP_VERSION, APP_BUILD, isNative, platform, checkWebUpdate, checkNativeUpdate, openApkDownload } from '../data/appUpdate';
+import { APP_VERSION, APP_BUILD, isNative, platform, checkWebUpdate, checkOtaUpdate, checkNativeUpdate, openApkDownload } from '../data/appUpdate';
 import NightscoutModal from '../components/NightscoutModal';
 import UnitsModal from '../components/UnitsModal';
 
@@ -54,24 +54,33 @@ export default function Profile() {
     setUpdateMsg(null);
     setApkUrl(null);
 
-    // Нативный Android — проверяем новый APK в релизах.
-    if (isNative && platform === 'android') {
-      const r = await checkNativeUpdate();
-      setUpdating(false);
-      if (r === 'error') { setUpdateMsg('Не удалось проверить обновление.'); return; }
-      if (r.hasUpdate && r.apkUrl) {
-        setApkUrl(r.apkUrl);
-        setUpdateMsg('Доступна новая сборка' + (r.build ? ` (${r.build})` : '') + '.');
-      } else {
-        setUpdateMsg('У вас последняя сборка.');
-        window.setTimeout(() => setUpdateMsg(null), 4000);
-      }
-      return;
-    }
-    // Нативный iOS — самообновления нет, только App Store.
+    // Нативка: сначала OTA (JS-бандл, лёгкий путь), потом APK (нативный код).
     if (isNative) {
+      const ota = await checkOtaUpdate();
+      if (ota === 'updated') return; // применилось → webview перезагрузится сам
+
+      // Android: если по JS всё свежее (или OTA недоступен) — проверяем новый APK.
+      if (platform === 'android') {
+        const r = await checkNativeUpdate();
+        setUpdating(false);
+        if (r === 'error') {
+          setUpdateMsg(ota === 'current' ? 'У вас последняя версия.' : 'Не удалось проверить обновление.');
+          return;
+        }
+        if (r.hasUpdate && r.apkUrl) {
+          setApkUrl(r.apkUrl);
+          setUpdateMsg('Нужна новая сборка приложения' + (r.build ? ` (${r.build})` : '') + '.');
+        } else {
+          setUpdateMsg('У вас последняя версия.');
+          window.setTimeout(() => setUpdateMsg(null), 4000);
+        }
+        return;
+      }
+
+      // iOS: APK-пути нет (только App Store), но OTA уже отработал выше.
       setUpdating(false);
-      setUpdateMsg('На iOS обновление приходит через App Store.');
+      setUpdateMsg(ota === 'current' ? 'У вас последняя версия.' : 'Не удалось проверить обновление.');
+      if (ota === 'current') window.setTimeout(() => setUpdateMsg(null), 4000);
       return;
     }
 

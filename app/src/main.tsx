@@ -16,6 +16,7 @@ import './theme/variables.css'
 import './theme/app.css'
 
 import App from './App.tsx'
+import { notifyAppReady } from './data/appUpdate'
 
 setupIonicReact({ mode: 'ios' })
 
@@ -24,3 +25,6 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// Сообщаем Capgo, что бандл успешно загрузился — иначе он откатит OTA-обновление.
+notifyAppReady()
