@@ -4,7 +4,9 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { pulse, flash, moon } from 'ionicons/icons';
 import { useStore } from '../data/store';
 import { toUnits, agoText, unitLabel, useUnit } from '../data/units';
-import { arrowChar } from '../data/nightscout';
+import { arrowChar, getCfg } from '../data/nightscout';
+import { deviceAges } from '../data/treatmentStats';
+import { useDeviceExtras, loadDeviceExtras } from '../data/deviceExtras';
 import { usePanelScrolled, setPanelScrolled } from '../data/panel';
 import { useTheme } from '../theme/useTheme';
 import CircleSparkline from './CircleSparkline';
@@ -20,6 +22,7 @@ function shortStatus(s?: string | null): string {
   if (l.includes('открыт') || l.includes('open')) return 'Цикл выкл';
   return s;
 }
+const fmtDays = (d: number) => (d < 10 ? d.toFixed(1).replace('.', ',') : String(Math.round(d)));
 
 /* Верхняя панель — единый постоянный элемент над контентом на ВСЕХ экранах.
    Три состояния плавно перетекают друг в друга (переход 0.22s):
@@ -33,6 +36,8 @@ export default function HeroPanel() {
   const history = useHistory();
   const { pathname } = useLocation();
   const scrolled = usePanelScrolled();
+  const extras = useDeviceExtras();
+  const cfg = getCfg();
 
   const full = pathname === '/today' || pathname === '/';
   const line = !full && scrolled;
@@ -40,6 +45,13 @@ export default function HeroPanel() {
 
   // при переходе на другой экран панель разворачивается заново (сброс прокрутки)
   useEffect(() => { setPanelScrolled(false); }, [pathname]);
+
+  // панель — владелец загрузки расширенных данных (датчик/резервуар/расход)
+  useEffect(() => {
+    loadDeviceExtras();
+    const id = window.setInterval(loadDeviceExtras, 120000);
+    return () => window.clearInterval(id);
+  }, [cfg?.url, cfg?.enabled]);
 
   const latest = data?.latest || null;
   const dev = data?.device || null;
@@ -53,6 +65,14 @@ export default function HeroPanel() {
   const reservoir = dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : DASH;
   const pumpStatus = shortStatus(dev?.status);
   const syncText = live ? 'реальное время' : latest ? 'Обновлено ' + agoText(data!.updatedAt) : 'Нет данных';
+
+  // датчик (день N) — слева; запас инсулина (≈N дн) — справа
+  const ages = deviceAges(extras.events);
+  const sensorDay = ages.sensor ? ages.sensor.days + 1 : null;
+  const nmgSub = sensorDay != null ? 'датчик' : 'обновлено';
+  const nmgVal = sensorDay != null ? 'день ' + sensorDay : fresh;
+  const daysLeft = dev?.reservoir != null && extras.tdd ? dev.reservoir / extras.tdd : null;
+  const resSub2 = daysLeft != null ? '≈ ' + fmtDays(daysLeft) + ' дн' : 'резервуар';
 
   return (
     <div className={'hero-panel ' + mode}>
@@ -71,8 +91,8 @@ export default function HeroPanel() {
               <span className="hp-name">НМГ</span>
               {live && <span className="live-dot" title="реальное время" />}
             </span>
-            <span className="hp-sub">обновлено</span>
-            <span className="hp-val">{fresh}</span>
+            <span className="hp-sub">{nmgSub}</span>
+            <span className="hp-val">{nmgVal}</span>
           </button>
 
           <div className="hp-gap" />
@@ -82,7 +102,7 @@ export default function HeroPanel() {
             <span className="hp-name">Помпа</span>
             <span className="hp-sub">{pumpStatus}</span>
             <span className="hp-val">{reservoir}</span>
-            <span className="hp-sub">резервуар</span>
+            <span className="hp-sub">{resSub2}</span>
           </button>
         </div>
 

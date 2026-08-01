@@ -1,15 +1,11 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
-import {
-  restaurantOutline,
-  phonePortraitOutline, hardwareChipOutline, waterOutline, warningOutline, refreshOutline,
-} from 'ionicons/icons';
-import { useEffect, useState } from 'react';
+import { restaurantOutline, warningOutline, refreshOutline } from 'ionicons/icons';
 import { useStore } from '../data/store';
 import { agoText, useUnit } from '../data/units';
 import { reportContentScroll } from '../data/panel';
-import { getCfg, loadEventsRange, loadDeviceStatusRange, loadTreatmentsRange, type Treatment, type DevPoint } from '../data/nightscout';
-import { deviceAges, reservoirStats, insulinDaily } from '../data/treatmentStats';
+import { useDeviceExtras } from '../data/deviceExtras';
+import { deviceAges, reservoirStats } from '../data/treatmentStats';
 
 const DASH = '—';
 
@@ -21,17 +17,10 @@ function mealsWord(n: number): string {
   return 'приёмов';
 }
 
-// Короткий статус помпы
-function shortStatus(s?: string | null): string {
-  if (!s) return DASH;
-  const l = s.toLowerCase();
-  if (l.includes('приостан') || l.includes('пауза') || l.includes('suspend') || l.includes('stop')) return 'Пауза';
-  if (l.includes('замкнут') || l.includes('closed')) return 'Цикл вкл';
-  if (l.includes('открыт') || l.includes('open')) return 'Цикл выкл';
-  return s;
-}
-const isPaused = (s?: string | null) => shortStatus(s) === 'Пауза';
-const fmtDays = (d: number) => (d < 10 ? d.toFixed(1).replace('.', ',') : String(Math.round(d)));
+const isPaused = (s?: string | null) => {
+  const l = (s || '').toLowerCase();
+  return l.includes('приостан') || l.includes('пауза') || l.includes('suspend') || l.includes('stop');
+};
 
 export default function Today() {
   const { data } = useStore();
@@ -39,42 +28,17 @@ export default function Today() {
   const history = useHistory();
   const dev = data?.device || null;
 
-  // события (день датчика + углеводы за сегодня) + история резервуара
-  const cfg = getCfg();
-  const [events, setEvents] = useState<Treatment[]>([]);
-  const [devHist, setDevHist] = useState<DevPoint[]>([]);
-  const [tdd, setTdd] = useState<number | null>(null);
-  useEffect(() => {
-    let cancel = false;
-    if (cfg?.enabled && cfg.url) {
-      loadEventsRange(cfg.url, cfg.token, 50).then((e) => { if (!cancel) setEvents(e); }).catch(() => {});
-      loadDeviceStatusRange(cfg.url, cfg.token, 2000).then((d) => { if (!cancel) setDevHist(d); }).catch(() => {});
-      // средний суточный расход за 90 дн — для «хватит инсулина»
-      loadTreatmentsRange(cfg.url, cfg.token, 90).then((tb) => {
-        if (cancel) return;
-        const id = insulinDaily(tb, []);
-        setTdd(id.tddPerDay > 5 ? id.tddPerDay : null);
-      }).catch(() => {});
-    }
-    return () => { cancel = true; };
-  }, [cfg?.url, cfg?.enabled]);
-  const ages = deviceAges(events);
-  const rstat = reservoirStats(devHist);
+  // общие расширенные данные (грузит панель) — события/резервуар
+  const extras = useDeviceExtras();
+  const ages = deviceAges(extras.events);
+  const rstat = reservoirStats(extras.devHist);
 
   // углеводы за сегодня (с локальной полуночи)
   const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
-  const todayCarbs = events.filter((e) => (e.carbs ?? 0) > 0 && e.t >= dayStart.getTime());
+  const todayCarbs = extras.events.filter((e) => (e.carbs ?? 0) > 0 && e.t >= dayStart.getTime());
   const dayCarbs = Math.round(todayCarbs.reduce((a, b) => a + (b.carbs || 0), 0));
   const mealCount = todayCarbs.length;
   const cob = dev?.cob != null ? Math.round(dev.cob) : null;
-
-  // статус-полоска
-  const phone = dev?.uploaderBattery;
-  const sensorDay = ages.sensor ? ages.sensor.days + 1 : null;
-  const daysLeft = dev?.reservoir != null && tdd ? dev.reservoir / tdd : null;
-  const connected = !!(cfg?.enabled && cfg.url);
-  const insulinComputing = connected && tdd === null && dev?.reservoir != null;
-  const daysLeftText = daysLeft != null ? '~' + fmtDays(daysLeft) + ' дн' : insulinComputing ? '…' : DASH;
 
   // подсветки резервуара
   const stuck = rstat.flatHours > 8 && !isPaused(dev?.status) && (rstat.current ?? 0) > 0;
@@ -105,25 +69,6 @@ export default function Today() {
               <div className="carb-food-s">{mealCount} {mealsWord(mealCount)}</div>
             </div>
           </button>
-
-          {/* статус: телефон · датчик · инсулин */}
-          <div className="today-status">
-            <div className="tstat">
-              <IonIcon icon={phonePortraitOutline} style={{ color: phone != null && phone <= 20 ? 'var(--c-danger)' : 'var(--color-accent)' }} />
-              <div className="tstat-val">{phone != null ? phone + '%' : DASH}</div>
-              <div className="tstat-label">телефон</div>
-            </div>
-            <div className="tstat" onClick={() => history.push('/mon')}>
-              <IonIcon icon={hardwareChipOutline} style={{ color: 'var(--color-accent)' }} />
-              <div className="tstat-val">{sensorDay != null ? 'день ' + sensorDay : DASH}</div>
-              <div className="tstat-label">датчик</div>
-            </div>
-            <div className="tstat" onClick={() => history.push('/ins')}>
-              <IonIcon icon={waterOutline} style={{ color: 'var(--c-ins)' }} />
-              <div className="tstat-val">{daysLeftText}</div>
-              <div className="tstat-label">хватит инсулина</div>
-            </div>
-          </div>
 
           {/* подсветки резервуара */}
           {stuck && (
