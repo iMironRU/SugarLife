@@ -12,6 +12,7 @@ import { fmt, toUnits, unitLabel, useUnit } from '../data/units';
 import { countEntries } from '../data/db';
 import { exportGlucoseCsv } from '../data/export';
 import { useTheme } from '../theme/useTheme';
+import { setPanelScrolled } from '../data/panel';
 import { APP_VERSION, APP_BUILD, isNative, platform, checkWebUpdate, checkOtaUpdate, checkNativeUpdate, openApkDownload } from '../data/appUpdate';
 import NightscoutModal from '../components/NightscoutModal';
 import UnitsModal from '../components/UnitsModal';
@@ -121,7 +122,7 @@ export default function Profile() {
 
   return (
     <IonPage>
-      <IonContent fullscreen>
+      <IonContent fullscreen scrollEvents onIonScroll={(e) => setPanelScrolled(e.detail.scrollTop > 10)}>
         <div className="screen screen-pad">
           {/* профиль */}
           <div className="profile-head">
