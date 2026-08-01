@@ -1,9 +1,13 @@
 /* Версия/сборка приложения и обновление.
-   Два слоя обновления:
+   Три слоя обновления:
    • Веб/PWA — service worker: проверка + перезагрузка на свежую оболочку (checkWebUpdate).
-   • Нативный Android — новый APK из GitHub Releases (checkNativeUpdate + openApkDownload).
-   iOS-нативка самообновляться не может (только App Store). */
+   • Нативный OTA (Capgo) — обновление JS-бандла БЕЗ переустановки (checkOtaUpdate),
+     самохостинг манифеста+zip на GitHub Pages. Покрывает 99% правок (JS/CSS/HTML).
+   • Нативный APK — полная переустановка из GitHub Releases (checkNativeUpdate + openApkDownload),
+     нужна лишь при смене нативного кода/зависимостей.
+   iOS-нативка через APK обновляться не может (только App Store), но OTA работает и на iOS. */
 import { Capacitor } from '@capacitor/core';
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
 
 export const APP_VERSION = __APP_VERSION__;
 export const APP_BUILD = __APP_BUILD__;
@@ -12,8 +16,38 @@ export const platform = Capacitor.getPlatform(); // 'web' | 'android' | 'ios'
 
 const REPO = 'iMironRU/SugarLife';
 const ANDROID_TAG = 'android-latest';
+// Самохостинг OTA-бандла на GitHub Pages (тот же origin, что и PWA).
+const OTA_BASE = 'https://imironru.github.io/SugarLife/v2/ota';
 
 export type UpdateResult = 'updated' | 'current' | 'error';
+
+// Подтвердить Capgo, что бандл ожил (иначе откат к предыдущему). No-op в вебе.
+export async function notifyAppReady(): Promise<void> {
+  if (!isNative) return;
+  try { await CapacitorUpdater.notifyAppReady(); } catch { /* ignore */ }
+}
+
+export type OtaResult = 'updated' | 'current' | 'error';
+
+// Нативный OTA: сверяем build из манифеста на Pages с текущим; если новее —
+// скачиваем zip-бандл, переключаемся на него и перезагружаем webview.
+export async function checkOtaUpdate(): Promise<OtaResult> {
+  if (!isNative) return 'error';
+  try {
+    const r = await fetch(`${OTA_BASE}/manifest.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) return 'error';
+    const m = await r.json() as { build?: string; version?: string; url?: string };
+    const short = (m.build || '').slice(0, 7);
+    if (!short || !m.url) return 'error';
+    if (APP_BUILD !== 'dev' && short === APP_BUILD) return 'current';
+    const bundle = await CapacitorUpdater.download({ url: m.url, version: m.version || short });
+    await CapacitorUpdater.set(bundle); // сделать активным
+    await CapacitorUpdater.reload();    // перезагрузить webview на новый бандл
+    return 'updated';
+  } catch {
+    return 'error';
+  }
+}
 
 // Проверить веб-слой: если есть свежая версия — применить и перезагрузиться.
 export async function checkWebUpdate(): Promise<UpdateResult> {

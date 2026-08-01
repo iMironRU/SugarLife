@@ -40,6 +40,25 @@ jobs:
           rm -rf prototypes/v2
           cp -r app/dist prototypes/v2
 
+      # OTA-бандл для нативки (Capgo): отдельная сборка с ОТНОСИТЕЛЬНЫМ base (CAP=1),
+      # т.к. в webview нет пути /SugarLife/v2/. Пакуем в zip + манифест на тех же Pages.
+      - name: Build OTA bundle (relative base)
+        working-directory: app
+        env:
+          CAP: '1'
+        run: npm run build
+
+      - name: Package OTA bundle + manifest
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          VER=$(node -p "require('./app/package.json').version")
+          mkdir -p prototypes/v2/ota
+          (cd app/dist && zip -qr "../../prototypes/v2/ota/bundle-$SHA.zip" .)
+          cat > prototypes/v2/ota/manifest.json <<EOF
+          { "build": "$SHA", "version": "$VER-$SHA", "url": "https://imironru.github.io/SugarLife/v2/ota/bundle-$SHA.zip" }
+          EOF
+          echo "OTA manifest:"; cat prototypes/v2/ota/manifest.json
+
       - uses: actions/configure-pages@v5
         with:
           enablement: true
