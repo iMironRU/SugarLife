@@ -1,11 +1,11 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
-import { restaurantOutline, warningOutline, refreshOutline } from 'ionicons/icons';
+import { restaurantOutline, warningOutline } from 'ionicons/icons';
 import { useStore } from '../data/store';
-import { agoText, useUnit } from '../data/units';
+import { useUnit } from '../data/units';
 import { reportContentScroll } from '../data/panel';
 import { useDeviceExtras } from '../data/deviceExtras';
-import { deviceAges, reservoirStats } from '../data/treatmentStats';
+import { reservoirStats } from '../data/treatmentStats';
 
 const DASH = '—';
 
@@ -30,7 +30,6 @@ export default function Today() {
 
   // общие расширенные данные (грузит панель) — события/резервуар
   const extras = useDeviceExtras();
-  const ages = deviceAges(extras.events);
   const rstat = reservoirStats(extras.devHist);
 
   // углеводы за сегодня (с локальной полуночи)
@@ -40,9 +39,8 @@ export default function Today() {
   const mealCount = todayCarbs.length;
   const cob = dev?.cob != null ? Math.round(dev.cob) : null;
 
-  // подсветки резервуара
+  // подсветка резервуара: подача идёт, а остаток не меняется
   const stuck = rstat.flatHours > 8 && !isPaused(dev?.status) && (rstat.current ?? 0) > 0;
-  const resChange = ages.reservoir && ages.reservoir.days < 2 ? ages.reservoir : null;
 
   return (
     <IonPage>
@@ -77,15 +75,6 @@ export default function Today() {
               <div>
                 <b>Резервуар не меняется {Math.round(rstat.flatHours)} ч</b>
                 <span>А помпа не на паузе — инсулин должен расходоваться. Проверь подачу (окклюзия, катетер, датчик резервуара).</span>
-              </div>
-            </div>
-          )}
-          {resChange && (
-            <div className="today-alert info">
-              <IonIcon icon={refreshOutline} />
-              <div>
-                <b>Резервуар заменён {agoText(resChange.at)}</b>
-                <span>Свежий резервуар — отсчёт срока пошёл заново.</span>
               </div>
             </div>
           )}
