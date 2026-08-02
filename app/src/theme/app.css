@@ -399,6 +399,55 @@ ion-content { --background: var(--color-bg); }
   color: var(--color-neutral-300); cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
 .sheet-desc { font-size: 13px; color: var(--color-neutral-400); line-height: 1.5; margin: 8px 0 16px; }
+.sheet-subtitle { font-size: 11px; color: var(--color-neutral-400); margin-top: 3px; }
+
+/* ===== Шторка «Еда» ===== */
+.food-warn {
+  display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 4px; padding: 10px 12px; border-radius: 12px;
+  background: color-mix(in srgb, var(--c-carb) 12%, transparent); border: 1px solid color-mix(in srgb, var(--c-carb) 40%, transparent);
+  font-size: 11px; line-height: 1.4; color: var(--c-carb-2);
+}
+.food-warn ion-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+.food-summary {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 16px;
+  border-radius: 20px; border: 1px solid color-mix(in srgb, var(--c-carb) 45%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 16%, var(--color-neutral-900)), color-mix(in srgb, var(--c-carb) 6%, var(--color-neutral-900)));
+}
+.fs-cap { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-400); }
+.fs-carbs { display: flex; align-items: baseline; gap: 5px; margin-top: 8px; font-size: 36px; font-weight: 600; line-height: 1; color: var(--c-carb); }
+.fs-carbs span { font-size: 14px; font-weight: 500; color: var(--c-carb-2); }
+.fs-macros { display: flex; gap: 14px; }
+.fs-macros > div { text-align: right; }
+.fs-mk { display: block; font-size: 10px; color: var(--color-neutral-500); }
+.fs-mv { display: block; font-size: 17px; font-weight: 600; margin-top: 3px; }
+.food-bolus { font-size: 11px; color: var(--color-neutral-400); margin: 10px 2px 0; }
+
+.food-modes { display: flex; gap: 6px; background: var(--color-neutral-900); border-radius: 16px; padding: 5px; margin-top: 14px; }
+.food-mode {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; height: 40px; border-radius: 12px; cursor: pointer;
+  background: transparent; border: 1px solid transparent; color: var(--color-neutral-400); font-size: 13px; font-weight: 500; font-family: var(--font-body);
+}
+.food-mode ion-icon { font-size: 16px; }
+.food-mode.on { background: color-mix(in srgb, var(--c-carb) 20%, var(--color-neutral-900)); border-color: color-mix(in srgb, var(--c-carb) 55%, transparent); color: var(--color-text); }
+
+.food-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-500); margin: 18px 2px 8px; }
+.food-meals { display: flex; flex-wrap: wrap; gap: 8px; }
+.food-meal {
+  padding: 10px 14px; border-radius: 14px; cursor: pointer; font-size: 13px; font-weight: 500; font-family: var(--font-body);
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800); color: var(--color-neutral-300);
+}
+.food-meal.on { background: color-mix(in srgb, var(--c-carb) 18%, transparent); border-color: color-mix(in srgb, var(--c-carb) 55%, transparent); color: var(--color-text); }
+
+.food-stepper { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding: 12px 16px; border-radius: 16px; background: var(--color-neutral-900); }
+.food-stepper > span { font-size: 14px; color: var(--color-neutral-300); }
+
+.food-save {
+  width: 100%; margin-top: 20px; padding: 15px; border-radius: 16px; border: 0; cursor: pointer;
+  background: var(--c-carb); color: #1a1200; font-size: 15px; font-weight: 600; font-family: var(--font-body);
+}
+.food-save:disabled { background: var(--color-neutral-800); color: var(--color-neutral-500); cursor: default; }
+.food-save-note { font-size: 11px; color: var(--color-neutral-500); text-align: center; margin: 8px 0 4px; }
 .field-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-500); margin: 0 2px 6px; }
 .field {
   display: flex; align-items: center; gap: 8px; margin-bottom: 14px;

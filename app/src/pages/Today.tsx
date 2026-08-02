@@ -1,11 +1,12 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { useHistory } from 'react-router-dom';
 import { restaurantOutline, warningOutline } from 'ionicons/icons';
+import { useState } from 'react';
 import { useStore } from '../data/store';
 import { useUnit } from '../data/units';
 import { reportContentScroll } from '../data/panel';
 import { useDeviceExtras } from '../data/deviceExtras';
 import { reservoirStats } from '../data/treatmentStats';
+import FoodSheet from '../components/FoodSheet';
 
 const DASH = '—';
 
@@ -25,7 +26,7 @@ const isPaused = (s?: string | null) => {
 export default function Today() {
   const { data } = useStore();
   useUnit(); // перерисовка при смене единиц
-  const history = useHistory();
+  const [foodOpen, setFoodOpen] = useState(false);
   const dev = data?.device || null;
 
   // общие расширенные данные (грузит панель) — события/резервуар
@@ -48,7 +49,7 @@ export default function Today() {
         <div className="screen">
           {/* панель углеводов (по макету): Б/Ж/У · активные · Еда.
               Б/Ж пусто — Nightscout не отдаёт белки/жиры, фейк не рисуем. */}
-          <button className="carb-panel" onClick={() => history.push('/ins')}>
+          <button className="carb-panel" onClick={() => setFoodOpen(true)}>
             <div className="carb-macros">
               <div className="carb-macro"><span className="cm-k">Б</span><span className="cm-v">{DASH}</span></div>
               <div className="carb-macro"><span className="cm-k">Ж</span><span className="cm-v">{DASH}</span></div>
@@ -79,6 +80,7 @@ export default function Today() {
             </div>
           )}
         </div>
+        <FoodSheet isOpen={foodOpen} onClose={() => setFoodOpen(false)} />
       </IonContent>
     </IonPage>
   );
