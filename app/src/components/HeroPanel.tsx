@@ -1,6 +1,6 @@
 import { IonIcon } from '@ionic/react';
 import { useEffect, useState } from 'react';
-import { pulse, flash, moon, cloudOfflineOutline, syncOutline } from 'ionicons/icons';
+import { pulse, flash, moon, cloudOfflineOutline, syncOutline, batteryFull, batteryHalf, batteryDead } from 'ionicons/icons';
 import { useTab, setTab } from '../data/nav';
 import { useStore } from '../data/store';
 import { toUnits, agoText, unitLabel, useUnit, fmt } from '../data/units';
@@ -23,6 +23,7 @@ function shortStatus(s?: string | null): string {
   return s;
 }
 const fmtDays = (d: number) => (d < 10 ? d.toFixed(1).replace('.', ',') : String(Math.round(d)));
+const battIcon = (p: number) => (p <= 20 ? batteryDead : p <= 60 ? batteryHalf : batteryFull);
 
 /* Верхняя панель — единый постоянный элемент над контентом на ВСЕХ экранах.
    Три состояния плавно перетекают друг в друга (переход 0.22s):
@@ -73,9 +74,8 @@ export default function HeroPanel() {
 
   const reservoir = dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : DASH;
   const pumpStatus = shortStatus(dev?.status);
-  // заряд помпы — к статусу в правом крыле; активный инсулин — в круг
-  const pumpSub = pumpStatus + (dev?.pumpBattery != null ? ' · ' + dev.pumpBattery + '%' : '');
-  const iob = dev?.iob != null ? fmt(dev.iob) : null;
+  const pumpBattery = dev?.pumpBattery ?? null; // заряд помпы — значком-батарейкой в крыле
+  const iob = dev?.iob != null ? fmt(dev.iob) : null; // активный инсулин — в круг
 
   // строка синхронизации: слева — как мы получаем (нами), справа — возраст
   // последнего значения в Nightscout, чтобы видеть задержку. + офлайн.
@@ -131,7 +131,12 @@ export default function HeroPanel() {
           <button className="hp-wing hp-wing-r" onClick={() => setTab(3)}>
             <span className="hp-ico"><IonIcon icon={flash} /></span>
             <span className="hp-name">Помпа</span>
-            <span className="hp-sub">{pumpSub}</span>
+            <span className="hp-sub">
+              {pumpStatus}
+              {pumpBattery != null && (
+                <span className="hp-batt"><IonIcon icon={battIcon(pumpBattery)} />{pumpBattery}%</span>
+              )}
+            </span>
             <span className="hp-val">{reservoir}</span>
             <span className="hp-sub">{resSub2}</span>
           </button>
