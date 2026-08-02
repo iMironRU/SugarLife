@@ -39,6 +39,9 @@ function Pager() {
     let base = 0;
 
     const setX = (px: number) => { t.style.transform = `translate3d(${px}px,0,0)`; };
+    // позиция ПОКОЯ — в процентах (независимо от ширины: -idx*100% всегда точно
+    // по вкладке, даже если ширина вьюпорта менялась — адресная строка, поворот)
+    const rest = (i: number) => { t.style.transform = `translate3d(${-i * 100}%,0,0)`; };
 
     const gesture = createGesture({
       el: vp,
@@ -66,12 +69,12 @@ function Pager() {
           target = d.deltaX < 0 ? Math.min(N - 1, cur + 1) : Math.max(0, cur - 1);
         }
         t.style.transition = 'transform .3s cubic-bezier(.3,.9,.3,1)';
-        setX(-target * W);
+        rest(target);
         setTab(target); // если target === cur — эффект не сработает, позиция уже выставлена
       },
     });
     gesture.enable();
-    const onResize = () => { W = vp.clientWidth; t.style.transition = 'none'; setX(-getTab() * W); };
+    const onResize = () => { t.style.transition = 'none'; rest(getTab()); };
     window.addEventListener('resize', onResize);
     return () => { gesture.destroy(); window.removeEventListener('resize', onResize); };
   }, []);
