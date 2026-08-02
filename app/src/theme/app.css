@@ -143,9 +143,11 @@ ion-content { --background: var(--color-bg); }
 /* подписи-детали (обновлено / резервуар / статус) — только в полном режиме */
 .hp-sub { display: block; font-size: 10px; color: var(--color-neutral-400); line-height: 1.4; }
 .is-compact .hp-sub, .is-line .hp-sub { display: none; }
-/* заряд помпы значком-батарейкой в статусе */
-.hp-batt { display: inline-flex; align-items: center; gap: 3px; margin-left: 5px; vertical-align: middle; }
-.hp-batt ion-icon { font-size: 15px; }
+/* заряд помпы: батарейка слева от «молнии», цвет по уровню, только в full */
+.hp-ico-pump { display: flex; align-items: center; gap: 7px; }
+.hp-batt { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 600; }
+.hp-batt ion-icon { font-size: 17px; color: currentColor; }
+.is-compact .hp-batt, .is-line .hp-batt { display: none; }
 
 .hp-gap { flex-shrink: 0; width: 146px; transition: width .22s cubic-bezier(.3,.9,.3,1); }
 .is-compact .hp-gap { width: 96px; }

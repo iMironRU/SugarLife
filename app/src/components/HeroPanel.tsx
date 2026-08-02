@@ -24,6 +24,7 @@ function shortStatus(s?: string | null): string {
 }
 const fmtDays = (d: number) => (d < 10 ? d.toFixed(1).replace('.', ',') : String(Math.round(d)));
 const battIcon = (p: number) => (p <= 20 ? batteryDead : p <= 60 ? batteryHalf : batteryFull);
+const battColor = (p: number) => (p <= 20 ? 'var(--c-danger)' : p <= 50 ? 'var(--c-carb)' : 'var(--c-glu)');
 
 /* Верхняя панель — единый постоянный элемент над контентом на ВСЕХ экранах.
    Три состояния плавно перетекают друг в друга (переход 0.22s):
@@ -129,14 +130,16 @@ export default function HeroPanel() {
           <div className="hp-gap" />
 
           <button className="hp-wing hp-wing-r" onClick={() => setTab(3)}>
-            <span className="hp-ico"><IonIcon icon={flash} /></span>
-            <span className="hp-name">Помпа</span>
-            <span className="hp-sub">
-              {pumpStatus}
+            <span className="hp-ico hp-ico-pump">
               {pumpBattery != null && (
-                <span className="hp-batt"><IonIcon icon={battIcon(pumpBattery)} />{pumpBattery}%</span>
+                <span className="hp-batt" style={{ color: battColor(pumpBattery) }}>
+                  <IonIcon icon={battIcon(pumpBattery)} />{pumpBattery}%
+                </span>
               )}
+              <IonIcon icon={flash} />
             </span>
+            <span className="hp-name">Помпа</span>
+            <span className="hp-sub">{pumpStatus}</span>
             <span className="hp-val">{reservoir}</span>
             <span className="hp-sub">{resSub2}</span>
           </button>
