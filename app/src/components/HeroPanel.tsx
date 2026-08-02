@@ -1,7 +1,7 @@
 import { IonIcon } from '@ionic/react';
 import { useEffect, useState } from 'react';
-import { useHistory, useLocation } from 'react-router-dom';
 import { pulse, flash, moon, cloudOfflineOutline, syncOutline } from 'ionicons/icons';
+import { useTab, setTab } from '../data/nav';
 import { useStore } from '../data/store';
 import { toUnits, agoText, unitLabel, useUnit } from '../data/units';
 import { arrowChar, getCfg } from '../data/nightscout';
@@ -33,8 +33,7 @@ export default function HeroPanel() {
   const { data, live, status } = useStore();
   const { toggle } = useTheme();
   useUnit(); // перерисовка при смене единиц
-  const history = useHistory();
-  const { pathname } = useLocation();
+  const tab = useTab();
   const scrolled = usePanelScrolled();
   const extras = useDeviceExtras();
   const cfg = getCfg();
@@ -49,12 +48,12 @@ export default function HeroPanel() {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
 
-  const full = pathname === '/today' || pathname === '/';
+  const full = tab === 2; // «Сегодня»
   const line = !full && scrolled;
   const mode = full ? 'is-full' : line ? 'is-line' : 'is-compact';
 
   // при переходе на другой экран панель разворачивается заново (сброс прокрутки)
-  useEffect(() => { setPanelScrolled(false); }, [pathname]);
+  useEffect(() => { setPanelScrolled(false); }, [tab]);
 
   // панель — владелец загрузки расширенных данных (датчик/резервуар/расход)
   useEffect(() => {
@@ -114,7 +113,7 @@ export default function HeroPanel() {
 
       <div className="hp-row">
         <div className="hp-rect">
-          <button className="hp-wing hp-wing-l" onClick={() => history.push('/mon')}>
+          <button className="hp-wing hp-wing-l" onClick={() => setTab(1)}>
             <span className="hp-ico"><IonIcon icon={pulse} /></span>
             <span className="hp-head">
               <span className="hp-name">НМГ</span>
@@ -126,7 +125,7 @@ export default function HeroPanel() {
 
           <div className="hp-gap" />
 
-          <button className="hp-wing hp-wing-r" onClick={() => history.push('/ins')}>
+          <button className="hp-wing hp-wing-r" onClick={() => setTab(3)}>
             <span className="hp-ico"><IonIcon icon={flash} /></span>
             <span className="hp-name">Помпа</span>
             <span className="hp-sub">{pumpStatus}</span>
@@ -135,7 +134,7 @@ export default function HeroPanel() {
           </button>
         </div>
 
-        <button className="hp-circle" onClick={() => history.push('/mon')} aria-label="Глюкоза">
+        <button className="hp-circle" onClick={() => setTab(1)} aria-label="Глюкоза">
           <CircleSparkline entries={data?.entries || []} />
           <span className="hp-circle-inner">
             <span className="hp-circle-val">

@@ -57,11 +57,31 @@ ion-content::part(scroll)::-webkit-scrollbar { width: 0; height: 0; }
 ion-app { background: var(--color-bg); }
 ion-content { --background: var(--color-bg); }
 
-.app-shell { display: flex; flex-direction: column; height: 100%; background: var(--color-bg); }
-/* Панель — во flex-потоке сверху; ниже — контейнер, дающий абсолютной .ion-page
-   (её создаёт Ionic вокруг IonTabs) нормальный блок для inset:0, вместо того
-   чтобы она накрывала панель. Никаких переопределений внутренностей Ionic. */
-.app-body { position: relative; flex: 1 1 auto; min-height: 0; }
+.app-shell { display: flex; flex-direction: column; height: 100%; background: var(--color-bg); overflow: hidden; }
+
+/* ===== Карусель вкладок (свайп между экранами) ===== */
+.pager-viewport { flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; }
+.pager-track { display: flex; height: 100%; will-change: transform; }
+.pager-pane { flex: 0 0 100%; width: 100%; height: 100%; position: relative; overflow: hidden; }
+/* каждая .pager-pane содержит экран (IonPage absolute inset:0) */
+.pager-pane > .ion-page { position: absolute; inset: 0; }
+.pager-pane .ion-page-invisible { opacity: 1; }
+
+/* ===== Свой таб-бар (заменяет IonTabBar) ===== */
+.tabbar {
+  flex-shrink: 0; display: flex; align-items: stretch;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: color-mix(in srgb, var(--color-neutral-900) 70%, var(--color-bg));
+  border-top: 1px solid var(--color-neutral-800);
+}
+.tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 8px 0 7px; background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
+  color: var(--color-neutral-500);
+}
+.tab ion-icon { font-size: 22px; }
+.tab span { font-size: 10px; }
+.tab.on { color: var(--color-accent); }
 
 .hero-panel {
   flex-shrink: 0; background: transparent;
