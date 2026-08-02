@@ -1,6 +1,6 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { reportContentScroll } from '../data/panel';
-import { water, batteryHalf, pulse, flash, add, remove, chevronForward, syncCircle } from 'ionicons/icons';
+import { water, flash, add, remove, chevronForward, syncCircle } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore, useWritable } from '../data/store';
 import { detectTherapy, therapyLabel } from '../data/therapy';
@@ -77,32 +77,17 @@ export default function Ins() {
 
           {!isPen && (
             <>
-              {/* статус помпы/петли */}
-              <div className="mon-status">
-                <div className="mon-stat">
-                  <IonIcon icon={pulse} style={{ color: 'var(--c-ins)' }} />
-                  <div className="mon-stat-val">{dev?.iob != null ? fmt(dev.iob) : '—'}</div>
-                  <div className="mon-stat-label">активный ед</div>
-                </div>
-                <div className="mon-stat">
-                  <IonIcon icon={water} style={{ color: 'var(--c-ins)' }} />
-                  <div className="mon-stat-val">{dev?.reservoir != null ? Math.round(dev.reservoir) : '—'}</div>
-                  <div className="mon-stat-label">резервуар ед</div>
-                </div>
-                <div className="mon-stat">
-                  <IonIcon icon={batteryHalf} style={{ color: 'var(--color-accent)' }} />
-                  <div className="mon-stat-val">{dev?.pumpBattery != null ? dev.pumpBattery + '%' : '—'}</div>
-                  <div className="mon-stat-label">помпа</div>
-                </div>
-              </div>
-
-              {/* базал */}
+              {/* базал (резервуар/заряд/активный — теперь в верхней панели и круге) */}
               <div className="basal-card">
                 <div className="basal-head">
                   <IonIcon icon={syncCircle} style={{ color: therapy === 'loop' ? 'var(--c-glu)' : 'var(--color-accent)' }} />
                   <span>{dev?.status || (therapy === 'loop' ? 'Замкнутый цикл' : 'Помпа')}</span>
                 </div>
                 <div className="basal-rows">
+                  <div className="basal-row">
+                    <span>Активный инсулин</span>
+                    <b>{dev?.iob != null ? fmt(dev.iob) + ' ед' : '—'}</b>
+                  </div>
                   <div className="basal-row">
                     <span>Базальная скорость</span>
                     <b>{dev?.baseBasal != null ? fmt(dev.baseBasal) : profile?.basal != null ? fmt(profile.basal) : '—'} ед/ч</b>
