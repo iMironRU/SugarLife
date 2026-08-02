@@ -1,7 +1,7 @@
 import { IonIcon } from '@ionic/react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
-import { pulse, flash, moon } from 'ionicons/icons';
+import { pulse, flash, moon, cloudOfflineOutline, syncOutline } from 'ionicons/icons';
 import { useStore } from '../data/store';
 import { toUnits, agoText, unitLabel, useUnit } from '../data/units';
 import { arrowChar, getCfg } from '../data/nightscout';
@@ -30,7 +30,7 @@ const fmtDays = (d: number) => (d < 10 ? d.toFixed(1).replace('.', ',') : String
    • compact — на прочих экранах: панель сжата;
    • line    — прочие экраны при прокрутке: тонкая строка. */
 export default function HeroPanel() {
-  const { data, live } = useStore();
+  const { data, live, status } = useStore();
   const { toggle } = useTheme();
   useUnit(); // перерисовка при смене единиц
   const history = useHistory();
@@ -38,6 +38,16 @@ export default function HeroPanel() {
   const scrolled = usePanelScrolled();
   const extras = useDeviceExtras();
   const cfg = getCfg();
+
+  // онлайн/офлайн — чтобы честно показать «нет сети»
+  const [online, setOnline] = useState<boolean>(typeof navigator === 'undefined' ? true : navigator.onLine);
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
 
   const full = pathname === '/today' || pathname === '/';
   const line = !full && scrolled;
@@ -64,7 +74,20 @@ export default function HeroPanel() {
 
   const reservoir = dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : DASH;
   const pumpStatus = shortStatus(dev?.status);
-  const syncText = live ? 'реальное время' : latest ? 'Обновлено ' + agoText(data!.updatedAt) : 'Нет данных';
+
+  // строка синхронизации: слева — как мы получаем (нами), справа — возраст
+  // последнего значения в Nightscout, чтобы видеть задержку. + офлайн.
+  const readingAge = latest ? agoText(latest.t) : null;
+  const syncState = !online ? 'offline'
+    : (status === 'stale' || status === 'error') ? 'stale'
+    : live ? 'live'
+    : 'poll';
+  const syncMain = syncState === 'offline' ? 'нет сети'
+    : syncState === 'stale' ? 'нет связи'
+    : syncState === 'live' ? 'реальное время'
+    : data ? 'обновлено ' + agoText(data.updatedAt)
+    : 'нет данных';
+  const syncWarn = syncState === 'offline' || syncState === 'stale';
 
   // датчик (день N) — слева; запас инсулина (≈N дн) — справа
   const ages = deviceAges(extras.events);
@@ -78,7 +101,13 @@ export default function HeroPanel() {
     <div className={'hero-panel ' + mode}>
       {full && (
         <div className="hp-sync">
-          <span className="hp-synctext"><span className="heart">♥</span> {syncText}</span>
+          <span className={'hp-synctext' + (syncWarn ? ' warn' : '')}>
+            {syncState === 'live'
+              ? <span className="heart">♥</span>
+              : <IonIcon className="sync-ico" icon={syncState === 'poll' ? syncOutline : cloudOfflineOutline} />}
+            <span>{syncMain}</span>
+            {readingAge && <span className="sync-reading">· значение {readingAge}</span>}
+          </span>
           <button className="theme-btn" onClick={toggle} aria-label="Тема"><IonIcon icon={moon} /></button>
         </div>
       )}
