@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { pulse, flash, moon, cloudOfflineOutline, syncOutline } from 'ionicons/icons';
 import { useTab, setTab } from '../data/nav';
 import { useStore } from '../data/store';
-import { toUnits, agoText, unitLabel, useUnit } from '../data/units';
+import { toUnits, agoText, unitLabel, useUnit, fmt } from '../data/units';
 import { arrowChar, getCfg } from '../data/nightscout';
 import { deviceAges } from '../data/treatmentStats';
 import { useDeviceExtras, loadDeviceExtras } from '../data/deviceExtras';
@@ -73,6 +73,9 @@ export default function HeroPanel() {
 
   const reservoir = dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : DASH;
   const pumpStatus = shortStatus(dev?.status);
+  // заряд помпы — к статусу в правом крыле; активный инсулин — в круг
+  const pumpSub = pumpStatus + (dev?.pumpBattery != null ? ' · ' + dev.pumpBattery + '%' : '');
+  const iob = dev?.iob != null ? fmt(dev.iob) : null;
 
   // строка синхронизации: слева — как мы получаем (нами), справа — возраст
   // последнего значения в Nightscout, чтобы видеть задержку. + офлайн.
@@ -128,7 +131,7 @@ export default function HeroPanel() {
           <button className="hp-wing hp-wing-r" onClick={() => setTab(3)}>
             <span className="hp-ico"><IonIcon icon={flash} /></span>
             <span className="hp-name">Помпа</span>
-            <span className="hp-sub">{pumpStatus}</span>
+            <span className="hp-sub">{pumpSub}</span>
             <span className="hp-val">{reservoir}</span>
             <span className="hp-sub">{resSub2}</span>
           </button>
@@ -142,6 +145,7 @@ export default function HeroPanel() {
               {arrow && <span className="hp-arrow">{arrow}</span>}
             </span>
             <span className="hp-unit">{unitLabel()}</span>
+            {iob != null && <span className="hp-iob">инс. {iob} ед</span>}
             <span className="hp-ago">{ago}</span>
           </span>
         </button>

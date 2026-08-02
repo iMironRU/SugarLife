@@ -173,6 +173,9 @@ ion-content { --background: var(--color-bg); }
 .is-line .hp-unit { display: none; }
 .hp-ago { font-size: 10px; color: var(--color-neutral-400); margin-top: 5px; }
 .is-compact .hp-ago, .is-line .hp-ago { display: none; }
+/* активный инсулин в круге — цветом инсулина, только в полном режиме */
+.hp-iob { font-size: 11px; font-weight: 600; color: var(--c-ins); margin-top: 4px; }
+.is-compact .hp-iob, .is-line .hp-iob { display: none; }
 
 .sync-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0 16px; }
 .sync { font-size: 12px; color: var(--color-neutral-400); }
