@@ -72,7 +72,12 @@ ion-content { --background: var(--color-bg); }
 .hero-panel.is-line { padding-top: calc(env(safe-area-inset-top, 0px) + 10px); }
 
 .hp-sync { display: flex; justify-content: space-between; align-items: center; padding: 0 0 22px; }
-.hp-synctext { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-400); }
+.hp-synctext { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-400); min-width: 0; }
+.hp-synctext .sync-ico { font-size: 13px; flex-shrink: 0; }
+.hp-synctext .sync-reading { color: var(--color-neutral-500); white-space: nowrap; }
+.hp-synctext.warn { color: var(--c-danger-2); }
+.hp-synctext.warn .sync-ico { color: var(--c-danger-2); }
+.hp-synctext.warn .sync-reading { color: color-mix(in srgb, var(--c-danger-2) 60%, var(--color-neutral-500)); }
 
 .hp-row { position: relative; height: 150px; transition: height .22s cubic-bezier(.3,.9,.3,1); }
 .is-compact .hp-row { height: 92px; }
