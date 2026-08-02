@@ -85,13 +85,13 @@ ion-content { --background: var(--color-bg); }
 
 .hero-panel {
   flex-shrink: 0; background: transparent;
-  padding: calc(env(safe-area-inset-top, 0px) + 48px) 20px 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 20px 0;
   transition: padding-top .22s cubic-bezier(.3,.9,.3,1);
 }
-.hero-panel.is-compact { padding-top: calc(env(safe-area-inset-top, 0px) + 16px); }
-.hero-panel.is-line { padding-top: calc(env(safe-area-inset-top, 0px) + 10px); }
+.hero-panel.is-compact { padding-top: calc(env(safe-area-inset-top, 0px) + 8px); }
+.hero-panel.is-line { padding-top: calc(env(safe-area-inset-top, 0px) + 6px); }
 
-.hp-sync { display: flex; justify-content: space-between; align-items: center; padding: 0 0 22px; }
+.hp-sync { display: flex; justify-content: space-between; align-items: center; padding: 0 0 14px; }
 .hp-synctext { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-400); min-width: 0; }
 .hp-synctext .sync-ico { font-size: 13px; flex-shrink: 0; }
 .hp-synctext .sync-reading { color: var(--color-neutral-500); white-space: nowrap; }
