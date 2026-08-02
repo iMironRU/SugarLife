@@ -20,12 +20,13 @@ export function usePanelScrolled(): boolean {
   );
 }
 
-// Обработчик onIonScroll для экранов. ВАЖНО: вкладки остаются смонтированными,
-// и уходящая (скрытая) вкладка может прислать событие скролла со своим старым
-// scrollTop — оно бы залипило панель в «строке». Поэтому реагируем только на
-// событие от ВИДИМОГО ion-content (у скрытого display:none → offsetParent === null).
+// Обработчик onIonScroll для экранов. В карусели все вкладки смонтированы (просто
+// сдвинуты), поэтому реагируем ТОЛЬКО на скролл АКТИВНОЙ панели карусели
+// (.pager-pane.is-active) — иначе прокрутка соседней вкладки залипила бы «строку».
 export function reportContentScroll(e: { target: EventTarget | null; detail: { scrollTop: number } }): void {
   const el = e.target as HTMLElement | null;
-  if (!el || el.offsetParent === null) return;
+  if (!el) return;
+  const pane = el.closest?.('.pager-pane');
+  if (pane && !pane.classList.contains('is-active')) return;
   setPanelScrolled(e.detail.scrollTop > 10);
 }
