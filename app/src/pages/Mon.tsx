@@ -1,12 +1,13 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { reportContentScroll } from '../data/panel';
-import { hardwareChipOutline } from 'ionicons/icons';
+import { hardwareChipOutline, chevronForward } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useEntries } from '../data/db';
 import { toUnits, useUnit } from '../data/units';
 import { arrowChar, getCfg, loadEventsRange, type Treatment } from '../data/nightscout';
 import { deviceAges } from '../data/treatmentStats';
 import GlucoseTimeChart from '../components/GlucoseTimeChart';
+import SensorSheet from '../components/SensorSheet';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
@@ -19,6 +20,7 @@ const fmtWhen = (ms: number) => {
 export default function Mon() {
   useUnit(); // перерисовка при смене единиц
   const [win, setWin] = useState(3);
+  const [sensorOpen, setSensorOpen] = useState(false);
   const entries = useEntries(24 * 3600e3);
 
   const cfg = getCfg();
@@ -38,21 +40,16 @@ export default function Mon() {
     <IonPage>
       <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
-          {/* сахар/тренд/свежесть — в верхней панели; здесь детали датчика и график */}
-          {/* датчик (при втором датчике здесь будет переключатель) */}
+          {/* сахар/тренд/свежесть — в верхней панели; здесь кнопка датчика + график */}
           {ages.sensor && (
-            <>
-              <div className="section-label sec">Датчик</div>
-              <div className="sensor-card">
-                <div className="sensor-main">
-                  <IonIcon icon={hardwareChipOutline} />
-                  <div>
-                    <div className="sensor-day">День {ages.sensor.days + 1}</div>
-                    <div className="sensor-when">установлен {fmtWhen(ages.sensor.at)}</div>
-                  </div>
-                </div>
+            <button className="pump-btn" style={{ marginTop: 0 }} onClick={() => setSensorOpen(true)}>
+              <IonIcon icon={hardwareChipOutline} className="pump-btn-ico" style={{ color: 'var(--color-accent)' }} />
+              <div className="pump-btn-txt">
+                <div className="pump-btn-title">Датчик</div>
+                <div className="pump-btn-sub">День {ages.sensor.days + 1} · установлен {fmtWhen(ages.sensor.at)}</div>
               </div>
-            </>
+              <IonIcon icon={chevronForward} className="pump-btn-chev" />
+            </button>
           )}
 
           {/* период */}
@@ -82,6 +79,7 @@ export default function Mon() {
 
           <div className="metric-note">День датчика — из события замены сенсора в Nightscout (Sensor Change). Сахар, тренд и свежесть — вживую.</div>
         </div>
+        <SensorSheet isOpen={sensorOpen} onClose={() => setSensorOpen(false)} sensor={ages.sensor} />
       </IonContent>
     </IonPage>
   );
