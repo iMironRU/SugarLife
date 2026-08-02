@@ -45,7 +45,7 @@ export default function Today() {
 
   return (
     <IonPage>
-      <IonContent fullscreen scrollEvents onIonScroll={reportContentScroll}>
+      <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen">
           {/* панель углеводов (по макету): Б/Ж/У · активные · Еда.
               Б/Ж пусто — Nightscout не отдаёт белки/жиры, фейк не рисуем. */}
