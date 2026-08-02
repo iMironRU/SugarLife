@@ -147,7 +147,9 @@ ion-content { --background: var(--color-bg); }
 .hp-ico-pump { display: flex; align-items: center; gap: 7px; }
 .hp-batt { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 600; }
 .hp-batt ion-icon { font-size: 17px; color: currentColor; }
-.is-compact .hp-batt, .is-line .hp-batt { display: none; }
+.is-line .hp-batt { display: none; } /* в compact показываем, скрываем только в тонкой строке */
+.is-compact .hp-batt { font-size: 10px; }
+.is-compact .hp-batt ion-icon { font-size: 15px; }
 
 .hp-gap { flex-shrink: 0; width: 146px; transition: width .22s cubic-bezier(.3,.9,.3,1); }
 .is-compact .hp-gap { width: 96px; }
@@ -178,9 +180,10 @@ ion-content { --background: var(--color-bg); }
 .is-line .hp-unit { display: none; }
 .hp-ago { font-size: 10px; color: var(--color-neutral-400); margin-top: 5px; }
 .is-compact .hp-ago, .is-line .hp-ago { display: none; }
-/* активный инсулин в круге — цветом инсулина, только в полном режиме */
+/* активный инсулин в круге — цветом инсулина; в compact мельче, в line скрыт */
 .hp-iob { font-size: 11px; font-weight: 600; color: var(--c-ins); margin-top: 4px; }
-.is-compact .hp-iob, .is-line .hp-iob { display: none; }
+.is-compact .hp-iob { font-size: 10px; margin-top: 2px; }
+.is-line .hp-iob { display: none; }
 
 .sync-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0 16px; }
 .sync { font-size: 12px; color: var(--color-neutral-400); }
