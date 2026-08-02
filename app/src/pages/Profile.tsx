@@ -122,7 +122,7 @@ export default function Profile() {
 
   return (
     <IonPage>
-      <IonContent fullscreen scrollEvents onIonScroll={reportContentScroll}>
+      <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
           {/* профиль */}
           <div className="profile-head">

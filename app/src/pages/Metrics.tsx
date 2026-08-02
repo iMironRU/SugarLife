@@ -73,7 +73,7 @@ export default function Metrics() {
 
   return (
     <IonPage>
-      <IonContent fullscreen scrollEvents onIonScroll={reportContentScroll}>
+      <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
           <div className="period">
             {PERIODS.map((p) => (

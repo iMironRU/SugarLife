@@ -66,7 +66,7 @@ export default function Ins() {
 
   return (
     <IonPage>
-      <IonContent fullscreen scrollEvents onIonScroll={reportContentScroll}>
+      <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
           <div className="mon-head">
             <div>

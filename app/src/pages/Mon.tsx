@@ -36,7 +36,7 @@ export default function Mon() {
 
   return (
     <IonPage>
-      <IonContent fullscreen scrollEvents onIonScroll={reportContentScroll}>
+      <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
           {/* сахар/тренд/свежесть — в верхней панели; здесь детали датчика и график */}
           {/* датчик (при втором датчике здесь будет переключатель) */}
