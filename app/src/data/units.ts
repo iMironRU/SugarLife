@@ -18,6 +18,7 @@ export function setUnit(u: Unit) {
   subs.forEach((f) => f());
 }
 function subscribe(cb: () => void) { subs.add(cb); return () => { subs.delete(cb); }; }
+export const subscribeUnit = subscribe; // не-React подписка (для моста)
 // Хук: возвращает текущую единицу и перерисовывает компонент при её смене.
 export function useUnit(): Unit { return useSyncExternalStore(subscribe, getUnit, getUnit); }
 

@@ -8,10 +8,17 @@ import { arrowChar, getCfg } from '../data/nightscout';
 import { deviceAges } from '../data/treatmentStats';
 import { useDeviceExtras, loadDeviceExtras } from '../data/deviceExtras';
 import { usePanelScrolled, setPanelScrolled } from '../data/panel';
+import { useSnapshot } from '../data/bridge';
 import { useTheme } from '../theme/useTheme';
 import CircleSparkline from './CircleSparkline';
 
 const DASH = '—';
+
+// Тренд из контракта → символ стрелки
+const TREND_CHAR: Record<string, string> = {
+  RisingRapidly: '⇈', Rising: '↑', RisingSlowly: '↗', Stable: '→',
+  FallingSlowly: '↘', Falling: '↓', FallingRapidly: '⇊',
+};
 
 // Короткий статус помпы для крыла
 function shortStatus(s?: string | null): string {
@@ -33,6 +40,7 @@ const battColor = (p: number) => (p <= 20 ? 'var(--c-danger)' : p <= 50 ? 'var(-
    • line    — прочие экраны при прокрутке: тонкая строка. */
 export default function HeroPanel() {
   const { data, live, status } = useStore();
+  const m = useSnapshot()?.monitor ?? null; // монитор из моста (контракт)
   const { toggle } = useTheme();
   useUnit(); // перерисовка при смене единиц
   const tab = useTab();
@@ -67,8 +75,9 @@ export default function HeroPanel() {
   const latest = data?.latest || null;
   const dev = data?.device || null;
 
-  const glucose = latest ? toUnits(latest.mmol) : DASH;
-  const arrow = latest ? arrowChar(latest.dir) : '';
+  // Головное значение и тренд — из моста (контракт); фолбэк на стор до первого снимка.
+  const glucose = m ? m.glucose : latest ? toUnits(latest.mmol) : DASH;
+  const arrow = m ? (TREND_CHAR[m.trend] ?? '') : latest ? arrowChar(latest.dir) : '';
   const ago = latest ? agoText(latest.t) : DASH;
   const minsAgo = latest ? Math.round((Date.now() - latest.t) / 60000) : null;
   const fresh = minsAgo == null ? DASH : minsAgo < 1 ? 'сейчас' : minsAgo + ' мин';

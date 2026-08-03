@@ -129,6 +129,10 @@ export function useStore(): StoreState {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
+// Не-React подписка (для моста SibionicBridge): вызывает cb при каждом изменении.
+export const subscribeStore = subscribe;
+export const getStoreState = getSnapshot;
+
 // Право записи в Nightscout. Гейтить им весь ввод (еда/болюсы/запись).
 export function useWritable(): boolean {
   return useSyncExternalStore(subscribe, () => state.writable);
