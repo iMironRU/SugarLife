@@ -1,6 +1,6 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { reportContentScroll } from '../data/panel';
-import { chevronForward, water, nutrition, medkit } from 'ionicons/icons';
+import { water, nutrition, medkit } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useEntries } from '../data/db';
 import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment } from '../data/nightscout';
@@ -136,7 +136,7 @@ export default function Metrics() {
                 <>
                   <div className="metric-title"><IonIcon icon={M.icon} style={{ color: M.color, fontSize: 26 }} /><span>{M.title}</span></div>
                   <div className="hero-tile">
-                    <div className="hero-tile-top"><span className="hero-tile-label">{M.hero[0]}</span><IonIcon icon={chevronForward} /></div>
+                    <div className="hero-tile-top"><span className="hero-tile-label">{M.hero[0]}</span></div>
                     <div className="hero-tile-val"><b>{M.hero[1]}</b><span>{M.hero[2]}</span></div>
                     {metric === 'carbs'
                       ? <MetricBars values={carbSeries} color={M.color} />
@@ -145,7 +145,7 @@ export default function Metrics() {
                   <div className="metric-cards">
                     {M.cards.map((c, i) => (
                       <div key={i} className="metric-card" style={{ height: 'auto', minHeight: 92 }}>
-                        <div className="metric-card-top"><span>{c[0]}</span><IonIcon icon={chevronForward} /></div>
+                        <div className="metric-card-top"><span>{c[0]}</span></div>
                         <div className="metric-card-val"><b>{c[1]}</b><span>{c[2]}</span></div>
                       </div>
                     ))}
@@ -153,7 +153,7 @@ export default function Metrics() {
                   <div className="metric-cards">
                     {M.stats.map((st, i) => (
                       <div key={i} className="metric-stat">
-                        <div className="metric-card-top"><span>{st[0]}</span><IonIcon icon={chevronForward} /></div>
+                        <div className="metric-card-top"><span>{st[0]}</span></div>
                         <div className="metric-card-val"><b>{st[1]}</b><span>{st[2]}</span></div>
                       </div>
                     ))}
