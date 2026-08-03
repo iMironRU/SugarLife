@@ -1,19 +1,14 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { reportContentScroll } from '../data/panel';
 import { water, nutrition, medkit } from 'ionicons/icons';
-import { useEffect, useState } from 'react';
-import { useEntries } from '../data/db';
-import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment } from '../data/nightscout';
+import { useState } from 'react';
+import { useEntries, useTreatments } from '../data/db';
 import { stats } from '../data/agp';
 import { carbStats, insulinDaily, carbsByDay, insulinByDay } from '../data/treatmentStats';
 import { fmt, toUnits, unitLabel, useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '../data/units';
 import TirBar from '../components/TirBar';
 import AgpChart from '../components/AgpChart';
 import MetricBars from '../components/MetricBars';
-
-// маленький кеш метрик в localStorage (углеводы/инсулин): мгновенно + офлайн
-function lget<T>(k: string): T | null { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) as T : null; } catch { return null; } }
-function lset(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* quota — ignore */ } }
 
 type MetricKey = 'glucose' | 'carbs' | 'insulin';
 type Cell = [string, string, string];
@@ -30,36 +25,22 @@ export default function Metrics() {
   const [metric, setMetric] = useState<MetricKey>('glucose');
   useUnit(); // перерисовка при смене единиц
   const cu = useCarbUnit(); // единицы углеводов (граммы/Х.Е.)
-  const [events, setEvents] = useState<Treatment[]>([]);
-  const [tempBasals, setTempBasals] = useState<Treatment[]>([]);
 
-  const cfg = getCfg();
-  const enabled = !!(cfg && cfg.enabled && cfg.url);
-  const basalDays = Math.min(days, 14); // базал усредняем по свежему окну (без тяжёлой выборки за 90 дней)
-
-  // глюкоза — из локальной БД; болюсы/углеводы — из событий; базал — из temp basal.
-  // Углеводы/инсулин кешируем в localStorage (как глюкозу в БД): показываем кеш
-  // сразу и в офлайне, при ошибке кеш НЕ затираем.
+  // всё из локальной БД (накапливается фоновым бэкфиллом на 90 дней): глюкоза —
+  // entries; лечение — treatments (temp basal + болюсы/углеводы). Больше не грузим
+  // при каждом открытии и не режем окно инсулина — считаем за выбранный период.
   const entries = useEntries(days * 86400e3);
-  useEffect(() => {
-    let cancel = false;
-    const ekey = `sl.m.ev.${days}`, tkey = `sl.m.tb.${basalDays}`;
-    const ce = lget<Treatment[]>(ekey); if (ce) setEvents(ce);
-    const ct = lget<Treatment[]>(tkey); if (ct) setTempBasals(ct);
-    if (enabled) {
-      loadEventsRange(cfg!.url, cfg!.token, days).then((e) => { if (!cancel) { setEvents(e); lset(ekey, e); } }).catch(() => { /* оставляем кеш */ });
-      loadTreatmentsRange(cfg!.url, cfg!.token, basalDays).then((t) => { if (!cancel) { setTempBasals(t); lset(tkey, t); } }).catch(() => { /* оставляем кеш */ });
-    } else if (!ce && !ct) { setEvents([]); setTempBasals([]); }
-    return () => { cancel = true; };
-  }, [days, basalDays, enabled, cfg?.url]);
+  const treatments = useTreatments(days * 86400e3);
+  const events = treatments.filter((t) => t.type !== 'Temp Basal'); // болюсы/углеводы/замены
+  const tempBasals = treatments; // insulinDaily/insulinByDay сами выберут Temp Basal
 
   const s = entries.length ? stats(entries) : null;
   const id = insulinDaily(tempBasals, events);
   const cs = carbStats(events, days);
 
-  // серии по дням для мини-графиков (углеводы — за период; инсулин — за окно базала)
+  // серии по дням для мини-графиков (за выбранный период)
   const carbSeries = carbsByDay(events, days);
-  const insByDay = insulinByDay(tempBasals, events, basalDays);
+  const insByDay = insulinByDay(tempBasals, events, days);
   const insSeries = insByDay.map((x) => x.tdd);
   const insMuted = insByDay.map((x) => !x.covered);
 
@@ -142,11 +123,6 @@ export default function Metrics() {
                       ? <MetricBars values={carbSeries} color={M.color} />
                       : <MetricBars values={insSeries} color={M.color} muted={insMuted} />}
                   </div>
-                  {metric === 'insulin' && days > basalDays && (
-                    <div className="metric-note warn" style={{ marginTop: 8 }}>
-                      Инсулин показан за последние {basalDays} дн. Выгрузка temp basal за {days} дней из Nightscout слишком объёмна для расчёта на устройстве — поэтому период выше на график и средние здесь не влияет (30 и 90 дней выглядят одинаково).
-                    </div>
-                  )}
                   <div className="metric-cards">
                     {M.cards.map((c, i) => (
                       <div key={i} className="metric-card" style={{ height: 'auto', minHeight: 92 }}>

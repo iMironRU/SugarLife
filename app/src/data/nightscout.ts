@@ -204,6 +204,13 @@ export async function loadTreatmentsRange(base: string, token: string | undefine
   return (Array.isArray(raw) ? raw : []).map(normTreatment).filter((x): x is Treatment => x != null).sort((a, b) => a.t - b.t);
 }
 
+// Все treatments (включая Temp Basal) в окне [from, to) — для фонового бэкфилла истории.
+export async function loadTreatmentsWindow(base: string, token: string | undefined, from: number, to: number): Promise<Treatment[]> {
+  const path = `/api/v1/treatments.json?count=100000&find[created_at][$gte]=${new Date(from).toISOString()}&find[created_at][$lt]=${new Date(to).toISOString()}`;
+  const raw = await getJSON(base, path, token, 25000);
+  return (Array.isArray(raw) ? raw : []).map(normTreatment).filter((x): x is Treatment => x != null).sort((a, b) => a.t - b.t);
+}
+
 async function loadDeviceStatus(base: string, token?: string): Promise<Device | null> {
   const raw = await getJSON(base, '/api/v1/devicestatus.json?count=1', token);
   return normDeviceDoc(Array.isArray(raw) ? raw[0] : null);

@@ -4,8 +4,8 @@
 import { useSyncExternalStore } from 'react';
 import { getCfg, loadAll, checkWrite, type NsData, type Entry, type Treatment, type Device } from './nightscout';
 import { connectSocket, disconnectSocket, type SocketData } from './nsSocket';
-import { putEntries } from './db';
-import { backfill } from './backfill';
+import { putEntries, putTreatments } from './db';
+import { backfill, backfillTreatments } from './backfill';
 
 const CACHE_KEY = 'sl.ns.cache.v1';
 const POLL_MS = 60000;
@@ -60,6 +60,7 @@ function mergeSocket(d: SocketData) {
   set({ data: { ...cur, entries, treatments, device, latest, updatedAt: Date.now() }, status: 'ok', error: null });
   saveCache();
   if (d.entries && d.entries.length) putEntries(d.entries);
+  if (d.treatments && d.treatments.length) putTreatments(d.treatments); // live-лечение в БД
 }
 
 // подключить/переподключить/отключить сокет по конфигу
@@ -100,7 +101,8 @@ export async function refresh() {
     set({ data: { ...res, entries, latest, updatedAt: Date.now() }, status: 'ok', error: null });
     saveCache();
     putEntries(entries);
-    backfill(); // фоновая докачка истории в БД
+    backfill(); // фоновая докачка истории глюкозы в БД
+    backfillTreatments(); // и истории лечения (для метрик за 30/90 дней)
   } catch (e: any) {
     set({ status: state.data ? 'stale' : 'error', error: String(e?.message || e) });
   } finally {
