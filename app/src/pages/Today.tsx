@@ -2,7 +2,7 @@ import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { restaurantOutline, warningOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '../data/store';
-import { useUnit } from '../data/units';
+import { useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '../data/units';
 import { reportContentScroll } from '../data/panel';
 import { useDeviceExtras } from '../data/deviceExtras';
 import { reservoirStats } from '../data/treatmentStats';
@@ -27,6 +27,7 @@ const isPaused = (s?: string | null) => {
 export default function Today() {
   const { data } = useStore();
   useUnit(); // перерисовка при смене единиц
+  const cu = useCarbUnit(); // единицы углеводов (граммы/Х.Е.)
   const [foodOpen, setFoodOpen] = useState(false);
   useCloseOnLeave(2, () => setFoodOpen(false)); // «Сегодня» — закрыть «Еду» при уходе
   const dev = data?.device || null;
@@ -55,13 +56,13 @@ export default function Today() {
             <div className="carb-macros">
               <div className="carb-macro"><span className="cm-k">Б</span><span className="cm-v">{DASH}</span></div>
               <div className="carb-macro"><span className="cm-k">Ж</span><span className="cm-v">{DASH}</span></div>
-              <div className="carb-macro"><span className="cm-k">У</span><span className="cm-v">{dayCarbs}</span><span className="cm-u">г</span></div>
+              <div className="carb-macro"><span className="cm-k">У</span><span className="cm-v">{toCarbs(dayCarbs, cu)}</span><span className="cm-u">{carbUnitLabel(cu)}</span></div>
             </div>
 
             <div className="carb-center">
-              <div className="carb-big">{cob != null ? cob : DASH}<span>г</span></div>
+              <div className="carb-big">{cob != null ? toCarbs(cob, cu) : DASH}<span>{carbUnitLabel(cu)}</span></div>
               <div className="carb-lbl">активные углеводы</div>
-              <div className="carb-sub">всего за день · {dayCarbs} г</div>
+              <div className="carb-sub">всего за день · {toCarbs(dayCarbs, cu)} {carbUnitLabel(cu)}</div>
             </div>
 
             <div className="carb-food">

@@ -1,14 +1,14 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import {
   personCircle, chevronForward, cloudDownloadOutline, downloadOutline,
-  optionsOutline, ellipse, sunny, moon, refreshOutline,
+  optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
 import { getCfg, setCfg } from '../data/nightscout';
 import { stats } from '../data/agp';
 import { detectTherapy, therapyLabel } from '../data/therapy';
-import { fmt, toUnits, unitLabel, useUnit } from '../data/units';
+import { fmt, toUnits, unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '../data/units';
 import { countEntries } from '../data/db';
 import { exportGlucoseCsv } from '../data/export';
 import { useTheme } from '../theme/useTheme';
@@ -17,6 +17,7 @@ import { APP_VERSION, APP_BUILD, isNative, platform, checkWebUpdate, checkOtaUpd
 import { useCloseOnLeave } from '../data/nav';
 import NightscoutModal from '../components/NightscoutModal';
 import UnitsModal from '../components/UnitsModal';
+import CarbUnitsModal from '../components/CarbUnitsModal';
 
 const DASH = '—';
 
@@ -26,13 +27,15 @@ export default function Profile() {
   const unit = useUnit();
   const [nsOpen, setNsOpen] = useState(false);
   const [unitsOpen, setUnitsOpen] = useState(false);
+  const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
+  const carbUnit = useCarbUnit();
   const [count, setCount] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
-  useCloseOnLeave(4, () => setNsOpen(false), () => setUnitsOpen(false)); // «Профиль» — закрыть модалки при уходе
+  useCloseOnLeave(4, () => setNsOpen(false), () => setUnitsOpen(false), () => setCarbUnitsOpen(false)); // «Профиль» — закрыть модалки при уходе
 
   useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
 
@@ -166,8 +169,14 @@ export default function Profile() {
             </button>
             <button className="list-row" onClick={() => setUnitsOpen(true)}>
               <IonIcon icon={optionsOutline} className="list-ico" />
-              <span className="list-title">Единицы измерения</span>
+              <span className="list-title">Единицы глюкозы</span>
               <span className="list-value">{unitLabel(unit)}</span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </button>
+            <button className="list-row" onClick={() => setCarbUnitsOpen(true)}>
+              <IonIcon icon={nutritionOutline} className="list-ico" />
+              <span className="list-title">Единицы еды</span>
+              <span className="list-value">{carbUnitLabel(carbUnit)}</span>
               <IonIcon icon={chevronForward} className="list-chev" />
             </button>
             <button className="list-row" onClick={doExport} disabled={exporting}>
@@ -209,6 +218,7 @@ export default function Profile() {
 
         <NightscoutModal isOpen={nsOpen} onClose={() => setNsOpen(false)} />
         <UnitsModal isOpen={unitsOpen} onClose={() => setUnitsOpen(false)} />
+        <CarbUnitsModal isOpen={carbUnitsOpen} onClose={() => setCarbUnitsOpen(false)} />
       </IonContent>
     </IonPage>
   );
