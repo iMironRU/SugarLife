@@ -36,6 +36,33 @@ export function toUnits(mmol: number, u: Unit = unit): string {
   return u === 'mgdl' ? String(Math.round(mmol * MGDL_PER_MMOL)) : fmt(mmol);
 }
 
+// --- единицы углеводов: граммы ⇄ Х.Е. (хлебные единицы) ---
+// Внутри всё храним и считаем в ГРАММАХ; Х.Е. — только способ показа/ввода.
+export type CarbUnit = 'g' | 'xe';
+export const XE_GRAMS = 12; // 1 Х.Е. = 12 г
+const CKEY = 'sl.carbunits';
+
+let carbUnit: CarbUnit = (typeof localStorage !== 'undefined' && (localStorage.getItem(CKEY) as CarbUnit)) || 'g';
+const csubs = new Set<() => void>();
+
+export function getCarbUnit(): CarbUnit { return carbUnit; }
+export function setCarbUnit(u: CarbUnit) {
+  if (u === carbUnit) return;
+  carbUnit = u;
+  try { localStorage.setItem(CKEY, u); } catch { /* ignore */ }
+  csubs.forEach((f) => f());
+}
+function csubscribe(cb: () => void) { csubs.add(cb); return () => { csubs.delete(cb); }; }
+export const subscribeCarbUnit = csubscribe; // не-React подписка (для моста)
+export function useCarbUnit(): CarbUnit { return useSyncExternalStore(csubscribe, getCarbUnit, getCarbUnit); }
+
+export function carbUnitLabel(u: CarbUnit = carbUnit): string { return u === 'xe' ? 'Х.Е.' : 'г'; }
+
+// граммы → строка в текущих единицах углеводов (Х.Е. — с десятой, граммы — целое)
+export function toCarbs(grams: number, u: CarbUnit = carbUnit): string {
+  return u === 'xe' ? fmt(Math.round((grams / XE_GRAMS) * 10) / 10) : String(Math.round(grams));
+}
+
 export function agoText(t: number, now = Date.now()) {
   const m = Math.max(0, Math.round((now - t) / 60000));
   if (m < 1) return 'только что';

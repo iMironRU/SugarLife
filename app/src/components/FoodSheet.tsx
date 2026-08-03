@@ -2,7 +2,7 @@ import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
 import { closeOutline, restaurantOutline, nutritionOutline, searchOutline, removeOutline, addOutline, lockClosed } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore, useWritable } from '../data/store';
-import { fmt } from '../data/units';
+import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS } from '../data/units';
 
 const DASH = '—';
 const MEALS = ['Завтрак', 'Обед', 'Ужин', 'Перекус'];
@@ -15,11 +15,16 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
   const writable = useWritable();
   const ic = data?.profile?.ic ?? 8;
 
+  const cu = useCarbUnit(); // граммы/Х.Е. — carbs храним в граммах, показываем в выбранных
   const [carbs, setCarbs] = useState(30);
   const [mode, setMode] = useState<'carbs' | 'dish'>('carbs');
   const [meal, setMeal] = useState(1); // Обед по умолчанию
 
   const mealBolus = carbs > 0 ? fmt(carbs / ic) : '0';
+  const step = cu === 'xe' ? XE_GRAMS : 5; // шаг: 1 Х.Е. или 5 г
+  const clabel = carbUnitLabel(cu);
+  // соотношение углеводы↔инсулин в выбранных единицах
+  const ratio = cu === 'xe' ? `1 Х.Е. ≈ ${fmt(XE_GRAMS / ic)} ед` : `КУ 1 ед / ${fmt(ic)} г`;
 
   return (
     <IonModal isOpen={isOpen} onDidDismiss={onClose} initialBreakpoint={0.9} breakpoints={[0, 0.9]} handle>
@@ -44,7 +49,7 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
         <div className="food-summary">
           <div className="fs-left">
             <div className="fs-cap">Углеводы</div>
-            <div className="fs-carbs">{carbs}<span>г</span></div>
+            <div className="fs-carbs">{toCarbs(carbs, cu)}<span>{clabel}</span></div>
           </div>
           <div className="fs-macros">
             <div><span className="fs-mk">Б</span><span className="fs-mv">{DASH}</span></div>
@@ -52,7 +57,7 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
             <div><span className="fs-mk">ккал</span><span className="fs-mv">{DASH}</span></div>
           </div>
         </div>
-        <div className="food-bolus">Болюс на еду: {mealBolus} ед · КУ 1 ед / {fmt(ic)} г</div>
+        <div className="food-bolus">Болюс на еду: {mealBolus} ед · {ratio}</div>
 
         {/* режим ввода */}
         <div className="food-modes">
@@ -77,9 +82,9 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
           <div className="food-stepper">
             <span>Углеводы</span>
             <div className="stepper">
-              <button onClick={() => setCarbs((c) => Math.max(0, c - 5))}><IonIcon icon={removeOutline} /></button>
-              <b>{carbs}<i>г</i></b>
-              <button onClick={() => setCarbs((c) => Math.min(300, c + 5))}><IonIcon icon={addOutline} /></button>
+              <button onClick={() => setCarbs((c) => Math.max(0, c - step))}><IonIcon icon={removeOutline} /></button>
+              <b>{toCarbs(carbs, cu)}<i>{clabel}</i></b>
+              <button onClick={() => setCarbs((c) => Math.min(300, c + step))}><IonIcon icon={addOutline} /></button>
             </div>
           </div>
         ) : (

@@ -6,7 +6,7 @@ import { useEntries } from '../data/db';
 import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment } from '../data/nightscout';
 import { stats } from '../data/agp';
 import { carbStats, insulinDaily } from '../data/treatmentStats';
-import { fmt, toUnits, unitLabel, useUnit } from '../data/units';
+import { fmt, toUnits, unitLabel, useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '../data/units';
 import TirBar from '../components/TirBar';
 import AgpChart from '../components/AgpChart';
 
@@ -19,12 +19,12 @@ const PERIODS: { days: number; label: string }[] = [
   { days: 30, label: '30 дней' }, { days: 90, label: '90 дней' },
 ];
 
-const r0 = (v: number) => String(Math.round(v));
 
 export default function Metrics() {
   const [days, setDays] = useState(3);
   const [metric, setMetric] = useState<MetricKey>('glucose');
   useUnit(); // перерисовка при смене единиц
+  const cu = useCarbUnit(); // единицы углеводов (граммы/Х.Е.)
   const [events, setEvents] = useState<Treatment[]>([]);
   const [tempBasals, setTempBasals] = useState<Treatment[]>([]);
 
@@ -47,11 +47,12 @@ export default function Metrics() {
   const id = insulinDaily(tempBasals, events);
   const cs = carbStats(events, days);
 
+  const cl = carbUnitLabel(cu);
   const carbsDef: MetricDef = {
     title: 'Углеводы', color: 'var(--c-carb)', icon: nutrition,
-    hero: ['Всего за день', r0(cs.perDay), 'г'],
-    cards: [['Завтрак', r0(cs.breakfast), 'г'], ['Ужин', r0(cs.dinner), 'г']],
-    stats: [['Ср. за приём', r0(cs.avgPerMeal), 'г'], ['Приёмов пищи', String(cs.mealCount), '']],
+    hero: ['Всего за день', toCarbs(cs.perDay, cu), cl],
+    cards: [['Завтрак', toCarbs(cs.breakfast, cu), cl], ['Ужин', toCarbs(cs.dinner, cu), cl]],
+    stats: [['Ср. за приём', toCarbs(cs.avgPerMeal, cu), cl], ['Приёмов пищи', String(cs.mealCount), '']],
     note: cs.hasData ? undefined : 'Углеводы не логируются в ваш Nightscout — тут будет 0. Появятся, если объявлять еду в петле/приложении.',
   };
   const noData = id.coveredDays === 0;
