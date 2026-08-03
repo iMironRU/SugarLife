@@ -2,6 +2,7 @@ import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import {
   personCircle, chevronForward, cloudDownloadOutline, downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
+  hardwareChipOutline, medkitOutline, repeat, speedometerOutline, cloudOutline,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
@@ -18,6 +19,16 @@ import { useCloseOnLeave } from '../data/nav';
 import NightscoutModal from '../components/NightscoutModal';
 import UnitsModal from '../components/UnitsModal';
 import CarbUnitsModal from '../components/CarbUnitsModal';
+import DeviceStubSheet from '../components/DeviceStubSheet';
+
+// категории «Устройства» — пока заглушки; существующие шторки (помпа/датчик) не трогаем
+const DEVICES = [
+  { key: 'sensor', icon: hardwareChipOutline, title: 'Сенсор (НМГ)', desc: 'Модель сенсора и трансмиттера, источник глюкозы — в разработке.' },
+  { key: 'insulin', icon: medkitOutline, title: 'Ввод инсулина', desc: 'Помпа или шприц-ручки и инсулин(ы). Пока выбор помпы/инсулина — в шторке «Помпа» на экране инсулина.' },
+  { key: 'loop', icon: repeat, title: 'Петля', desc: 'Алгоритм замкнутого цикла (AAPS/Loop/встроенный) и статус — в разработке.' },
+  { key: 'meter', icon: speedometerOutline, title: 'Глюкометр', desc: 'Модель глюкометра и расходники (тест-полоски, ланцеты) — в разработке.' },
+  { key: 'source', icon: cloudOutline, title: 'Источник данных', desc: 'Откуда берём данные (сейчас — Nightscout). Управление источниками — в разработке.' },
+];
 
 const DASH = '—';
 
@@ -29,13 +40,14 @@ export default function Profile() {
   const [unitsOpen, setUnitsOpen] = useState(false);
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
   const carbUnit = useCarbUnit();
+  const [deviceCat, setDeviceCat] = useState<string | null>(null);
   const [count, setCount] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
-  useCloseOnLeave(4, () => setNsOpen(false), () => setUnitsOpen(false), () => setCarbUnitsOpen(false)); // «Профиль» — закрыть модалки при уходе
+  useCloseOnLeave(4, () => setNsOpen(false), () => setUnitsOpen(false), () => setCarbUnitsOpen(false), () => setDeviceCat(null)); // «Профиль» — закрыть модалки при уходе
 
   useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
 
@@ -158,6 +170,19 @@ export default function Profile() {
             })}
           </div>
 
+          {/* устройства (пока заглушки; существующие шторки помпы/датчика не трогаем) */}
+          <div className="section-label sec">Устройства</div>
+          <div className="list">
+            {DEVICES.map((d) => (
+              <button key={d.key} className="list-row" onClick={() => setDeviceCat(d.key)}>
+                <IonIcon icon={d.icon} className="list-ico" />
+                <span className="list-title">{d.title}</span>
+                <span className="list-value muted">скоро</span>
+                <IonIcon icon={chevronForward} className="list-chev" />
+              </button>
+            ))}
+          </div>
+
           {/* настройки */}
           <div className="section-label sec">Настройки</div>
           <div className="list">
@@ -219,6 +244,9 @@ export default function Profile() {
         <NightscoutModal isOpen={nsOpen} onClose={() => setNsOpen(false)} />
         <UnitsModal isOpen={unitsOpen} onClose={() => setUnitsOpen(false)} />
         <CarbUnitsModal isOpen={carbUnitsOpen} onClose={() => setCarbUnitsOpen(false)} />
+        {DEVICES.map((d) => (
+          <DeviceStubSheet key={d.key} isOpen={deviceCat === d.key} onClose={() => setDeviceCat(null)} title={d.title} desc={d.desc} />
+        ))}
       </IonContent>
     </IonPage>
   );
