@@ -1,4 +1,5 @@
 /* Фоновая докачка истории глюкозы и лечения в локальную БД (до 90 дней). */
+import { useSyncExternalStore } from 'react';
 import { getCfg, loadEntriesWindow, loadTreatmentsWindow } from './nightscout';
 import {
   putEntries, newestT, oldestT, pruneBefore,
@@ -6,14 +7,23 @@ import {
 } from './db';
 
 const DAY = 86400e3;
+
+// Статус фоновой докачки — чтобы UI честно предупреждал, что данные ещё пополняются.
 let running = false;
 let runningT = false;
+const subs = new Set<() => void>();
+function emit() { for (const f of subs) f(); }
+function setRunning(v: boolean) { if (v !== running) { running = v; emit(); } }
+function setRunningT(v: boolean) { if (v !== runningT) { runningT = v; emit(); } }
+export function isBackfilling(): boolean { return running || runningT; }
+export function subscribeBackfill(cb: () => void) { subs.add(cb); return () => { subs.delete(cb); }; }
+export function useBackfilling(): boolean { return useSyncExternalStore(subscribeBackfill, isBackfilling, isBackfilling); }
 
 export async function backfill(targetDays = 90) {
   if (running) return;
   const cfg = getCfg();
   if (!cfg || !cfg.enabled || !cfg.url) return;
-  running = true;
+  setRunning(true);
   try {
     const now = Date.now();
     const minT = now - targetDays * DAY;
@@ -38,7 +48,7 @@ export async function backfill(targetDays = 90) {
   } catch {
     // тихо — графики покажут, что успели набрать
   } finally {
-    running = false;
+    setRunning(false);
   }
 }
 
@@ -48,7 +58,7 @@ export async function backfillTreatments(targetDays = 90) {
   if (runningT) return;
   const cfg = getCfg();
   if (!cfg || !cfg.enabled || !cfg.url) return;
-  runningT = true;
+  setRunningT(true);
   try {
     const now = Date.now();
     const minT = now - targetDays * DAY;
@@ -73,6 +83,6 @@ export async function backfillTreatments(targetDays = 90) {
   } catch {
     // тихо
   } finally {
-    runningT = false;
+    setRunningT(false);
   }
 }

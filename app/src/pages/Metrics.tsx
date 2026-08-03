@@ -1,8 +1,9 @@
-import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { IonPage, IonContent, IonIcon, IonSpinner } from '@ionic/react';
 import { reportContentScroll } from '../data/panel';
 import { water, nutrition, medkit } from 'ionicons/icons';
 import { useState } from 'react';
 import { useEntries, useTreatments } from '../data/db';
+import { useBackfilling } from '../data/backfill';
 import { stats } from '../data/agp';
 import { carbStats, insulinDaily, carbsByDay, insulinByDay } from '../data/treatmentStats';
 import { fmt, toUnits, unitLabel, useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '../data/units';
@@ -33,6 +34,12 @@ export default function Metrics() {
   const treatments = useTreatments(days * 86400e3);
   const events = treatments.filter((t) => t.type !== 'Temp Basal'); // болюсы/углеводы/замены
   const tempBasals = treatments; // insulinDaily/insulinByDay сами выберут Temp Basal
+
+  // Честно предупреждаем, пока бэкфилл ещё не набрал полный период (данные неполные).
+  // Как только докачка закончилась — прячем, даже если данных меньше (значит столько и есть).
+  const backfilling = useBackfilling();
+  const oldestHave = metric === 'glucose' ? entries[0]?.t : treatments[0]?.t;
+  const gathering = backfilling && (oldestHave == null || oldestHave > Date.now() - days * 86400e3 + 2 * 86400e3);
 
   const s = entries.length ? stats(entries) : null;
   const id = insulinDaily(tempBasals, events);
@@ -91,6 +98,13 @@ export default function Metrics() {
               );
             })}
           </div>
+
+          {gathering && (
+            <div className="gather-note">
+              <IonSpinner name="crescent" />
+              <span>Собираем историю за {days} дн — данные ещё пополняются, показано не за весь период.</span>
+            </div>
+          )}
 
           {metric === 'glucose' ? (
             s ? (
