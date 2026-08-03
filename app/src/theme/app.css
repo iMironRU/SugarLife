@@ -186,8 +186,6 @@ ion-content { --background: var(--color-bg); }
 .hp-iob { font-size: 11px; font-weight: 600; color: var(--c-ins); margin-top: 4px; }
 .is-compact .hp-iob { font-size: 10px; margin-top: 2px; }
 .is-line .hp-iob { display: none; }
-
-.sync-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0 16px; }
 .sync { font-size: 12px; color: var(--color-neutral-400); }
 .heart { color: var(--c-danger); }
 .theme-btn {
@@ -198,69 +196,14 @@ ion-content { --background: var(--color-bg); }
 
 /* Верхний блок: три кнопки — НМГ | круг | Помпа (по макету) */
 .hero { position: relative; height: 150px; margin-top: 4px; }
-
-.hero-rect {
-  position: absolute; left: 0; right: 0; top: 10px; height: 130px;
-  display: flex; border-radius: 20px; overflow: hidden;
-  border: 1.5px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 14%, transparent), color-mix(in srgb, var(--color-accent) 4%, transparent));
-}
-.hero-btn {
-  flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
-  background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
-  color: var(--color-text); transition: background .16s;
-}
-.hero-btn { overflow: hidden; }
-.hero-nmg { align-items: flex-start; text-align: left; padding: 0 18px 0 16px; }
-.hero-pump { align-items: flex-end; text-align: right; padding: 0 16px 0 18px; }
-.hero-btn:active { background: color-mix(in srgb, var(--color-accent) 20%, transparent); }
-.hero-gap { width: 150px; flex-shrink: 0; }
-/* текст крыльев — одна строка, без переноса под круг */
-.wing-head, .wing-title, .wing-sub, .wing-val { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-glu); box-shadow: 0 0 6px var(--c-glu); flex-shrink: 0; }
-
-.wing-ico { font-size: 22px; line-height: 1; margin-bottom: 5px; color: var(--color-accent); display: flex; }
-.wing-ico ion-icon { font-size: 22px; color: var(--color-accent); }
-.wing-head { display: flex; align-items: center; gap: 5px; }
-.wing-title { font-size: 14px; font-weight: 600; color: var(--color-text); }
-.wing-sub { font-size: 10px; color: var(--color-neutral-400); line-height: 1.4; }
-.wing-val { font-size: 15px; font-weight: 600; color: var(--color-text); margin-top: 3px; }
 .badge {
   display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 7px;
   font-size: 9px; font-weight: 600; line-height: 1; color: var(--c-glu);
   background: color-mix(in srgb, var(--c-glu) 18%, transparent);
 }
 .badge .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--c-glu); }
-
-.hero-circle {
-  position: absolute; left: 50%; top: 0; transform: translateX(-50%);
-  width: 150px; height: 150px; border-radius: 50%; padding: 0; cursor: pointer; z-index: 2;
-  border: 2px solid var(--color-accent); font-family: var(--font-body);
-  box-shadow: 0 0 0 8px var(--color-bg), 0 0 22px color-mix(in srgb, var(--color-accent) 22%, transparent), inset 0 0 30px color-mix(in srgb, var(--color-accent) 16%, transparent);
-  /* центр непрозрачный (подмешан фон), чтобы сквозь круг не просвечивала граница подложки */
-  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--color-accent) 14%, var(--color-bg)), var(--color-bg) 74%);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-}
 .circle-spark { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-.circle-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
-.circle-val { display: flex; align-items: center; gap: 6px; }
-.circle-val > span:first-child { font-size: 44px; font-weight: 600; letter-spacing: -.02em; line-height: 1; color: var(--color-text); }
-.circle-arrow { font-size: 24px; color: var(--c-glu); font-weight: 700; }
-.circle-unit { font-size: 12px; color: var(--color-neutral-300); margin-top: 4px; }
-.circle-ago { font-size: 10px; color: var(--color-neutral-400); margin-top: 5px; }
-
-.today-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
-.today-stat {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: 16px;
-  border-radius: 20px; cursor: pointer; font-family: var(--font-body); text-align: left;
-  border: 1.5px solid color-mix(in srgb, var(--color-accent) 38%, transparent);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 12%, transparent), color-mix(in srgb, var(--color-accent) 3%, transparent));
-  color: var(--color-text);
-}
-.today-stat ion-icon { font-size: 24px; }
-.today-stat-val { font-size: 30px; font-weight: 600; letter-spacing: -.02em; line-height: 1; }
-.today-stat-val i { font-size: 13px; font-weight: 400; color: var(--color-neutral-400); font-style: normal; }
-.today-stat-label { font-size: 12px; color: var(--color-neutral-400); }
 
 /* ===== Панель углеводов (по макету): Б/Ж/У · активные · Еда ===== */
 .carb-panel {
@@ -289,17 +232,6 @@ ion-content { --background: var(--color-bg); }
 .carb-food-t { font-size: 14px; font-weight: 600; color: var(--color-text); }
 .carb-food-s { font-size: 10px; color: var(--color-neutral-400); line-height: 1.2; }
 
-/* статус-полоска: телефон · датчик · инсулин */
-.today-status { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 12px; }
-.tstat {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
-  padding: 13px 12px; border-radius: 16px; cursor: pointer;
-  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
-}
-.tstat ion-icon { font-size: 19px; }
-.tstat-val { font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1; }
-.tstat-label { font-size: 10.5px; color: var(--color-neutral-400); }
-
 /* подсветки резервуара */
 .today-alert {
   display: flex; align-items: flex-start; gap: 11px; margin-top: 12px;
@@ -314,25 +246,11 @@ ion-content { --background: var(--color-bg); }
 .today-alert.info > ion-icon { color: var(--color-accent-300); }
 .today-alert b { display: block; font-size: 14px; font-weight: 600; }
 .today-alert span { display: block; font-size: 12px; color: var(--color-neutral-400); line-height: 1.4; margin-top: 3px; text-wrap: pretty; }
-
-/* Плитка еды */
-.food-tile {
-  display: flex; align-items: stretch; border-radius: 20px; margin-top: 14px; overflow: hidden;
-  border: 1.5px solid color-mix(in srgb, var(--c-carb) 55%, transparent);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 14%, transparent), color-mix(in srgb, var(--c-carb) 4%, transparent));
-}
 .macros { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 14px 0 14px 18px; }
 .macros > div { font-size: 13px; font-weight: 600; }
 .macros span { color: var(--color-neutral-400); font-size: 11px; font-weight: 400; display: inline-block; width: 12px; }
 .macros b { font-weight: 600; }
 .carbs { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 10px; }
-.carbs-val { line-height: 1; }
-.carbs-val b { font-size: 40px; font-weight: 600; color: var(--c-carb); letter-spacing: -.02em; }
-.carbs-sub { font-size: 11px; color: var(--color-neutral-400); margin-top: 5px; }
-.carbs-sub2 { font-size: 10px; color: var(--color-neutral-500); margin-top: 3px; }
-.food-cta { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 2px; padding: 14px 18px 14px 0; }
-.food-ico { font-size: 22px; color: var(--c-carb); }
-.food-title { font-size: 14px; font-weight: 600; }
 
 /* ===== Профиль ===== */
 .screen-pad { padding-top: 6px; }
@@ -548,25 +466,6 @@ ion-content { --background: var(--color-bg); }
 .ns-access-title { font-size: 14px; font-weight: 600; }
 .ns-access-sub { font-size: 11.5px; color: var(--color-neutral-400); line-height: 1.4; margin-top: 3px; text-wrap: pretty; }
 
-/* --- Аналитика / инсайты --- */
-.ready-card {
-  margin-top: 4px; border-radius: 20px; padding: 16px;
-  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
-}
-.ready-head { display: flex; align-items: center; gap: 9px; }
-.ready-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 10px currentColor; }
-.ready-label { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
-.ready-tag {
-  margin-left: auto; font-size: 10px; font-weight: 600; letter-spacing: .04em;
-  color: var(--color-neutral-400); border: 1px solid var(--color-neutral-800);
-  padding: 3px 8px; border-radius: 8px;
-}
-.ready-desc { font-size: 12.5px; color: var(--color-neutral-300); line-height: 1.45; margin-top: 10px; }
-.ready-reasons { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
-.ready-reason { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: var(--color-neutral-300); }
-.ready-reason ion-icon { font-size: 15px; color: var(--c-carb); flex-shrink: 0; margin-top: 1px; }
-.ready-foot { font-size: 11px; color: var(--color-neutral-500); line-height: 1.4; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-neutral-800); text-wrap: pretty; }
-
 .insights { display: flex; flex-direction: column; gap: 10px; }
 .insight {
   border-radius: 16px;
@@ -615,16 +514,6 @@ ion-content { --background: var(--color-bg); }
 }
 .ins-tab.on { color: var(--color-text); font-weight: 600; }
 .ins-tab-count { font-size: 12px; font-weight: 700; color: var(--color-neutral-500); }
-
-.ins-groups { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
-.ins-group-btn {
-  width: 100%; display: flex; align-items: center; gap: 9px;
-  padding: 13px 14px; border-radius: 14px; cursor: pointer;
-  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
-  color: var(--color-neutral-200); font-size: 13px; font-weight: 500; font-family: var(--font-body);
-}
-.ins-group-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.ins-group-count { color: var(--color-neutral-500); font-weight: 600; margin-left: 2px; }
 .ins-group-btn .chev { margin-left: auto; font-size: 16px; color: var(--color-neutral-500); transition: transform .2s; }
 .ins-group-btn.open .chev { transform: rotate(90deg); }
 ion-toggle {
@@ -695,33 +584,6 @@ ion-toggle {
 .tir-range { font-size: 11px; color: var(--color-neutral-500); margin-right: 6px; }
 .tir-pct { font-size: 15px; font-weight: 600; min-width: 40px; text-align: right; }
 .stat-grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
-
-/* ===== НМГ (мониторинг) ===== */
-.mon-head { display: flex; align-items: flex-start; justify-content: space-between; }
-.mon-title { font-size: 28px; font-weight: 600; letter-spacing: -.02em; }
-.mon-sub { font-size: 12px; color: var(--color-neutral-400); margin-top: 2px; }
-.mon-now { display: flex; align-items: baseline; gap: 6px; }
-.mon-now-val { font-size: 30px; font-weight: 600; letter-spacing: -.02em; }
-.mon-now-arrow { font-size: 18px; color: var(--c-glu); font-weight: 700; }
-.mon-now-ago { font-size: 11px; color: var(--color-neutral-400); margin-left: 4px; }
-
-.mon-status { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
-.mon-stat {
-  border-radius: 16px; padding: 14px 12px; display: flex; flex-direction: column; align-items: center; gap: 4px;
-  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));
-}
-.mon-stat ion-icon { font-size: 20px; }
-.mon-stat-val { font-size: 16px; font-weight: 600; }
-.mon-stat-label { font-size: 10px; color: var(--color-neutral-400); }
-
-.sensor-card {
-  margin-top: 10px; border-radius: 20px; padding: 16px;
-  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));
-}
-.sensor-main { display: flex; align-items: center; gap: 12px; }
-.sensor-main ion-icon { font-size: 26px; color: var(--color-accent); }
-.sensor-day { font-size: 20px; font-weight: 600; }
-.sensor-when { font-size: 12px; color: var(--color-neutral-400); margin-top: 2px; }
 .sensor-ages { display: flex; gap: 8px; margin-top: 14px; }
 .sensor-ages-solo { margin-top: 10px; }
 
@@ -804,12 +666,6 @@ ion-toggle {
 .lg-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
 .lg-dash { width: 12px; height: 0; border-top: 1.5px dashed color-mix(in srgb, var(--c-ins) 70%, transparent); flex-shrink: 0; }
 
-.chart { position: relative; height: 200px; margin-top: 14px; padding-left: 22px; }
-.chart-svg { width: 100%; height: 190px; display: block; }
-.chart-y { position: absolute; left: 0; top: 0; height: 190px; width: 22px; font-size: 10px; color: var(--color-neutral-400); }
-.chart-y span { position: absolute; transform: translateY(-50%); left: 0; }
-.chart-x { display: flex; justify-content: space-between; padding: 4px 0 0 0; font-size: 10px; color: var(--color-neutral-400); }
-
 .reading-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--color-neutral-800); }
 .reading-row:last-child { border-bottom: 0; }
 .reading-time { font-size: 14px; flex: 1; }
@@ -826,12 +682,6 @@ ion-toggle {
 .basal-row:last-child { border-bottom: 0; }
 .basal-row span { font-size: 13px; color: var(--color-neutral-400); }
 .basal-row b { font-size: 14px; font-weight: 600; }
-
-.bolus-card { margin-top: 10px; border-radius: 20px; overflow: hidden; background: var(--color-neutral-900); }
-.bolus-input { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--color-neutral-800); }
-.bolus-input > span { font-size: 14px; }
-.bolus-bg { font-size: 18px; font-weight: 600; }
-.bolus-bg i { font-size: 12px; font-weight: 400; color: var(--color-neutral-400); font-style: normal; margin-left: 3px; }
 .stepper { display: flex; align-items: center; gap: 14px; }
 .stepper button {
   width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--color-neutral-700);
@@ -840,14 +690,6 @@ ion-toggle {
 .stepper button ion-icon { font-size: 18px; }
 .stepper b { font-size: 22px; font-weight: 600; min-width: 54px; text-align: center; }
 .stepper b i { font-size: 12px; font-weight: 400; color: var(--color-neutral-400); font-style: normal; margin-left: 2px; }
-
-.bolus-result { padding: 16px; background: color-mix(in srgb, var(--color-accent) 12%, var(--color-neutral-900)); }
-.bolus-rec-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-400); }
-.bolus-rec { display: flex; align-items: baseline; gap: 5px; margin-top: 4px; }
-.bolus-rec b { font-size: 34px; font-weight: 700; line-height: 1; }
-.bolus-rec span { font-size: 14px; color: var(--color-neutral-300); }
-.bolus-breakdown { font-size: 12px; color: var(--color-neutral-400); margin-top: 8px; }
-.bolus-note { padding: 12px 16px; font-size: 11px; color: var(--color-neutral-500); line-height: 1.4; }
 
 /* Заглушка */
 .placeholder {

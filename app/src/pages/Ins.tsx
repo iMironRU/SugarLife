@@ -7,6 +7,7 @@ import { detectTherapy } from '../data/therapy';
 import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment } from '../data/nightscout';
 import { deviceAges } from '../data/treatmentStats';
 import { fmt } from '../data/units';
+import { useCloseOnLeave } from '../data/nav';
 import InsulinTimeChart from '../components/InsulinTimeChart';
 import PumpSheet from '../components/PumpSheet';
 import LoopSheet from '../components/LoopSheet';
@@ -26,6 +27,7 @@ export default function Ins() {
   const [win, setWin] = useState(3);
   const [pumpOpen, setPumpOpen] = useState(false);
   const [loopOpen, setLoopOpen] = useState(false);
+  useCloseOnLeave(3, () => setPumpOpen(false), () => setLoopOpen(false)); // «Инсулин» — закрыть шторки при уходе
 
   useEffect(() => {
     let cancel = false;
