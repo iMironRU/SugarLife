@@ -2,6 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { setupIonicReact } from '@ionic/react'
 
+// Рано регистрируем нативный мост: в оболочке ставит window.SugarLifeBridge,
+// в браузере — no-op (getBridge подхватит Nightscout-шим).
+import './native/sugarLifeBridge'
+
 /* Базовые стили Ionic */
 import '@ionic/react/css/core.css'
 import '@ionic/react/css/normalize.css'

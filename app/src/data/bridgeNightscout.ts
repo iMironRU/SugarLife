@@ -1,8 +1,8 @@
-/* Nightscout-шим моста: реализует SibionicBridge поверх нашего стора Nightscout.
+/* Nightscout-шим моста: реализует SugarLifeBridge поверх нашего стора Nightscout.
    Когда появится нативный мост (оболочка/релей) — UI не меняется, просто
    getBridge() вернёт его вместо шима. Пока: живой монитор + alerts из Nightscout.
    Гэпы честно: один IOB (→ conservative), нет истории/транзакций/wiring/insights. */
-import type { SibionicBridge, UiSnapshot, Monitor, Trend, Link, DeviceInfo, Alert, Intent } from './bridge';
+import type { SugarLifeBridge, UiSnapshot, Monitor, Trend, Link, DeviceInfo, Alert, Intent } from './bridge';
 import { subscribeStore, getStoreState, refresh } from './store';
 import { getUnit, subscribeUnit, toUnits } from './units';
 import { getCfg, setCfg } from './nightscout';
@@ -106,7 +106,7 @@ async function sendIntent(i: Intent): Promise<{ accepted: boolean; error?: strin
   }
 }
 
-export const nightscoutBridge: SibionicBridge = {
+export const nightscoutBridge: SugarLifeBridge = {
   bridgeRevision: '1.0',
   subscribe(cb) {
     ensureStarted();
