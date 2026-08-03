@@ -84,11 +84,12 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
           </div>
         ) : (
           <>
+            <div className="food-label">Блюдо</div>
             <div className="field" aria-disabled="true" style={{ opacity: 0.6 }}>
               <IonIcon icon={searchOutline} className="field-ico" />
               <IonInput placeholder="Найти блюдо" disabled />
             </div>
-            <div className="metric-note" style={{ marginTop: 8 }}>Каталог блюд появится позже.</div>
+            <div className="metric-note">Каталог блюд появится позже.</div>
           </>
         )}
 
