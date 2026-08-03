@@ -6,6 +6,7 @@ import { useEntries } from '../data/db';
 import { toUnits, useUnit } from '../data/units';
 import { arrowChar, getCfg, loadEventsRange, type Treatment } from '../data/nightscout';
 import { deviceAges } from '../data/treatmentStats';
+import { useCloseOnLeave } from '../data/nav';
 import GlucoseTimeChart from '../components/GlucoseTimeChart';
 import SensorSheet from '../components/SensorSheet';
 
@@ -21,6 +22,7 @@ export default function Mon() {
   useUnit(); // перерисовка при смене единиц
   const [win, setWin] = useState(3);
   const [sensorOpen, setSensorOpen] = useState(false);
+  useCloseOnLeave(1, () => setSensorOpen(false)); // «НМГ» — закрыть «Датчик» при уходе
   const entries = useEntries(24 * 3600e3);
 
   const cfg = getCfg();

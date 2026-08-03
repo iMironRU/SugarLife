@@ -1,7 +1,7 @@
 /* Активная вкладка для карусели (свайп между экранами). Заменяет роутинг табов:
    один индекс 0..4, оба — карусель и панель — читают его. Хэш синхронизируем
    для дип-линков (#/today и т.п.), но без реального роутера. */
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
 export const TAB_PATHS = ['/metrics', '/mon', '/today', '/ins', '/profile'];
 const DEFAULT = 2; // «Сегодня»
@@ -31,4 +31,16 @@ export function useTab(): number {
     (cb) => { subs.add(cb); return () => { subs.delete(cb); }; },
     () => index,
   );
+}
+
+/* Закрыть шторки при уходе с вкладки. Карусель держит все панели
+   смонтированными и не шлёт ionViewWillLeave, поэтому чистим вручную:
+   как только активная вкладка не наша — зовём переданные close-функции
+   (для закрытой шторки это no-op). */
+export function useCloseOnLeave(myTab: number, ...closers: Array<() => void>): void {
+  const tab = useTab();
+  useEffect(() => {
+    if (tab !== myTab) closers.forEach((c) => c());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, myTab]);
 }

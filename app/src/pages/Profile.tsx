@@ -1,4 +1,4 @@
-import { IonPage, IonContent, IonIcon, useIonViewWillLeave } from '@ionic/react';
+import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import {
   personCircle, chevronForward, cloudDownloadOutline, downloadOutline,
   optionsOutline, ellipse, sunny, moon, refreshOutline,
@@ -14,6 +14,7 @@ import { exportGlucoseCsv } from '../data/export';
 import { useTheme } from '../theme/useTheme';
 import { reportContentScroll } from '../data/panel';
 import { APP_VERSION, APP_BUILD, isNative, platform, checkWebUpdate, checkOtaUpdate, checkNativeUpdate, openApkDownload } from '../data/appUpdate';
+import { useCloseOnLeave } from '../data/nav';
 import NightscoutModal from '../components/NightscoutModal';
 import UnitsModal from '../components/UnitsModal';
 
@@ -31,7 +32,7 @@ export default function Profile() {
   const [updating, setUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
-  useIonViewWillLeave(() => { setNsOpen(false); setUnitsOpen(false); });
+  useCloseOnLeave(4, () => setNsOpen(false), () => setUnitsOpen(false)); // «Профиль» — закрыть модалки при уходе
 
   useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
 

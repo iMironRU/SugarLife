@@ -6,6 +6,7 @@ import { useUnit } from '../data/units';
 import { reportContentScroll } from '../data/panel';
 import { useDeviceExtras } from '../data/deviceExtras';
 import { reservoirStats } from '../data/treatmentStats';
+import { useCloseOnLeave } from '../data/nav';
 import FoodSheet from '../components/FoodSheet';
 
 const DASH = '—';
@@ -27,6 +28,7 @@ export default function Today() {
   const { data } = useStore();
   useUnit(); // перерисовка при смене единиц
   const [foodOpen, setFoodOpen] = useState(false);
+  useCloseOnLeave(2, () => setFoodOpen(false)); // «Сегодня» — закрыть «Еду» при уходе
   const dev = data?.device || null;
 
   // общие расширенные данные (грузит панель) — события/резервуар
