@@ -1,6 +1,6 @@
 import { IonIcon } from '@ionic/react';
 import { useEffect, useState } from 'react';
-import { pulse, flash, moon, cloudOfflineOutline, syncOutline, batteryFull, batteryHalf, batteryDead } from 'ionicons/icons';
+import { pulse, flash, moon, cloudOfflineOutline, syncOutline, batteryFull, batteryHalf, batteryDead, timeOutline } from 'ionicons/icons';
 import { useTab, setTab } from '../data/nav';
 import { useStore } from '../data/store';
 import { toUnits, agoText, unitLabel, useUnit, fmt } from '../data/units';
@@ -108,6 +108,9 @@ export default function HeroPanel() {
   const nmgVal = sensorDay != null ? 'день ' + sensorDay : fresh;
   const daysLeft = dev?.reservoir != null && extras.tdd ? dev.reservoir / extras.tdd : null;
   const resSub2 = daysLeft != null ? '≈ ' + fmtDays(daysLeft) + ' дн' : 'резервуар';
+  // часики на значениях из кеша, пока идёт свежая загрузка (текст не подменяем)
+  const staleSensor = extras.stale && sensorDay != null;
+  const staleDays = extras.stale && daysLeft != null;
 
   return (
     <div className={'hero-panel ' + mode}>
@@ -132,7 +135,7 @@ export default function HeroPanel() {
               <span className="hp-name">НМГ</span>
               {live && <span className="live-dot" title="реальное время" />}
             </span>
-            <span className="hp-sub">{nmgSub}</span>
+            <span className="hp-sub">{nmgSub}{staleSensor && <IonIcon className="hp-stale" icon={timeOutline} />}</span>
             <span className="hp-val">{nmgVal}</span>
           </button>
 
@@ -150,7 +153,7 @@ export default function HeroPanel() {
             <span className="hp-name">Помпа</span>
             <span className="hp-sub">{pumpStatus}</span>
             <span className="hp-val">{reservoir}</span>
-            <span className="hp-sub">{resSub2}</span>
+            <span className="hp-sub">{resSub2}{staleDays && <IonIcon className="hp-stale" icon={timeOutline} />}</span>
           </button>
         </div>
 
