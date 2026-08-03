@@ -308,7 +308,22 @@ ion-content { --background: var(--color-bg); }
 .list-ico { font-size: 19px; color: var(--color-accent); flex-shrink: 0; }
 .list-title { flex: 1; min-width: 0; font-size: 14px; }
 .list-value { font-size: 13px; color: var(--color-neutral-400); }
+.list-value.muted { color: var(--color-accent); }
 .list-chev { font-size: 14px; color: var(--color-neutral-600); }
+
+/* пикер справочника (помпы/инсулины) */
+.pick-toggle {
+  margin: 10px 0 6px; padding: 7px 13px; border-radius: 999px; cursor: pointer;
+  font-size: 12px; font-family: var(--font-body);
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800); color: var(--color-neutral-400);
+}
+.pick-toggle.on { background: color-mix(in srgb, var(--color-accent) 18%, transparent); border-color: color-mix(in srgb, var(--color-accent) 55%, transparent); color: var(--color-text); }
+.pick-list { max-height: none; }
+.pick-row.on { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.pick-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pick-main .list-title { flex: none; }
+.pick-sub { font-size: 11px; color: var(--color-neutral-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick-check { font-size: 18px; color: var(--color-accent); flex-shrink: 0; }
 
 .logout {
   width: 100%; margin-top: 24px; padding: 14px; border-radius: 16px; cursor: pointer;
