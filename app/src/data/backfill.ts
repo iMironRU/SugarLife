@@ -1,9 +1,13 @@
-/* Фоновая докачка истории глюкозы в локальную БД (до 90 дней). */
-import { getCfg, loadEntriesWindow } from './nightscout';
-import { putEntries, newestT, oldestT, pruneBefore } from './db';
+/* Фоновая докачка истории глюкозы и лечения в локальную БД (до 90 дней). */
+import { getCfg, loadEntriesWindow, loadTreatmentsWindow } from './nightscout';
+import {
+  putEntries, newestT, oldestT, pruneBefore,
+  putTreatments, newestTreatmentT, oldestTreatmentT, pruneTreatmentsBefore,
+} from './db';
 
 const DAY = 86400e3;
 let running = false;
+let runningT = false;
 
 export async function backfill(targetDays = 90) {
   if (running) return;
@@ -35,5 +39,40 @@ export async function backfill(targetDays = 90) {
     // тихо — графики покажут, что успели набрать
   } finally {
     running = false;
+  }
+}
+
+// То же для лечения (temp basal + болюсы/углеводы): один раз копим 90 дней,
+// дальше докачивается только хвост. Metrics считает углеводы/инсулин из БД.
+export async function backfillTreatments(targetDays = 90) {
+  if (runningT) return;
+  const cfg = getCfg();
+  if (!cfg || !cfg.enabled || !cfg.url) return;
+  runningT = true;
+  try {
+    const now = Date.now();
+    const minT = now - targetDays * DAY;
+
+    // 1) свежий хвост
+    const newest = await newestTreatmentT();
+    const gapFrom = newest ? newest + 1 : now - 2 * DAY;
+    if (gapFrom < now) {
+      await putTreatments(await loadTreatmentsWindow(cfg.url, cfg.token, gapFrom, now + 60000));
+    }
+
+    // 2) назад чанками по 7 дней
+    let to = (await oldestTreatmentT()) ?? now;
+    while (to > minT) {
+      const from = Math.max(minT, to - 7 * DAY);
+      await putTreatments(await loadTreatmentsWindow(cfg.url, cfg.token, from, to));
+      to = from;
+      await new Promise((r) => setTimeout(r, 150));
+    }
+
+    await pruneTreatmentsBefore(minT - DAY);
+  } catch {
+    // тихо
+  } finally {
+    runningT = false;
   }
 }

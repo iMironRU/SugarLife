@@ -2,14 +2,16 @@
    чтобы графики за длинные периоды не были пустыми. */
 import { openDB, type IDBPDatabase } from 'idb';
 import { useEffect, useState } from 'react';
-import type { Entry } from './nightscout';
+import type { Entry, Treatment } from './nightscout';
 
 let dbp: Promise<IDBPDatabase> | null = null;
 function db() {
   if (!dbp) {
-    dbp = openDB('sugarlife', 1, {
+    dbp = openDB('sugarlife', 2, {
       upgrade(d) {
         if (!d.objectStoreNames.contains('entries')) d.createObjectStore('entries', { keyPath: 't' });
+        // лечение: ключ [t, type] — как дедуп в сторе (temp basal по циклам, болюсы/углеводы)
+        if (!d.objectStoreNames.contains('treatments')) d.createObjectStore('treatments', { keyPath: ['t', 'type'] });
       },
     });
   }
@@ -72,4 +74,48 @@ export function useEntries(windowMs: number): Entry[] {
     return () => { cancel = true; off(); };
   }, [windowMs]);
   return entries;
+}
+
+// --- лечение (treatments): temp basal + болюсы/углеводы, копим до 90 дней ---
+export async function putTreatments(ts: Treatment[]) {
+  if (!ts.length) return;
+  const d = await db();
+  const tx = d.transaction('treatments', 'readwrite');
+  for (const t of ts) tx.store.put(t);
+  await tx.done;
+  bump();
+}
+export async function getTreatmentsSince(since: number): Promise<Treatment[]> {
+  const d = await db();
+  return (await d.getAll('treatments', IDBKeyRange.lowerBound([since]))) as Treatment[];
+}
+export async function newestTreatmentT(): Promise<number | null> {
+  const d = await db();
+  const cur = await d.transaction('treatments').store.openCursor(null, 'prev');
+  return cur ? (cur.key as [number, string])[0] : null;
+}
+export async function oldestTreatmentT(): Promise<number | null> {
+  const d = await db();
+  const cur = await d.transaction('treatments').store.openCursor(null, 'next');
+  return cur ? (cur.key as [number, string])[0] : null;
+}
+export async function pruneTreatmentsBefore(before: number) {
+  const d = await db();
+  const tx = d.transaction('treatments', 'readwrite');
+  let cur = await tx.store.openCursor(IDBKeyRange.upperBound([before], true));
+  while (cur) { await cur.delete(); cur = await cur.continue(); }
+  await tx.done;
+}
+
+// Хук: лечение из БД за окно windowMs, с перезапросом при докачке.
+export function useTreatments(windowMs: number): Treatment[] {
+  const [ts, setTs] = useState<Treatment[]>([]);
+  useEffect(() => {
+    let cancel = false;
+    const load = () => getTreatmentsSince(Date.now() - windowMs).then((t) => { if (!cancel) setTs(t); }).catch(() => {});
+    load();
+    const off = onDbChange(load);
+    return () => { cancel = true; off(); };
+  }, [windowMs]);
+  return ts;
 }
