@@ -100,6 +100,47 @@ export function carbStats(events: Treatment[], days: number): CarbStats {
   };
 }
 
+// --- серии по дням (для мини-графиков в метриках) ---
+// Выровнены на последние `days` календарных дней: индекс 0 — самый старый, последний — сегодня.
+function dayWindow(days: number) {
+  const d = Math.max(1, days);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const start = today.getTime() - (d - 1) * 86400e3;
+  return { d, idxOf: (ms: number) => Math.floor((ms - start) / 86400e3) };
+}
+
+// углеводы по дням (граммы)
+export function carbsByDay(events: Treatment[], days: number): number[] {
+  const { d, idxOf } = dayWindow(days);
+  const out = new Array<number>(d).fill(0);
+  for (const t of events) {
+    if (!t.carbs || t.carbs <= 0) continue;
+    const k = idxOf(t.t);
+    if (k >= 0 && k < d) out[k] += t.carbs;
+  }
+  return out;
+}
+
+// суточная доза инсулина по дням; covered=false — день покрыт temp basal < порога (данные неполные)
+export function insulinByDay(tempBasals: Treatment[], boluses: Treatment[], days: number): { tdd: number; covered: boolean }[] {
+  const { d, idxOf } = dayWindow(days);
+  const out = Array.from({ length: d }, () => ({ basal: 0, bolus: 0, covMs: 0 }));
+  const tb = tempBasals.filter((t) => t.type === 'Temp Basal' && t.rate != null).sort((a, b) => a.t - b.t);
+  for (let i = 0; i < tb.length; i++) {
+    let segMs = i < tb.length - 1 ? tb[i + 1].t - tb[i].t : (tb[i].duration ? tb[i].duration! * 60000 : 0);
+    if (tb[i].duration != null) segMs = Math.min(segMs || tb[i].duration! * 60000, tb[i].duration! * 60000);
+    segMs = Math.max(0, segMs);
+    const k = idxOf(tb[i].t);
+    if (k >= 0 && k < d) { out[k].basal += (tb[i].rate as number) * (segMs / 3600000); out[k].covMs += segMs; }
+  }
+  for (const b of boluses) {
+    if (!b.insulin || b.insulin <= 0) continue;
+    const k = idxOf(b.t);
+    if (k >= 0 && k < d) out[k].bolus += b.insulin;
+  }
+  return out.map((x) => ({ tdd: x.basal + x.bolus, covered: x.covMs >= COVERAGE_MIN * 86400e3 }));
+}
+
 // Возрасты устройств из событий замен
 export interface Age { at: number; days: number; hours: number; }
 function latest(events: Treatment[], types: string[]): number | null {

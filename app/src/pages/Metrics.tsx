@@ -5,10 +5,15 @@ import { useEffect, useState } from 'react';
 import { useEntries } from '../data/db';
 import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment } from '../data/nightscout';
 import { stats } from '../data/agp';
-import { carbStats, insulinDaily } from '../data/treatmentStats';
+import { carbStats, insulinDaily, carbsByDay, insulinByDay } from '../data/treatmentStats';
 import { fmt, toUnits, unitLabel, useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '../data/units';
 import TirBar from '../components/TirBar';
 import AgpChart from '../components/AgpChart';
+import MetricBars from '../components/MetricBars';
+
+// маленький кеш метрик в localStorage (углеводы/инсулин): мгновенно + офлайн
+function lget<T>(k: string): T | null { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) as T : null; } catch { return null; } }
+function lset(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* quota — ignore */ } }
 
 type MetricKey = 'glucose' | 'carbs' | 'insulin';
 type Cell = [string, string, string];
@@ -32,20 +37,31 @@ export default function Metrics() {
   const enabled = !!(cfg && cfg.enabled && cfg.url);
   const basalDays = Math.min(days, 14); // базал усредняем по свежему окну (без тяжёлой выборки за 90 дней)
 
-  // глюкоза — из локальной БД; болюсы/углеводы — из событий; базал — из temp basal
+  // глюкоза — из локальной БД; болюсы/углеводы — из событий; базал — из temp basal.
+  // Углеводы/инсулин кешируем в localStorage (как глюкозу в БД): показываем кеш
+  // сразу и в офлайне, при ошибке кеш НЕ затираем.
   const entries = useEntries(days * 86400e3);
   useEffect(() => {
     let cancel = false;
+    const ekey = `sl.m.ev.${days}`, tkey = `sl.m.tb.${basalDays}`;
+    const ce = lget<Treatment[]>(ekey); if (ce) setEvents(ce);
+    const ct = lget<Treatment[]>(tkey); if (ct) setTempBasals(ct);
     if (enabled) {
-      loadEventsRange(cfg!.url, cfg!.token, days).then((e) => { if (!cancel) setEvents(e); }).catch(() => { if (!cancel) setEvents([]); });
-      loadTreatmentsRange(cfg!.url, cfg!.token, basalDays).then((t) => { if (!cancel) setTempBasals(t); }).catch(() => { if (!cancel) setTempBasals([]); });
-    } else { setEvents([]); setTempBasals([]); }
+      loadEventsRange(cfg!.url, cfg!.token, days).then((e) => { if (!cancel) { setEvents(e); lset(ekey, e); } }).catch(() => { /* оставляем кеш */ });
+      loadTreatmentsRange(cfg!.url, cfg!.token, basalDays).then((t) => { if (!cancel) { setTempBasals(t); lset(tkey, t); } }).catch(() => { /* оставляем кеш */ });
+    } else if (!ce && !ct) { setEvents([]); setTempBasals([]); }
     return () => { cancel = true; };
   }, [days, basalDays, enabled, cfg?.url]);
 
   const s = entries.length ? stats(entries) : null;
   const id = insulinDaily(tempBasals, events);
   const cs = carbStats(events, days);
+
+  // серии по дням для мини-графиков (углеводы — за период; инсулин — за окно базала)
+  const carbSeries = carbsByDay(events, days);
+  const insByDay = insulinByDay(tempBasals, events, basalDays);
+  const insSeries = insByDay.map((x) => x.tdd);
+  const insMuted = insByDay.map((x) => !x.covered);
 
   const cl = carbUnitLabel(cu);
   const carbsDef: MetricDef = {
@@ -122,10 +138,9 @@ export default function Metrics() {
                   <div className="hero-tile">
                     <div className="hero-tile-top"><span className="hero-tile-label">{M.hero[0]}</span><IonIcon icon={chevronForward} /></div>
                     <div className="hero-tile-val"><b>{M.hero[1]}</b><span>{M.hero[2]}</span></div>
-                    <svg className="hero-svg" viewBox="0 0 300 90" preserveAspectRatio="none">
-                      <path d="M8,66 C70,62 110,54 155,50 C210,45 255,26 292,16 L292,90 L8,90 Z" fill={M.color} fillOpacity="0.16" />
-                      <path d="M8,66 C70,62 110,54 155,50 C210,45 255,26 292,16" fill="none" stroke={M.color} strokeWidth="2.5" />
-                    </svg>
+                    {metric === 'carbs'
+                      ? <MetricBars values={carbSeries} color={M.color} />
+                      : <MetricBars values={insSeries} color={M.color} muted={insMuted} />}
                   </div>
                   <div className="metric-cards">
                     {M.cards.map((c, i) => (
