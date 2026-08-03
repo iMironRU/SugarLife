@@ -570,6 +570,7 @@ ion-toggle {
 .metric-card-val span { font-size: 13px; color: var(--color-neutral-300); }
 
 .metric-note { font-size: 11px; color: var(--color-neutral-500); margin: 16px 2px 0; line-height: 1.5; }
+.metric-note.warn { color: color-mix(in srgb, var(--c-carb) 70%, var(--color-neutral-400)); }
 
 /* AGP / TIR */
 .agp-card { border-radius: 20px; padding: 12px; margin-top: 12px; background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900)); }

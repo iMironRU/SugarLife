@@ -142,6 +142,11 @@ export default function Metrics() {
                       ? <MetricBars values={carbSeries} color={M.color} />
                       : <MetricBars values={insSeries} color={M.color} muted={insMuted} />}
                   </div>
+                  {metric === 'insulin' && days > basalDays && (
+                    <div className="metric-note warn" style={{ marginTop: 8 }}>
+                      Инсулин показан за последние {basalDays} дн. Выгрузка temp basal за {days} дней из Nightscout слишком объёмна для расчёта на устройстве — поэтому период выше на график и средние здесь не влияет (30 и 90 дней выглядят одинаково).
+                    </div>
+                  )}
                   <div className="metric-cards">
                     {M.cards.map((c, i) => (
                       <div key={i} className="metric-card" style={{ height: 'auto', minHeight: 92 }}>
