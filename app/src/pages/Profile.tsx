@@ -19,15 +19,16 @@ import { useCloseOnLeave } from '../data/nav';
 import NightscoutModal from '../components/NightscoutModal';
 import UnitsModal from '../components/UnitsModal';
 import CarbUnitsModal from '../components/CarbUnitsModal';
-import DeviceStubSheet from '../components/DeviceStubSheet';
+import DeviceSheet, { type DeviceCatKey } from '../components/DeviceSheet';
 
-// категории «Устройства» — пока заглушки; существующие шторки (помпа/датчик) не трогаем
-const DEVICES = [
-  { key: 'sensor', icon: hardwareChipOutline, title: 'Сенсор (НМГ)', desc: 'Модель сенсора и трансмиттера, источник глюкозы — в разработке.' },
-  { key: 'insulin', icon: medkitOutline, title: 'Ввод инсулина', desc: 'Помпа или шприц-ручки и инсулин(ы). Пока выбор помпы/инсулина — в шторке «Помпа» на экране инсулина.' },
-  { key: 'loop', icon: repeat, title: 'Петля', desc: 'Алгоритм замкнутого цикла (AAPS/Loop/встроенный) и статус — в разработке.' },
-  { key: 'meter', icon: speedometerOutline, title: 'Глюкометр', desc: 'Модель глюкометра и расходники (тест-полоски, ланцеты) — в разработке.' },
-  { key: 'source', icon: cloudOutline, title: 'Источник данных', desc: 'Откуда берём данные (сейчас — Nightscout). Управление источниками — в разработке.' },
+// категории «Устройства». Источник данных = существующая настройка Nightscout.
+// Остальные открывают общий каркас DeviceSheet (модель + вкладка «Мост»).
+const DEVICES: { key: string; icon: string; title: string; sheet?: DeviceCatKey; source?: boolean }[] = [
+  { key: 'sensor', icon: hardwareChipOutline, title: 'Сенсор (НМГ)', sheet: 'sensor' },
+  { key: 'insulin', icon: medkitOutline, title: 'Ввод инсулина', sheet: 'pump' },
+  { key: 'loop', icon: repeat, title: 'Петля', sheet: 'loop' },
+  { key: 'meter', icon: speedometerOutline, title: 'Глюкометр', sheet: 'meter' },
+  { key: 'source', icon: cloudOutline, title: 'Источник данных', source: true },
 ];
 
 const DASH = '—';
@@ -170,14 +171,14 @@ export default function Profile() {
             })}
           </div>
 
-          {/* устройства (пока заглушки; существующие шторки помпы/датчика не трогаем) */}
+          {/* устройства: модель + вкладка «Мост»; источник = Nightscout */}
           <div className="section-label sec">Устройства</div>
           <div className="list">
             {DEVICES.map((d) => (
-              <button key={d.key} className="list-row" onClick={() => setDeviceCat(d.key)}>
+              <button key={d.key} className="list-row" onClick={() => (d.source ? setNsOpen(true) : setDeviceCat(d.key))}>
                 <IonIcon icon={d.icon} className="list-ico" />
                 <span className="list-title">{d.title}</span>
-                <span className="list-value muted">скоро</span>
+                <span className="list-value">{d.source ? nsValue : 'настроить'}</span>
                 <IonIcon icon={chevronForward} className="list-chev" />
               </button>
             ))}
@@ -244,8 +245,8 @@ export default function Profile() {
         <NightscoutModal isOpen={nsOpen} onClose={() => setNsOpen(false)} />
         <UnitsModal isOpen={unitsOpen} onClose={() => setUnitsOpen(false)} />
         <CarbUnitsModal isOpen={carbUnitsOpen} onClose={() => setCarbUnitsOpen(false)} />
-        {DEVICES.map((d) => (
-          <DeviceStubSheet key={d.key} isOpen={deviceCat === d.key} onClose={() => setDeviceCat(null)} title={d.title} desc={d.desc} />
+        {DEVICES.filter((d) => d.sheet).map((d) => (
+          <DeviceSheet key={d.key} isOpen={deviceCat === d.key} onClose={() => setDeviceCat(null)} cat={d.sheet!} title={d.title} />
         ))}
       </IonContent>
     </IonPage>

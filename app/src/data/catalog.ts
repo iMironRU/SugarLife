@@ -32,3 +32,43 @@ export const isCurrentPump = (p: Pump): boolean => p.statusClass === 'актуа
 
 // краткий бренд помпы (без «(бывшая …)»)
 export const pumpBrand = (p: Pump): string => p.manufacturer.split(' (')[0];
+
+/* --- Посредники подключения (трансмиттеры/мосты) ---
+   Между сенсором/помпой и телефоном часто стоит железка-посредник со своим
+   серийником и связью. Держим отдельным узлом (см. вкладку «Мост»). */
+export interface Bridge { id: string; name: string; forWhat: string; }
+export const BRIDGES: Bridge[] = [
+  { id: 'riley-link', name: 'RileyLink', forWhat: 'Medtronic по радио (916/868 МГц)' },
+  { id: 'orange-link', name: 'OrangeLink', forWhat: 'Medtronic по радио' },
+  { id: 'emalink', name: 'EmaLink', forWhat: 'Medtronic по радио' },
+  { id: 'miaomiao', name: 'MiaoMiao', forWhat: 'Libre 1 → BLE' },
+  { id: 'bubble', name: 'Bubble', forWhat: 'Libre 1 → BLE' },
+  { id: 'blucon', name: 'Blucon (NightRider)', forWhat: 'Libre 1 → BLE' },
+  { id: 'other', name: 'Другой', forWhat: '' },
+];
+export const bridgeById = (id: string | null | undefined): Bridge | null =>
+  (id ? BRIDGES.find((b) => b.id === id) : null) ?? null;
+
+/* --- Сенсоры НМГ (минимальный список; полного справочника пока нет) ---
+   needsBridge — сенсор сам не вещает BLE, нужен посредник (Libre 1). */
+export interface Sensor { id: string; name: string; brand: string; needsBridge: boolean; current: boolean; }
+export const SENSORS: Sensor[] = [
+  { id: 'dexcom-g7', name: 'Dexcom G7', brand: 'Dexcom', needsBridge: false, current: true },
+  { id: 'dexcom-g6', name: 'Dexcom G6', brand: 'Dexcom', needsBridge: false, current: true },
+  { id: 'libre-3', name: 'FreeStyle Libre 3', brand: 'Abbott', needsBridge: false, current: true },
+  { id: 'libre-2', name: 'FreeStyle Libre 2', brand: 'Abbott', needsBridge: false, current: true },
+  { id: 'libre-1', name: 'FreeStyle Libre 1', brand: 'Abbott', needsBridge: true, current: false },
+  { id: 'guardian-4', name: 'Guardian 4', brand: 'Medtronic', needsBridge: false, current: true },
+  { id: 'simplera', name: 'Simplera Sync', brand: 'Medtronic', needsBridge: false, current: true },
+  { id: 'dexcom-one', name: 'Dexcom ONE+', brand: 'Dexcom', needsBridge: false, current: true },
+];
+export const sensorById = (id: string | null | undefined): Sensor | null =>
+  (id ? SENSORS.find((s) => s.id === id) : null) ?? null;
+
+// Помпе может требоваться радио-мост (старые Medtronic Paradigm/5xx/7xx).
+export const pumpNeedsBridge = (p: Pump | null): boolean => {
+  if (!p) return false;
+  const m = p.model.toLowerCase();
+  const medtronic = /minimed|medtronic|paradigm/.test(p.manufacturer.toLowerCase()) || /paradigm|veo|revel/.test(m);
+  return medtronic && /paradigm|veo|revel|\b5\d\d\b|\b7\d\d\b|508|507|506/.test(m);
+};
