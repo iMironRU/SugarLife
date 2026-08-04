@@ -325,6 +325,15 @@ ion-content { --background: var(--color-bg); }
 .pick-sub { font-size: 11px; color: var(--color-neutral-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pick-check { font-size: 18px; color: var(--color-accent); flex-shrink: 0; }
 
+/* сегмент вкладок внутри шторки устройства (Устройство / Мост) */
+.dev-seg { display: flex; gap: 6px; background: var(--color-neutral-900); border-radius: 14px; padding: 5px; margin: 6px 0 14px; }
+.dev-seg-btn {
+  flex: 1; padding: 9px; border-radius: 10px; border: 0; cursor: pointer;
+  font-size: 13px; font-weight: 500; font-family: var(--font-body);
+  background: transparent; color: var(--color-neutral-400);
+}
+.dev-seg-btn.on { background: color-mix(in srgb, var(--color-accent) 20%, var(--color-neutral-800)); color: var(--color-text); }
+
 .logout {
   width: 100%; margin-top: 24px; padding: 14px; border-radius: 16px; cursor: pointer;
   border: 1px solid color-mix(in srgb, var(--c-danger) 55%, transparent); background: transparent;

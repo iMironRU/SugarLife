@@ -8,8 +8,15 @@ const KEY = 'sl.device.v1';
 export interface DeviceConfig {
   pumpId: string | null;
   fastInsulinId: string | null;
+  sensorId: string | null;
+  meterModel: string | null;      // глюкометр: пока свободный текст (справочника нет)
+  bridgeSensorId: string | null;  // трансмиттер/мост сенсора
+  bridgePumpId: string | null;    // радио-мост помпы (RileyLink и т.п.)
 }
-const DEFAULT: DeviceConfig = { pumpId: null, fastInsulinId: null };
+const DEFAULT: DeviceConfig = {
+  pumpId: null, fastInsulinId: null, sensorId: null, meterModel: null,
+  bridgeSensorId: null, bridgePumpId: null,
+};
 
 function load(): DeviceConfig {
   try {
