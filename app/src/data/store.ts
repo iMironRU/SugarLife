@@ -131,7 +131,7 @@ export function useStore(): StoreState {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
-// Не-React подписка (для моста SibionicBridge): вызывает cb при каждом изменении.
+// Не-React подписка (для моста SugarLifeBridge): вызывает cb при каждом изменении.
 export const subscribeStore = subscribe;
 export const getStoreState = getSnapshot;
 

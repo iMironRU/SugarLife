@@ -1,5 +1,5 @@
 /* Контракт интеграции PWA ↔ система (см. документ). PWA — представление: читает
-   UiSnapshot через мост и шлёт Intent. Мост — либо нативный (window.SibionicBridge,
+   UiSnapshot через мост и шлёт Intent. Мост — либо нативный (window.SugarLifeBridge,
    ставит оболочка/релей), либо наш Nightscout-шим (bridgeNightscout) в браузере.
    ВАЖНО: sendIntent подтверждает только ПРИЁМ действия, не выполнение. */
 import { useEffect, useState } from 'react';
@@ -38,6 +38,12 @@ export interface UiSnapshot {
   alerts: Alert[];
 }
 
+// ---- История (rev ≥ 1.1): query(HistoryQuery) → HistoryResult ----
+export interface HistoryQuery { kind: 'Glucose' | 'Treatments' | 'Both'; fromMs: number; toMs: number; maxPoints?: number | null; }
+export interface GlucosePoint { atMs: number; mmol: number | null; source: string; trend?: string | null; }
+export interface TreatmentPoint { atMs: number; kind: string; amount: number; evidence: string; source: string; }
+export interface HistoryResult { glucose: GlucosePoint[]; treatments: TreatmentPoint[]; }
+
 // ---- Intent (веб → натив) ----
 export type Intent =
   | { type: 'addDevice'; driverType: string; params: Record<string, string> }
@@ -53,22 +59,29 @@ export type Intent =
   | { type: 'enableAlgorithm'; enabled: boolean }
   | { type: 'setAlgorithmParams'; params: Record<string, string> };
 
-export interface SibionicBridge {
+export interface SugarLifeBridge {
   bridgeRevision: string;
   subscribe(cb: (s: UiSnapshot) => void): () => void;
   requestSnapshot(): Promise<UiSnapshot>;
   sendIntent(i: Intent): Promise<{ accepted: boolean; error?: string }>;
+  // rev ≥ 1.1: окно истории для графиков (опционально — Nightscout-шим может не иметь)
+  query?(q: HistoryQuery): Promise<HistoryResult>;
+}
+
+// Запрос истории через активный мост (undefined, если мост не поддерживает).
+export function queryHistory(q: HistoryQuery): Promise<HistoryResult> | undefined {
+  return getBridge().query?.(q);
 }
 
 declare global {
-  interface Window { SibionicBridge?: SibionicBridge }
+  interface Window { SugarLifeBridge?: SugarLifeBridge }
 }
 
 const BRIDGE_MAJOR = '1';
 
 // Настоящий мост (оболочка/релей) если совместим по major, иначе Nightscout-шим.
-export function getBridge(): SibionicBridge {
-  const native = typeof window !== 'undefined' ? window.SibionicBridge : undefined;
+export function getBridge(): SugarLifeBridge {
+  const native = typeof window !== 'undefined' ? window.SugarLifeBridge : undefined;
   if (native && String(native.bridgeRevision).split('.')[0] === BRIDGE_MAJOR) return native;
   return nightscoutBridge;
 }
