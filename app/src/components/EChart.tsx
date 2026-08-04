@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts/core';
-import { LineChart, CustomChart } from 'echarts/charts';
+import { LineChart, CustomChart, BarChart } from 'echarts/charts';
 import { GridComponent, MarkLineComponent, MarkAreaComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
-echarts.use([LineChart, CustomChart, GridComponent, MarkLineComponent, MarkAreaComponent, TooltipComponent, CanvasRenderer]);
+echarts.use([LineChart, CustomChart, BarChart, GridComponent, MarkLineComponent, MarkAreaComponent, TooltipComponent, CanvasRenderer]);
 
 export function cssVar(name: string, fallback = '#888') {
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
