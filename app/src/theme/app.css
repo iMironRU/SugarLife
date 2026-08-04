@@ -182,6 +182,12 @@ ion-content { --background: var(--color-bg); }
 .is-line .hp-unit { display: none; }
 .hp-ago { font-size: 10px; color: var(--color-neutral-400); margin-top: 5px; }
 .is-compact .hp-ago, .is-line .hp-ago { display: none; }
+/* заряд телефона-аплоадера в круге — тем же стилем, что заряд помпы (цвет по уровню) */
+.hp-phone { display: inline-flex; align-items: center; gap: 2px; font-size: 10px; font-weight: 600; margin-top: 4px; }
+.hp-phone ion-icon { font-size: 14px; color: currentColor; }
+.is-compact .hp-phone { font-size: 9px; margin-top: 2px; }
+.is-compact .hp-phone ion-icon { font-size: 12px; }
+.is-line .hp-phone { display: none; }
 /* активный инсулин в круге — цветом инсулина; в compact мельче, в line скрыт */
 .hp-iob { font-size: 11px; font-weight: 600; color: var(--c-ins); margin-top: 4px; }
 .is-compact .hp-iob { font-size: 10px; margin-top: 2px; }
