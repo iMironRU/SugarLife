@@ -1,10 +1,11 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { reportContentScroll } from '../data/panel';
 import { flash, repeat, chevronForward } from 'ionicons/icons';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useStore } from '../data/store';
+import { useTreatments } from '../data/db';
+import { useDeviceExtras } from '../data/deviceExtras';
 import { detectTherapy } from '../data/therapy';
-import { getCfg, loadEventsRange, loadTreatmentsRange, type Treatment } from '../data/nightscout';
 import { deviceAges } from '../data/treatmentStats';
 import { fmt } from '../data/units';
 import { useCloseOnLeave } from '../data/nav';
@@ -21,24 +22,15 @@ export default function Ins() {
   const therapy = detectTherapy(data);
   const isPen = therapy === 'pen';
 
-  const cfg = getCfg();
-  const [events, setEvents] = useState<Treatment[]>([]);
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [win, setWin] = useState(3);
   const [pumpOpen, setPumpOpen] = useState(false);
   const [loopOpen, setLoopOpen] = useState(false);
   useCloseOnLeave(3, () => setPumpOpen(false), () => setLoopOpen(false)); // «Инсулин» — закрыть шторки при уходе
 
-  useEffect(() => {
-    let cancel = false;
-    if (cfg?.enabled && cfg.url) {
-      loadEventsRange(cfg.url, cfg.token, 30).then((e) => { if (!cancel) setEvents(e); }).catch(() => {});
-      loadTreatmentsRange(cfg.url, cfg.token, 1).then((t) => { if (!cancel) setTreatments(t); }).catch(() => {});
-    }
-    return () => { cancel = true; };
-  }, [cfg?.url, cfg?.enabled]);
-
-  const ages = deviceAges(events);
+  // Живьём из локальной БД (обновляется сокетом/бэкфиллом): раньше грузили один раз
+  // на старте — новые болюсы в график не попадали, пока не перезапустишь приложение.
+  const treatments = useTreatments(31 * 3600e3); // 24ч окна графика + запас на ступень базала
+  const ages = deviceAges(useDeviceExtras().events);
   const tempBasals = treatments.filter((t) => t.type === 'Temp Basal');
   const boluses = treatments.filter((t) => t.type !== 'Temp Basal' && (t.insulin ?? 0) > 0);
   const baseBasal = dev?.baseBasal ?? profile?.basal ?? null;
