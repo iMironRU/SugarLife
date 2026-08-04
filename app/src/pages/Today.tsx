@@ -1,5 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { restaurantOutline, warningOutline } from 'ionicons/icons';
+import { restaurantOutline, warningOutline, moonOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '../data/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '../data/units';
@@ -46,6 +46,18 @@ export default function Today() {
   // подсветка резервуара: подача идёт, а остаток не меняется
   const stuck = rstat.flatHours > 8 && !isPaused(dev?.status) && (rstat.current ?? 0) > 0;
 
+  // «ночное окончание»: если резервуара < 14 ч и он закончится в ночь (23:00–08:00) —
+  // рекомендуем заменить заранее, чтобы подача не прервалась во сне. Оценка (≈).
+  const reservoir = dev?.reservoir ?? rstat.current ?? null;
+  const hoursLeft = reservoir != null && extras.tdd ? reservoir / (extras.tdd / 24) : null;
+  let nightEmpty: Date | null = null;
+  if (hoursLeft != null && hoursLeft > 0 && hoursLeft < 14) {
+    const e = new Date(Date.now() + hoursLeft * 3600e3);
+    const h = e.getHours();
+    if (h >= 23 || h < 8) nightEmpty = e;
+  }
+  const emptyTime = nightEmpty?.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
   return (
     <IonPage>
       <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
@@ -71,6 +83,17 @@ export default function Today() {
               <div className="carb-food-s">{mealCount} {mealsWord(mealCount)}</div>
             </div>
           </button>
+
+          {/* окончание резервуара придётся на ночь — поменять заранее */}
+          {nightEmpty && (
+            <div className="today-alert warn">
+              <IonIcon icon={moonOutline} />
+              <div>
+                <b>Инсулина ≈{Math.round(hoursLeft as number)} ч — закончится ночью (~{emptyTime})</b>
+                <span>Замените резервуар заранее, чтобы подача не прервалась во сне. Оценка по среднему расходу.</span>
+              </div>
+            </div>
+          )}
 
           {/* подсветки резервуара */}
           {stuck && (
