@@ -49,7 +49,7 @@ export default function InsulinTimeChart({
         splitLine: { lineStyle: { color: grid, opacity: 0.25 } },
       },
       {
-        type: 'value', min: 0, max: Math.ceil(maxBolus), position: 'right', show: hasBolus,
+        type: 'value', min: 0, max: Math.ceil(maxBolus) + 1, position: 'right', show: hasBolus,
         axisLabel: { color: axis, fontSize: 10, formatter: '{value}' },
         axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false },
       },
@@ -68,8 +68,9 @@ export default function InsulinTimeChart({
         } : undefined,
       },
       {
-        name: 'болюс', type: 'bar', yAxisIndex: 1, data: bolusPts, barWidth: 5, barMinHeight: 2,
-        itemStyle: { color: carb, borderRadius: [2, 2, 0, 0] },
+        name: 'болюс', type: 'scatter', yAxisIndex: 1, data: bolusPts, symbol: 'circle',
+        symbolSize: (v: [number, number]) => Math.max(7, Math.min(20, 6 + v[1] * 2.2)),
+        itemStyle: { color: carb, opacity: 0.9 },
         label: { show: true, position: 'top', color: carb, fontSize: 9, formatter: (p: { value: [number, number] }) => p.value[1] },
       },
     ],
