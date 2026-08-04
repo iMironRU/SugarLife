@@ -1,6 +1,6 @@
 import { IonIcon } from '@ionic/react';
 import { useEffect, useState } from 'react';
-import { pulse, flash, moon, cloudOfflineOutline, syncOutline, batteryFull, batteryHalf, batteryDead, timeOutline } from 'ionicons/icons';
+import { pulse, flash, moon, cloudOfflineOutline, syncOutline, batteryFull, batteryHalf, batteryDead, timeOutline, phonePortraitOutline } from 'ionicons/icons';
 import { useTab, setTab } from '../data/nav';
 import { useStore } from '../data/store';
 import { toUnits, agoText, unitLabel, useUnit, fmt } from '../data/units';
@@ -85,6 +85,7 @@ export default function HeroPanel() {
   const reservoir = dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : DASH;
   const pumpStatus = shortStatus(dev?.status);
   const pumpBattery = dev?.pumpBattery ?? null; // заряд помпы — значком-батарейкой в крыле
+  const phoneBattery = dev?.uploaderBattery ?? null; // заряд телефона-аплоадера — в круг
   const iob = dev?.iob != null ? fmt(dev.iob) : null; // активный инсулин — в круг
 
   // строка синхронизации: слева — как мы получаем (нами), справа — возраст
@@ -167,6 +168,11 @@ export default function HeroPanel() {
             <span className="hp-unit">{unitLabel()}</span>
             {iob != null && <span className="hp-iob">инс. {iob} ед</span>}
             <span className="hp-ago">{ago}</span>
+            {phoneBattery != null && (
+              <span className="hp-phone" style={{ color: battColor(phoneBattery) }}>
+                <IonIcon icon={phonePortraitOutline} />{phoneBattery}%
+              </span>
+            )}
           </span>
         </button>
       </div>
