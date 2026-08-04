@@ -12,6 +12,7 @@ import Loader from './pages/Loader';
 import InstallPrompt from './components/InstallPrompt';
 import HeroPanel from './components/HeroPanel';
 import { useStore } from './data/store';
+import { useSnapshot } from './data/bridge';
 import { detectTherapy } from './data/therapy';
 import { useTab, setTab, getTab, TAB_PATHS } from './data/nav';
 
@@ -115,11 +116,17 @@ function TabBar({ insIcon }: { insIcon: string }) {
 
 export default function App() {
   const { data, status } = useStore();
+  const snap = useSnapshot();
   const insIcon = detectTherapy(data) === 'pen' ? medkit : water;
 
-  // Гейт: не подключён → только форма; подключён, но данных ещё нет → лоадер.
-  if (status === 'off') return <IonApp><Connect /></IonApp>;
-  if (!data && (status === 'idle' || status === 'loading')) return <IonApp><Loader /></IonApp>;
+  // Если у моста уже есть данные монитора (нативный движок/драйвер) — открываем
+  // основной UI, даже без Nightscout. В браузере без нативного моста мост = Nightscout-
+  // шим, и при выключенном NS данных нет → показываем экран подключения как раньше.
+  const bridgeHasData = !!snap && snap.monitor.glucose !== '—' && snap.monitor.glucose !== '';
+
+  // Гейт: не подключён и мост пуст → форма; подключён, но данных ещё нет → лоадер.
+  if (status === 'off' && !bridgeHasData) return <IonApp><Connect /></IonApp>;
+  if (!data && !bridgeHasData && (status === 'idle' || status === 'loading')) return <IonApp><Loader /></IonApp>;
 
   return (
     <IonApp>
