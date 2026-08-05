@@ -2,7 +2,7 @@
    Когда появится нативный мост (оболочка/релей) — UI не меняется, просто
    getBridge() вернёт его вместо шима. Пока: живой монитор + alerts из Nightscout.
    Гэпы честно: один IOB (→ conservative), нет истории/транзакций/wiring/insights. */
-import type { SugarLifeBridge, UiSnapshot, Monitor, Trend, Link, DeviceInfo, Alert, Intent } from './bridge';
+import type { SugarLifeBridge, UiSnapshot, Monitor, Trend, Link, DeviceInfo, Alert, Intent, DriverDescriptor } from './bridge';
 import { subscribeStore, getStoreState, refresh } from './store';
 import { getUnit, subscribeUnit, toUnits } from './units';
 import { getCfg, setCfg } from './nightscout';
@@ -66,7 +66,25 @@ function buildSnapshot(): UiSnapshot {
   if (cfg?.url && (link === 'Error' || link === 'Disconnected')) alerts.push({ level: 'warn', text: 'Нет связи с Nightscout' });
   if (d?.pumpBattery != null && d.pumpBattery <= 15) alerts.push({ level: 'warn', text: 'Низкий заряд помпы' });
 
-  return { bridgeRevision: '1.0', monitor, devices, insights: null, pendingWrites: [], alerts };
+  // Честно: этот мост не умеет сканировать эфир (браузер/Nightscout-only) — скана и
+  // опознанных устройств никогда не будет. Единственный «драйвер» — сам Nightscout
+  // (ручное добавление через существующую форму url/token, не через скан).
+  const availableDrivers: DriverDescriptor[] = [{
+    id: 'nightscout', displayName: 'Nightscout', kind: 'service',
+    roles: ['GlucoseSource', 'PumpStateSource', 'DeliveryHistorySource'],
+    settings: {
+      parameters: [
+        { key: 'url', title: 'Адрес Nightscout', type: 'Text', required: true, default: null, options: [] },
+        { key: 'token', title: 'Токен (для записи)', type: 'Secret', required: false, default: null, options: [] },
+      ],
+    },
+    available: true, canActivate: false, providesTransportFor: [],
+  }];
+
+  return {
+    bridgeRevision: '1.5', monitor, devices, insights: null, pendingWrites: [], alerts,
+    scanning: false, discovered: [], availableDrivers, logging: null,
+  };
 }
 
 const cbs = new Set<(s: UiSnapshot) => void>();
@@ -107,7 +125,7 @@ async function sendIntent(i: Intent): Promise<{ accepted: boolean; error?: strin
 }
 
 export const nightscoutBridge: SugarLifeBridge = {
-  bridgeRevision: '1.0',
+  bridgeRevision: '1.5',
   subscribe(cb) {
     ensureStarted();
     cbs.add(cb);

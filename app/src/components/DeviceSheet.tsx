@@ -1,12 +1,14 @@
 import { IonModal, IonContent, IonIcon } from '@ionic/react';
-import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline } from 'ionicons/icons';
+import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useDeviceConfig, setDeviceConfig } from '../data/deviceConfig';
+import { useSnapshot } from '../data/bridge';
 import {
   PUMPS, SENSORS, BRIDGES, pumpById, sensorById, bridgeById,
   isCurrentPump, pumpBrand, pumpNeedsBridge,
 } from '../data/catalog';
 import CatalogPicker, { type PickerItem } from './CatalogPicker';
+import DeviceScanSheet from './DeviceScanSheet';
 
 export type DeviceCatKey = 'sensor' | 'pump' | 'meter' | 'loop';
 
@@ -27,9 +29,17 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
   const cfg = useDeviceConfig();
   const [tab, setTab] = useState<'device' | 'bridge'>('device');
   const [pick, setPick] = useState<null | 'model' | 'bridge'>(null);
+  const [scanOpen, setScanOpen] = useState(false);
 
   const hasModel = cat === 'sensor' || cat === 'pump';
   const hasBridge = cat === 'sensor' || cat === 'pump';
+
+  // реальное BLE-подключение показываем ТОЛЬКО когда мост действительно предлагает
+  // драйвер для этой категории (прямой или через мост) — иначе секции нет вообще
+  const snap = useSnapshot();
+  const drivers = snap?.availableDrivers ?? [];
+  const driverKind = (id: string) => drivers.find((d) => d.id === id)?.kind;
+  const hasBleDriver = hasModel && drivers.some((d) => d.kind === cat || (d.providesTransportFor ?? []).some((t) => driverKind(t) === cat));
 
   // выбранная модель
   const pump = cat === 'pump' ? pumpById(cfg.pumpId) : null;
@@ -94,7 +104,20 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
               </div>
             )}
             {hasModel && (
-              <div className="sheet-note">Сейчас данные приходят через Nightscout. Прямое подключение по BLE — с нативным драйвером (в разработке). Выбор хранится на этом устройстве.</div>
+              <div className="sheet-note">Модель выше — для учёта, хранится только на этом устройстве.</div>
+            )}
+            {hasModel && (
+              hasBleDriver ? (
+                <div className="list" style={{ marginTop: 12 }}>
+                  <button className="list-row" onClick={() => setScanOpen(true)}>
+                    <IonIcon icon={bluetoothOutline} className="list-ico" />
+                    <span className="list-title">Подключить по BLE</span>
+                    <IonIcon icon={chevronForward} className="list-chev" />
+                  </button>
+                </div>
+              ) : (
+                <div className="sheet-note">Прямое подключение по BLE появится, когда будет готов драйвер этого устройства.</div>
+              )
             )}
           </>
         )}
@@ -128,6 +151,9 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
             items={bridgeItems} selectedId={bridgeId}
             onSelect={setBridge} currentLabel="только актуальные"
           />
+        )}
+        {hasModel && hasBleDriver && (cat === 'sensor' || cat === 'pump') && (
+          <DeviceScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} kind={cat} title={title} />
         )}
       </IonContent>
     </IonModal>
