@@ -5,6 +5,7 @@ import Capacitor
 /// регистрируем явно (см. docs/native-bridge-integration.md).
 class ViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
+        super.capacitorDidLoad()
         bridge?.registerPluginInstance(SugarLifeBridgePlugin())
     }
 }
