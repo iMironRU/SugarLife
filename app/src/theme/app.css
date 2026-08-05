@@ -340,6 +340,23 @@ ion-content { --background: var(--color-bg); }
 }
 .dev-seg-btn.on { background: color-mix(in srgb, var(--color-accent) 20%, var(--color-neutral-800)); color: var(--color-text); }
 
+/* generic-форма настроек устройства (Text/Secret/Number/Bool/Enum) */
+.dev-form { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.dev-select {
+  width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--color-neutral-800);
+  background: var(--color-neutral-900); color: var(--color-text); font-size: 14px; font-family: var(--font-body);
+}
+
+/* индикатор скана эфира (plug-and-play) */
+.scan-state {
+  display: flex; align-items: center; gap: 9px; margin: 4px 0 14px; padding: 12px 14px;
+  border-radius: 14px; font-size: 13px; color: var(--color-neutral-400);
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+}
+.scan-state.on { color: var(--color-accent); border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
+.scan-state ion-spinner { width: 16px; height: 16px; --color: var(--color-accent); }
+.scan-state ion-icon { font-size: 17px; }
+
 .logout {
   width: 100%; margin-top: 24px; padding: 14px; border-radius: 16px; cursor: pointer;
   border: 1px solid color-mix(in srgb, var(--c-danger) 55%, transparent); background: transparent;
