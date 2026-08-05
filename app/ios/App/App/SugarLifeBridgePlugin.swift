@@ -15,7 +15,9 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "query", returnType: CAPPluginReturnPromise),
     ]
 
-    private let engine = SugarLifeEngine()
+    // driverProvider: nil — движок используем со стандартными драйверами; свой
+    // провайдер понадобится, если оболочка будет поставлять драйверы сама.
+    private let engine = SugarLifeEngine(driverProvider: nil)
     private var unsubscribe: (() -> Void)?
 
     override public func load() {
