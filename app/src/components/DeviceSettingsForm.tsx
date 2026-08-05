@@ -2,6 +2,7 @@ import { IonInput, IonToggle, IonIcon } from '@ionic/react';
 import { qrCodeOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import type { Param } from '../data/bridge';
+import QrScanner from './QrScanner';
 
 /* Generic-форма настроек устройства: рисуется ИЗ settings.parameters, без хардкода
    под конкретное устройство (контракт §2.5/§3). Text/Secret/Number — поле ввода,
@@ -12,7 +13,7 @@ export default function DeviceSettingsForm({
 }: {
   params: Param[]; values: Record<string, string>; onChange: (key: string, v: string) => void;
 }) {
-  const [scanNote, setScanNote] = useState<string | null>(null);
+  const [scanKey, setScanKey] = useState<string | null>(null);
 
   return (
     <div className="dev-form">
@@ -51,15 +52,19 @@ export default function DeviceSettingsForm({
                 placeholder={p.title}
               />
               {p.scan === 'qr' && (
-                <button className="field-copy" onClick={() => setScanNote(p.key)} aria-label="Сканировать QR">
+                <button className="field-copy" onClick={() => setScanKey(p.key)} aria-label="Сканировать QR">
                   <IonIcon icon={qrCodeOutline} />
                 </button>
               )}
             </div>
-            {scanNote === p.key && <div className="metric-note">Сканер QR появится отдельно — пока введите значение с этикетки вручную.</div>}
           </div>
         );
       })}
+      <QrScanner
+        isOpen={scanKey !== null}
+        onClose={() => setScanKey(null)}
+        onResult={(text) => { if (scanKey) onChange(scanKey, text); }}
+      />
     </div>
   );
 }

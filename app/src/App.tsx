@@ -11,6 +11,7 @@ import Connect from './pages/Connect';
 import Loader from './pages/Loader';
 import InstallPrompt from './components/InstallPrompt';
 import HeroPanel from './components/HeroPanel';
+import ErrorDialog from './components/ErrorDialog';
 import { useStore } from './data/store';
 import { useSnapshot } from './data/bridge';
 import { detectTherapy } from './data/therapy';
@@ -141,6 +142,7 @@ export default function App() {
         <TabBar insIcon={insIcon} />
       </div>
       <InstallPrompt />
+      <ErrorDialog />
     </IonApp>
   );
 }

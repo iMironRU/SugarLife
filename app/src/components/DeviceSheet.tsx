@@ -1,8 +1,30 @@
 import { IonModal, IonContent, IonIcon } from '@ionic/react';
-import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline } from 'ionicons/icons';
+import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, pulseOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useDeviceConfig, setDeviceConfig } from '../data/deviceConfig';
 import { useSnapshot } from '../data/bridge';
+import type { DeviceInfo } from '../data/bridge';
+
+// Метка состояния сессии сенсора + обратный отсчёт (контракт §2.2).
+const SESSION_RU: Record<string, string> = {
+  WarmingUp: 'прогрев', Active: 'работает', Expiring: 'истекает',
+  Expired: 'истёк', Stopped: 'остановлен', Failed: 'сбой', Unknown: '—',
+};
+function sessionLabel(d: DeviceInfo): string {
+  const st = d.sessionState;
+  if (!st) return connLabel(d.connection);
+  const parts = [SESSION_RU[st] ?? st];
+  if (st === 'WarmingUp' && d.warmupEndsAtMs) {
+    parts.push(`${Math.max(0, Math.round((d.warmupEndsAtMs - Date.now()) / 60000))} мин`);
+  } else if ((st === 'Active' || st === 'Expiring') && d.expiresAtMs) {
+    parts.push(`осталось ${Math.max(0, Math.floor((d.expiresAtMs - Date.now()) / 86400000))} дн`);
+  }
+  return parts.join(' · ');
+}
+const CONN_RU: Record<string, string> = {
+  Streaming: 'поток', Connected: 'связь', Connecting: 'подключение', Disconnected: 'нет связи', Error: 'ошибка',
+};
+function connLabel(c: string): string { return CONN_RU[c] ?? c; }
 import {
   PUMPS, SENSORS, BRIDGES, pumpById, sensorById, bridgeById,
   isCurrentPump, pumpBrand, pumpNeedsBridge,
@@ -37,6 +59,7 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
   // реальное BLE-подключение показываем ТОЛЬКО когда мост действительно предлагает
   // драйвер для этой категории (прямой или через мост) — иначе секции нет вообще
   const snap = useSnapshot();
+  const connected = (snap?.devices ?? []).filter((d) => d.kind === cat);
   const drivers = snap?.availableDrivers ?? [];
   const driverKind = (id: string) => drivers.find((d) => d.id === id)?.kind;
   const hasBleDriver = hasModel && drivers.some((d) => d.kind === cat || (d.providesTransportFor ?? []).some((t) => driverKind(t) === cat));
@@ -118,6 +141,24 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
               ) : (
                 <div className="sheet-note">Прямое подключение по BLE появится, когда будет готов драйвер этого устройства.</div>
               )
+            )}
+
+            {connected.length > 0 && (
+              <div className="list" style={{ marginTop: 12 }}>
+                {connected.map((d) => (
+                  <div key={d.id} className="list-row" style={{ cursor: 'default' }}>
+                    <IonIcon icon={pulseOutline} className="list-ico" />
+                    <span className="pick-main">
+                      <span className="list-title">
+                        {d.name}
+                        {d.primary && <span className="badge-primary">основной</span>}
+                      </span>
+                      <span className="pick-sub">{sessionLabel(d)}</span>
+                    </span>
+                    <span className="list-value">{connLabel(d.connection)}</span>
+                  </div>
+                ))}
+              </div>
             )}
           </>
         )}

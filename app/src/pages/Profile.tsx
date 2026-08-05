@@ -20,6 +20,7 @@ import NightscoutModal from '../components/NightscoutModal';
 import UnitsModal from '../components/UnitsModal';
 import CarbUnitsModal from '../components/CarbUnitsModal';
 import DeviceSheet, { type DeviceCatKey } from '../components/DeviceSheet';
+import LoggingSheet from '../components/LoggingSheet';
 
 // категории «Устройства». Источник данных = существующая настройка Nightscout.
 // Остальные открывают общий каркас DeviceSheet (модель + вкладка «Мост»).
@@ -40,6 +41,7 @@ export default function Profile() {
   const [nsOpen, setNsOpen] = useState(false);
   const [unitsOpen, setUnitsOpen] = useState(false);
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   const carbUnit = useCarbUnit();
   const [deviceCat, setDeviceCat] = useState<string | null>(null);
   const [count, setCount] = useState<number | null>(null);
@@ -211,6 +213,11 @@ export default function Profile() {
               <span className="list-value">{exporting ? 'выгрузка…' : count != null ? `${count} зап.` : DASH}</span>
               <IonIcon icon={chevronForward} className="list-chev" />
             </button>
+            <button className="list-row" onClick={() => setLogOpen(true)}>
+              <IonIcon icon={optionsOutline} className="list-ico" />
+              <span className="list-title">Логирование</span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </button>
           </div>
           {exportMsg && <div className="metric-note" style={{ marginTop: 8 }}>{exportMsg}</div>}
 
@@ -242,6 +249,7 @@ export default function Profile() {
           <button className="logout" onClick={reset}>Сбросить настройки</button>
         </div>
 
+        <LoggingSheet isOpen={logOpen} onClose={() => setLogOpen(false)} />
         <NightscoutModal isOpen={nsOpen} onClose={() => setNsOpen(false)} />
         <UnitsModal isOpen={unitsOpen} onClose={() => setUnitsOpen(false)} />
         <CarbUnitsModal isOpen={carbUnitsOpen} onClose={() => setCarbUnitsOpen(false)} />
