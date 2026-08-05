@@ -15,6 +15,7 @@ import { useStore } from './data/store';
 import { useSnapshot } from './data/bridge';
 import { detectTherapy } from './data/therapy';
 import { useTab, setTab, getTab, TAB_PATHS } from './data/nav';
+import { requestNotifyPermissionOnStart } from './data/notify';
 
 // Порядок вкладок: 0 Метрики · 1 НМГ · 2 Сегодня · 3 Инсулин · 4 Профиль
 function Pager() {
@@ -118,6 +119,10 @@ export default function App() {
   const { data, status } = useStore();
   const snap = useSnapshot();
   const insIcon = detectTherapy(data) === 'pen' ? medkit : water;
+
+  // Спрашиваем разрешение на уведомления сразу при старте (не ждём первого
+  // реального события) — так пользователь явно видит и решает.
+  useEffect(() => { requestNotifyPermissionOnStart(); }, []);
 
   // Если у моста уже есть данные монитора (нативный движок/драйвер) — открываем
   // основной UI, даже без Nightscout. В браузере без нативного моста мост = Nightscout-
