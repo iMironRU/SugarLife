@@ -8,6 +8,9 @@ export interface Device {
   pumpBattery: number | null; status: string | null; baseBasal: number | null;
   tempRate: number | null; tempRemaining: number | null; lastBolus: number | null;
   uploaderBattery: number | null; loop: boolean; pump: boolean; at: number | null;
+  // AAPS extended (кастомные поля этого пользователя): заряд OrangeLink/RileyLink и
+  // авторитетный флаг паузы помпы. Отсутствие ключа = неизвестно (не 0%/false).
+  mountBattery: number | null; suspended: boolean | null;
 }
 export interface Profile {
   name: string; ic: number | null; isf: number | null; basal: number | null;
@@ -165,6 +168,8 @@ export function normDeviceDoc(d: any): Device | null {
     loop: !!(d.openaps || d.loop),
     pump: !!(pump && (pump.reservoir != null || pump.extended || pump.status)),
     at: d.date || (d.mills) || (d.created_at && Date.parse(d.created_at)) || null,
+    mountBattery: (() => { const v = num(ext.OrangeLinkBattery); return v != null ? Math.max(0, Math.min(100, v)) : null; })(),
+    suspended: typeof ext.PumpSuspended === 'boolean' ? ext.PumpSuspended : null,
   };
 }
 
