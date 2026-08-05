@@ -75,7 +75,10 @@ export default function HeroPanel() {
   const dev = data?.device || null;
 
   // Головное значение и тренд — из моста (контракт); фолбэк на стор до первого снимка.
-  const glucose = m ? m.glucose : latest ? toUnits(latest.mmol) : DASH;
+  // m.glucose — «сырая» строка движка (может включать единицу, напр. "6.1 mmol/L" у
+  // нативного скелета) — для отображения в круге используем короткое число из glucoseMmol,
+  // единицу показывает соседний .hp-unit.
+  const glucose = m ? (m.glucoseMmol != null ? toUnits(m.glucoseMmol) : m.glucose) : latest ? toUnits(latest.mmol) : DASH;
   const arrow = m ? (TREND_CHAR[m.trend] ?? '') : latest ? arrowChar(latest.dir) : '';
   const ago = latest ? agoText(latest.t) : DASH;
   const minsAgo = latest ? Math.round((Date.now() - latest.t) / 60000) : null;
