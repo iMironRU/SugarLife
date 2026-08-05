@@ -165,25 +165,37 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "query", returnType: CAPPluginReturnPromise),
     ]
 
-    // Движок стартует с nil-провайдером — это НАДЁЖНЫЙ рендер (как исходный плагин). Реальный провайдер
-    // драйверов (тяжёлая инициализация K/N-модулей) цепляем ВНЕ boot-пути — по первому «Подключить»/скану,
-    // когда main-луп уже устоялся. Так KMP-графа драйверов на старте нет → нет гонки/зависания.
-    private let engine = SugarLifeEngine(driverProvider: nil)
-    private lazy var scanner = SugarLifeScanner { [weak self] json in _ = self?.engine.submitAdvertisement(json: json) }
+    // Движок создаём ОТЛОЖЕННО — на следующем тике main-цикла (в load() через async), а не в property-init
+    // и не синхронно в load(). Инициализация KMP-графа на главном потоке ВО ВРЕМЯ синхронной фазы Capacitor
+    // load() дедлочит (K/N-рантайм ↔ WKWebView) → webview/JS не стартует. На реальном устройстве это стабильно.
+    // Отложив за пределы фазы load(), получаем максимум кратковременную заминку, а не вечный сплэш.
+    // Провайдер реальных драйверов цепляем ещё позже — по первому «Подключить»/скану (attachDriverProvider).
+    private var engine: SugarLifeEngine?
+    private lazy var scanner = SugarLifeScanner { [weak self] json in _ = self?.engine?.submitAdvertisement(json: json) }
     private var unsubscribe: (() -> Void)?
     private var providerAttached = false
 
-    override public func load() {
-        unsubscribe = engine.subscribe(onSnapshot: { [weak self] json in
-            DispatchQueue.main.async { self?.notifyListeners("snapshot", data: ["json": json]) }
-        })
-        engine.startAsync()
-    }
-    deinit { unsubscribe?(); engine.stop() }
+    private static let emptySnapshot =
+        "{\"bridgeRevision\":\"1.6\",\"monitor\":{\"glucose\":\"—\",\"glucoseMmol\":null,\"trend\":\"—\"," +
+        "\"link\":\"Disconnected\",\"reservoir\":\"—\",\"battery\":\"—\",\"confirmedIOB\":0,\"assumedIOB\":0," +
+        "\"conservativeIOB\":0},\"devices\":[],\"availableDrivers\":[]}"
 
-    /// Подцепить провайдер реальных драйверов — вне boot-пути (создаём на фоне, цепляем на main).
+    override public func load() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let e = SugarLifeEngine(driverProvider: nil)
+            self.engine = e
+            self.unsubscribe = e.subscribe(onSnapshot: { [weak self] json in
+                DispatchQueue.main.async { self?.notifyListeners("snapshot", data: ["json": json]) }
+            })
+            e.startAsync()
+        }
+    }
+    deinit { unsubscribe?(); engine?.stop() }
+
+    /// Подцепить провайдер реальных драйверов — по первому скану/добавлению (создаём на фоне, цепляем на main).
     private func ensureProvider() {
-        guard !providerAttached else { return }
+        guard !providerAttached, engine != nil else { return }
         providerAttached = true
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let provider = DefaultDriverProvider(
@@ -191,19 +203,19 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
                 sensorBridge: { bleId, _ in SensorBridge(bleId: bleId) },
                 pumpBridge: { bleId, _ in PumpBridge(bleId: bleId) }
             )
-            DispatchQueue.main.async { self?.engine.attachDriverProvider(provider: provider) }
+            DispatchQueue.main.async { self?.engine?.attachDriverProvider(provider: provider) }
         }
     }
 
-    @objc func requestSnapshot(_ call: CAPPluginCall) { call.resolve(["json": engine.requestSnapshot()]) }
+    @objc func requestSnapshot(_ call: CAPPluginCall) { call.resolve(["json": engine?.requestSnapshot() ?? Self.emptySnapshot]) }
 
     @objc func sendIntent(_ call: CAPPluginCall) {
         let json = call.getString("json") ?? ""
         if json.contains("\"startScan\"") { ensureProvider(); scanner.start() }
         else if json.contains("\"stopScan\"") { scanner.stop() }
         else if json.contains("\"addDevice\"") || json.contains("\"addDiscovered\"") { ensureProvider() }
-        call.resolve(["json": engine.sendIntent(json: json)])
+        call.resolve(["json": engine?.sendIntent(json: json) ?? "{\"accepted\":false,\"error\":\"engine not ready\"}"])
     }
 
-    @objc func query(_ call: CAPPluginCall) { call.resolve(["json": engine.query(json: call.getString("json") ?? "")]) }
+    @objc func query(_ call: CAPPluginCall) { call.resolve(["json": engine?.query(json: call.getString("json") ?? "") ?? "{\"glucose\":[],\"treatments\":[]}"]) }
 }
