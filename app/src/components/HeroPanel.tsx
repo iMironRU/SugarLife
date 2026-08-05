@@ -1,6 +1,6 @@
 import { IonIcon } from '@ionic/react';
 import { useEffect, useState } from 'react';
-import { pulse, flash, moon, cloudOfflineOutline, syncOutline, batteryFull, batteryHalf, batteryDead, timeOutline, phonePortraitOutline } from 'ionicons/icons';
+import { pulse, flash, moon, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline } from 'ionicons/icons';
 import { useTab, setTab } from '../data/nav';
 import { useStore } from '../data/store';
 import { toUnits, agoText, unitLabel, useUnit, fmt } from '../data/units';
@@ -30,7 +30,6 @@ function shortStatus(s?: string | null): string {
   return s;
 }
 const fmtDays = (d: number) => (d < 10 ? d.toFixed(1).replace('.', ',') : String(Math.round(d)));
-const battIcon = (p: number) => (p <= 20 ? batteryDead : p <= 60 ? batteryHalf : batteryFull);
 const battColor = (p: number) => (p <= 20 ? 'var(--c-danger)' : p <= 50 ? 'var(--c-carb)' : 'var(--c-glu)');
 
 /* Верхняя панель — единый постоянный элемент над контентом на ВСЕХ экранах.
@@ -84,9 +83,17 @@ export default function HeroPanel() {
 
   const reservoir = dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : DASH;
   const pumpStatus = shortStatus(dev?.status);
-  const pumpBattery = dev?.pumpBattery ?? null; // заряд помпы — значком-батарейкой в крыле
-  const phoneBattery = dev?.uploaderBattery ?? null; // заряд телефона-аплоадера — в круг
   const iob = dev?.iob != null ? fmt(dev.iob) : null; // активный инсулин — в круг
+
+  // Полоса зарядов устройств над панелью — расширяемо: помпа, телефон-аплоадер,
+  // дальше мост (OrangeLink/RileyLink), когда AAPS начнёт писать его заряд в Nightscout
+  // (сейчас такого поля нет — честно не рисуем, пока не появится). Показываем только
+  // то, что реально известно, без пустых иконок.
+  const batteries: { id: string; icon: string; value: number | null }[] = [
+    { id: 'pump', icon: flash, value: dev?.pumpBattery ?? null },
+    { id: 'phone', icon: phonePortraitOutline, value: dev?.uploaderBattery ?? null },
+    { id: 'mount', icon: gitNetworkOutline, value: null },
+  ].filter((b) => b.value != null);
 
   // строка синхронизации: слева — как мы получаем (нами), справа — возраст
   // последнего значения в Nightscout, чтобы видеть задержку. + офлайн.
@@ -128,6 +135,16 @@ export default function HeroPanel() {
         </div>
       )}
 
+      {batteries.length > 0 && (
+        <div className="hp-batteries">
+          {batteries.map((b) => (
+            <span key={b.id} className="hp-batt-item" style={{ color: battColor(b.value as number) }}>
+              <IonIcon icon={b.icon} />{b.value}%
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="hp-row">
         <div className="hp-rect">
           <button className="hp-wing hp-wing-l" onClick={() => setTab(1)}>
@@ -143,14 +160,7 @@ export default function HeroPanel() {
           <div className="hp-gap" />
 
           <button className="hp-wing hp-wing-r" onClick={() => setTab(3)}>
-            <span className="hp-ico hp-ico-pump">
-              {pumpBattery != null && (
-                <span className="hp-batt" style={{ color: battColor(pumpBattery) }}>
-                  <IonIcon icon={battIcon(pumpBattery)} />{pumpBattery}%
-                </span>
-              )}
-              <IonIcon icon={flash} />
-            </span>
+            <span className="hp-ico"><IonIcon icon={flash} /></span>
             <span className="hp-name">Помпа</span>
             <span className="hp-sub">{pumpStatus}</span>
             <span className="hp-val">{reservoir}</span>
@@ -168,11 +178,6 @@ export default function HeroPanel() {
             <span className="hp-unit">{unitLabel()}</span>
             {iob != null && <span className="hp-iob">инс. {iob} ед</span>}
             <span className="hp-ago">{ago}</span>
-            {phoneBattery != null && (
-              <span className="hp-phone" style={{ color: battColor(phoneBattery) }}>
-                <IonIcon icon={phonePortraitOutline} />{phoneBattery}%
-              </span>
-            )}
           </span>
         </button>
       </div>
