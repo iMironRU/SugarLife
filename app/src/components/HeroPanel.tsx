@@ -85,14 +85,13 @@ export default function HeroPanel() {
   const pumpStatus = shortStatus(dev?.status);
   const iob = dev?.iob != null ? fmt(dev.iob) : null; // активный инсулин — в круг
 
-  // Полоса зарядов устройств над панелью — расширяемо: помпа, телефон-аплоадер,
-  // дальше мост (OrangeLink/RileyLink), когда AAPS начнёт писать его заряд в Nightscout
-  // (сейчас такого поля нет — честно не рисуем, пока не появится). Показываем только
+  // Полоса зарядов устройств над панелью — расширяемо: помпа, телефон-аплоадер, мост
+  // (OrangeLink/RileyLink, pump.extended.OrangeLinkBattery от AAPS). Показываем только
   // то, что реально известно, без пустых иконок.
   const batteries: { id: string; icon: string; value: number | null }[] = [
     { id: 'pump', icon: flash, value: dev?.pumpBattery ?? null },
     { id: 'phone', icon: phonePortraitOutline, value: dev?.uploaderBattery ?? null },
-    { id: 'mount', icon: gitNetworkOutline, value: null },
+    { id: 'mount', icon: gitNetworkOutline, value: dev?.mountBattery ?? null },
   ].filter((b) => b.value != null);
 
   // строка синхронизации: слева — как мы получаем (нами), справа — возраст

@@ -1,5 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { restaurantOutline, warningOutline, moonOutline } from 'ionicons/icons';
+import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '../data/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '../data/units';
@@ -43,8 +43,12 @@ export default function Today() {
   const mealCount = todayCarbs.length;
   const cob = dev?.cob != null ? Math.round(dev.cob) : null;
 
+  // авторитетный флаг паузы (AAPS pump.extended.PumpSuspended), если известен —
+  // иначе фолбэк на текстовую эвристику по статусу
+  const paused = dev?.suspended ?? isPaused(dev?.status);
+
   // подсветка резервуара: подача идёт, а остаток не меняется
-  const stuck = rstat.flatHours > 8 && !isPaused(dev?.status) && (rstat.current ?? 0) > 0;
+  const stuck = rstat.flatHours > 8 && !paused && (rstat.current ?? 0) > 0;
 
   // «ночное окончание»: если резервуара < 14 ч и он закончится в ночь (23:00–08:00) —
   // рекомендуем заменить заранее, чтобы подача не прервалась во сне. Оценка (≈).
@@ -83,6 +87,17 @@ export default function Today() {
               <div className="carb-food-s">{mealCount} {mealsWord(mealCount)}</div>
             </div>
           </button>
+
+          {/* помпа на паузе — важный статус, не прячем (авторитетно из AAPS) */}
+          {dev?.suspended === true && (
+            <div className="today-alert info">
+              <IonIcon icon={pauseCircleOutline} />
+              <div>
+                <b>Помпа на паузе</b>
+                <span>Подача инсулина остановлена.</span>
+              </div>
+            </div>
+          )}
 
           {/* окончание резервуара придётся на ночь — поменять заранее */}
           {nightEmpty && (
