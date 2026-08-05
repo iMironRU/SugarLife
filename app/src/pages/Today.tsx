@@ -1,12 +1,13 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline } from 'ionicons/icons';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../data/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '../data/units';
 import { reportContentScroll } from '../data/panel';
 import { useDeviceExtras } from '../data/deviceExtras';
 import { reservoirStats } from '../data/treatmentStats';
 import { useCloseOnLeave } from '../data/nav';
+import { notify } from '../data/notify';
 import FoodSheet from '../components/FoodSheet';
 
 const DASH = '—';
@@ -61,6 +62,24 @@ export default function Today() {
     if (h >= 23 || h < 8) nightEmpty = e;
   }
   const emptyTime = nightEmpty?.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+  // Локальные уведомления — только на переходе false→true (не спамим на каждый опрос).
+  const suspendedRef = useRef(false);
+  useEffect(() => {
+    const now = dev?.suspended === true;
+    if (now && !suspendedRef.current) notify('Помпа на паузе', 'Подача инсулина остановлена.');
+    suspendedRef.current = now;
+  }, [dev?.suspended]);
+
+  const nightWarnedRef = useRef(false);
+  useEffect(() => {
+    const now = !!nightEmpty;
+    if (now && !nightWarnedRef.current) {
+      notify('Инсулин закончится ночью', `Осталось ≈${Math.round(hoursLeft as number)} ч (~${emptyTime}). Замените резервуар заранее.`);
+    }
+    nightWarnedRef.current = now;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!nightEmpty]);
 
   return (
     <IonPage>
