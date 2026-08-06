@@ -4,6 +4,7 @@
    ВАЖНО: sendIntent подтверждает только ПРИЁМ действия, не выполнение. */
 import { useEffect, useState } from 'react';
 import { nightscoutBridge } from './bridgeNightscout';
+import { getCfg } from './nightscout';
 
 // ---- UiSnapshot ----
 export interface Monitor {
@@ -126,8 +127,12 @@ declare global {
 
 const BRIDGE_MAJOR = '1';
 
-// Настоящий мост (оболочка/релей) если совместим по major, иначе Nightscout-шим.
+// ВРЕМЕННО (2026-08-05): у нативного движка ещё нет реальных драйверов (Nightscout/BLE) —
+// он отдаёт данные встроенного симулятора-скелета. Пока это так, при настроенном Nightscout
+// приоритет отдаём шиму (реальные данные), а не нативному мосту (фейковые). Убрать этот гейт,
+// когда ядро подключит реальные источники — тогда снова native первым при совместимой ревизии.
 export function getBridge(): SugarLifeBridge {
+  if (typeof window !== 'undefined' && getCfg()?.url) return nightscoutBridge;
   const native = typeof window !== 'undefined' ? window.SugarLifeBridge : undefined;
   if (native && String(native.bridgeRevision).split('.')[0] === BRIDGE_MAJOR) return native;
   return nightscoutBridge;
