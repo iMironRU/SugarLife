@@ -104,7 +104,9 @@ export type Intent =
   | { type: 'setLogLevel'; level: 'Trace' | 'Debug' | 'Info' | 'Warn' | 'Error' }
   | { type: 'setLogCapture'; file: boolean | null; raw: boolean | null }
   | { type: 'exportLog' }
-  | { type: 'sendReport'; errorId: string };
+  | { type: 'sendReport'; errorId: string }
+  // rev ≥ 1.6: облачный источник (способ «облако» — Nightscout и подобные), только чтение
+  | { type: 'addCloudSource'; url: string; token?: string | null; streams?: Array<'glucose' | 'pump' | 'treatments'> };
 
 export interface SugarLifeBridge {
   bridgeRevision: string;

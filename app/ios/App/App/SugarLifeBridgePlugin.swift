@@ -183,7 +183,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     override public func load() {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            let e = SugarLifeEngine(driverProvider: nil)
+            let e = SugarLifeEngine(driverProvider: nil, withSimulators: false)
             self.engine = e
             self.unsubscribe = e.subscribe(onSnapshot: { [weak self] json in
                 DispatchQueue.main.async { self?.notifyListeners("snapshot", data: ["json": json]) }

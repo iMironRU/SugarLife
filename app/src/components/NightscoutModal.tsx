@@ -4,6 +4,7 @@ import {
 import { linkOutline, keyOutline, closeOutline, gitNetworkOutline, lockClosed, createOutline, copyOutline, checkmarkOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { getCfg, setCfg, ping } from '../data/nightscout';
+import { sendIntent } from '../data/bridge';
 import { refresh, useStore } from '../data/store';
 import { toUnits } from '../data/units';
 
@@ -56,6 +57,8 @@ export default function NightscoutModal({ isOpen, onClose }: { isOpen: boolean; 
     const u = url.trim(), t = token.trim();
     setCfg({ url: u, token: t, enabled: true });
     setEnabled(true);
+    // Подключить Nightscout как ИСТОЧНИК в KMP-движке (способ «облако», наш Socket.IO-драйвер).
+    void sendIntent({ type: 'addCloudSource', url: u, token: t || null, streams: ['glucose', 'pump', 'treatments'] });
     setMsg('Проверяю подключение…');
     try {
       const res = await ping(u, t);
