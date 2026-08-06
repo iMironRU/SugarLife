@@ -1,6 +1,6 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import {
-  personCircle, chevronForward, cloudDownloadOutline, downloadOutline,
+  personCircle, chevronForward, downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
   hardwareChipOutline, medkitOutline, repeat, speedometerOutline, cloudOutline,
 } from 'ionicons/icons';
@@ -21,14 +21,15 @@ import UnitsModal from '../components/UnitsModal';
 import CarbUnitsModal from '../components/CarbUnitsModal';
 import DeviceSheet, { type DeviceCatKey } from '../components/DeviceSheet';
 
-// категории «Устройства». Источник данных = существующая настройка Nightscout.
-// Остальные открывают общий каркас DeviceSheet (модель + вкладка «Мост»).
-const DEVICES: { key: string; icon: string; title: string; sheet?: DeviceCatKey; source?: boolean }[] = [
+// «Устройства» (ЧТО) — реестр того, что у пользователя есть физически. Открывают общий
+// каркас DeviceSheet (модель + вкладка «Мост» для радио-транспортов вроде OrangeLink/RileyLink).
+// Облако/сервисы (Nightscout и т.п.) — это КАК, отдельный раздел «Способы / Сервисы» ниже
+// (см. docs/CONNECT-UX.md §2b: устройство и способ подключения — независимые оси).
+const DEVICES: { key: string; icon: string; title: string; sheet: DeviceCatKey }[] = [
   { key: 'sensor', icon: hardwareChipOutline, title: 'Сенсор (НМГ)', sheet: 'sensor' },
   { key: 'insulin', icon: medkitOutline, title: 'Ввод инсулина', sheet: 'pump' },
   { key: 'loop', icon: repeat, title: 'Петля', sheet: 'loop' },
   { key: 'meter', icon: speedometerOutline, title: 'Глюкометр', sheet: 'meter' },
-  { key: 'source', icon: cloudOutline, title: 'Источник данных', source: true },
 ];
 
 const DASH = '—';
@@ -171,28 +172,34 @@ export default function Profile() {
             })}
           </div>
 
-          {/* устройства: модель + вкладка «Мост»; источник = Nightscout */}
+          {/* устройства (ЧТО): модель + вкладка «Мост» для радио-транспортов */}
           <div className="section-label sec">Устройства</div>
           <div className="list">
             {DEVICES.map((d) => (
-              <button key={d.key} className="list-row" onClick={() => (d.source ? setNsOpen(true) : setDeviceCat(d.key))}>
+              <button key={d.key} className="list-row" onClick={() => setDeviceCat(d.key)}>
                 <IonIcon icon={d.icon} className="list-ico" />
                 <span className="list-title">{d.title}</span>
-                <span className="list-value">{d.source ? nsValue : 'настроить'}</span>
+                <span className="list-value">настроить</span>
                 <IonIcon icon={chevronForward} className="list-chev" />
               </button>
             ))}
           </div>
 
-          {/* настройки */}
-          <div className="section-label sec">Настройки</div>
+          {/* способы / сервисы (КАК): облако — такой же транспорт, как мост, только со своими
+              настройками (URL/токен) и статусом (доступность/связь) вместо сигнала/батареи */}
+          <div className="section-label sec">Способы / Сервисы</div>
           <div className="list">
             <button className="list-row" onClick={() => setNsOpen(true)}>
-              <IonIcon icon={cloudDownloadOutline} className="list-ico" />
+              <IonIcon icon={cloudOutline} className="list-ico" />
               <span className="list-title">Nightscout</span>
               <span className="list-value">{nsValue}</span>
               <IonIcon icon={chevronForward} className="list-chev" />
             </button>
+          </div>
+
+          {/* настройки */}
+          <div className="section-label sec">Настройки</div>
+          <div className="list">
             <button className="list-row" onClick={() => setUnitsOpen(true)}>
               <IonIcon icon={optionsOutline} className="list-ico" />
               <span className="list-title">Единицы глюкозы</span>
