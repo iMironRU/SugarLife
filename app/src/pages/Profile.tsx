@@ -20,6 +20,7 @@ import NightscoutModal from '../components/NightscoutModal';
 import UnitsModal from '../components/UnitsModal';
 import CarbUnitsModal from '../components/CarbUnitsModal';
 import DeviceSheet, { type DeviceCatKey } from '../components/DeviceSheet';
+import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '../data/deviceConfig';
 
 // «Устройства» (ЧТО) — реестр того, что у пользователя есть физически. Открывают общий
 // каркас DeviceSheet (модель + вкладка «Мост» для радио-транспортов вроде OrangeLink/RileyLink).
@@ -52,6 +53,10 @@ export default function Profile() {
   useCloseOnLeave(4, () => setNsOpen(false), () => setUnitsOpen(false), () => setCarbUnitsOpen(false), () => setDeviceCat(null)); // «Профиль» — закрыть модалки при уходе
 
   useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
+
+  const devCfg = useDeviceConfig();
+  const tileLabel = (sheet: DeviceCatKey): string =>
+    sheet === 'sensor' || sheet === 'pump' ? deviceStatusLabel(deviceStatus(sheet, devCfg)) : 'настроить';
 
   const cfg = getCfg();
   const nsValue = !cfg || !cfg.enabled ? 'выкл'
@@ -179,7 +184,7 @@ export default function Profile() {
               <button key={d.key} className="list-row" onClick={() => setDeviceCat(d.key)}>
                 <IonIcon icon={d.icon} className="list-ico" />
                 <span className="list-title">{d.title}</span>
-                <span className="list-value">настроить</span>
+                <span className="list-value">{tileLabel(d.sheet)}</span>
                 <IonIcon icon={chevronForward} className="list-chev" />
               </button>
             ))}

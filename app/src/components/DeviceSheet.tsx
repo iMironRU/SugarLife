@@ -1,7 +1,7 @@
 import { IonModal, IonContent, IonIcon } from '@ionic/react';
-import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline } from 'ionicons/icons';
+import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, trashOutline } from 'ionicons/icons';
 import { useState } from 'react';
-import { useDeviceConfig, setDeviceConfig } from '../data/deviceConfig';
+import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice } from '../data/deviceConfig';
 import { useSnapshot } from '../data/bridge';
 import {
   PUMPS, SENSORS, BRIDGES, pumpById, sensorById, bridgeById,
@@ -60,13 +60,22 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
   const setBridge = (id: string) => setDeviceConfig(cat === 'pump' ? { bridgePumpId: id } : { bridgeSensorId: id });
   const modelItems = cat === 'pump' ? pumpItems : sensorItems;
 
+  // реестр (docs/CONNECT-UX.md §2a): статус записи — только для категорий с моделью
+  const status = (cat === 'sensor' || cat === 'pump') ? deviceStatus(cat, cfg) : null;
+  const onForget = () => {
+    if (cat !== 'sensor' && cat !== 'pump') return;
+    if (!window.confirm(`Забыть ${title.toLowerCase()}? Модель и мост нужно будет выбрать заново.`)) return;
+    forgetDevice(cat);
+    onClose();
+  };
+
   return (
     <IonModal isOpen={isOpen} onDidDismiss={() => { setTab('device'); onClose(); }} initialBreakpoint={0.7} breakpoints={[0, 0.7, 1]} handle>
       <IonContent className="sheet">
         <div className="sheet-head">
           <div>
             <div className="sheet-title">{title}</div>
-            <div className="sheet-subtitle">Устройство</div>
+            <div className="sheet-subtitle">{status ? deviceStatusLabel(status) : 'Устройство'}</div>
           </div>
           <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
         </div>
@@ -118,6 +127,12 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
               ) : (
                 <div className="sheet-note">Прямое подключение по BLE появится, когда будет готов драйвер этого устройства.</div>
               )
+            )}
+            {hasModel && modelName && (
+              <button className="sheet-danger" onClick={onForget}>
+                <IonIcon icon={trashOutline} />
+                Забыть устройство
+              </button>
             )}
           </>
         )}

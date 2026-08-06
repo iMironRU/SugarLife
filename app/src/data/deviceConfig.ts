@@ -2,6 +2,7 @@
    в Nightscout этого нет и писать некуда. v1: помпа + один быстрый инсулин.
    На будущее сюда добавятся режим (помпа/МДИ), базальный инсулин, мульти-профиль. */
 import { useSyncExternalStore } from 'react';
+import { pumpById, sensorById, pumpNeedsBridge } from './catalog';
 
 const KEY = 'sl.device.v1';
 
@@ -39,4 +40,30 @@ export function useDeviceConfig(): DeviceConfig {
     (cb) => { subs.add(cb); return () => { subs.delete(cb); }; },
     getDeviceConfig, getDeviceConfig,
   );
+}
+
+/* Реестр устройств (docs/CONNECT-UX.md §2a): жизненный цикл записи —
+   Записано (модель выбрана) → Настроено (путь подключения полный) → На связи/На паузе → Забыто.
+   Честно: «На связи/На паузе» тут не считаем — это про живое BLE-подключение, которого у нас
+   пока физически нет (движок — скелет, см. project-bridge-contract). Как появятся реальные
+   драйверы — состояние подтянется из snapshot.devices[], а не отсюда. */
+export type DeviceStatus = 'unset' | 'recorded' | 'configured';
+
+export function deviceStatus(cat: 'sensor' | 'pump', cfg: DeviceConfig): DeviceStatus {
+  if (cat === 'pump') {
+    if (!cfg.pumpId) return 'unset';
+    return pumpNeedsBridge(pumpById(cfg.pumpId)) && !cfg.bridgePumpId ? 'recorded' : 'configured';
+  }
+  if (!cfg.sensorId) return 'unset';
+  return sensorById(cfg.sensorId)?.needsBridge && !cfg.bridgeSensorId ? 'recorded' : 'configured';
+}
+
+export function deviceStatusLabel(status: DeviceStatus): string {
+  return status === 'unset' ? 'настроить' : status === 'recorded' ? 'записано — нужен мост' : 'настроено';
+}
+
+// «Забыть устройство» (§2a, путь 10) — снять модель и её мост для категории.
+export function forgetDevice(cat: 'sensor' | 'pump'): void {
+  if (cat === 'pump') setDeviceConfig({ pumpId: null, bridgePumpId: null });
+  else setDeviceConfig({ sensorId: null, bridgeSensorId: null });
 }
