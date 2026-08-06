@@ -53,6 +53,7 @@ export const bridgeById = (id: string | null | undefined): Bridge | null =>
    needsBridge — сенсор сам не вещает BLE, нужен посредник (Libre 1). */
 export interface Sensor { id: string; name: string; brand: string; needsBridge: boolean; current: boolean; }
 export const SENSORS: Sensor[] = [
+  { id: 'sibionics-gs1', name: 'Sibionics GS1', brand: 'Sibionics', needsBridge: false, current: true },
   { id: 'dexcom-g7', name: 'Dexcom G7', brand: 'Dexcom', needsBridge: false, current: true },
   { id: 'dexcom-g6', name: 'Dexcom G6', brand: 'Dexcom', needsBridge: false, current: true },
   { id: 'libre-3', name: 'FreeStyle Libre 3', brand: 'Abbott', needsBridge: false, current: true },

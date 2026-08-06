@@ -2,7 +2,7 @@ import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import {
   personCircle, chevronForward, downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
-  hardwareChipOutline, medkitOutline, repeat, speedometerOutline, cloudOutline,
+  hardwareChipOutline, medkitOutline, repeat, speedometerOutline, cloudOutline, helpCircleOutline,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
@@ -20,6 +20,7 @@ import NightscoutModal from '../components/NightscoutModal';
 import UnitsModal from '../components/UnitsModal';
 import CarbUnitsModal from '../components/CarbUnitsModal';
 import DeviceSheet, { type DeviceCatKey } from '../components/DeviceSheet';
+import RequirementsCatalogSheet from '../components/RequirementsCatalogSheet';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '../data/deviceConfig';
 
 // «Устройства» (ЧТО) — реестр того, что у пользователя есть физически. Открывают общий
@@ -44,13 +45,14 @@ export default function Profile() {
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
   const carbUnit = useCarbUnit();
   const [deviceCat, setDeviceCat] = useState<string | null>(null);
+  const [reqCatalogOpen, setReqCatalogOpen] = useState(false);
   const [count, setCount] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
-  useCloseOnLeave(4, () => setNsOpen(false), () => setUnitsOpen(false), () => setCarbUnitsOpen(false), () => setDeviceCat(null)); // «Профиль» — закрыть модалки при уходе
+  useCloseOnLeave(4, () => setNsOpen(false), () => setUnitsOpen(false), () => setCarbUnitsOpen(false), () => setDeviceCat(null), () => setReqCatalogOpen(false)); // «Профиль» — закрыть модалки при уходе
 
   useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
 
@@ -188,6 +190,11 @@ export default function Profile() {
                 <IonIcon icon={chevronForward} className="list-chev" />
               </button>
             ))}
+            <button className="list-row" onClick={() => setReqCatalogOpen(true)}>
+              <IonIcon icon={helpCircleOutline} className="list-ico" />
+              <span className="list-title">Проверить / записать по модели</span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </button>
           </div>
 
           {/* способы / сервисы (КАК): облако — такой же транспорт, как мост, только со своими
@@ -260,6 +267,7 @@ export default function Profile() {
         {DEVICES.filter((d) => d.sheet).map((d) => (
           <DeviceSheet key={d.key} isOpen={deviceCat === d.key} onClose={() => setDeviceCat(null)} cat={d.sheet!} title={d.title} />
         ))}
+        <RequirementsCatalogSheet isOpen={reqCatalogOpen} onClose={() => setReqCatalogOpen(false)} />
       </IonContent>
     </IonPage>
   );
