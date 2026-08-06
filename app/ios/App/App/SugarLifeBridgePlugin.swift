@@ -88,11 +88,12 @@ private let sibService = CBUUID(string: "FF30")
 private let sibNotify  = CBUUID(string: "FF31")
 private let sibWrite   = CBUUID(string: "FF32")
 private let macChar    = CBUUID(string: "2A25")
+private let macCharAlt  = CBUUID(string: "2ABE")   // вендор-характеристика MAC (как в Juggluco) — фолбэк
 
 final class SensorBridge: SensorTransportBridge {
     private let link: BleLink
     private var onDataCb: ((KotlinByteArray) -> Void)?
-    init(bleId: String) { link = BleLink(bleId: bleId, service: sibService, characteristics: [sibNotify, sibWrite, macChar]) }
+    init(bleId: String) { link = BleLink(bleId: bleId, service: sibService, characteristics: [sibNotify, sibWrite, macChar, macCharAlt]) }
     func onLink(callback: @escaping (String) -> Void) { link.onState = callback }
     func onData(callback: @escaping (KotlinByteArray) -> Void) {
         onDataCb = callback
@@ -100,9 +101,14 @@ final class SensorBridge: SensorTransportBridge {
     }
     func connect() { link.connectNow() }
     func readMac(callback: @escaping (KotlinByteArray?) -> Void) {
-        link.read(macChar) { data in
-            guard let d = data, d.count == 6 else { callback(nil); return }
-            callback(Data(d.reversed()).toKotlin())
+        // сначала стандартный 0x2A25; если не 6 байт — фолбэк на вендор 2ABE (как Juggluco). Лог — в device-консоль.
+        link.read(macChar) { d1 in
+            if let d = d1, d.count == 6 { NSLog("SIB-swift: MAC 2A25 ok"); callback(Data(d.reversed()).toKotlin()); return }
+            NSLog("SIB-swift: MAC 2A25 = \(d1?.count ?? -1) байт, пробую 2ABE")
+            self.link.read(macCharAlt) { d2 in
+                if let d = d2, d.count == 6 { NSLog("SIB-swift: MAC 2ABE ok"); callback(Data(d.reversed()).toKotlin()) }
+                else { NSLog("SIB-swift: MAC 2ABE = \(d2?.count ?? -1) байт — нет MAC"); callback(nil) }
+            }
         }
     }
     func write(bytes: KotlinByteArray) { link.write(bytes.toData(), to: sibWrite) }
