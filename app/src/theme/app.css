@@ -384,6 +384,11 @@ ion-content { --background: var(--color-bg); }
 
 /* ===== Шторка Nightscout ===== */
 .sheet { --background: var(--color-bg); }
+/* Полноэкранный «раздел» Профиля (не шторка-пик снизу, а страница) — Устройства,
+   Способы/Сервисы и т.п. (docs/CONNECT-UX.md §10 «Карта интерфейса»). Без breakpoints/handle:
+   те давали нестабильное поведение (самопроизвольное закрытие) без явной пользы для страницы,
+   которую и так закрывают только кнопкой «назад». */
+.full-page { --width: 100%; --height: 100%; --border-radius: 0; }
 .sheet::part(scroll) { padding: 6px 18px 26px; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 0 4px; }
 .sheet-title { font-size: 19px; font-weight: 600; letter-spacing: -.01em; }

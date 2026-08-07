@@ -2,7 +2,7 @@ import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import {
   personCircle, chevronForward, downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
-  hardwareChipOutline, medkitOutline, repeat, speedometerOutline, cloudOutline, helpCircleOutline,
+  hardwareChipOutline, cloudOutline,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
@@ -19,20 +19,7 @@ import { useCloseOnLeave } from '../data/nav';
 import NightscoutModal from '../components/NightscoutModal';
 import UnitsModal from '../components/UnitsModal';
 import CarbUnitsModal from '../components/CarbUnitsModal';
-import DeviceSheet, { type DeviceCatKey } from '../components/DeviceSheet';
-import RequirementsCatalogSheet from '../components/RequirementsCatalogSheet';
-import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '../data/deviceConfig';
-
-// «Устройства» (ЧТО) — реестр того, что у пользователя есть физически. Открывают общий
-// каркас DeviceSheet (модель + вкладка «Мост» для радио-транспортов вроде OrangeLink/RileyLink).
-// Облако/сервисы (Nightscout и т.п.) — это КАК, отдельный раздел «Способы / Сервисы» ниже
-// (см. docs/CONNECT-UX.md §2b: устройство и способ подключения — независимые оси).
-const DEVICES: { key: string; icon: string; title: string; sheet: DeviceCatKey }[] = [
-  { key: 'sensor', icon: hardwareChipOutline, title: 'Сенсор (НМГ)', sheet: 'sensor' },
-  { key: 'insulin', icon: medkitOutline, title: 'Ввод инсулина', sheet: 'pump' },
-  { key: 'loop', icon: repeat, title: 'Петля', sheet: 'loop' },
-  { key: 'meter', icon: speedometerOutline, title: 'Глюкометр', sheet: 'meter' },
-];
+import DevicesScreen from '../components/DevicesScreen';
 
 const DASH = '—';
 
@@ -44,21 +31,16 @@ export default function Profile() {
   const [unitsOpen, setUnitsOpen] = useState(false);
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
   const carbUnit = useCarbUnit();
-  const [deviceCat, setDeviceCat] = useState<string | null>(null);
-  const [reqCatalogOpen, setReqCatalogOpen] = useState(false);
+  const [devicesOpen, setDevicesOpen] = useState(false);
   const [count, setCount] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
-  useCloseOnLeave(4, () => setNsOpen(false), () => setUnitsOpen(false), () => setCarbUnitsOpen(false), () => setDeviceCat(null), () => setReqCatalogOpen(false)); // «Профиль» — закрыть модалки при уходе
+  useCloseOnLeave(4, () => setNsOpen(false), () => setUnitsOpen(false), () => setCarbUnitsOpen(false), () => setDevicesOpen(false)); // «Профиль» — закрыть модалки при уходе
 
   useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
-
-  const devCfg = useDeviceConfig();
-  const tileLabel = (sheet: DeviceCatKey): string =>
-    sheet === 'sensor' || sheet === 'pump' ? deviceStatusLabel(deviceStatus(sheet, devCfg)) : 'настроить';
 
   const cfg = getCfg();
   const nsValue = !cfg || !cfg.enabled ? 'выкл'
@@ -179,20 +161,13 @@ export default function Profile() {
             })}
           </div>
 
-          {/* устройства (ЧТО): модель + вкладка «Мост» для радио-транспортов */}
+          {/* устройства (ЧТО) — отдельный полноэкранный раздел, не инлайн-список
+              (см. docs/CONNECT-UX.md §10 «Карта интерфейса»: Профиль → Устройства) */}
           <div className="section-label sec">Устройства</div>
           <div className="list">
-            {DEVICES.map((d) => (
-              <button key={d.key} className="list-row" onClick={() => setDeviceCat(d.key)}>
-                <IonIcon icon={d.icon} className="list-ico" />
-                <span className="list-title">{d.title}</span>
-                <span className="list-value">{tileLabel(d.sheet)}</span>
-                <IonIcon icon={chevronForward} className="list-chev" />
-              </button>
-            ))}
-            <button className="list-row" onClick={() => setReqCatalogOpen(true)}>
-              <IonIcon icon={helpCircleOutline} className="list-ico" />
-              <span className="list-title">Проверить / записать по модели</span>
+            <button className="list-row" onClick={() => setDevicesOpen(true)}>
+              <IonIcon icon={hardwareChipOutline} className="list-ico" />
+              <span className="list-title">Помпа, сенсоры, глюкометр, петля</span>
               <IonIcon icon={chevronForward} className="list-chev" />
             </button>
           </div>
@@ -264,10 +239,7 @@ export default function Profile() {
         <NightscoutModal isOpen={nsOpen} onClose={() => setNsOpen(false)} />
         <UnitsModal isOpen={unitsOpen} onClose={() => setUnitsOpen(false)} />
         <CarbUnitsModal isOpen={carbUnitsOpen} onClose={() => setCarbUnitsOpen(false)} />
-        {DEVICES.filter((d) => d.sheet).map((d) => (
-          <DeviceSheet key={d.key} isOpen={deviceCat === d.key} onClose={() => setDeviceCat(null)} cat={d.sheet!} title={d.title} />
-        ))}
-        <RequirementsCatalogSheet isOpen={reqCatalogOpen} onClose={() => setReqCatalogOpen(false)} />
+        <DevicesScreen isOpen={devicesOpen} onClose={() => setDevicesOpen(false)} />
       </IonContent>
     </IonPage>
   );
