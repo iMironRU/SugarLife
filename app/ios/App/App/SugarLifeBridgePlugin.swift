@@ -62,11 +62,12 @@ final class BleLink: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     }
 
     func centralManagerDidUpdateState(_ c: CBCentralManager) { if c.state == .poweredOn { connectNow() } }
-    func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) { onState?("Connected"); p.discoverServices([serviceUUID]) }
+    func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) { onState?("Connected"); p.discoverServices(nil) }  // все сервисы: MAC 0x2A25 лежит в 0x180A, не в FF30
     func centralManager(_ c: CBCentralManager, didDisconnectPeripheral p: CBPeripheral, error: Error?) { onState?("Disconnected") }
     func centralManager(_ c: CBCentralManager, didFailToConnect p: CBPeripheral, error: Error?) { onState?("Error") }
     func peripheral(_ p: CBPeripheral, didDiscoverServices error: Error?) {
-        for s in p.services ?? [] where s.uuid == serviceUUID { p.discoverCharacteristics(charUUIDs, for: s) }
+        // discover наши характеристики в КАЖДОМ сервисе (FF31/FF32 в FF30, MAC 0x2A25 в 0x180A)
+        for s in p.services ?? [] { p.discoverCharacteristics(charUUIDs, for: s) }
     }
     func peripheral(_ p: CBPeripheral, didDiscoverCharacteristicsFor s: CBService, error: Error?) {
         for ch in s.characteristics ?? [] {
@@ -101,13 +102,19 @@ final class SensorBridge: SensorTransportBridge {
     }
     func connect() { link.connectNow() }
     func readMac(callback: @escaping (KotlinByteArray?) -> Void) {
-        // сначала стандартный 0x2A25; если не 6 байт — фолбэк на вендор 2ABE (как Juggluco). Лог — в device-консоль.
+        // 0x2A25 (сервис 0x180A) открывается чуть позже FF30 → retry ~6с; фолбэк на вендор 2ABE (как Juggluco).
+        attemptMac(tries: 12, callback: callback)
+    }
+    private func attemptMac(tries: Int, callback: @escaping (KotlinByteArray?) -> Void) {
         link.read(macChar) { d1 in
             if let d = d1, d.count == 6 { NSLog("SIB-swift: MAC 2A25 ok"); callback(Data(d.reversed()).toKotlin()); return }
-            NSLog("SIB-swift: MAC 2A25 = \(d1?.count ?? -1) байт, пробую 2ABE")
             self.link.read(macCharAlt) { d2 in
-                if let d = d2, d.count == 6 { NSLog("SIB-swift: MAC 2ABE ok"); callback(Data(d.reversed()).toKotlin()) }
-                else { NSLog("SIB-swift: MAC 2ABE = \(d2?.count ?? -1) байт — нет MAC"); callback(nil) }
+                if let d = d2, d.count == 6 { NSLog("SIB-swift: MAC 2ABE ok"); callback(Data(d.reversed()).toKotlin()); return }
+                if tries > 1 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self.attemptMac(tries: tries - 1, callback: callback) }
+                } else {
+                    NSLog("SIB-swift: MAC не прочитался (2A25/2ABE нет)"); callback(nil)
+                }
             }
         }
     }

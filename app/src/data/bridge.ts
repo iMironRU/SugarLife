@@ -10,6 +10,9 @@ export interface Monitor {
   glucose: string; glucoseMmol: number | null; trend: Trend; link: Link;
   reservoir: string; battery: string;
   confirmedIOB: number; assumedIOB: number; conservativeIOB: number;
+  // rev ≥ 1.7: основной источник отдаёт свежее (true) или идёт синхронизация/бэкфилл (false).
+  // false → показываем индикатор «синхронизация», алгоритм эти данные пока не берёт.
+  live?: boolean;
 }
 export type Trend =
   | 'RisingRapidly' | 'Rising' | 'RisingSlowly' | 'Stable'
@@ -36,6 +39,7 @@ export interface DeviceInfo {
   warmupEndsAtMs?: number | null;
   expiresAtMs?: number | null;
   primary?: boolean;
+  live?: boolean;   // rev ≥ 1.7: отдаёт свежее (true) или идёт синхронизация/бэкфилл (false)
 }
 export interface Insights { mode: 'Observe' | 'Advisory' | 'ClosedLoop'; messages: string[]; }
 export interface PendingWrite { id: string; description: string; state: string; needsAttention: boolean; }
