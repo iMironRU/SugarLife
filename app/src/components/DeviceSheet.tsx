@@ -3,6 +3,7 @@ import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOut
 import { useState } from 'react';
 import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice } from '../data/deviceConfig';
 import { useSnapshot } from '../data/bridge';
+import { useStore } from '../data/store';
 import {
   PUMPS, SENSORS, BRIDGES, pumpById, sensorById, bridgeById,
   isCurrentPump, pumpBrand, pumpNeedsBridge,
@@ -62,6 +63,19 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
 
   // реестр (docs/CONNECT-UX.md §2a): статус записи — только для категорий с моделью
   const status = (cat === 'sensor' || cat === 'pump') ? deviceStatus(cat, cfg) : null;
+
+  // «Забираем через Nightscout» (§2b: удалённый способ — тот же принцип для помпы и сенсора,
+  // работает уже сегодня, не гипотеза). Честно: не переключатель — Nightscout-шим не умеет
+  // выключать отдельные потоки, поэтому просто показываем, что реально приходит.
+  const { data: storeData } = useStore();
+  const nsDev = storeData?.device ?? null;
+  const nsFeed = cat === 'pump'
+    ? (nsDev?.reservoir != null || nsDev?.pumpBattery != null
+        ? [nsDev.reservoir != null ? Math.round(nsDev.reservoir) + ' ед' : null, nsDev.pumpBattery != null ? nsDev.pumpBattery + '%' : null].filter(Boolean).join(' · ')
+        : null)
+    : cat === 'sensor'
+    ? (storeData?.latest ? 'сахар и тренд' : null)
+    : null;
   const onForget = () => {
     if (cat !== 'sensor' && cat !== 'pump') return;
     if (!window.confirm(`Забыть ${title.toLowerCase()}? Модель и мост нужно будет выбрать заново.`)) return;
@@ -99,8 +113,8 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
                 </button>
                 <div className="list-row" style={{ cursor: 'default' }}>
                   <IonIcon icon={cloudOutline} className="list-ico" />
-                  <span className="list-title">Подключение</span>
-                  <span className="list-value">через Nightscout</span>
+                  <span className="list-title">Через Nightscout</span>
+                  <span className={'list-value' + (nsFeed ? '' : ' muted')}>{nsFeed ?? 'пока нет данных'}</span>
                 </div>
               </div>
             ) : (
@@ -113,7 +127,11 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
               </div>
             )}
             {hasModel && (
-              <div className="sheet-note">Модель выше — для учёта, хранится только на этом устройстве.</div>
+              <div className="sheet-note">
+                Модель выше — для учёта, хранится только на этом устройстве. Nightscout — способ
+                получать данные удалённо: работает уже сейчас, даже без прямого моста, вместе с ним,
+                а не вместо.
+              </div>
             )}
             {hasModel && (
               hasBleDriver ? (
