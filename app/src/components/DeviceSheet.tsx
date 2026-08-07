@@ -2,7 +2,7 @@ import { IonModal, IonContent, IonIcon } from '@ionic/react';
 import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, pulseOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useDeviceConfig, setDeviceConfig } from '../data/deviceConfig';
-import { useSnapshot } from '../data/bridge';
+import { useSnapshot, sendIntent } from '../data/bridge';
 import type { DeviceInfo } from '../data/bridge';
 
 // Метка состояния сессии сенсора + обратный отсчёт (контракт §2.2).
@@ -156,6 +156,14 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
                       <span className="pick-sub">{sessionLabel(d)}</span>
                     </span>
                     <span className="list-value">{connLabel(d.connection)}</span>
+                    <button
+                      onClick={() => void sendIntent(d.connection === 'Disconnected'
+                        ? { type: 'connect', deviceId: d.id }
+                        : { type: 'disconnect', deviceId: d.id })}
+                      style={{ marginLeft: 8, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--line2, #3a3d50)', background: 'transparent', color: 'inherit', fontSize: 13, fontWeight: 600 }}
+                    >
+                      {d.connection === 'Disconnected' ? 'Подключить' : 'Пауза'}
+                    </button>
                   </div>
                 ))}
               </div>
