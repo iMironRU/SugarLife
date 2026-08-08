@@ -743,7 +743,7 @@
    "algorithm": null,
    "cgm": null,
    "status": null,
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   },
   {
    "id": "закрытые-компании-помпы-ушедшие-с-рынка-onetouch-ping",
@@ -754,7 +754,7 @@
    "algorithm": null,
    "cgm": null,
    "status": null,
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   },
   {
    "id": "закрытые-компании-помпы-ушедшие-с-рынка-animas-2020",
@@ -765,7 +765,7 @@
    "algorithm": null,
    "cgm": null,
    "status": null,
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   },
   {
    "id": "закрытые-компании-помпы-ушедшие-с-рынка-animas-ir1250",
@@ -776,7 +776,7 @@
    "algorithm": null,
    "cgm": null,
    "status": null,
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   },
   {
    "id": "закрытые-компании-помпы-ушедшие-с-рынка-animas-ir1200",
@@ -787,7 +787,7 @@
    "algorithm": null,
    "cgm": null,
    "status": null,
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   },
   {
    "id": "закрытые-компании-помпы-ушедшие-с-рынка-animas-ir1100",
@@ -798,7 +798,7 @@
    "algorithm": null,
    "cgm": null,
    "status": null,
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   },
   {
    "id": "закрытые-компании-помпы-ушедшие-с-рынка-animas-ir1000",
@@ -809,7 +809,7 @@
    "algorithm": null,
    "cgm": null,
    "status": null,
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   },
   {
    "id": "закрытые-компании-помпы-ушедшие-с-рынка-animas-r1000",
@@ -820,7 +820,7 @@
    "algorithm": null,
    "cgm": null,
    "status": null,
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   },
   {
    "id": "закрытые-компании-помпы-ушедшие-с-рынка-cozmo",
@@ -831,7 +831,7 @@
    "algorithm": null,
    "cgm": null,
    "status": null,
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   },
   {
    "id": "закрытые-компании-помпы-ушедшие-с-рынка-cozmore",
@@ -842,7 +842,7 @@
    "algorithm": null,
    "cgm": null,
    "status": null,
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   },
   {
    "id": "закрытые-компании-помпы-ушедшие-с-рынка-asante-snap",
@@ -853,7 +853,7 @@
    "algorithm": null,
    "cgm": null,
    "status": null,
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   },
   {
    "id": "закрытые-компании-помпы-ушедшие-с-рынка-cellnovo-system",
@@ -864,7 +864,7 @@
    "algorithm": null,
    "cgm": null,
    "status": null,
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   },
   {
    "id": "закрытые-компании-помпы-ушедшие-с-рынка-v-go",
@@ -897,7 +897,7 @@
    "algorithm": null,
    "cgm": null,
    "status": "свёрнута",
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   },
   {
    "id": "закрытые-компании-помпы-ушедшие-с-рынка-amigo-amigo-ii",
@@ -908,7 +908,7 @@
    "algorithm": null,
    "cgm": null,
    "status": null,
-   "statusClass": "актуальная"
+   "statusClass": "снята"
   }
  ]
 }
