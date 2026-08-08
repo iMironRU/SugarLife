@@ -1,5 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline } from 'ionicons/icons';
+import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline, batteryDeadOutline } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../data/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '../data/units';
@@ -63,6 +63,14 @@ export default function Today() {
   }
   const emptyTime = nightEmpty?.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 
+  /* Батарея помпы на дне. Порог 5%, а не 20%: по истории замен видно, что шкала грубая
+     и нелинейная (75 → 44 → 29 → 22 → 3 → 1), а НУЛЯ помпа не показывает вовсе — дно 1%.
+     Тревожить раньше времени вредно: на 1% помпа реально работает ещё часы, поэтому
+     формулировка — «поменяйте при случае», а не «срочно». Сколько именно осталось,
+     сказать не можем, пока не знаем тип батарейки (см. бэклог). */
+  const battery = dev?.pumpBattery ?? null;
+  const batteryLow = battery != null && battery <= 5;
+
   // Локальные уведомления — только на переходе false→true (не спамим на каждый опрос).
   const suspendedRef = useRef(false);
   useEffect(() => {
@@ -125,6 +133,17 @@ export default function Today() {
               <div>
                 <b>Инсулина ≈{Math.round(hoursLeft as number)} ч — закончится ночью (~{emptyTime})</b>
                 <span>Замените резервуар заранее, чтобы подача не прервалась во сне. Оценка по среднему расходу.</span>
+              </div>
+            </div>
+          )}
+
+          {/* батарея помпы на дне */}
+          {batteryLow && (
+            <div className="today-alert warn">
+              <IonIcon icon={batteryDeadOutline} />
+              <div>
+                <b>Батарея помпы {battery}%</b>
+                <span>Помпа не показывает ноль — {battery}% это уже дно шкалы. Поработает ещё, но батарейку стоит поменять при случае и носить запасную.</span>
               </div>
             </div>
           )}
