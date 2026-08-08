@@ -25,6 +25,15 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 private fun uuid16(v: String): UUID = UUID.fromString("0000$v-0000-1000-8000-00805f9b34fb")
 private val CCCD = uuid16("2902")
+
+/** Короткая форма стандартного Bluetooth-UUID (как CBUUID на iOS): 0000FF30-0000-1000-8000-00805f9b34fb → "FF30".
+ *  Каталог матчит короткие ("FF30"); Android же отдаёт полный 128-битный → без нормализации совпадения нет.
+ *  Кастомные 128-битные (RileyLink) остаются полными. */
+private fun shortUuid(u: UUID): String {
+    val s = u.toString().lowercase()
+    return if (s.startsWith("0000") && s.endsWith("-0000-1000-8000-00805f9b34fb"))
+        s.substring(4, 8).uppercase() else s.uppercase()
+}
 private val mainHandler = Handler(Looper.getMainLooper())
 
 // Sibionics
@@ -66,6 +75,8 @@ class BleLink(
     fun subscribe(char: UUID, handler: (ByteArray) -> Unit) { notifyHandlers[char] = handler }
 
     fun connect() {
+        // Свежая GATT-сессия (реконнект): сбрасываем состояние старой, иначе застрявшая операция/характеристика мешает.
+        chars.clear(); readHandlers.clear(); opQueue.clear(); opBusy = false
         val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
         val device = adapter.getRemoteDevice(address)
         onState?.invoke("Connecting")
@@ -96,8 +107,13 @@ class BleLink(
     private val callback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
             when (newState) {
-                BluetoothProfile.STATE_CONNECTED -> { onState?.invoke("Connected"); g.discoverServices() }
-                BluetoothProfile.STATE_DISCONNECTED -> onState?.invoke("Disconnected")
+                BluetoothProfile.STATE_CONNECTED -> {
+                    onState?.invoke("Connected")
+                    // Быстрый интервал связи (7.5мс) — стабильнее при потоке данных, меньше обрывов на Android.
+                    g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+                    g.discoverServices()
+                }
+                BluetoothProfile.STATE_DISCONNECTED -> { onState?.invoke("Disconnected"); opBusy = false; opQueue.clear() }
             }
         }
 
@@ -193,7 +209,7 @@ class SugarLifeScanner(context: Context, private val onAdvertisement: (String) -
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val dev = result.device
             val services = JSONArray()
-            result.scanRecord?.serviceUuids?.forEach { services.put(it.uuid.toString()) }
+            result.scanRecord?.serviceUuids?.forEach { services.put(shortUuid(it.uuid)) }
             val dto = JSONObject()
                 .put("bleId", dev.address)
                 .put("name", result.scanRecord?.deviceName)
