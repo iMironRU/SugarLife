@@ -1,6 +1,6 @@
 import { IonModal, IonContent, IonIcon } from '@ionic/react';
 import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, trashOutline, water } from 'ionicons/icons';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '../data/deviceConfig';
 import { useSnapshot } from '../data/bridge';
 import { useStore } from '../data/store';
@@ -64,30 +64,39 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
     ? (pumpNeedsBridge(pump) ? 'Эта помпа управляется по радио — нужен мост (RileyLink/OrangeLink).' : 'Старые Medtronic (Paradigm, 5xx/7xx) — по радио, требуют RileyLink/OrangeLink. Современные — напрямую/через аплоадер.')
     : (sensor?.needsBridge ? 'Этот сенсор не вещает BLE сам — нужен мост (MiaoMiao/Bubble).' : 'Libre 1 и старые сенсоры подключаются через мост (MiaoMiao/Bubble). Современные — напрямую.');
 
-  /* --- Состояние: то, что реально известно прямо сейчас (было в SensorSheet/PumpSheet) --- */
+  /* --- Состояние: то, что реально известно прямо сейчас (было в SensorSheet/PumpSheet) ---
+     Считаем ТОЛЬКО когда шторка открыта и только при смене данных. Инстансов
+     DeviceSheet смонтировано несколько сразу (список устройств + «НМГ» + «Инсулин»),
+     а deviceAges проходит по всем событиям замен — без этой памятки закрытые шторки
+     молотили бы тысячи проходов на каждое обновление данных. */
   const dev = data?.device ?? null;
-  const ages = deviceAges(extras.events);
   const insulin = insulinById(cfg.fastInsulinId);
 
-  type Row = { k: string; v: string };
-  const stateRows: Row[] = [];
-  if (cat === 'sensor' && ages.sensor) {
-    stateRows.push({ k: 'День', v: String(ages.sensor.days + 1) });
-    stateRows.push({ k: 'Носится', v: ageText(ages.sensor) });
-  }
-  if (cat === 'pump') {
-    if (dev?.status) stateRows.push({ k: 'Статус', v: dev.status });
-    if (dev?.reservoir != null) stateRows.push({ k: 'Резервуар', v: Math.round(dev.reservoir) + ' ед' });
-    if (dev?.pumpBattery != null) stateRows.push({ k: 'Батарея', v: dev.pumpBattery + '%' });
-    if (dev?.baseBasal != null) stateRows.push({ k: 'Базальная скорость', v: fmt(dev.baseBasal) + ' ед/ч' });
-    if (dev?.tempRate != null) stateRows.push({ k: 'Временный базал', v: fmt(dev.tempRate) + ' ед/ч' });
-    if (dev?.lastBolus != null) stateRows.push({ k: 'Последний болюс', v: fmt(dev.lastBolus) + ' ед' });
-  }
-  // расходники со сроками (§9) — пока только у помпы, из событий замен в Nightscout
-  const supplies = cat === 'pump'
-    ? ([['Канюля', ages.site], ['Резервуар', ages.reservoir], ['Батарея', ages.battery]] as [string, Age | null][])
-      .filter(([, a]) => !!a)
-    : [];
+  const { stateRows, supplies } = useMemo(() => {
+    type Row = { k: string; v: string };
+    const rows: Row[] = [];
+    if (!isOpen) return { stateRows: rows, supplies: [] as [string, Age][] };
+
+    const ages = deviceAges(extras.events);
+    if (cat === 'sensor' && ages.sensor) {
+      rows.push({ k: 'День', v: String(ages.sensor.days + 1) });
+      rows.push({ k: 'Носится', v: ageText(ages.sensor) });
+    }
+    if (cat === 'pump') {
+      if (dev?.status) rows.push({ k: 'Статус', v: dev.status });
+      if (dev?.reservoir != null) rows.push({ k: 'Резервуар', v: Math.round(dev.reservoir) + ' ед' });
+      if (dev?.pumpBattery != null) rows.push({ k: 'Батарея', v: dev.pumpBattery + '%' });
+      if (dev?.baseBasal != null) rows.push({ k: 'Базальная скорость', v: fmt(dev.baseBasal) + ' ед/ч' });
+      if (dev?.tempRate != null) rows.push({ k: 'Временный базал', v: fmt(dev.tempRate) + ' ед/ч' });
+      if (dev?.lastBolus != null) rows.push({ k: 'Последний болюс', v: fmt(dev.lastBolus) + ' ед' });
+    }
+    // расходники со сроками (§9) — пока только у помпы, из событий замен в Nightscout
+    const sup = cat === 'pump'
+      ? ([['Канюля', ages.site], ['Резервуар', ages.reservoir], ['Батарея', ages.battery]] as [string, Age | null][])
+        .filter((x): x is [string, Age] => !!x[1])
+      : [];
+    return { stateRows: rows, supplies: sup };
+  }, [isOpen, cat, extras.events, dev]);
 
   const modelIcon = cat === 'pump' ? flash : hardwareChipOutline;
   const setModel = (id: string) => setDeviceConfig(cat === 'pump' ? { pumpId: id } : { sensorId: id });
