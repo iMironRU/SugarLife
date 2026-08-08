@@ -21,6 +21,12 @@
             </intent-filter>
         </activity>
 
+        <!-- Foreground-сервис: держит процесс живым в фоне (иначе HyperOS убивает → потеря сенсора). -->
+        <service
+            android:name=".SugarLifeService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -33,6 +39,11 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Foreground-сервис фонового мониторинга + его уведомление (Android 13+). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- BLE (сенсор Sibionics / мост помпы). Android 12+ (API 31): SCAN/CONNECT. -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" tools:targetApi="s" />

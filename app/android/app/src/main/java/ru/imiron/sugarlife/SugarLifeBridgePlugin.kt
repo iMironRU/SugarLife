@@ -11,7 +11,6 @@ import android.os.Build
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import ru.imiron.sugarlife.engine.DefaultDriverProvider
 import ru.imiron.sugarlife.engine.SugarLifeEngine
 
 /**
@@ -22,27 +21,16 @@ import ru.imiron.sugarlife.engine.SugarLifeEngine
  */
 @CapacitorPlugin(name = "SugarLifeBridge")
 class SugarLifeBridgePlugin : Plugin() {
-    private var engine: SugarLifeEngine? = null
+    private val engine: SugarLifeEngine get() = EngineHolder.engine()
     private var unsubscribe: (() -> Unit)? = null
-    private var providerAttached = false
     private val scanner by lazy {
-        SugarLifeScanner(context.applicationContext) { json -> engine?.submitAdvertisement(json) }
+        SugarLifeScanner(context.applicationContext) { json -> engine.submitAdvertisement(json) }
     }
 
     /** Реальные BLE-драйверы цепляем по требованию (первый скан/добавление) — как iOS ensureProvider. */
     private fun ensureProvider() {
-        val e = engine ?: return
         requestBlePermissions()
-        if (providerAttached) return
-        providerAttached = true
-        val ctx = context.applicationContext
-        e.attachDriverProvider(
-            DefaultDriverProvider(
-                nowMs = { System.currentTimeMillis() },
-                sensorBridge = { bleId, _ -> AndroidSensorBridge(ctx, bleId) },
-                pumpBridge = { bleId, _ -> AndroidPumpBridge(ctx, bleId) },
-            ),
-        )
+        EngineHolder.ensureProvider(context.applicationContext)
     }
 
     private fun requestBlePermissions() {
@@ -54,20 +42,19 @@ class SugarLifeBridgePlugin : Plugin() {
     }
 
     override fun load() {
-        Log.i(TAG, "load: creating engine")
-        val e = SugarLifeEngine(withSimulators = false)
-        engine = e
-        // Снимок из движка (фоновая корутина) → в webview на UI-потоке.
-        unsubscribe = e.subscribe { json ->
+        Log.i(TAG, "load: attach to engine")
+        // Держим процесс живым в фоне (иначе HyperOS убьёт → потеря сенсора). Стартуем с переднего плана — ОК.
+        SugarLifeService.start(context.applicationContext)
+        // Снимок из движка-синглтона (переживает пересоздание Activity) → в webview на UI-потоке.
+        unsubscribe = engine.subscribe { json ->
             val data = JSObject().put("json", json)
             activity?.runOnUiThread { notifyListeners("snapshot", data) }
         }
-        e.startAsync()
     }
 
     @PluginMethod
     fun requestSnapshot(call: PluginCall) {
-        call.resolve(JSObject().put("json", engine?.requestSnapshot() ?: EMPTY))
+        call.resolve(JSObject().put("json", engine.requestSnapshot()))
     }
 
     @PluginMethod
@@ -80,7 +67,7 @@ class SugarLifeBridgePlugin : Plugin() {
             json.contains("\"addDevice\"") || json.contains("\"addDiscovered\"") -> ensureProvider()
         }
         val res = try {
-            engine?.sendIntent(json) ?: """{"accepted":false,"error":"engine not ready"}"""
+            engine.sendIntent(json)
         } catch (t: Throwable) {
             Log.e(TAG, "sendIntent error", t); """{"accepted":false,"error":"${t.message}"}"""
         }
@@ -89,21 +76,15 @@ class SugarLifeBridgePlugin : Plugin() {
 
     @PluginMethod
     fun query(call: PluginCall) {
-        val json = call.getString("json") ?: ""
-        val res = engine?.query(json) ?: """{"glucose":[],"treatments":[]}"""
-        call.resolve(JSObject().put("json", res))
+        call.resolve(JSObject().put("json", engine.query(call.getString("json") ?: "")))
     }
 
     override fun handleOnDestroy() {
+        // Только отписываемся. Движок НЕ останавливаем — он живёт в EngineHolder, процесс держит SugarLifeService.
         unsubscribe?.invoke()
-        engine?.stop()
     }
 
     companion object {
         private const val TAG = "SugarLifeBridge"
-        private const val EMPTY =
-            "{\"bridgeRevision\":\"1.7\",\"monitor\":{\"glucose\":\"—\",\"glucoseMmol\":null,\"trend\":\"—\"," +
-            "\"link\":\"Disconnected\",\"reservoir\":\"—\",\"battery\":\"—\",\"confirmedIOB\":0,\"assumedIOB\":0," +
-            "\"conservativeIOB\":0,\"live\":false},\"devices\":[],\"availableDrivers\":[]}"
     }
 }
