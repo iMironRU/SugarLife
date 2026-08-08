@@ -1,4 +1,5 @@
-import EChart, { cssVar } from './EChart';
+import EChart from './Chart';
+import { cssVar } from './cssVar';
 import type { Treatment } from '../data/nightscout';
 
 /* График подачи инсулина: ступенчатая кривая базала (ед/ч) из temp basal +
