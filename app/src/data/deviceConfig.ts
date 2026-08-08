@@ -42,24 +42,46 @@ export function useDeviceConfig(): DeviceConfig {
   );
 }
 
+/* Модель неизвестна (§2b): запись в реестре ЕСТЬ, а какая это железка — не знаем.
+   Такое бывает штатно: человек подключил Nightscout, данные идут, а модель он не назвал.
+   Отличать от null обязательно — это два разных состояния:
+     null      — записи нет вообще (устройства у человека нет / не заводил)
+     UNKNOWN   — запись есть, модель не указана
+     <id>      — запись есть, модель известна
+   Практическое следствие: пока модель неизвестна, мы не можем знать, нужен ли этой железке
+   мост или она вещает напрямую → единственный честный способ для неё — облако. */
+export const UNKNOWN_MODEL = 'unknown';
+
+export const isRecorded = (id: string | null): boolean => id != null;
+export const isModelKnown = (id: string | null): boolean => id != null && id !== UNKNOWN_MODEL;
+
 /* Реестр устройств (docs/CONNECT-UX.md §2a): жизненный цикл записи —
-   Записано (модель выбрана) → Настроено (путь подключения полный) → На связи/На паузе → Забыто.
+   Записано → Настроено (путь подключения полный) → На связи/На паузе → Забыто.
    Честно: «На связи/На паузе» тут не считаем — это про живое BLE-подключение, которого у нас
    пока физически нет (движок — скелет, см. project-bridge-contract). Как появятся реальные
    драйверы — состояние подтянется из snapshot.devices[], а не отсюда. */
-export type DeviceStatus = 'unset' | 'recorded' | 'configured';
+export type DeviceStatus = 'unset' | 'unknownModel' | 'needsBridge' | 'configured';
 
 export function deviceStatus(cat: 'sensor' | 'pump', cfg: DeviceConfig): DeviceStatus {
-  if (cat === 'pump') {
-    if (!cfg.pumpId) return 'unset';
-    return pumpNeedsBridge(pumpById(cfg.pumpId)) && !cfg.bridgePumpId ? 'recorded' : 'configured';
-  }
-  if (!cfg.sensorId) return 'unset';
-  return sensorById(cfg.sensorId)?.needsBridge && !cfg.bridgeSensorId ? 'recorded' : 'configured';
+  const id = cat === 'pump' ? cfg.pumpId : cfg.sensorId;
+  if (!isRecorded(id)) return 'unset';
+  if (!isModelKnown(id)) return 'unknownModel';
+  if (cat === 'pump') return pumpNeedsBridge(pumpById(id)) && !cfg.bridgePumpId ? 'needsBridge' : 'configured';
+  return sensorById(id)?.needsBridge && !cfg.bridgeSensorId ? 'needsBridge' : 'configured';
 }
 
 export function deviceStatusLabel(status: DeviceStatus): string {
-  return status === 'unset' ? 'настроить' : status === 'recorded' ? 'записано — нужен мост' : 'настроено';
+  switch (status) {
+    case 'unset': return 'настроить';
+    case 'unknownModel': return 'только через облако';
+    case 'needsBridge': return 'записано — нужен мост';
+    case 'configured': return 'настроено';
+  }
+}
+
+// Записать устройство, не зная модели (онбординг: облако отдаёт данные, модель — потом).
+export function recordUnknownDevice(cat: 'sensor' | 'pump'): void {
+  setDeviceConfig(cat === 'pump' ? { pumpId: UNKNOWN_MODEL } : { sensorId: UNKNOWN_MODEL });
 }
 
 // «Забыть устройство» (§2a, путь 10) — снять модель и её мост для категории.

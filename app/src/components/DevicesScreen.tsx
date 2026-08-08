@@ -95,6 +95,7 @@ export default function DevicesScreen({ isOpen, onClose }: { isOpen: boolean; on
           <DeviceSheet
             key={c} isOpen={cat === c} onClose={() => setCat(null)} cat={c}
             title={c === 'sensor' ? 'Сенсор (НМГ)' : c === 'pump' ? 'Ввод инсулина' : c === 'loop' ? 'Петля' : 'Глюкометр'}
+            
           />
         ))}
         <RequirementsCatalogSheet isOpen={reqOpen} onClose={() => setReqOpen(false)} />

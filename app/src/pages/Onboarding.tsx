@@ -1,0 +1,283 @@
+import { useState } from 'react';
+import { IonIcon, IonInput, IonButton } from '@ionic/react';
+import {
+  linkOutline, keyOutline, chevronForward, chevronBack, qrCodeOutline, cloudOutline,
+  listOutline, bluetoothOutline, downloadOutline, checkmarkCircle, hardwareChipOutline, flash,
+} from 'ionicons/icons';
+import BrandDrop from '../components/BrandDrop';
+import CatalogPicker from '../components/CatalogPicker';
+import { pumpItems, sensorItems, modelTitle } from '../components/modelItems';
+import RequirementsCatalogSheet from '../components/RequirementsCatalogSheet';
+import { probeCloud, type CloudProbe } from '../data/nightscout';
+import { addCloud } from '../data/clouds';
+import { refresh } from '../data/store';
+import { setDeviceConfig } from '../data/deviceConfig';
+import { setOnboarded } from '../data/onboarding';
+import { toUnits, unitLabel } from '../data/units';
+import { isNative } from '../data/appUpdate';
+
+const RELEASES_URL = 'https://github.com/iMironRU/SugarLife/releases';
+
+type Step = 'welcome' | 'ways' | 'cloud' | 'streams';
+
+/* Мастер первого запуска (docs/CONNECT-UX.md §7, путь 1) — discovery-first.
+   Не «сначала Nightscout», а «как будем доставать данные»: прямое подключение / QR /
+   облако / каталог моделей. В вебе прямого BLE нет физически — не изображаем поиск,
+   которого не существует, а честно ведём в нативное приложение. */
+export default function Onboarding() {
+  const [step, setStep] = useState<Step>('welcome');
+
+  // --- шаг «облако» ---
+  const [url, setUrl] = useState('');
+  const [token, setToken] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [probe, setProbe] = useState<CloudProbe | null>(null);
+
+  // --- шаг «потоки → устройства» ---
+  const [sensorId, setSensorId] = useState<string | null>(null);
+  const [pumpId, setPumpId] = useState<string | null>(null);
+  const [pick, setPick] = useState<null | 'sensor' | 'pump'>(null);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+
+  const skip = () => setOnboarded(true); // «настрою потом» — приложение с прочерками
+
+  const doProbe = async () => {
+    const u = url.trim(), t = token.trim();
+    if (!u) { setMsg('Введите адрес сайта'); return; }
+    setBusy(true); setMsg('Смотрю, что есть в облаке…'); setProbe(null);
+    try {
+      const p = await probeCloud(u, t);
+      setProbe(p);
+      if (!p.glucose && !p.pump) {
+        setMsg('Сервер ответил, но ни глюкозы, ни статуса помпы там нет. Проверьте адрес и токен.');
+      } else {
+        setMsg('');
+        setStep('streams');
+      }
+    } catch (e: any) {
+      setMsg('Не удалось подключиться: ' + (e?.message || e));
+    }
+    setBusy(false);
+  };
+
+  // Записываем облако + устройства под найденные потоки и открываем приложение.
+  const finish = () => {
+    addCloud({
+      kind: 'nightscout',
+      name: (() => { try { return new URL(url.trim()).host; } catch { return url.trim(); } })(),
+      url: url.trim(), token: token.trim(), enabled: true,
+      sourceGlucose: !!probe?.glucose && sensorId != null,
+      sourcePumpStatus: !!probe?.pump && pumpId != null,
+    });
+    setDeviceConfig({
+      ...(sensorId ? { sensorId } : {}),
+      ...(pumpId ? { pumpId } : {}),
+    });
+    setOnboarded(true);
+    refresh();
+  };
+
+  // ---------- welcome ----------
+  if (step === 'welcome') {
+    return (
+      <div className="connect">
+        <BrandDrop size={92} />
+        <h1 className="connect-title">SladkaЯ жизнь</h1>
+        <p className="connect-desc">
+          Подключим ваши устройства — сенсор и помпу. Напрямую, если приложение видит их рядом,
+          или через облако, если данные уже уходят в Nightscout.
+        </p>
+        <div className="connect-form">
+          <IonButton expand="block" className="connect-btn" onClick={() => setStep('ways')}>
+            <IonIcon icon={chevronForward} slot="start" />
+            Подключить устройство
+          </IonButton>
+          <button className="ob-skip" onClick={skip}>Уже настроено — просто открыть</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- ways: три способа ----------
+  if (step === 'ways') {
+    return (
+      <div className="connect ob-page">
+        <div className="ob-head">
+          <button className="sheet-close" onClick={() => setStep('welcome')} aria-label="Назад">
+            <IonIcon icon={chevronBack} />
+          </button>
+          <div>
+            <div className="sheet-title">Как подключим</div>
+            <div className="sheet-subtitle">Выберите, откуда брать данные</div>
+          </div>
+        </div>
+
+        {/* Прямое подключение: в вебе BLE нет — не изображаем поиск, ведём в приложение */}
+        <div className="list">
+          {isNative ? (
+            <button className="list-row" onClick={() => setCatalogOpen(true)}>
+              <IonIcon icon={bluetoothOutline} className="list-ico" />
+              <span className="pick-main">
+                <span className="list-title">Найти рядом</span>
+                <span className="pick-sub">поиск устройств по Bluetooth</span>
+              </span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </button>
+          ) : (
+            <a className="list-row" href={RELEASES_URL} target="_blank" rel="noreferrer">
+              <IonIcon icon={downloadOutline} className="list-ico" />
+              <span className="pick-main">
+                <span className="list-title">Найти рядом — в приложении</span>
+                <span className="pick-sub">браузер не умеет Bluetooth · скачать сборку</span>
+              </span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </a>
+          )}
+
+          <button className="list-row" onClick={() => setStep('cloud')}>
+            <IonIcon icon={cloudOutline} className="list-ico" />
+            <span className="pick-main">
+              <span className="list-title">Через облако</span>
+              <span className="pick-sub">данные из Nightscout — работает уже сейчас</span>
+            </span>
+            <IonIcon icon={chevronForward} className="list-chev" />
+          </button>
+
+          <button className="list-row" onClick={() => setCatalogOpen(true)}>
+            <IonIcon icon={listOutline} className="list-ico" />
+            <span className="pick-main">
+              <span className="list-title">Выбрать модель</span>
+              <span className="pick-sub">скажем, что нужно для вашей модели</span>
+            </span>
+            <IonIcon icon={chevronForward} className="list-chev" />
+          </button>
+
+          <div className="list-row" style={{ cursor: 'default', opacity: 0.55 }}>
+            <IonIcon icon={qrCodeOutline} className="list-ico" />
+            <span className="pick-main">
+              <span className="list-title">По QR-коду</span>
+              <span className="pick-sub">для новых сенсоров · сканер камеры в разработке</span>
+            </span>
+          </div>
+        </div>
+
+        <button className="ob-skip" onClick={skip}>Пропустить — настрою потом</button>
+        <RequirementsCatalogSheet isOpen={catalogOpen} onClose={() => setCatalogOpen(false)} />
+      </div>
+    );
+  }
+
+  // ---------- cloud: адрес → разведка ----------
+  if (step === 'cloud') {
+    return (
+      <div className="connect ob-page">
+        <div className="ob-head">
+          <button className="sheet-close" onClick={() => setStep('ways')} aria-label="Назад">
+            <IonIcon icon={chevronBack} />
+          </button>
+          <div>
+            <div className="sheet-title">Через облако</div>
+            <div className="sheet-subtitle">Nightscout</div>
+          </div>
+        </div>
+
+        <p className="connect-desc">
+          Посмотрим, какие данные там реально есть, и подключим только их. Только чтение.
+          Адрес и токен хранятся на этом устройстве.
+        </p>
+
+        <div className="connect-form">
+          <div className="field">
+            <IonIcon icon={linkOutline} className="field-ico" />
+            <IonInput value={url} onIonInput={(e) => setUrl(e.detail.value ?? '')} placeholder="https://ваш-сайт.nightscout…" inputmode="url" autocapitalize="off" />
+          </div>
+          <div className="field">
+            <IonIcon icon={keyOutline} className="field-ico" />
+            <IonInput value={token} onIonInput={(e) => setToken(e.detail.value ?? '')} placeholder="токен доступа (если требуется)" autocapitalize="off" />
+          </div>
+          <IonButton expand="block" className="connect-btn" onClick={doProbe} disabled={busy}>
+            <IonIcon icon={cloudOutline} slot="start" />
+            {busy ? 'Смотрю…' : 'Посмотреть, что есть'}
+          </IonButton>
+          <div className="connect-msg">{msg}</div>
+        </div>
+
+        <button className="ob-skip" onClick={skip}>Пропустить — настрою потом</button>
+      </div>
+    );
+  }
+
+  // ---------- streams: что нашли → чьё это ----------
+  const glucoseAt = probe?.glucose?.at ? new Date(probe.glucose.at).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }) : null;
+  const pumpBits = [
+    probe?.pump?.reservoir != null ? Math.round(probe.pump.reservoir) + ' ед' : null,
+    probe?.pump?.battery != null ? probe.pump.battery + '%' : null,
+  ].filter(Boolean).join(' · ');
+
+  return (
+    <div className="connect ob-page">
+      <div className="ob-head">
+        <button className="sheet-close" onClick={() => setStep('cloud')} aria-label="Назад">
+          <IonIcon icon={chevronBack} />
+        </button>
+        <div>
+          <div className="sheet-title">Что нашли</div>
+          <div className="sheet-subtitle">Осталось сказать, чьи это данные</div>
+        </div>
+      </div>
+
+      <div className="list">
+        {probe?.glucose && (
+          <button className="list-row" onClick={() => setPick('sensor')}>
+            <IonIcon icon={hardwareChipOutline} className="list-ico" />
+            <span className="pick-main">
+              <span className="list-title">Глюкоза · {toUnits(probe.glucose.mmol)} {unitLabel()}</span>
+              <span className="pick-sub">
+                {glucoseAt ? `последнее в ${glucoseAt} · ` : ''}
+                {modelTitle('sensor', sensorId) ?? 'какой у вас сенсор?'}
+              </span>
+            </span>
+            {sensorId ? <IonIcon icon={checkmarkCircle} className="list-chev" /> : <IonIcon icon={chevronForward} className="list-chev" />}
+          </button>
+        )}
+        {probe?.pump && (
+          <button className="list-row" onClick={() => setPick('pump')}>
+            <IonIcon icon={flash} className="list-ico" />
+            <span className="pick-main">
+              <span className="list-title">Статус помпы{pumpBits ? ' · ' + pumpBits : ''}</span>
+              <span className="pick-sub">
+                {modelTitle('pump', pumpId) ?? 'какая у вас помпа?'}
+              </span>
+            </span>
+            {pumpId ? <IonIcon icon={checkmarkCircle} className="list-chev" /> : <IonIcon icon={chevronForward} className="list-chev" />}
+          </button>
+        )}
+      </div>
+
+      <div className="sheet-note">
+        Модель нужна, чтобы позже перейти с облака на прямое чтение — мы должны знать, нужен ли
+        железке мост. Не знаете — так и скажите, данные всё равно пойдут.
+      </div>
+
+      <div className="connect-form">
+        <IonButton expand="block" className="connect-btn" onClick={finish} disabled={!sensorId && !pumpId}>
+          <IonIcon icon={checkmarkCircle} slot="start" />
+          Готово
+        </IonButton>
+      </div>
+      <button className="ob-skip" onClick={skip}>Пропустить — настрою потом</button>
+
+      <CatalogPicker
+        isOpen={pick === 'sensor'} onClose={() => setPick(null)}
+        title="Какой у вас сенсор?" subtitle="Справочник моделей"
+        items={sensorItems} selectedId={sensorId} onSelect={setSensorId} currentLabel="только актуальные"
+      />
+      <CatalogPicker
+        isOpen={pick === 'pump'} onClose={() => setPick(null)}
+        title="Какая у вас помпа?" subtitle="Справочник моделей"
+        items={pumpItems} selectedId={pumpId} onSelect={setPumpId} currentLabel="только актуальные"
+      />
+    </div>
+  );
+}

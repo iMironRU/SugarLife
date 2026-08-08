@@ -6,7 +6,8 @@ import {
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
-import { getCfg, setCfg } from '../data/nightscout';
+import { setCfg } from '../data/nightscout';
+import { useClouds } from '../data/clouds';
 import { stats } from '../data/agp';
 import { detectTherapy, therapyLabel } from '../data/therapy';
 import { fmt, toUnits, unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '../data/units';
@@ -16,10 +17,10 @@ import { useTheme } from '../theme/useTheme';
 import { reportContentScroll } from '../data/panel';
 import { APP_VERSION, APP_BUILD, isNative, platform, checkWebUpdate, checkOtaUpdate, checkNativeUpdate, openApkDownload } from '../data/appUpdate';
 import { useCloseOnLeave } from '../data/nav';
-import NightscoutModal from '../components/NightscoutModal';
 import UnitsModal from '../components/UnitsModal';
 import CarbUnitsModal from '../components/CarbUnitsModal';
 import DevicesScreen from '../components/DevicesScreen';
+import ServicesScreen from '../components/ServicesScreen';
 
 const DASH = '—';
 
@@ -27,7 +28,7 @@ export default function Profile() {
   const { status, data } = useStore();
   const { theme, setTheme } = useTheme();
   const unit = useUnit();
-  const [nsOpen, setNsOpen] = useState(false);
+  const [servicesOpen, setServicesOpen] = useState(false);
   const [unitsOpen, setUnitsOpen] = useState(false);
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
   const carbUnit = useCarbUnit();
@@ -38,13 +39,15 @@ export default function Profile() {
   const [updating, setUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
-  useCloseOnLeave(4, () => setNsOpen(false), () => setUnitsOpen(false), () => setCarbUnitsOpen(false), () => setDevicesOpen(false)); // «Профиль» — закрыть модалки при уходе
+  useCloseOnLeave(4, () => setServicesOpen(false), () => setUnitsOpen(false), () => setCarbUnitsOpen(false), () => setDevicesOpen(false)); // «Профиль» — закрыть модалки при уходе
 
   useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
 
-  const cfg = getCfg();
-  const nsValue = !cfg || !cfg.enabled ? 'выкл'
-    : status === 'ok' ? 'подключено'
+  const clouds = useClouds();
+  const enabledClouds = clouds.filter((c) => c.enabled);
+  const cloudsValue = clouds.length === 0 ? 'нет облаков'
+    : enabledClouds.length === 0 ? 'выкл'
+    : status === 'ok' ? (enabledClouds.length > 1 ? `${enabledClouds.length} подключено` : 'подключено')
     : status === 'loading' ? 'подключение…'
     : (status === 'error' || status === 'stale') ? 'нет связи' : DASH;
 
@@ -176,10 +179,10 @@ export default function Profile() {
               настройками (URL/токен) и статусом (доступность/связь) вместо сигнала/батареи */}
           <div className="section-label sec">Способы / Сервисы</div>
           <div className="list">
-            <button className="list-row" onClick={() => setNsOpen(true)}>
+            <button className="list-row" onClick={() => setServicesOpen(true)}>
               <IonIcon icon={cloudOutline} className="list-ico" />
-              <span className="list-title">Nightscout</span>
-              <span className="list-value">{nsValue}</span>
+              <span className="list-title">Облака</span>
+              <span className="list-value">{cloudsValue}</span>
               <IonIcon icon={chevronForward} className="list-chev" />
             </button>
           </div>
@@ -236,7 +239,7 @@ export default function Profile() {
           <button className="logout" onClick={reset}>Сбросить настройки</button>
         </div>
 
-        <NightscoutModal isOpen={nsOpen} onClose={() => setNsOpen(false)} />
+        <ServicesScreen isOpen={servicesOpen} onClose={() => setServicesOpen(false)} />
         <UnitsModal isOpen={unitsOpen} onClose={() => setUnitsOpen(false)} />
         <CarbUnitsModal isOpen={carbUnitsOpen} onClose={() => setCarbUnitsOpen(false)} />
         <DevicesScreen isOpen={devicesOpen} onClose={() => setDevicesOpen(false)} />

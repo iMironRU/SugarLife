@@ -44,13 +44,38 @@ ion-content::part(scroll)::-webkit-scrollbar { width: 0; height: 0; }
 .connect-form { width: 100%; max-width: 360px; margin-top: 8px; }
 .connect-msg { min-height: 18px; font-size: 13px; color: var(--color-neutral-300); margin-top: 12px; }
 
+/* Онбординг: шаги мастера — не по центру, а сверху (списки способов длиннее приветствия) */
+.connect.ob-page {
+  justify-content: flex-start; text-align: left; gap: 12px;
+  padding: max(28px, env(safe-area-inset-top)) 20px 28px; overflow-y: auto;
+}
+.ob-page .list, .ob-page .connect-form, .ob-page .sheet-note { width: 100%; max-width: 420px; }
+.ob-page .connect-desc { max-width: 420px; }
+.ob-head { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 420px; }
+.ob-skip {
+  background: none; border: 0; color: var(--color-neutral-400); font-size: 13px;
+  padding: 12px; margin-top: 4px; cursor: pointer; text-decoration: underline;
+}
+/* ссылка-строка в списке способов ведёт себя как кнопка-строка */
+.ob-page a.list-row { text-decoration: none; color: inherit; }
+/* в мастере подпись объясняет выбор — она должна дочитываться, а не обрезаться */
+.ob-page .pick-sub { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
+.ob-page .list-row { align-items: flex-start; padding-top: 12px; padding-bottom: 12px; }
+.ob-page .list-row .list-ico, .ob-page .list-row .list-chev { margin-top: 2px; }
+
 /* Экраны */
 /* верхний safe-area: контент не под статус-баром/островом (iOS standalone/нативка) */
 /* верхний safe-area держит общая панель (HeroPanel), поэтому экраны его НЕ добавляют */
+/* Без искусственного запаса прокрутки. Панель живёт НАД областью прокрутки, поэтому
+   каждый прокрученный пиксель уводит контент вверх, под панель. Добавлять запас там,
+   где контент и так помещается, значит прятать этот контент ни за чем — панель
+   сворачивается только когда прокручивать действительно есть что.
+   Чтобы сворачивать и на коротких экранах, панель должна поглощать жест сама
+   (липкая внутри прокрутки) — см. docs/, это отдельная переделка. */
 .screen { padding: 8px 20px 24px; }
 
 /* ===== Общая верхняя панель: НМГ | круг | Помпа — живёт на ВСЕХ экранах =====
-   Три состояния плавно перетекают (0.22s):
+   Три состояния плавно перетекают (--hp-dur на .hero-panel — один тайминг на все части):
    .is-full (Сегодня) → .is-compact (прочие) → .is-line (прочие + прокрутка). */
 /* Один фон на всё приложение (панель + все экраны) — Ionic-палитра тянет свой
    чёрный --ion-background-color, поэтому единый цвет задаём явно из --color-bg. */
@@ -84,14 +109,36 @@ ion-content { --background: var(--color-bg); }
 .tab.on { color: var(--color-accent); }
 
 .hero-panel {
+  /* один тайминг на все части панели — иначе они разъезжаются во времени и
+     переход читается как несколько отдельных рывков вместо одного движения */
+  --hp-dur: .28s;
+  --hp-ease: cubic-bezier(.3,.9,.3,1);
   flex-shrink: 0; background: transparent;
   padding: calc(env(safe-area-inset-top, 0px) + 10px) 20px 0;
-  transition: padding-top .22s cubic-bezier(.3,.9,.3,1);
+  transition: padding-top var(--hp-dur) var(--hp-ease);
 }
+/* Размеры текста внутри панели тоже меняются между состояниями — без переходов
+   рамка ехала плавно, а надписи внутри прыгали. */
+.hp-ico, .hp-ico ion-icon, .hp-name, .hp-arrow, .hp-iob,
+.hp-batt-item, .hp-batt-item ion-icon {
+  transition: font-size var(--hp-dur) var(--hp-ease);
+}
+.hp-val { transition: font-size var(--hp-dur) var(--hp-ease), margin-top var(--hp-dur) var(--hp-ease); }
 .hero-panel.is-compact { padding-top: calc(env(safe-area-inset-top, 0px) + 8px); }
 .hero-panel.is-line { padding-top: calc(env(safe-area-inset-top, 0px) + 6px); }
 
-.hp-sync { display: flex; justify-content: space-between; align-items: center; padding: 0 0 14px; }
+/* Статус связи + заряды — ВСЕГДА одной строкой, в любом состоянии панели.
+   Не исчезает при сворачивании: это то, что нужно видеть постоянно. */
+.hp-status {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; padding: 0 0 10px; min-width: 0;
+  transition: padding-bottom var(--hp-dur) var(--hp-ease);
+}
+.hp-status .hp-synctext { min-width: 0; font-size: 11px; gap: 5px; }
+.hp-status .hp-batteries { gap: 9px; }
+/* связь ужимается первой — заряды короткие и должны остаться целыми */
+.hp-status .hp-synctext > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hp-status .hp-batteries { flex-shrink: 0; }
 .hp-synctext { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-400); min-width: 0; }
 .hp-synctext .sync-ico { font-size: 13px; flex-shrink: 0; }
 .hp-synctext .sync-reading { color: var(--color-neutral-500); white-space: nowrap; }
@@ -101,14 +148,13 @@ ion-content { --background: var(--color-bg); }
 
 /* полоса зарядов устройств над панелью — расширяемо (помпа/телефон/мост/…),
    рисуем только то, что реально известно. Скрыта в тонкой строке (line). */
-.hp-batteries { display: flex; justify-content: center; gap: 14px; padding-bottom: 8px; }
-.is-line .hp-batteries { display: none; }
-.hp-batt-item { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; }
-.hp-batt-item ion-icon { font-size: 15px; color: currentColor; }
-.is-compact .hp-batt-item { font-size: 10px; }
-.is-compact .hp-batt-item ion-icon { font-size: 13px; }
+.hp-batteries { display: flex; justify-content: center; gap: 14px; }
+/* Размер один на все состояния: строка статуса больше не перестраивается.
+   Компактно намеренно — связь и три заряда должны уместиться даже на 320px. */
+.hp-batt-item { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; }
+.hp-batt-item ion-icon { font-size: 13px; color: currentColor; }
 
-.hp-row { position: relative; height: 150px; transition: height .22s cubic-bezier(.3,.9,.3,1); }
+.hp-row { position: relative; height: 150px; transition: height var(--hp-dur) var(--hp-ease); }
 .is-compact .hp-row { height: 92px; }
 .is-line .hp-row { height: 54px; }
 
@@ -117,7 +163,7 @@ ion-content { --background: var(--color-bg); }
   display: flex; border-radius: 20px; overflow: hidden;
   border: 1.5px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 14%, transparent), color-mix(in srgb, var(--color-accent) 4%, transparent));
-  transition: height .22s cubic-bezier(.3,.9,.3,1), top .22s cubic-bezier(.3,.9,.3,1);
+  transition: height var(--hp-dur) var(--hp-ease), top var(--hp-dur) var(--hp-ease);
 }
 .is-compact .hp-rect { top: 7px; height: 78px; }
 .is-line .hp-rect { top: 4px; height: 46px; }
@@ -134,7 +180,8 @@ ion-content { --background: var(--color-bg); }
 .is-line .hp-wing-l { padding: 0 8px 0 12px; }
 .is-line .hp-wing-r { padding: 0 12px 0 8px; }
 .is-line .hp-name { flex-shrink: 0; }
-.is-line .live-dot { display: none; }
+.live-dot { transition: opacity var(--hp-dur) var(--hp-ease), width var(--hp-dur) var(--hp-ease); }
+.is-line .live-dot { opacity: 0; width: 0; }
 
 .hp-head, .hp-name, .hp-sub, .hp-val { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hp-head { display: flex; align-items: center; gap: 5px; }
@@ -150,12 +197,20 @@ ion-content { --background: var(--color-bg); }
 .is-compact .hp-val { font-size: 14px; }
 .is-line .hp-val { font-size: 12px; margin-top: 0; }
 /* подписи-детали (обновлено / резервуар / статус) — только в полном режиме */
-.hp-sub { display: block; font-size: 10px; color: var(--color-neutral-400); line-height: 1.4; }
-.is-compact .hp-sub, .is-line .hp-sub { display: none; }
+.hp-sub {
+  display: block; font-size: 10px; color: var(--color-neutral-400); line-height: 1.4;
+  max-height: 16px; overflow: hidden;
+  transition: max-height var(--hp-dur) var(--hp-ease), opacity var(--hp-dur) var(--hp-ease),
+              max-width var(--hp-dur) var(--hp-ease);
+}
+/* В «строке» крыло становится горизонтальным, поэтому свёрнутую подпись надо убрать
+   и по ширине: max-height её только сплющивает, место в ряду она продолжает занимать
+   (в отличие от display:none) — иначе «НМГ день 6» ужимается до «Н… де…». */
+.is-compact .hp-sub, .is-line .hp-sub { max-height: 0; opacity: 0; max-width: 0; margin: 0; }
 /* часики: значение из кеша, идёт обновление */
 .hp-stale { font-size: 10px; vertical-align: -1px; margin-left: 3px; opacity: 0.55; color: currentColor; }
 
-.hp-gap { flex-shrink: 0; width: 146px; transition: width .22s cubic-bezier(.3,.9,.3,1); }
+.hp-gap { flex-shrink: 0; width: 146px; transition: width var(--hp-dur) var(--hp-ease); }
 .is-compact .hp-gap { width: 96px; }
 .is-line .hp-gap { width: 58px; }
 
@@ -166,36 +221,39 @@ ion-content { --background: var(--color-bg); }
   box-shadow: 0 0 0 8px var(--color-bg), 0 0 22px color-mix(in srgb, var(--color-accent) 22%, transparent), inset 0 0 30px color-mix(in srgb, var(--color-accent) 16%, transparent);
   background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--color-accent) 14%, var(--color-bg)), var(--color-bg) 74%);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  transition: width .22s cubic-bezier(.3,.9,.3,1), height .22s cubic-bezier(.3,.9,.3,1), box-shadow .16s;
+  transition: width var(--hp-dur) var(--hp-ease), height var(--hp-dur) var(--hp-ease), box-shadow .16s;
 }
 .is-compact .hp-circle { width: 92px; height: 92px; }
 .is-line .hp-circle { width: 54px; height: 54px; }
 .hp-circle .circle-spark { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 .hp-circle-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
 .hp-circle-val { display: flex; align-items: center; gap: 6px; }
-.hp-value { font-size: 44px; font-weight: 600; letter-spacing: -.02em; line-height: 1; color: var(--color-text); transition: font-size .22s cubic-bezier(.3,.9,.3,1); }
+.hp-value { font-size: 44px; font-weight: 600; letter-spacing: -.02em; line-height: 1; color: var(--color-text); transition: font-size var(--hp-dur) var(--hp-ease); }
 .is-compact .hp-value { font-size: 27px; }
 .is-line .hp-value { font-size: 17px; }
 .hp-arrow { font-size: 22px; color: var(--c-glu); font-weight: 700; }
 .is-compact .hp-arrow { font-size: 15px; }
 .is-line .hp-arrow { font-size: 11px; }
-.hp-unit { font-size: 12px; color: var(--color-neutral-300); margin-top: 4px; }
+.hp-unit {
+  font-size: 12px; color: var(--color-neutral-300); margin-top: 4px;
+  max-height: 18px; overflow: hidden;
+  transition: font-size var(--hp-dur) var(--hp-ease), max-height var(--hp-dur) var(--hp-ease),
+              opacity var(--hp-dur) var(--hp-ease), margin-top var(--hp-dur) var(--hp-ease);
+}
 .is-compact .hp-unit { font-size: 9px; }
-.is-line .hp-unit { display: none; }
-.hp-ago { font-size: 10px; color: var(--color-neutral-400); margin-top: 5px; }
-.is-compact .hp-ago, .is-line .hp-ago { display: none; }
+.is-line .hp-unit { max-height: 0; opacity: 0; margin-top: 0; }
+.hp-ago {
+  font-size: 10px; color: var(--color-neutral-400); margin-top: 5px;
+  max-height: 16px; overflow: hidden;
+  transition: max-height var(--hp-dur) var(--hp-ease), opacity var(--hp-dur) var(--hp-ease), margin-top var(--hp-dur) var(--hp-ease);
+}
+.is-compact .hp-ago, .is-line .hp-ago { max-height: 0; opacity: 0; margin-top: 0; }
 /* активный инсулин в круге — цветом инсулина; в compact мельче, в line скрыт */
 .hp-iob { font-size: 11px; font-weight: 600; color: var(--c-ins); margin-top: 4px; }
 .is-compact .hp-iob { font-size: 10px; margin-top: 2px; }
 .is-line .hp-iob { display: none; }
 .sync { font-size: 12px; color: var(--color-neutral-400); }
 .heart { color: var(--c-danger); }
-.theme-btn {
-  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
-  border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
-  color: var(--color-neutral-300); cursor: pointer; font-size: 15px;
-}
-
 /* Верхний блок: три кнопки — НМГ | круг | Помпа (по макету) */
 .hero { position: relative; height: 150px; margin-top: 4px; }
 .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-glu); box-shadow: 0 0 6px var(--c-glu); flex-shrink: 0; }
@@ -392,11 +450,15 @@ ion-content { --background: var(--color-bg); }
 .sheet::part(scroll) { padding: 6px 18px 26px; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 0 4px; }
 .sheet-title { font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
+/* 44px — минимальный удобный размер касания (рекомендация iOS/Android). Сама иконка
+   крупнее пропорционально: раньше в круге 36px сидел значок ~16px и терялся. */
 .sheet-close {
-  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
   border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
-  color: var(--color-neutral-300); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--color-neutral-200); cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
+.sheet-close ion-icon { font-size: 24px; }
+.sheet-close:active { background: var(--color-neutral-800); }
 .sheet-desc { font-size: 13px; color: var(--color-neutral-400); line-height: 1.5; margin: 8px 0 16px; }
 .sheet-subtitle { font-size: 11px; color: var(--color-neutral-400); margin-top: 3px; }
 

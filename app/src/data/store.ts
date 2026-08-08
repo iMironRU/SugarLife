@@ -1,8 +1,14 @@
-/* Стор живых данных Nightscout: initial по REST → живые апдейты по Socket.IO,
-   поллинг (REST) остаётся страховкой на случай обрыва сокета/CORS.
-   Кэш в localStorage (офлайн). Без конфига — данных нет, экраны показывают демо. */
+/* Стор живых данных: initial по REST → живые апдейты по Socket.IO, поллинг (REST) —
+   страховка на случай обрыва сокета/CORS. Кэш в localStorage (офлайн).
+   Несколько облаков (data/clouds.ts) — данные сливаются честно, без выдумывания:
+   глюкоза — объединение всех источников с sourceGlucose (дедуп по времени, это же
+   схлопывает дублирующие показания от двух зеркал одного Nightscout); статус помпы —
+   от первого источника с sourcePumpStatus, у которого он реально есть; лечение —
+   объединение всех источников (аддитивно, дедуп по времени+типу). Без конфига —
+   данных нет, экраны показывают демо. */
 import { useSyncExternalStore } from 'react';
-import { getCfg, loadAll, checkWrite, type NsData, type Entry, type Treatment, type Device } from './nightscout';
+import { loadAll, checkWrite, type NsData, type Entry, type Treatment, type Device } from './nightscout';
+import { getClouds, type CloudConfig } from './clouds';
 import { connectSocket, disconnectSocket, type SocketData } from './nsSocket';
 import { putEntries, putTreatments } from './db';
 import { backfill, backfillTreatments } from './backfill';
@@ -15,16 +21,17 @@ export interface StoreState {
   data: (NsData & { latest: Entry | null; updatedAt: number }) | null;
   status: Status;
   error: string | null;
-  live: boolean; // сокет подключён
-  writable: boolean; // токен даёт право записи (еда/болюсы)
+  live: boolean; // хотя бы один сокет подключён
+  writable: boolean; // токен основного облака даёт право записи (еда/болюсы)
 }
 
 let state: StoreState = { data: null, status: 'idle', error: null, live: false, writable: false };
 const listeners = new Set<() => void>();
 let inflight = false;
 let started = false;
-let socketUrl: string | null = null;
-let writeCheckedToken: string | undefined | null = null; // null = ещё не проверяли
+const socketIds = new Set<string>();
+const liveByCloud = new Map<string, boolean>();
+let writeCheckedKey: string | undefined | null = null; // null = ещё не проверяли
 
 function emit() { for (const l of listeners) l(); }
 function set(patch: Partial<StoreState>) { state = { ...state, ...patch }; emit(); }
@@ -39,11 +46,15 @@ function saveCache() {
   try { localStorage.setItem(CACHE_KEY, JSON.stringify(state.data)); } catch { /* ignore */ }
 }
 
-// --- слияние дельт из сокета ---
-function mergeSocket(d: SocketData) {
-  const cur = state.data || { entries: [], device: null, profile: null, treatments: [], latest: null, updatedAt: 0 };
+function emptyData(): NsData & { latest: Entry | null; updatedAt: number } {
+  return { entries: [], device: null, profile: null, treatments: [], latest: null, updatedAt: 0 };
+}
+
+// --- слияние дельт из сокета конкретного облака ---
+function mergeSocket(cloud: CloudConfig, d: SocketData) {
+  const cur = state.data || emptyData();
   let entries = cur.entries;
-  if (d.entries && d.entries.length) {
+  if (cloud.sourceGlucose && d.entries && d.entries.length) {
     const map = new Map<number, Entry>(cur.entries.map((e) => [e.t, e]));
     for (const e of d.entries) map.set(e.t, e);
     entries = [...map.values()].sort((a, b) => a.t - b.t).slice(-288);
@@ -55,54 +66,85 @@ function mergeSocket(d: SocketData) {
     for (const x of d.treatments) map.set(key(x), x);
     treatments = [...map.values()].sort((a, b) => a.t - b.t).slice(-200);
   }
-  const device: Device | null = d.device !== undefined ? d.device : cur.device;
+  const device: Device | null = (cloud.sourcePumpStatus && d.device !== undefined) ? d.device : cur.device;
   const latest = entries.length ? entries[entries.length - 1] : cur.latest;
   set({ data: { ...cur, entries, treatments, device, latest, updatedAt: Date.now() }, status: 'ok', error: null });
   saveCache();
-  if (d.entries && d.entries.length) putEntries(d.entries);
-  if (d.treatments && d.treatments.length) putTreatments(d.treatments); // live-лечение в БД
+  if (cloud.sourceGlucose && d.entries && d.entries.length) putEntries(d.entries);
+  if (d.treatments && d.treatments.length) putTreatments(d.treatments);
 }
 
-// подключить/переподключить/отключить сокет по конфигу
-function ensureSocket(cfg: ReturnType<typeof getCfg>) {
-  const want = cfg && cfg.enabled && cfg.url ? cfg.url : null;
-  if (want === socketUrl) return;
-  disconnectSocket();
-  socketUrl = want;
-  set({ live: false });
-  if (want) {
-    connectSocket(want, cfg!.token, mergeSocket, (connected) => set({ live: connected }));
+// подключить/переподключить/отключить сокеты по списку включённых облаков
+function ensureSockets(clouds: CloudConfig[]) {
+  const wantIds = new Set(clouds.map((c) => c.id));
+  for (const id of [...socketIds]) {
+    if (!wantIds.has(id)) { disconnectSocket(id); socketIds.delete(id); liveByCloud.delete(id); }
   }
+  for (const cloud of clouds) {
+    if (!socketIds.has(cloud.id)) {
+      socketIds.add(cloud.id);
+      connectSocket(cloud.id, cloud.url, cloud.token, (d) => mergeSocket(cloud, d), (connected) => {
+        liveByCloud.set(cloud.id, connected);
+        set({ live: [...liveByCloud.values()].some(Boolean) });
+      });
+    }
+  }
+  if (!clouds.length) set({ live: false });
 }
 
-// Проверка права записи только при смене токена/URL (не на каждый поллинг).
-function ensureWriteCheck(cfg: ReturnType<typeof getCfg>) {
-  const key = cfg && cfg.enabled && cfg.url ? (cfg.token || '') : undefined;
-  if (key === writeCheckedToken) return;
-  writeCheckedToken = key;
-  if (!key || !cfg) { set({ writable: false }); return; }
-  checkWrite(cfg.url, cfg.token).then((w) => {
-    if (writeCheckedToken === key) set({ writable: w });
-  }).catch(() => { if (writeCheckedToken === key) set({ writable: false }); });
+// Проверка права записи — пока только для основного (первого включённого) облака:
+// выгрузка (запись) в конкретное облако ещё не сделана, это отдельная задача.
+function ensureWriteCheck(primary: CloudConfig | null) {
+  const key = primary ? primary.id + '|' + (primary.token || '') : undefined;
+  if (key === writeCheckedKey) return;
+  writeCheckedKey = key;
+  if (!primary) { set({ writable: false }); return; }
+  checkWrite(primary.url, primary.token).then((w) => {
+    if (writeCheckedKey === key) set({ writable: w });
+  }).catch(() => { if (writeCheckedKey === key) set({ writable: false }); });
 }
 
 export async function refresh() {
-  const cfg = getCfg();
-  ensureSocket(cfg);
-  ensureWriteCheck(cfg);
+  const clouds = getClouds().filter((c) => c.enabled && c.url);
+  ensureSockets(clouds);
+  ensureWriteCheck(clouds[0] ?? null);
   if (inflight) return;
-  if (!cfg || !cfg.enabled || !cfg.url) { set({ status: 'off', error: null, writable: false }); return; }
+  if (!clouds.length) { set({ status: 'off', error: null, writable: false }); return; }
   inflight = true;
   if (!state.data) set({ status: 'loading' });
   try {
-    const res = await loadAll(cfg);
-    const entries = res.entries || [];
+    const settled = await Promise.allSettled(
+      clouds.map(async (cloud) => ({ cloud, data: await loadAll({ url: cloud.url, token: cloud.token, enabled: true }) })),
+    );
+    const oks = settled
+      .filter((r): r is PromiseFulfilledResult<{ cloud: CloudConfig; data: NsData }> => r.status === 'fulfilled')
+      .map((r) => r.value);
+    if (!oks.length) throw new Error('Все облака недоступны');
+
+    // глюкоза: источники с sourceGlucose, дедуп по времени показания
+    const glucoseSources = oks.filter((o) => o.cloud.sourceGlucose);
+    const entryMap = new Map<number, Entry>();
+    for (const o of glucoseSources) for (const e of o.data.entries) entryMap.set(e.t, e);
+    const entries = [...entryMap.values()].sort((a, b) => a.t - b.t);
     const latest = entries.length ? entries[entries.length - 1] : null;
-    set({ data: { ...res, entries, latest, updatedAt: Date.now() }, status: 'ok', error: null });
+
+    // статус помпы: первый источник с sourcePumpStatus, у которого реально есть данные
+    const device = oks.find((o) => o.cloud.sourcePumpStatus && o.data.device)?.data.device ?? null;
+
+    // профиль (СУИ/ЦД/цели): первый источник, у которого он есть
+    const profile = oks.find((o) => o.data.profile)?.data.profile ?? null;
+
+    // лечение: объединяем все источники, дедуп по времени+типу
+    const tKey = (t: Treatment) => t.t + '|' + t.type;
+    const tmap = new Map<string, Treatment>();
+    for (const o of oks) for (const t of o.data.treatments) tmap.set(tKey(t), t);
+    const treatments = [...tmap.values()].sort((a, b) => a.t - b.t);
+
+    set({ data: { entries, device, profile, treatments, latest, updatedAt: Date.now() }, status: 'ok', error: null });
     saveCache();
     putEntries(entries);
-    backfill(); // фоновая докачка истории глюкозы в БД
-    backfillTreatments(); // и истории лечения (для метрик за 30/90 дней)
+    backfill(); // фоновая докачка истории глюкозы в БД (пока только основное облако)
+    backfillTreatments(); // и истории лечения
   } catch (e: any) {
     set({ status: state.data ? 'stale' : 'error', error: String(e?.message || e) });
   } finally {

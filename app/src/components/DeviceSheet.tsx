@@ -1,51 +1,59 @@
 import { IonModal, IonContent, IonIcon } from '@ionic/react';
-import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, trashOutline } from 'ionicons/icons';
+import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, trashOutline, water } from 'ionicons/icons';
 import { useState } from 'react';
-import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice } from '../data/deviceConfig';
+import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '../data/deviceConfig';
 import { useSnapshot } from '../data/bridge';
 import { useStore } from '../data/store';
-import {
-  PUMPS, SENSORS, BRIDGES, pumpById, sensorById, bridgeById,
-  isCurrentPump, pumpBrand, pumpNeedsBridge,
-} from '../data/catalog';
-import CatalogPicker, { type PickerItem } from './CatalogPicker';
+import { useDeviceExtras } from '../data/deviceExtras';
+import { deviceAges, type Age } from '../data/treatmentStats';
+import { fmt } from '../data/units';
+import { pumpById, sensorById, bridgeById, pumpNeedsBridge, insulinById } from '../data/catalog';
+import CatalogPicker from './CatalogPicker';
+import { modelItems, bridgeItems, insulinItems } from './modelItems';
 import DeviceScanSheet from './DeviceScanSheet';
 
 export type DeviceCatKey = 'sensor' | 'pump' | 'meter' | 'loop';
 
-const pumpItems: PickerItem[] = PUMPS
-  .map((p) => ({ id: p.id, title: p.model, subtitle: pumpBrand(p), meta: p.reservoir || '', current: isCurrentPump(p) }))
-  .sort((a, b) => Number(b.current) - Number(a.current) || a.subtitle!.localeCompare(b.subtitle!) || a.title.localeCompare(b.title));
-const sensorItems: PickerItem[] = SENSORS
-  .map((s) => ({ id: s.id, title: s.name, subtitle: s.brand, meta: s.needsBridge ? 'нужен мост' : '', current: s.current }))
-  .sort((a, b) => Number(b.current) - Number(a.current) || a.title.localeCompare(b.title));
-const bridgeItems: PickerItem[] = BRIDGES.map((b) => ({ id: b.id, title: b.name, subtitle: b.forWhat, current: true }));
+const ageText = (a: Age) => (a.days >= 1 ? a.days + ' дн' : a.hours + ' ч');
 
-/* Общий каркас карточки устройства: вкладка «Устройство» (модель + путь подключения) и,
-   если у категории бывает посредник, вкладка «Мост» (трансмиттер/RileyLink). Реального
-   BLE ещё нет — честно: сейчас всё «через Nightscout», прямое подключение = заглушка. */
+/* ЕДИНАЯ карточка устройства (docs/CONNECT-UX.md §7): состояние + способ подключения
+   в одном месте. Сюда ведут все входы — и «Профиль → Устройства», и плитки на экранах
+   «НМГ» и «Инсулин». Раньше рядом жили отдельные SensorSheet/PumpSheet/LoopSheet, и в
+   PumpSheet был свой второй выбор модели помпы — теперь этого нет.
+   Вкладка «Мост» появляется, только если модель известна (иначе неизвестно, нужен ли он). */
 export default function DeviceSheet({ isOpen, onClose, cat, title }: {
   isOpen: boolean; onClose: () => void; cat: DeviceCatKey; title: string;
 }) {
   const cfg = useDeviceConfig();
-  const [tab, setTab] = useState<'device' | 'bridge'>('device');
-  const [pick, setPick] = useState<null | 'model' | 'bridge'>(null);
+  const { data } = useStore();
+  const extras = useDeviceExtras();
+  const [rawTab, setTab] = useState<'device' | 'bridge'>('device');
+  const [pick, setPick] = useState<null | 'model' | 'bridge' | 'insulin'>(null);
   const [scanOpen, setScanOpen] = useState(false);
 
   const hasModel = cat === 'sensor' || cat === 'pump';
-  const hasBridge = cat === 'sensor' || cat === 'pump';
+  // Модель не указана (§2b) — мы не знаем, нужен ли мост и вещает ли железка сама,
+  // поэтому ни «Мост», ни BLE не показываем: честно доступно только облако.
+  const modelId = cat === 'pump' ? cfg.pumpId : cat === 'sensor' ? cfg.sensorId : null;
+  const modelKnown = isModelKnown(modelId);
+  const recordedNoModel = hasModel && isRecorded(modelId) && !modelKnown;
+  const hasBridge = (cat === 'sensor' || cat === 'pump') && modelKnown;
+  // вкладки «Мост» может не быть (модель неизвестна) — тогда всегда показываем «Устройство»,
+  // иначе шторка осталась бы пустой
+  const tab = hasBridge ? rawTab : 'device';
 
   // реальное BLE-подключение показываем ТОЛЬКО когда мост действительно предлагает
   // драйвер для этой категории (прямой или через мост) — иначе секции нет вообще
   const snap = useSnapshot();
   const drivers = snap?.availableDrivers ?? [];
   const driverKind = (id: string) => drivers.find((d) => d.id === id)?.kind;
-  const hasBleDriver = hasModel && drivers.some((d) => d.kind === cat || (d.providesTransportFor ?? []).some((t) => driverKind(t) === cat));
+  const hasBleDriver = modelKnown && drivers.some((d) => d.kind === cat || (d.providesTransportFor ?? []).some((t) => driverKind(t) === cat));
 
   // выбранная модель
   const pump = cat === 'pump' ? pumpById(cfg.pumpId) : null;
   const sensor = cat === 'sensor' ? sensorById(cfg.sensorId) : null;
-  const modelName = cat === 'pump' ? pump?.model : cat === 'sensor' ? sensor?.name : null;
+  const modelName = recordedNoModel ? 'не указана'
+    : cat === 'pump' ? pump?.model : cat === 'sensor' ? sensor?.name : null;
 
   // выбранный мост
   const bridgeId = cat === 'pump' ? cfg.bridgePumpId : cat === 'sensor' ? cfg.bridgeSensorId : null;
@@ -56,26 +64,46 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
     ? (pumpNeedsBridge(pump) ? 'Эта помпа управляется по радио — нужен мост (RileyLink/OrangeLink).' : 'Старые Medtronic (Paradigm, 5xx/7xx) — по радио, требуют RileyLink/OrangeLink. Современные — напрямую/через аплоадер.')
     : (sensor?.needsBridge ? 'Этот сенсор не вещает BLE сам — нужен мост (MiaoMiao/Bubble).' : 'Libre 1 и старые сенсоры подключаются через мост (MiaoMiao/Bubble). Современные — напрямую.');
 
+  /* --- Состояние: то, что реально известно прямо сейчас (было в SensorSheet/PumpSheet) --- */
+  const dev = data?.device ?? null;
+  const ages = deviceAges(extras.events);
+  const insulin = insulinById(cfg.fastInsulinId);
+
+  type Row = { k: string; v: string };
+  const stateRows: Row[] = [];
+  if (cat === 'sensor' && ages.sensor) {
+    stateRows.push({ k: 'День', v: String(ages.sensor.days + 1) });
+    stateRows.push({ k: 'Носится', v: ageText(ages.sensor) });
+  }
+  if (cat === 'pump') {
+    if (dev?.status) stateRows.push({ k: 'Статус', v: dev.status });
+    if (dev?.reservoir != null) stateRows.push({ k: 'Резервуар', v: Math.round(dev.reservoir) + ' ед' });
+    if (dev?.pumpBattery != null) stateRows.push({ k: 'Батарея', v: dev.pumpBattery + '%' });
+    if (dev?.baseBasal != null) stateRows.push({ k: 'Базальная скорость', v: fmt(dev.baseBasal) + ' ед/ч' });
+    if (dev?.tempRate != null) stateRows.push({ k: 'Временный базал', v: fmt(dev.tempRate) + ' ед/ч' });
+    if (dev?.lastBolus != null) stateRows.push({ k: 'Последний болюс', v: fmt(dev.lastBolus) + ' ед' });
+  }
+  // расходники со сроками (§9) — пока только у помпы, из событий замен в Nightscout
+  const supplies = cat === 'pump'
+    ? ([['Канюля', ages.site], ['Резервуар', ages.reservoir], ['Батарея', ages.battery]] as [string, Age | null][])
+      .filter(([, a]) => !!a)
+    : [];
+
   const modelIcon = cat === 'pump' ? flash : hardwareChipOutline;
   const setModel = (id: string) => setDeviceConfig(cat === 'pump' ? { pumpId: id } : { sensorId: id });
   const setBridge = (id: string) => setDeviceConfig(cat === 'pump' ? { bridgePumpId: id } : { bridgeSensorId: id });
-  const modelItems = cat === 'pump' ? pumpItems : sensorItems;
+  const pickerItems = hasModel ? modelItems(cat as 'pump' | 'sensor') : [];
 
   // реестр (docs/CONNECT-UX.md §2a): статус записи — только для категорий с моделью
   const status = (cat === 'sensor' || cat === 'pump') ? deviceStatus(cat, cfg) : null;
 
-  // «Забираем через Nightscout» (§2b: удалённый способ — тот же принцип для помпы и сенсора,
-  // работает уже сегодня, не гипотеза). Честно: не переключатель — Nightscout-шим не умеет
-  // выключать отдельные потоки, поэтому просто показываем, что реально приходит.
-  const { data: storeData } = useStore();
-  const nsDev = storeData?.device ?? null;
+  // «Забираем через Nightscout» (§2b) — честная строка того, что реально приходит
   const nsFeed = cat === 'pump'
-    ? (nsDev?.reservoir != null || nsDev?.pumpBattery != null
-        ? [nsDev.reservoir != null ? Math.round(nsDev.reservoir) + ' ед' : null, nsDev.pumpBattery != null ? nsDev.pumpBattery + '%' : null].filter(Boolean).join(' · ')
-        : null)
-    : cat === 'sensor'
-    ? (storeData?.latest ? 'сахар и тренд' : null)
+    ? ([dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : null,
+        dev?.pumpBattery != null ? dev.pumpBattery + '%' : null].filter(Boolean).join(' · ') || null)
+    : cat === 'sensor' ? (data?.latest ? 'сахар и тренд' : null)
     : null;
+
   const onForget = () => {
     if (cat !== 'sensor' && cat !== 'pump') return;
     if (!window.confirm(`Забыть ${title.toLowerCase()}? Модель и мост нужно будет выбрать заново.`)) return;
@@ -103,6 +131,25 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
 
         {tab === 'device' && (
           <>
+            {/* Состояние — только то, что реально знаем; пустых строк не рисуем */}
+            {stateRows.length > 0 && (
+              <div className="basal-rows">
+                {stateRows.map((r) => (
+                  <div key={r.k} className="basal-row"><span>{r.k}</span><b>{r.v}</b></div>
+                ))}
+              </div>
+            )}
+            {supplies.length > 0 && (
+              <>
+                <div className="section-label sec">Расходники</div>
+                <div className="sensor-ages sensor-ages-solo">
+                  {supplies.map(([name, a]) => (
+                    <div key={name} className="age-pill"><span>{name}</span><b>{ageText(a!)}</b></div>
+                  ))}
+                </div>
+              </>
+            )}
+
             {hasModel ? (
               <div className="list">
                 <button className="list-row" onClick={() => setPick('model')}>
@@ -111,6 +158,14 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
                   <span className={'list-value' + (modelName ? '' : ' muted')}>{modelName || 'выбрать'}</span>
                   <IonIcon icon={chevronForward} className="list-chev" />
                 </button>
+                {cat === 'pump' && (
+                  <button className="list-row" onClick={() => setPick('insulin')}>
+                    <IonIcon icon={water} className="list-ico" />
+                    <span className="list-title">Инсулин</span>
+                    <span className={'list-value' + (insulin ? '' : ' muted')}>{insulin ? insulin.name : 'выбрать'}</span>
+                    <IonIcon icon={chevronForward} className="list-chev" />
+                  </button>
+                )}
                 <div className="list-row" style={{ cursor: 'default' }}>
                   <IonIcon icon={cloudOutline} className="list-ico" />
                   <span className="list-title">Через Nightscout</span>
@@ -128,12 +183,20 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
             )}
             {hasModel && (
               <div className="sheet-note">
+                {cat === 'pump' && 'В помпе один быстрый инсулин — он идёт и на базал, и на болюс. '}
                 Модель выше — для учёта, хранится только на этом устройстве. Nightscout — способ
                 получать данные удалённо: работает уже сейчас, даже без прямого моста, вместе с ним,
                 а не вместо.
               </div>
             )}
-            {hasModel && (
+            {recordedNoModel && (
+              <div className="sheet-note">
+                Модель не указана — поэтому доступно только облако. Мы не знаем, нужен ли этой
+                железке мост или она вещает сама. Укажите модель, когда захотите перейти
+                с Nightscout на прямое чтение — данные при этом не потеряются.
+              </div>
+            )}
+            {hasModel && !recordedNoModel && (
               hasBleDriver ? (
                 <div className="list" style={{ marginTop: 12 }}>
                   <button className="list-row" onClick={() => setScanOpen(true)}>
@@ -173,8 +236,17 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
           <CatalogPicker
             isOpen={pick === 'model'} onClose={() => setPick(null)}
             title={cat === 'pump' ? 'Выбор помпы' : 'Выбор сенсора'} subtitle="Справочник моделей"
-            items={modelItems} selectedId={cat === 'pump' ? cfg.pumpId : cfg.sensorId}
+            items={pickerItems} selectedId={cat === 'pump' ? cfg.pumpId : cfg.sensorId}
             onSelect={setModel} currentLabel="только актуальные"
+          />
+        )}
+        {cat === 'pump' && (
+          <CatalogPicker
+            isOpen={pick === 'insulin'} onClose={() => setPick(null)}
+            title="Выбор инсулина" subtitle="Быстрый инсулин для помпы"
+            items={insulinItems} selectedId={cfg.fastInsulinId}
+            onSelect={(id) => setDeviceConfig({ fastInsulinId: id })}
+            currentLabel="только актуальные быстрые"
           />
         )}
         {hasBridge && (

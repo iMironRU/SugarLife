@@ -34,6 +34,7 @@ export default defineConfig(({ command }) => ({
         globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
         cleanupOutdatedCaches: true,
         navigateFallbackDenylist: [/^\/api\//],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // основной бандл подрос за 2 MiB — поднимаем лимит прекэша
       },
     }),
   ],

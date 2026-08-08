@@ -4,14 +4,11 @@ import { flash, repeat, chevronForward } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '../data/store';
 import { useTreatments } from '../data/db';
-import { useDeviceExtras } from '../data/deviceExtras';
 import { detectTherapy } from '../data/therapy';
-import { deviceAges } from '../data/treatmentStats';
 import { fmt } from '../data/units';
 import { useCloseOnLeave } from '../data/nav';
 import InsulinTimeChart from '../components/InsulinTimeChart';
-import PumpSheet from '../components/PumpSheet';
-import LoopSheet from '../components/LoopSheet';
+import DeviceSheet from '../components/DeviceSheet';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
@@ -30,7 +27,6 @@ export default function Ins() {
   // Живьём из локальной БД (обновляется сокетом/бэкфиллом): раньше грузили один раз
   // на старте — новые болюсы в график не попадали, пока не перезапустишь приложение.
   const treatments = useTreatments(31 * 3600e3); // 24ч окна графика + запас на ступень базала
-  const ages = deviceAges(useDeviceExtras().events);
   const tempBasals = treatments.filter((t) => t.type === 'Temp Basal');
   const boluses = treatments.filter((t) => t.type !== 'Temp Basal' && (t.insulin ?? 0) > 0);
   const baseBasal = dev?.baseBasal ?? profile?.basal ?? null;
@@ -82,8 +78,9 @@ export default function Ins() {
           )}
         </div>
 
-        <PumpSheet isOpen={pumpOpen} onClose={() => setPumpOpen(false)} dev={dev} profile={profile} ages={ages} />
-        <LoopSheet isOpen={loopOpen} onClose={() => setLoopOpen(false)} />
+        {/* одна карточка устройства на всё приложение (§7) — та же, что в «Профиль → Устройства» */}
+        <DeviceSheet isOpen={pumpOpen} onClose={() => setPumpOpen(false)} cat="pump" title="Ввод инсулина" />
+        <DeviceSheet isOpen={loopOpen} onClose={() => setLoopOpen(false)} cat="loop" title="Петля" />
       </IonContent>
     </IonPage>
   );

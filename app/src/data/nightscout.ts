@@ -1,5 +1,6 @@
 /* Адаптер Nightscout (read-only). Порт из ваниль-версии.
    Ходит напрямую из браузера (у Nightscout по умолчанию CORS + роль readable). */
+import { primaryCloud, addCloud, updateCloud, setClouds } from './clouds';
 
 export interface NsConfig { url: string; token?: string; enabled: boolean }
 export interface Entry { t: number; mgdl: number; mmol: number; dir: string }
@@ -18,15 +19,22 @@ export interface Profile {
 }
 export interface Treatment { t: number; type: string; carbs: number | null; insulin: number | null; rate: number | null; duration: number | null }
 
-const CFG_KEY = 'sl.ns.cfg';
 export const MGDL_PER_MMOL = 18.0;
 
+// Шим для старых мест использования (одно облако). Реальный список — data/clouds.ts.
+// «Основное» облако — первое включённое, иначе первое в списке.
 export function getCfg(): NsConfig | null {
-  try { return JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); } catch { return null; }
+  const c = primaryCloud();
+  return c ? { url: c.url, token: c.token, enabled: c.enabled } : null;
 }
 export function setCfg(cfg: NsConfig | null) {
-  if (cfg) localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
-  else localStorage.removeItem(CFG_KEY);
+  if (!cfg) { setClouds([]); return; } // null исторически значил «забыть всё»
+  const primary = primaryCloud();
+  if (primary) updateCloud(primary.id, { url: cfg.url, token: cfg.token, enabled: cfg.enabled });
+  else addCloud({
+    kind: 'nightscout', name: (() => { try { return new URL(cfg.url).host || cfg.url; } catch { return cfg.url || 'Nightscout'; } })(),
+    url: cfg.url, token: cfg.token, enabled: cfg.enabled, sourceGlucose: true, sourcePumpStatus: true,
+  });
 }
 
 const ARROWS: Record<string, string> = {
@@ -72,6 +80,42 @@ export async function ping(base: string, token?: string) {
     ok: !!e, version: status?.version, name: status?.name,
     latestMgdl: e ? e.sgv : null, latestMmol: e ? +(e.sgv / MGDL_PER_MMOL).toFixed(1) : null,
     at: e ? (e.date || Date.parse(e.dateString)) : null,
+  };
+}
+
+/* Разведка облака (docs/CONNECT-UX.md §7): не «накидываем все галочки», а смотрим, какие
+   потоки там РЕАЛЬНО есть — так же, как скан смотрит, что реально в эфире. Каждый поток
+   либо найден с доказательством (последнее значение и когда), либо честно не найден. */
+export interface CloudProbe {
+  ok: boolean;               // сервер вообще ответил
+  version?: string;
+  glucose: { mmol: number; at: number | null } | null;
+  pump: { reservoir: number | null; battery: number | null; at: number | null } | null;
+  treatments: number;        // сколько записей лечения нашли (0 = потока нет)
+}
+
+export async function probeCloud(base: string, token?: string): Promise<CloudProbe> {
+  const [entries, status, devices, treatments] = await Promise.all([
+    getJSON(base, '/api/v1/entries.json?count=1', token).catch(() => null),
+    getJSON(base, '/api/v1/status.json', token).catch(() => null),
+    getJSON(base, '/api/v1/devicestatus.json?count=1', token).catch(() => null),
+    getJSON(base, '/api/v1/treatments.json?count=1', token).catch(() => null),
+  ]);
+  if (entries == null && status == null && devices == null && treatments == null) {
+    throw new Error('Сервер не ответил');
+  }
+
+  const e = Array.isArray(entries) ? entries.find((x: any) => x && x.sgv != null) : null;
+  const dev = normDeviceDoc(Array.isArray(devices) ? devices[0] : null);
+  // помпа считается найденной, только если есть хоть один её собственный показатель
+  const pumpFound = dev && (dev.reservoir != null || dev.pumpBattery != null || dev.status != null);
+
+  return {
+    ok: true,
+    version: status?.version,
+    glucose: e ? { mmol: e.sgv / MGDL_PER_MMOL, at: e.date || Date.parse(e.dateString) || null } : null,
+    pump: pumpFound ? { reservoir: dev!.reservoir, battery: dev!.pumpBattery, at: dev!.at } : null,
+    treatments: Array.isArray(treatments) ? treatments.length : 0,
   };
 }
 

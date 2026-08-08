@@ -1,5 +1,6 @@
 /* Реалтайм Nightscout через Socket.IO. Слушает событие dataUpdate и отдаёт
-   нормализованные дельты. Профиль по сокету не приходит — берётся из REST. */
+   нормализованные дельты. Профиль по сокету не приходит — берётся из REST.
+   Несколько облаков — несколько сокетов одновременно, ключ id — это CloudConfig.id. */
 import { io, type Socket } from 'socket.io-client';
 import { normSgv, normDeviceDoc, normTreatment, type Entry, type Device, type Treatment } from './nightscout';
 
@@ -10,25 +11,27 @@ export interface SocketData {
   delta: boolean;
 }
 
-let socket: Socket | null = null;
+const sockets = new Map<string, Socket>();
 
 export function connectSocket(
+  id: string,
   base: string,
   token: string | undefined,
   onData: (d: SocketData) => void,
   onStatus?: (connected: boolean) => void,
 ) {
-  disconnectSocket();
-  socket = io(base.replace(/\/+$/, ''), {
+  disconnectSocket(id);
+  const socket = io(base.replace(/\/+$/, ''), {
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionDelay: 2000,
     reconnectionDelayMax: 15000,
   });
+  sockets.set(id, socket);
 
   socket.on('connect', () => {
     onStatus?.(true);
-    socket?.emit('authorize', { client: 'web', history: 48, token: token || undefined });
+    socket.emit('authorize', { client: 'web', history: 48, token: token || undefined });
   });
   socket.on('disconnect', () => onStatus?.(false));
   socket.on('connect_error', () => onStatus?.(false));
@@ -50,10 +53,15 @@ export function connectSocket(
   return socket;
 }
 
-export function disconnectSocket() {
+export function disconnectSocket(id: string) {
+  const socket = sockets.get(id);
   if (socket) {
     socket.removeAllListeners();
     socket.disconnect();
-    socket = null;
+    sockets.delete(id);
   }
+}
+
+export function disconnectAllSockets() {
+  for (const id of [...sockets.keys()]) disconnectSocket(id);
 }

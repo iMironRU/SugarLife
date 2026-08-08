@@ -1,15 +1,15 @@
 import { IonIcon } from '@ionic/react';
 import { useEffect, useState } from 'react';
-import { pulse, flash, moon, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline } from 'ionicons/icons';
+import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline } from 'ionicons/icons';
 import { useTab, setTab } from '../data/nav';
 import { useStore } from '../data/store';
 import { toUnits, agoText, unitLabel, useUnit, fmt } from '../data/units';
 import { arrowChar, getCfg } from '../data/nightscout';
 import { deviceAges } from '../data/treatmentStats';
 import { useDeviceExtras, loadDeviceExtras } from '../data/deviceExtras';
-import { usePanelScrolled, setPanelScrolled } from '../data/panel';
+import { usePanelLevel, setPanelLevel } from '../data/panel';
+import { resetPanelGesture } from '../data/panelGesture';
 import { useSnapshot } from '../data/bridge';
-import { useTheme } from '../theme/useTheme';
 import CircleSparkline from './CircleSparkline';
 
 const DASH = '—';
@@ -40,10 +40,9 @@ const battColor = (p: number) => (p <= 20 ? 'var(--c-danger)' : p <= 50 ? 'var(-
 export default function HeroPanel() {
   const { data, live, status } = useStore();
   const m = useSnapshot()?.monitor ?? null; // монитор из моста (контракт)
-  const { toggle } = useTheme();
   useUnit(); // перерисовка при смене единиц
   const tab = useTab();
-  const scrolled = usePanelScrolled();
+  const level = usePanelLevel();
   const extras = useDeviceExtras();
   const cfg = getCfg();
 
@@ -57,12 +56,17 @@ export default function HeroPanel() {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
 
-  const full = tab === 2; // «Сегодня»
-  const line = !full && scrolled;
-  const mode = full ? 'is-full' : line ? 'is-line' : 'is-compact';
+  /* «Сегодня» разворачивается на весь рост и сворачивается ступенями: full → compact → line.
+     Прочие экраны стартуют уже сжатыми, им остаётся одна ступень: compact → line.
+     Сворачивание доступно везде — даже когда контент помещается целиком (см. .screen:
+     запас прокрутки задан явно, иначе сворачивать было бы нечем). */
+  const home = tab === 2;
+  const mode = home
+    ? (level >= 2 ? 'is-line' : level === 1 ? 'is-compact' : 'is-full')
+    : (level >= 1 ? 'is-line' : 'is-compact');
 
-  // при переходе на другой экран панель разворачивается заново (сброс прокрутки)
-  useEffect(() => { setPanelScrolled(false); }, [tab]);
+  // при переходе на другой экран панель разворачивается заново (сброс прокрутки и жеста)
+  useEffect(() => { resetPanelGesture(); setPanelLevel(0); }, [tab]);
 
   // панель — владелец загрузки расширенных данных (датчик/резервуар/расход)
   useEffect(() => {
@@ -99,7 +103,9 @@ export default function HeroPanel() {
 
   // строка синхронизации: слева — как мы получаем (нами), справа — возраст
   // последнего значения в Nightscout, чтобы видеть задержку. + офлайн.
-  const readingAge = latest ? agoText(latest.t) : null;
+  // Короткая форма: строка статуса теперь всегда в одну линию рядом с зарядами,
+  // и «назад» в ней — лишние ~35px, из-за которых текст обрезался на узких экранах.
+  const readingAge = latest ? agoText(latest.t).replace(' назад', '') : null;
   const syncState = !online ? 'offline'
     : (status === 'stale' || status === 'error') ? 'stale'
     : live ? 'live'
@@ -124,28 +130,27 @@ export default function HeroPanel() {
 
   return (
     <div className={'hero-panel ' + mode}>
-      {full && (
-        <div className="hp-sync">
-          <span className={'hp-synctext' + (syncWarn ? ' warn' : '')}>
-            {syncState === 'live'
-              ? <span className="heart">♥</span>
-              : <IonIcon className="sync-ico" icon={syncState === 'poll' ? syncOutline : cloudOfflineOutline} />}
-            <span>{syncMain}</span>
-            {readingAge && <span className="sync-reading">· значение {readingAge}</span>}
+      {/* Статус связи + заряды — одним блоком. Он НЕ прячется при сворачивании панели:
+          это то, что нужно видеть всегда. Разворот только меняет раскладку — две строки
+          сходятся в одну (см. .hp-status). */}
+      <div className="hp-status">
+        <span className={'hp-synctext' + (syncWarn ? ' warn' : '')}>
+          {syncState === 'live'
+            ? <span className="heart">♥</span>
+            : <IonIcon className="sync-ico" icon={syncState === 'poll' ? syncOutline : cloudOfflineOutline} />}
+          <span>{syncMain}</span>
+          {readingAge && <span className="sync-reading">· {readingAge}</span>}
+        </span>
+        {batteries.length > 0 && (
+          <span className="hp-batteries">
+            {batteries.map((b) => (
+              <span key={b.id} className="hp-batt-item" style={{ color: battColor(b.value as number) }}>
+                <IonIcon icon={b.icon} />{b.value}%
+              </span>
+            ))}
           </span>
-          <button className="theme-btn" onClick={toggle} aria-label="Тема"><IonIcon icon={moon} /></button>
-        </div>
-      )}
-
-      {batteries.length > 0 && (
-        <div className="hp-batteries">
-          {batteries.map((b) => (
-            <span key={b.id} className="hp-batt-item" style={{ color: battColor(b.value as number) }}>
-              <IonIcon icon={b.icon} />{b.value}%
-            </span>
-          ))}
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="hp-row">
         <div className="hp-rect">

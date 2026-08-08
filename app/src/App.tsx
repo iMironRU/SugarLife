@@ -7,7 +7,7 @@ import Profile from './pages/Profile';
 import Metrics from './pages/Metrics';
 import Mon from './pages/Mon';
 import Ins from './pages/Ins';
-import Connect from './pages/Connect';
+import Onboarding from './pages/Onboarding';
 import Loader from './pages/Loader';
 import InstallPrompt from './components/InstallPrompt';
 import HeroPanel from './components/HeroPanel';
@@ -15,6 +15,8 @@ import { useStore } from './data/store';
 import { useSnapshot } from './data/bridge';
 import { detectTherapy } from './data/therapy';
 import { useTab, setTab, getTab, TAB_PATHS } from './data/nav';
+import { useOnboarded } from './data/onboarding';
+import { attachPanelGesture } from './data/panelGesture';
 import { requestNotifyPermissionOnStart } from './data/notify';
 
 // Порядок вкладок: 0 Метрики · 1 НМГ · 2 Сегодня · 3 Инсулин · 4 Профиль
@@ -78,7 +80,9 @@ function Pager() {
     gesture.enable();
     const onResize = () => { t.style.transition = 'none'; rest(getTab()); };
     window.addEventListener('resize', onResize);
-    return () => { gesture.destroy(); window.removeEventListener('resize', onResize); };
+    // вертикальный жест — сворачивает панель там, где прокручивать нечего
+    const detachPanel = attachPanelGesture(vp);
+    return () => { gesture.destroy(); window.removeEventListener('resize', onResize); detachPanel(); };
   }, []);
 
   return (
@@ -118,6 +122,7 @@ function TabBar({ insIcon }: { insIcon: string }) {
 export default function App() {
   const { data, status } = useStore();
   const snap = useSnapshot();
+  const onboarded = useOnboarded();
   const insIcon = detectTherapy(data) === 'pen' ? medkit : water;
 
   // Спрашиваем разрешение на уведомления сразу при старте (не ждём первого
@@ -129,8 +134,9 @@ export default function App() {
   // шим, и при выключенном NS данных нет → показываем экран подключения как раньше.
   const bridgeHasData = !!snap && snap.monitor.glucose !== '—' && snap.monitor.glucose !== '';
 
-  // Гейт: не подключён и мост пуст → форма; подключён, но данных ещё нет → лоадер.
-  if (status === 'off' && !bridgeHasData) return <IonApp><Connect /></IonApp>;
+  // Онбординг — главный путь, но не стена (CONNECT-UX §7): показываем, пока ничего не
+  // подключено И человек его ещё не прошёл/не пропустил. Пропустил → приложение с прочерками.
+  if (status === 'off' && !bridgeHasData && !onboarded) return <IonApp><Onboarding /></IonApp>;
   if (!data && !bridgeHasData && (status === 'idle' || status === 'loading')) return <IonApp><Loader /></IonApp>;
 
   return (

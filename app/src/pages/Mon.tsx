@@ -8,7 +8,7 @@ import { arrowChar, getCfg, loadEventsRange, type Treatment } from '../data/nigh
 import { deviceAges } from '../data/treatmentStats';
 import { useCloseOnLeave } from '../data/nav';
 import GlucoseTimeChart from '../components/GlucoseTimeChart';
-import SensorSheet from '../components/SensorSheet';
+import DeviceSheet from '../components/DeviceSheet';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
@@ -81,7 +81,8 @@ export default function Mon() {
 
           <div className="metric-note">День датчика — из события замены сенсора в Nightscout (Sensor Change). Сахар, тренд и свежесть — вживую.</div>
         </div>
-        <SensorSheet isOpen={sensorOpen} onClose={() => setSensorOpen(false)} sensor={ages.sensor} />
+        {/* одна карточка устройства на всё приложение (§7) — та же, что в «Профиль → Устройства» */}
+        <DeviceSheet isOpen={sensorOpen} onClose={() => setSensorOpen(false)} cat="sensor" title="Сенсор (НМГ)" />
       </IonContent>
     </IonPage>
   );
