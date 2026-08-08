@@ -6,7 +6,7 @@ import {
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
-import { setCfg } from '../data/nightscout';
+import { resetLocalData } from '../data/reset';
 import { useClouds } from '../data/clouds';
 import { stats } from '../data/agp';
 import { detectTherapy, therapyLabel } from '../data/therapy';
@@ -52,10 +52,8 @@ export default function Profile() {
     : (status === 'error' || status === 'stale') ? 'нет связи' : DASH;
 
   const reset = () => {
-    if (!window.confirm('Сбросить настройки? Адрес Nightscout и локальная история глюкозы будут удалены с этого устройства.')) return;
-    setCfg(null);
-    try { localStorage.removeItem('sl.ns.cache.v1'); } catch { /* ignore */ }
-    try { indexedDB.deleteDatabase('sugarlife'); } catch { /* ignore */ }
+    if (!window.confirm('Сбросить настройки? С этого устройства будут удалены облака, записанные устройства и локальная история глюкозы.')) return;
+    resetLocalData();
     location.reload();
   };
 
