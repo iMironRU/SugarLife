@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline } from 'ionicons/icons';
 import { useTab, setTab } from '../data/nav';
 import { useStore } from '../data/store';
-import { toUnits, agoText, unitLabel, useUnit, fmt } from '../data/units';
+import { toUnits, agoText, unitLabel, useUnit, fmt, daysHoursText } from '../data/units';
 import { arrowChar, getCfg } from '../data/nightscout';
 import { deviceAges } from '../data/treatmentStats';
 import { useDeviceExtras, loadDeviceExtras } from '../data/deviceExtras';
@@ -29,7 +29,6 @@ function shortStatus(s?: string | null): string {
   if (l.includes('открыт') || l.includes('open')) return 'Цикл выкл';
   return s;
 }
-const fmtDays = (d: number) => (d < 10 ? d.toFixed(1).replace('.', ',') : String(Math.round(d)));
 const battColor = (p: number) => (p <= 20 ? 'var(--c-danger)' : p <= 50 ? 'var(--c-carb)' : 'var(--c-glu)');
 
 /* Верхняя панель — единый постоянный элемент над контентом на ВСЕХ экранах.
@@ -123,7 +122,7 @@ export default function HeroPanel() {
   const nmgSub = sensorDay != null ? 'датчик' : 'обновлено';
   const nmgVal = sensorDay != null ? 'день ' + sensorDay : fresh;
   const daysLeft = dev?.reservoir != null && extras.tdd ? dev.reservoir / extras.tdd : null;
-  const resSub2 = daysLeft != null ? '≈ ' + fmtDays(daysLeft) + ' дн' : 'резервуар';
+  const resSub2 = daysLeft != null ? '≈ ' + daysHoursText(daysLeft) : 'резервуар';
   // часики на значениях из кеша, пока идёт свежая загрузка (текст не подменяем)
   const staleSensor = extras.stale && sensorDay != null;
   const staleDays = extras.stale && daysLeft != null;

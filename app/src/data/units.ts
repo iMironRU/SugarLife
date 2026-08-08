@@ -69,3 +69,15 @@ export function agoText(t: number, now = Date.now()) {
   if (m < 60) return m + ' мин назад';
   return Math.floor(m / 60) + ' ч назад';
 }
+
+/* Длительность в днях → «1 д 18 ч». Дробные дни («≈ 1,8 дн») человеку приходится
+   пересчитывать в уме, а решение принимается именно в часах: хватит ли до утра,
+   доживу ли до замены. Часы округляем вниз: «осталось не меньше», а не наоборот. */
+export function daysHoursText(days: number): string {
+  const totalH = Math.max(0, Math.floor(days * 24));
+  const d = Math.floor(totalH / 24);
+  const h = totalH % 24;
+  if (d === 0) return h + ' ч';
+  if (h === 0) return d + ' д';
+  return d + ' д ' + h + ' ч';
+}
