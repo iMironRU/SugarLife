@@ -1,11 +1,11 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, bandageOutline } from 'ionicons/icons';
+import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline, batteryDeadOutline } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../data/store';
-import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, daysHoursText } from '../data/units';
+import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt } from '../data/units';
 import { reportContentScroll } from '../data/panel';
 import { useDeviceExtras } from '../data/deviceExtras';
-import { reservoirStats, deviceAges } from '../data/treatmentStats';
+import { reservoirStats } from '../data/treatmentStats';
 import { useCloseOnLeave } from '../data/nav';
 import { notify } from '../data/notify';
 import FoodSheet from '../components/FoodSheet';
@@ -81,14 +81,35 @@ export default function Today() {
   const battery = dev?.pumpBattery ?? null;
   const batteryLow = battery != null && battery <= 5;
 
-  /* Канюля: рекомендованный срок ношения — 3 суток. Считаем от последней «Site Change».
-     Отдельный баннер нужен именно потому, что канюлю меняют заодно с резервуаром, а
-     резервуар кончается по расходу, а не по сроку — при малой суточной дозе он может
-     дожить до пятого дня, и катетер вместе с ним. Сам по себе остаток инсулина о
-     сроке ношения ничего не говорит. */
-  const siteAge = deviceAges(extras.events).site;
-  const siteHours = siteAge ? siteAge.hours : null; // hours — ВСЕГО часов, не остаток сверх суток
-  const siteOld = siteHours != null && siteHours >= 72;
+  /* Еда: либо человек давно не ел, либо поел и не внёс. Второе для нас важнее —
+     незаписанная еда ломает расчёт активных углеводов, а значит и все подсказки.
+     Косвенный признак: сахар заметно вырос, а углеводов в этом окне нет.
+
+     Осторожно с ложными срабатываниями:
+     • ночью не дёргаем — рост во сне это заря/гормоны, а не еда;
+     • не считаем едой выход из гипо: подъём с 3,5 до 6 — это купирование низкого,
+       и говорить «вы что-то съели» тут звучит глупо, хотя углеводы там тоже были;
+     • нужен и рост, и текущий сахар выше цели — иначе поймаем обычные колебания. */
+  const nowH = new Date().getHours();
+  const daytime = nowH >= 8 && nowH < 23;
+  const carbEvents = extras.events.filter((e) => (e.carbs ?? 0) > 0);
+  const lastCarbT = carbEvents.length ? carbEvents[carbEvents.length - 1].t : null;
+  const hoursSinceCarb = lastCarbT != null ? (Date.now() - lastCarbT) / 3600e3 : null;
+
+  const es = data?.entries ?? [];
+  const win = es.filter((e) => e.t >= Date.now() - 2 * 3600e3); // последние 2 ч
+  const nowG = es.length ? es[es.length - 1].mmol : null;
+  const minG = win.length ? Math.min(...win.map((e) => e.mmol)) : null;
+  const rise = nowG != null && minG != null ? nowG - minG : null;
+
+  /* Порог подобран на реальных данных, а не на глаз: при росте ≥2,5 баннер вылезал бы
+     ~2,8 раза в сутки и превратился бы в фон. ≥4,0 ммоль/л за 2 ч при сахаре выше 10 —
+     это уже размер настоящего приёма пищи, а не колебание. */
+  const unloggedMeal = daytime && rise != null && rise >= 4 && (nowG as number) > 10
+    && (hoursSinceCarb == null || hoursSinceCarb >= 2);
+  // «давно не ел»: спокойный случай, без роста — просто напоминание
+  const longNoFood = daytime && !unloggedMeal && hoursSinceCarb != null && hoursSinceCarb >= 7;
+
 
   // Локальные уведомления — только на переходе false→true (не спамим на каждый опрос).
   const suspendedRef = useRef(false);
@@ -177,13 +198,24 @@ export default function Today() {
             </div>
           )}
 
-          {/* канюля пережила рекомендованные 3 суток */}
-          {siteOld && (
+          {/* похоже, поел и не внёс — активные углеводы посчитаны неверно */}
+          {unloggedMeal && (
             <div className="today-alert warn">
-              <IonIcon icon={bandageOutline} />
+              <IonIcon icon={restaurantOutline} />
               <div>
-                <b>Катетер стоит {daysHoursText((siteHours as number) / 24)}</b>
-                <span>Рекомендованный срок — 3 суток. Дольше растёт риск воспаления и хуже всасывается инсулин. Замените вместе с резервуаром.</span>
+                <b>Сахар вырос на {fmt(rise as number)} — еда записана?</b>
+                <span>За 2 часа поднялся до {toUnits(nowG as number)} {unitLabel()}, а углеводов не внесено. Если поели — добавьте, иначе активные углеводы и подсказки будут врать.</span>
+              </div>
+            </div>
+          )}
+
+          {/* давно не было еды — спокойное напоминание, без роста сахара */}
+          {longNoFood && (
+            <div className="today-alert info">
+              <IonIcon icon={restaurantOutline} />
+              <div>
+                <b>Еды не вносили {Math.round(hoursSinceCarb as number)} ч</b>
+                <span>Либо давно не ели, либо забыли записать. Внесённая еда нужна для расчёта активных углеводов.</span>
               </div>
             </div>
           )}
