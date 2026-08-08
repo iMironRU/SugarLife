@@ -5,7 +5,13 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import ru.imiron.sugarlife.engine.DefaultDriverProvider
 import ru.imiron.sugarlife.engine.SugarLifeEngine
 
 /**
@@ -18,6 +24,34 @@ import ru.imiron.sugarlife.engine.SugarLifeEngine
 class SugarLifeBridgePlugin : Plugin() {
     private var engine: SugarLifeEngine? = null
     private var unsubscribe: (() -> Unit)? = null
+    private var providerAttached = false
+    private val scanner by lazy {
+        SugarLifeScanner(context.applicationContext) { json -> engine?.submitAdvertisement(json) }
+    }
+
+    /** Реальные BLE-драйверы цепляем по требованию (первый скан/добавление) — как iOS ensureProvider. */
+    private fun ensureProvider() {
+        val e = engine ?: return
+        requestBlePermissions()
+        if (providerAttached) return
+        providerAttached = true
+        val ctx = context.applicationContext
+        e.attachDriverProvider(
+            DefaultDriverProvider(
+                nowMs = { System.currentTimeMillis() },
+                sensorBridge = { bleId, _ -> AndroidSensorBridge(ctx, bleId) },
+                pumpBridge = { bleId, _ -> AndroidPumpBridge(ctx, bleId) },
+            ),
+        )
+    }
+
+    private fun requestBlePermissions() {
+        val perms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+        else arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        val missing = perms.filter { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }
+        if (missing.isNotEmpty()) activity?.let { ActivityCompat.requestPermissions(it, missing.toTypedArray(), 7401) }
+    }
 
     override fun load() {
         Log.i(TAG, "load: creating engine")
@@ -39,6 +73,12 @@ class SugarLifeBridgePlugin : Plugin() {
     @PluginMethod
     fun sendIntent(call: PluginCall) {
         val json = call.getString("json") ?: ""
+        // Скан/подключение реальных устройств — на нативной стороне (как iOS): поднимаем провайдер + сканер.
+        when {
+            json.contains("\"startScan\"") -> { ensureProvider(); scanner.start() }
+            json.contains("\"stopScan\"") -> scanner.stop()
+            json.contains("\"addDevice\"") || json.contains("\"addDiscovered\"") -> ensureProvider()
+        }
         val res = try {
             engine?.sendIntent(json) ?: """{"accepted":false,"error":"engine not ready"}"""
         } catch (t: Throwable) {
