@@ -79,11 +79,6 @@ export function deviceStatusLabel(status: DeviceStatus): string {
   }
 }
 
-// Записать устройство, не зная модели (онбординг: облако отдаёт данные, модель — потом).
-export function recordUnknownDevice(cat: 'sensor' | 'pump'): void {
-  setDeviceConfig(cat === 'pump' ? { pumpId: UNKNOWN_MODEL } : { sensorId: UNKNOWN_MODEL });
-}
-
 // «Забыть устройство» (§2a, путь 10) — снять модель и её мост для категории.
 export function forgetDevice(cat: 'sensor' | 'pump'): void {
   if (cat === 'pump') setDeviceConfig({ pumpId: null, bridgePumpId: null });

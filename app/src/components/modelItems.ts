@@ -11,7 +11,7 @@ import { UNKNOWN_MODEL, isModelKnown } from '../data/deviceConfig';
 
 /* «Не знаю модель» — полноценный выбор, а не отказ (docs/CONNECT-UX.md §2b):
    запись в реестре появляется, данные из облака идут, модель уточняется позже. */
-export const unknownModelItem: PickerItem = {
+const unknownModelItem: PickerItem = {
   id: UNKNOWN_MODEL,
   title: 'Не знаю модель',
   subtitle: 'запишем устройство, данные пойдут через облако',

@@ -61,7 +61,3 @@ export function disconnectSocket(id: string) {
     sockets.delete(id);
   }
 }
-
-export function disconnectAllSockets() {
-  for (const id of [...sockets.keys()]) disconnectSocket(id);
-}
