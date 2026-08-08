@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { IonIcon, IonInput, IonButton } from '@ionic/react';
 import { linkOutline, keyOutline, gitNetworkOutline } from 'ionicons/icons';
 import { getCfg, setCfg, ping } from '../data/nightscout';
+import { sendIntent } from '../data/bridge';
 import { refresh } from '../data/store';
 import { toUnits } from '../data/units';
 import BrandDrop from '../components/BrandDrop';
@@ -21,6 +22,8 @@ export default function Connect() {
       const res = await ping(u, t);
       if (res.ok) {
         setCfg({ url: u, token: t, enabled: true });
+        // Поднять Nightscout как ИСТОЧНИК в KMP-движке (наш Socket.IO-драйвер), а не только в стор приложения.
+        void sendIntent({ type: 'addCloudSource', url: u, token: t || null, streams: ['glucose', 'pump', 'treatments'] });
         setMsg(`Подключено · сахар ${toUnits(res.latestMmol!)}`);
         refresh(); // статус стора → ok → гейт откроет приложение
       } else {

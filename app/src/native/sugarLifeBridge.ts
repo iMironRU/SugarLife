@@ -4,6 +4,7 @@
    ВАЖНО: sendIntent подтверждает лишь приём действия, не выполнение (см. bridge.ts). */
 import { registerPlugin, Capacitor } from '@capacitor/core';
 import type { SugarLifeBridge, UiSnapshot, Intent, HistoryQuery, HistoryResult } from '../data/bridge';
+import { getCfg } from '../data/nightscout';
 
 interface NativePlugin {
   requestSnapshot(): Promise<{ json: string }>;
@@ -34,4 +35,14 @@ if (Capacitor.isNativePlatform()) {
     },
   };
   window.SugarLifeBridge = bridge;
+
+  // Движок НЕ хранит состояние между запусками — переприменяем сохранённый облачный источник на старте,
+  // иначе Nightscout отваливается от ядра после каждого перезапуска (в отличие от собственного стора приложения).
+  const cfg = getCfg();
+  if (cfg?.enabled && cfg.url) {
+    void bridge.sendIntent({
+      type: 'addCloudSource', url: cfg.url, token: cfg.token || null,
+      streams: ['glucose', 'pump', 'treatments'],
+    });
+  }
 }
