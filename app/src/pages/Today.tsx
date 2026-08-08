@@ -63,6 +63,16 @@ export default function Today() {
   }
   const emptyTime = nightEmpty?.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 
+  /* Дневное окончание. Ночной случай выше строже (14 ч) — во сне человек не заметит.
+     Но днём окончание тоже пропускается, если занят, а прерывание подачи одинаково
+     плохо в любое время. Порог в ЧАСАХ, не в единицах: 10 ед при суточной дозе 20
+     и при 60 — это принципиально разное время. Ночной баннер имеет приоритет,
+     чтобы не показывать два про одно и то же. */
+  const soonEmpty = hoursLeft != null && hoursLeft > 0 && hoursLeft < 6 && !nightEmpty;
+  const emptyAt = soonEmpty
+    ? new Date(Date.now() + (hoursLeft as number) * 3600e3).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    : null;
+
   /* Батарея помпы на дне. Порог 5%, а не 20%: по истории замен видно, что шкала грубая
      и нелинейная (75 → 44 → 29 → 22 → 3 → 1), а НУЛЯ помпа не показывает вовсе — дно 1%.
      Тревожить раньше времени вредно: на 1% помпа реально работает ещё часы, поэтому
@@ -88,6 +98,16 @@ export default function Today() {
     nightWarnedRef.current = now;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!nightEmpty]);
+
+  // то же для дневного окончания: смысл предупреждения в том, что на экран не смотрят
+  const soonWarnedRef = useRef(false);
+  useEffect(() => {
+    if (soonEmpty && !soonWarnedRef.current) {
+      notify('Инсулин заканчивается', `Осталось ≈${Math.round(hoursLeft as number)} ч (~${emptyAt}). Пора менять резервуар.`);
+    }
+    soonWarnedRef.current = soonEmpty;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [soonEmpty]);
 
   return (
     <IonPage>
@@ -133,6 +153,17 @@ export default function Today() {
               <div>
                 <b>Инсулина ≈{Math.round(hoursLeft as number)} ч — закончится ночью (~{emptyTime})</b>
                 <span>Замените резервуар заранее, чтобы подача не прервалась во сне. Оценка по среднему расходу.</span>
+              </div>
+            </div>
+          )}
+
+          {/* инсулин заканчивается днём — раньше про это не предупреждали вовсе */}
+          {soonEmpty && (
+            <div className="today-alert warn">
+              <IonIcon icon={warningOutline} />
+              <div>
+                <b>Инсулина ≈{Math.round(hoursLeft as number)} ч — до ~{emptyAt}</b>
+                <span>Резервуар скоро опустеет, подача прервётся. Оценка по среднему расходу.</span>
               </div>
             </div>
           )}
