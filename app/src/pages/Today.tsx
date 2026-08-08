@@ -1,11 +1,11 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline, batteryDeadOutline } from 'ionicons/icons';
+import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, bandageOutline } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../data/store';
-import { useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '../data/units';
+import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, daysHoursText } from '../data/units';
 import { reportContentScroll } from '../data/panel';
 import { useDeviceExtras } from '../data/deviceExtras';
-import { reservoirStats } from '../data/treatmentStats';
+import { reservoirStats, deviceAges } from '../data/treatmentStats';
 import { useCloseOnLeave } from '../data/nav';
 import { notify } from '../data/notify';
 import FoodSheet from '../components/FoodSheet';
@@ -80,6 +80,15 @@ export default function Today() {
      сказать не можем, пока не знаем тип батарейки (см. бэклог). */
   const battery = dev?.pumpBattery ?? null;
   const batteryLow = battery != null && battery <= 5;
+
+  /* Канюля: рекомендованный срок ношения — 3 суток. Считаем от последней «Site Change».
+     Отдельный баннер нужен именно потому, что канюлю меняют заодно с резервуаром, а
+     резервуар кончается по расходу, а не по сроку — при малой суточной дозе он может
+     дожить до пятого дня, и катетер вместе с ним. Сам по себе остаток инсулина о
+     сроке ношения ничего не говорит. */
+  const siteAge = deviceAges(extras.events).site;
+  const siteHours = siteAge ? siteAge.hours : null; // hours — ВСЕГО часов, не остаток сверх суток
+  const siteOld = siteHours != null && siteHours >= 72;
 
   // Локальные уведомления — только на переходе false→true (не спамим на каждый опрос).
   const suspendedRef = useRef(false);
@@ -164,6 +173,17 @@ export default function Today() {
               <div>
                 <b>Инсулина ≈{Math.round(hoursLeft as number)} ч — до ~{emptyAt}</b>
                 <span>Резервуар скоро опустеет, подача прервётся. Оценка по среднему расходу.</span>
+              </div>
+            </div>
+          )}
+
+          {/* канюля пережила рекомендованные 3 суток */}
+          {siteOld && (
+            <div className="today-alert warn">
+              <IonIcon icon={bandageOutline} />
+              <div>
+                <b>Катетер стоит {daysHoursText((siteHours as number) / 24)}</b>
+                <span>Рекомендованный срок — 3 суток. Дольше растёт риск воспаления и хуже всасывается инсулин. Замените вместе с резервуаром.</span>
               </div>
             </div>
           )}
