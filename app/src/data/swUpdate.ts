@@ -70,19 +70,41 @@ function watch(r: ServiceWorkerRegistration) {
   });
 }
 
+let checking = false;
+
+/* Таймаут обязателен: registration.update() при плохой сети может не завершиться
+   вообще, и состояние навсегда застревало на «Проверяю…» — крутилка висела
+   бесконечно. Спиннер без предела хуже честной ошибки. */
+const CHECK_TIMEOUT = 8000;
+
 export async function checkNow(): Promise<void> {
   if (isNative) return;
   if (!('serviceWorker' in navigator)) { set({ status: 'unsupported' }); return; }
+  if (checking) return; // не копим параллельные проверки (фон + кнопка)
+  checking = true;
   set({ status: 'checking' });
   try {
-    const r = reg ?? (await navigator.serviceWorker.getRegistration()) ?? null;
-    if (!r) { set({ status: 'unsupported' }); return; }
-    if (!reg) watch(r);
-    await r.update();
+    // Таймаут на ВСЮ операцию: зависнуть может и getRegistration(), не только update()
+    const timedOut = Symbol('timeout');
+    const work = (async () => {
+      const r = reg ?? (await navigator.serviceWorker.getRegistration()) ?? null;
+      if (!r) return 'none' as const;
+      if (!reg) watch(r);
+      await r.update();
+      return 'ok' as const;
+    })();
+    const res = await Promise.race([
+      work,
+      new Promise((resolve) => setTimeout(() => resolve(timedOut), CHECK_TIMEOUT)),
+    ]);
+    if (res === timedOut) { set({ status: 'error' }); return; }
+    if (res === 'none') { set({ status: 'unsupported' }); return; }
     set({ status: hasWaiting() ? 'available' : 'current', checkedAt: Date.now() });
   } catch {
     // офлайн и «обновлений нет» — разные вещи, не выдаём одно за другое
     set({ status: 'error' });
+  } finally {
+    checking = false;
   }
 }
 
