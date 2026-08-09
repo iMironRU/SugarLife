@@ -1,15 +1,20 @@
-/* Сворачивание панели жестом — для экранов, где контент помещается целиком.
-   Зачем: панель лежит НАД областью прокрутки, поэтому «свернуть прокруткой» там, где
-   прокручивать нечего, можно было бы только выдумав искусственный запас — а он уводит
-   контент вверх, под панель. Вместо этого панель забирает жест себе: контент стоит на
-   месте, двигается только панель. Где контент реально длинный — жест не трогаем,
-   ступени считает reportContentScroll по scrollTop. */
+/* Сворачивание панели перетаскиванием.
+
+   Почему pointer-события, а не touch: touch-слушатели на дальних предках ненадёжны —
+   в вебвью браузера жест мог не доходить, и на телефоне панель не тянулась ни на iOS,
+   ни на Android, хотя синтетические touch-события в отладке проходили. Pointer-события
+   покрывают палец, мышь и стилус одинаково.
+
+   Кто владеет жестом:
+   • начали ТЯНУТЬ ЗА ПАНЕЛЬ — всегда она (панель = ручка, однозначно и предсказуемо);
+   • начали в контенте — только если прокручивать по сути нечего (запас меньше 40px),
+     иначе это обычная прокрутка и мешать ей нельзя. */
 import { setPanelLevel, type PanelLevel } from './panel';
 
-// «виртуальная прокрутка» панели: сколько пикселей жеста уже съедено
 const MAX = 160;
 const STEP_1 = 40;
 const STEP_2 = 110;
+const SCROLL_SLACK = 40; // запас, ниже которого прокрутка бессмысленна
 
 let offset = 0;
 
@@ -17,18 +22,11 @@ const levelOf = (o: number): PanelLevel => (o > STEP_2 ? 2 : o > STEP_1 ? 1 : 0)
 const offsetOf = (l: PanelLevel): number => (l === 2 ? STEP_2 + 1 : l === 1 ? STEP_1 + 1 : 0);
 const clamp = (v: number) => Math.max(0, Math.min(MAX, v));
 
-// Активный скроллер карусели. У ion-content он в теневом DOM, поэтому достаём оттуда:
-// нужен синхронный ответ «есть ли что прокручивать», getScrollElement() асинхронный.
-function activeScroller(): HTMLElement | null {
-  const content = document.querySelector('.pager-pane.is-active ion-content');
-  return (content?.shadowRoot?.querySelector('.inner-scroll') as HTMLElement) ?? null;
-}
-
-// Жест наш, только если прокручивать нечего — иначе управляет обычный скролл.
-function gestureOwnsPanel(): boolean {
-  const s = activeScroller();
-  if (!s) return false;
-  return s.scrollHeight <= s.clientHeight + 2;
+// Активный скроллер карусели живёт в теневом DOM ion-content.
+function scrollRoom(): number {
+  const c = document.querySelector('.pager-pane.is-active ion-content');
+  const s = c?.shadowRoot?.querySelector('.inner-scroll') as HTMLElement | undefined;
+  return s ? s.scrollHeight - s.clientHeight : 0;
 }
 
 function apply(next: number) {
@@ -36,51 +34,43 @@ function apply(next: number) {
   setPanelLevel(levelOf(offset));
 }
 
-// Сбросить «виртуальную прокрутку» — при смене вкладки панель разворачивается заново.
 export function resetPanelGesture(): void { offset = 0; }
 
 export function attachPanelGesture(el: HTMLElement): () => void {
   let startY = 0;
   let base = 0;
   let active = false;
+  let id: number | null = null;
 
-  const onTouchStart = (e: TouchEvent) => {
-    active = gestureOwnsPanel();
+  const onDown = (e: PointerEvent) => {
+    const onPanel = !!(e.target as Element | null)?.closest?.('.hero-panel');
+    active = onPanel || scrollRoom() < SCROLL_SLACK;
     if (!active) return;
-    startY = e.touches[0].clientY;
+    id = e.pointerId;
+    startY = e.clientY;
     base = offset;
   };
 
-  const onTouchMove = (e: TouchEvent) => {
-    if (!active) return;
-    // палец вверх → dy отрицательный → панель сворачивается
-    const dy = e.touches[0].clientY - startY;
-    apply(base - dy);
+  const onMove = (e: PointerEvent) => {
+    if (!active || e.pointerId !== id) return;
+    apply(base - (e.clientY - startY)); // палец вверх → dy<0 → сворачиваем
   };
 
-  const onTouchEnd = () => {
-    if (!active) return;
-    active = false;
-    // фиксируем ступень целиком, чтобы панель не зависала в промежуточном положении
-    apply(offsetOf(levelOf(offset)));
+  const onUp = (e: PointerEvent) => {
+    if (!active || e.pointerId !== id) return;
+    active = false; id = null;
+    apply(offsetOf(levelOf(offset))); // доводим до ближайшей ступени
   };
 
-  const onWheel = (e: WheelEvent) => {
-    if (!gestureOwnsPanel()) return;
-    apply(offset + e.deltaY);
-  };
-
-  el.addEventListener('touchstart', onTouchStart, { passive: true });
-  el.addEventListener('touchmove', onTouchMove, { passive: true });
-  el.addEventListener('touchend', onTouchEnd, { passive: true });
-  el.addEventListener('touchcancel', onTouchEnd, { passive: true });
-  el.addEventListener('wheel', onWheel, { passive: true });
+  el.addEventListener('pointerdown', onDown, { passive: true });
+  el.addEventListener('pointermove', onMove, { passive: true });
+  el.addEventListener('pointerup', onUp, { passive: true });
+  el.addEventListener('pointercancel', onUp, { passive: true });
 
   return () => {
-    el.removeEventListener('touchstart', onTouchStart);
-    el.removeEventListener('touchmove', onTouchMove);
-    el.removeEventListener('touchend', onTouchEnd);
-    el.removeEventListener('touchcancel', onTouchEnd);
-    el.removeEventListener('wheel', onWheel);
+    el.removeEventListener('pointerdown', onDown);
+    el.removeEventListener('pointermove', onMove);
+    el.removeEventListener('pointerup', onUp);
+    el.removeEventListener('pointercancel', onUp);
   };
 }

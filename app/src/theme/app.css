@@ -117,13 +117,11 @@ ion-content { --background: var(--color-bg); }
   padding: calc(env(safe-area-inset-top, 0px) + 10px) 20px 0;
   transition: padding-top var(--hp-dur) var(--hp-ease);
 }
-/* Размеры текста внутри панели тоже меняются между состояниями — без переходов
-   рамка ехала плавно, а надписи внутри прыгали. */
-.hp-ico, .hp-ico ion-icon, .hp-name, .hp-arrow, .hp-iob,
-.hp-batt-item, .hp-batt-item ion-icon {
-  transition: font-size var(--hp-dur) var(--hp-ease);
-}
-.hp-val { transition: font-size var(--hp-dur) var(--hp-ease), margin-top var(--hp-dur) var(--hp-ease); }
+/* Переходов по font-size здесь НЕТ намеренно: это свойство пересчитывает раскладку
+   каждый кадр, и на восьми селекторах сразу давало заметные тормоза на Android.
+   Движение читается по геометрии круга и рамки, а размер текста меняется за один
+   кадр — глаз этого не ловит. */
+.hp-val { transition: margin-top var(--hp-dur) var(--hp-ease); }
 .hero-panel.is-compact { padding-top: calc(env(safe-area-inset-top, 0px) + 8px); }
 .hero-panel.is-line { padding-top: calc(env(safe-area-inset-top, 0px) + 6px); }
 
@@ -228,7 +226,7 @@ ion-content { --background: var(--color-bg); }
 .hp-circle .circle-spark { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 .hp-circle-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
 .hp-circle-val { display: flex; align-items: center; gap: 6px; }
-.hp-value { font-size: 44px; font-weight: 600; letter-spacing: -.02em; line-height: 1; color: var(--color-text); transition: font-size var(--hp-dur) var(--hp-ease); }
+.hp-value { font-size: 44px; font-weight: 600; letter-spacing: -.02em; line-height: 1; color: var(--color-text); }
 .is-compact .hp-value { font-size: 27px; }
 .is-line .hp-value { font-size: 17px; }
 .hp-arrow { font-size: 22px; color: var(--c-glu); font-weight: 700; }
@@ -237,7 +235,7 @@ ion-content { --background: var(--color-bg); }
 .hp-unit {
   font-size: 12px; color: var(--color-neutral-300); margin-top: 4px;
   max-height: 18px; overflow: hidden;
-  transition: font-size var(--hp-dur) var(--hp-ease), max-height var(--hp-dur) var(--hp-ease),
+  transition: max-height var(--hp-dur) var(--hp-ease),
               opacity var(--hp-dur) var(--hp-ease), margin-top var(--hp-dur) var(--hp-ease);
 }
 .is-compact .hp-unit { font-size: 9px; }
