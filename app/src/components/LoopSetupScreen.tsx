@@ -148,6 +148,11 @@ export default function LoopSetupScreen({ isOpen, onClose }: { isOpen: boolean; 
                   const v = profile.values[l.id];
                   const warn = outOfRec(l, v);
                   const open = editing === l.id;
+                  // на пределах кнопки гаснут и объясняют, что это предел приложения
+                  const atMin = v <= l.min + 1e-9;
+                  const atMax = v >= l.max - 1e-9;
+                  const changed = Math.abs(v - l.rec) > 1e-9;
+                  const num = (x: number) => x.toFixed(l.dp).replace('.', ',');
                   return (
                     <div key={l.id} className={'wz-card wz-lim' + (open ? ' open' : '') + (warn ? ' warn' : '')}>
                       <div className="wz-limtop">
@@ -163,23 +168,54 @@ export default function LoopSetupScreen({ isOpen, onClose }: { isOpen: boolean; 
                         <>
                           <div className="wz-why">{l.why}</div>
                           <div className="wz-stepper">
-                            <button onClick={() => bump(l, -l.step)} aria-label="Меньше">−</button>
+                            <button className={atMin ? 'off' : ''} disabled={atMin} onClick={() => bump(l, -l.step)} aria-label="Меньше">−</button>
                             <span className="wz-big">
                               <b className={warn ? 'warn' : ''}>{fmtLimit(l, v)}</b>
-                              <i>{l.unit} · шаг {fmtLimit({ ...l, dp: l.dp } as LoopLimit, l.step)}</i>
+                              <i>{l.unit} · шаг {num(l.step)}</i>
                             </span>
-                            <button onClick={() => bump(l, l.step)} aria-label="Больше">+</button>
+                            <button className={atMax ? 'off' : ''} disabled={atMax} onClick={() => bump(l, l.step)} aria-label="Больше">+</button>
                           </div>
                           <div className="wz-impact"><b>Станет так:</b> {l.impact(v)}</div>
+
+                          {atMax && <div className="wz-edge hard"><b>Выше недоступно.</b> {num(l.max)} {l.unit} — предел приложения.</div>}
+                          {atMin && <div className="wz-edge hard"><b>Ниже недоступно.</b> {num(l.min)} {l.unit} — предел приложения.</div>}
+                          {warn && !atMax && !atMin && (
+                            <div className="wz-edge"><b>Вне рекомендованного диапазона.</b> Рекомендовано {fmtLimit(l, l.rec)} {l.unit}.</div>
+                          )}
+
                           <div className="wz-why2">{l.why2}</div>
-                          <button className="wz-done" onClick={() => setEditing(null)}>Готово</button>
+
+                          {changed ? (
+                            <div className="wz-erow">
+                              {/* вернуть рекомендованное — главный выход, оставить своё — осознанный */}
+                              <button className="wz-done go" onClick={() => saveLoopProfile({ values: { ...profile.values, [l.id]: l.rec } })}>
+                                ↺ Вернуть рекомендованное {fmtLimit(l, l.rec)} {l.unit}
+                              </button>
+                              <button className="wz-done ghost" onClick={() => setEditing(null)}>
+                                Всё же оставить {fmtLimit(l, v)} {l.unit}
+                              </button>
+                            </div>
+                          ) : (
+                            <button className="wz-done" onClick={() => setEditing(null)}>Готово</button>
+                          )}
                         </>
                       ) : (
                         <>
                           <span className="wz-big collapsed">
                             <b className={warn ? 'warn' : ''}>{fmtLimit(l, v)}</b><i>{l.unit}</i>
                           </span>
-                          <div className="wz-impact-sm">{l.impact(v)}</div>
+                          <div className="wz-why">{l.why}</div>
+                          <div className="wz-why2">{l.why2}</div>
+                          <div className="wz-impact"><b>На практике:</b> {l.impact(v)}</div>
+                          {warn && (
+                            <div className="wz-edge">
+                              <b>Вне рекомендованного диапазона.</b> Рекомендовано {fmtLimit(l, l.rec)} {l.unit}.
+                              На последнем шаге потребуется подтверждение согласования с врачом.
+                            </div>
+                          )}
+                          <div className="wz-range">
+                            рекомендовано {fmtLimit(l, l.rec)} · допустимо {num(l.min)}…{num(l.max)} {l.unit}
+                          </div>
                         </>
                       )}
                     </div>

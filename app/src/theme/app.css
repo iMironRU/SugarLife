@@ -986,3 +986,19 @@ ion-toggle {
 .hold-btn.off { opacity: .4; cursor: default; }
 .hold-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: rgba(255,255,255,.28); }
 .hold-label { position: relative; }
+
+/* Карточка лимита: пределы, диапазон и выход «вернуть рекомендованное» (из прототипа) */
+.wz-edge {
+  font-size: 13px; line-height: 1.45; margin-top: 10px; padding: 10px 12px; border-radius: 12px;
+  background: color-mix(in srgb, var(--c-carb) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-carb) 40%, transparent); color: var(--color-neutral-200);
+}
+.wz-edge b { color: var(--c-carb); }
+.wz-edge.hard { background: var(--color-neutral-800); border-color: var(--color-neutral-700); }
+.wz-edge.hard b { color: var(--color-neutral-300); }
+.wz-range { font-size: 12px; color: var(--color-neutral-500); margin-top: 10px; font-family: ui-monospace, monospace; }
+.wz-stepper > button.off { opacity: .3; cursor: default; }
+.wz-erow { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.wz-erow .wz-done { margin-top: 0; }
+.wz-done.go { background: color-mix(in srgb, var(--color-accent) 20%, var(--color-neutral-800)); color: var(--color-accent); }
+.wz-done.ghost { background: transparent; border: 1px solid var(--color-neutral-800); color: var(--color-neutral-400); font-weight: 500; }
