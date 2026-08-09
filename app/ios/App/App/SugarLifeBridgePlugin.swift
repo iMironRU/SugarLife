@@ -1,6 +1,7 @@
 import Foundation
 import Capacitor
 import CoreBluetooth
+import UIKit
 import SugarLifeKit
 
 /// Нативная сторона моста: держит KMP-движок (SugarLifeEngine) + реальные драйверы через колбэк-мосты
@@ -229,10 +230,29 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func sendIntent(_ call: CAPPluginCall) {
         let json = call.getString("json") ?? ""
+        // Экспорт лога перехватываем ДО движка (как Android): редактированный NDJSON → share sheet ОС.
+        if json.contains("\"exportLog\"") { exportAndShare(); return call.resolve(["json": "{\"accepted\":true}"]) }
         if json.contains("\"startScan\"") { ensureProvider(); scanner.start() }
         else if json.contains("\"stopScan\"") { scanner.stop() }
         else if json.contains("\"addDevice\"") || json.contains("\"addDiscovered\"") { ensureProvider() }
         call.resolve(["json": engine?.sendIntent(json: json) ?? "{\"accepted\":false,\"error\":\"engine not ready\"}"])
+    }
+
+    /// Экспорт диагностического лога (редактированный NDJSON из движка) → UIActivityViewController
+    /// (Telegram/почта/Файлы). Зеркало Android exportAndShare — механизм сбора телеметрии от волонтёров.
+    private func exportAndShare() {
+        guard let ndjson = engine?.exportLog() else { return }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("sugarlife-log.ndjson")
+        do { try ndjson.write(to: url, atomically: true, encoding: .utf8) } catch { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let vc = self?.bridge?.viewController else { return }
+            let av = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+            // iPad: share sheet — popover, нужен якорь (иначе краш).
+            av.popoverPresentationController?.sourceView = vc.view
+            av.popoverPresentationController?.sourceRect = CGRect(x: vc.view.bounds.midX, y: vc.view.bounds.midY, width: 0, height: 0)
+            av.popoverPresentationController?.permittedArrowDirections = []
+            vc.present(av, animated: true)
+        }
     }
 
     @objc func query(_ call: CAPPluginCall) { call.resolve(["json": engine?.query(json: call.getString("json") ?? "") ?? "{\"glucose\":[],\"treatments\":[]}"]) }
