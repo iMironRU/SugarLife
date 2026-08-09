@@ -110,7 +110,11 @@ export type Intent =
   | { type: 'exportLog' }
   | { type: 'sendReport'; errorId: string }
   // rev ≥ 1.6: облачный источник (способ «облако» — Nightscout и подобные), только чтение
-  | { type: 'addCloudSource'; url: string; token?: string | null; streams?: Array<'glucose' | 'pump' | 'treatments'> };
+  | { type: 'addCloudSource'; url: string; token?: string | null; streams?: Array<'glucose' | 'pump' | 'treatments'> }
+  // бэкап конфига/истории в облако пользователя (пережить переустановку)
+  | { type: 'configureBackup'; provider: 's3' | 'webdav'; params: Record<string, string> }
+  | { type: 'backup' }
+  | { type: 'restore' };
 
 export interface SugarLifeBridge {
   bridgeRevision: string;
