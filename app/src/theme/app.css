@@ -861,3 +861,88 @@ ion-toggle {
 .placeholder-ico { font-size: 44px; opacity: .5; }
 .placeholder h2 { font-size: 20px; font-weight: 600; color: var(--color-text); margin: 0; }
 .placeholder p { font-size: 13px; margin: 0; max-width: 260px; }
+
+/* ===== Мастер профиля петли (loop) =====
+   Только интерфейс: команд в помпу отсюда не уходит (docs/decisions/0004). */
+.wz-prog { display: flex; gap: 5px; margin: 6px 0 12px; }
+.wz-dot { flex: 1; height: 3px; border-radius: 2px; background: var(--color-neutral-800); }
+.wz-dot.on { background: var(--color-accent); }
+
+/* Постоянная плашка: видно на каждом шаге, что подача не включается */
+.wz-l0 {
+  display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 14px;
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
+  font-size: 11px; color: var(--color-neutral-300); line-height: 1.4; margin-bottom: 14px;
+}
+.wz-l0 ion-icon { font-size: 15px; color: var(--color-accent); flex-shrink: 0; margin-top: 1px; }
+
+.wz-hw { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--color-neutral-800); }
+.wz-hw:last-of-type { border-bottom: 0; }
+.wz-ic { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.wz-ic.yes { color: var(--c-glu); }
+.wz-ic.no { color: var(--c-danger); }
+.wz-ic.maybe { color: var(--c-carb); }
+
+.wz-mode {
+  display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left;
+  padding: 12px 14px; margin-bottom: 8px; border-radius: 16px; cursor: pointer;
+  background: var(--color-neutral-900); border: 1.5px solid transparent; font-family: inherit;
+}
+.wz-mode.on { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 10%, var(--color-neutral-900)); }
+.wz-mode.locked { opacity: .5; cursor: default; }
+.wz-mrow { display: flex; align-items: center; gap: 8px; }
+.wz-code { font-size: 12px; font-weight: 700; color: var(--color-accent); }
+.wz-lock, .wz-warn { font-size: 10px; padding: 2px 7px; border-radius: 8px; }
+.wz-lock { background: var(--color-neutral-800); color: var(--color-neutral-400); }
+.wz-warn { background: color-mix(in srgb, var(--c-carb) 22%, transparent); color: var(--c-carb); }
+.wz-mname { font-size: 15px; font-weight: 600; color: var(--color-text); }
+.wz-mdesc { font-size: 12px; color: var(--color-neutral-400); line-height: 1.4; }
+.wz-mneed { font-size: 11px; color: var(--color-neutral-500); margin-top: 2px; }
+
+.wz-lim { border-radius: 16px; background: var(--color-neutral-900); margin-bottom: 8px; overflow: hidden; }
+.wz-lim.warn { outline: 1px solid color-mix(in srgb, var(--c-carb) 55%, transparent); }
+.wz-limhead {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 12px 14px; background: none; border: 0; cursor: pointer; font-family: inherit; color: inherit;
+}
+.wz-val { font-size: 14px; font-weight: 600; flex-shrink: 0; }
+.wz-val.warn, .list-value.warn { color: var(--c-carb); }
+.wz-edit { padding: 0 14px 12px; }
+.wz-stepper { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wz-stepper > button {
+  min-width: 44px; min-height: 40px; border-radius: 12px; font-size: 20px; cursor: pointer;
+  background: var(--color-neutral-800); border: 0; color: var(--color-text); font-family: inherit;
+}
+.wz-stepper > span { font-size: 15px; font-weight: 600; min-width: 92px; text-align: center; }
+.wz-reset {
+  display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 0 12px;
+  font-size: 11px !important; color: var(--color-neutral-400) !important;
+}
+
+.wz-fixed { border: 1px dashed var(--color-neutral-700); border-radius: 14px; padding: 12px 14px; margin-top: 12px; }
+.wz-fixed.ok { border-color: color-mix(in srgb, var(--c-glu) 55%, transparent); }
+.wz-fixed-n { font-size: 11px; color: var(--color-neutral-500); }
+.wz-fixed-v { font-size: 14px; font-weight: 600; margin-top: 2px; }
+.wz-fixed-v.ok { color: var(--c-glu); }
+
+.wz-rule { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--color-neutral-800); }
+.wz-rule-a { font-size: 13px; font-weight: 600; }
+.wz-rule-b { font-size: 12px; color: var(--color-neutral-400); line-height: 1.4; }
+
+.wz-gate {
+  display: flex; gap: 9px; align-items: flex-start; width: 100%; text-align: left; margin-top: 12px;
+  padding: 12px 14px; border-radius: 14px; cursor: pointer; font-family: inherit; font-size: 12px;
+  line-height: 1.4; background: var(--color-neutral-900);
+  border: 1.5px solid color-mix(in srgb, var(--c-carb) 55%, transparent); color: var(--color-neutral-300);
+}
+.wz-gate.on { border-color: var(--c-glu); color: var(--color-text); }
+.wz-gate ion-icon { font-size: 18px; flex-shrink: 0; }
+
+.wz-nav { display: flex; gap: 8px; }
+.wz-nav .page-back { flex: 1; }
+.page-next {
+  flex: 1; min-height: 48px; border-radius: 16px; border: 0; cursor: pointer;
+  background: var(--color-accent); color: #fff; font-size: 15px; font-weight: 600; font-family: inherit;
+}
+.page-next:disabled { opacity: .45; cursor: default; }

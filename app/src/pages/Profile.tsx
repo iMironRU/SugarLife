@@ -2,7 +2,7 @@ import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import {
   personCircle, chevronForward, downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
-  hardwareChipOutline, cloudOutline,
+  hardwareChipOutline, cloudOutline, repeat,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
@@ -18,10 +18,12 @@ import { reportContentScroll } from '../data/panel';
 import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload } from '../data/appUpdate';
 import { useCloseOnLeave } from '../data/nav';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '../data/swUpdate';
+import { useLoopProfile, LOOP_MODES } from '../data/loopProfile';
 import UnitsModal from '../components/UnitsModal';
 import CarbUnitsModal from '../components/CarbUnitsModal';
 import DevicesScreen from '../components/DevicesScreen';
 import ServicesScreen from '../components/ServicesScreen';
+import LoopSetupScreen from '../components/LoopSetupScreen';
 
 const DASH = '—';
 
@@ -34,6 +36,7 @@ export default function Profile() {
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
   const carbUnit = useCarbUnit();
   const [devicesOpen, setDevicesOpen] = useState(false);
+  const [loopOpen, setLoopOpen] = useState(false);
   const [count, setCount] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
@@ -128,6 +131,12 @@ export default function Profile() {
     : upd.status === 'current' ? `Актуально · проверено ${agoMin != null && agoMin > 0 ? agoMin + ' мин назад' : 'только что'}`
     : 'Проверяю…';
 
+  const loop = useLoopProfile();
+  const loopMode = LOOP_MODES.find((m) => m.id === loop.mode);
+  const loopSub = loop.savedAt
+    ? `${loopMode?.code} · ${loopMode?.name.toLowerCase()}`
+    : 'не настроен';
+
   const gs = data?.entries?.length ? stats(data.entries) : null;
   const gmi = gs ? fmt(gs.gmi) : DASH;
   const mean = gs ? toUnits(gs.mean) : DASH;
@@ -198,6 +207,19 @@ export default function Profile() {
             </button>
           </div>
 
+          {/* алгоритм: профиль петли. Только настройка — подача не включается (решение 0004) */}
+          <div className="section-label sec">Алгоритм</div>
+          <div className="list">
+            <button className="list-row" onClick={() => setLoopOpen(true)}>
+              <IonIcon icon={repeat} className="list-ico" />
+              <span className="pick-main">
+                <span className="list-title">Профиль петли</span>
+                <span className="pick-sub">{loopSub}</span>
+              </span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </button>
+          </div>
+
           {/* настройки */}
           <div className="section-label sec">Настройки</div>
           <div className="list">
@@ -264,6 +286,7 @@ export default function Profile() {
         </div>
 
         <ServicesScreen isOpen={servicesOpen} onClose={() => setServicesOpen(false)} />
+        <LoopSetupScreen isOpen={loopOpen} onClose={() => setLoopOpen(false)} />
         <UnitsModal isOpen={unitsOpen} onClose={() => setUnitsOpen(false)} />
         <CarbUnitsModal isOpen={carbUnitsOpen} onClose={() => setCarbUnitsOpen(false)} />
         <DevicesScreen isOpen={devicesOpen} onClose={() => setDevicesOpen(false)} />
