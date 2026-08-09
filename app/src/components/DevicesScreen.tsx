@@ -38,7 +38,7 @@ export default function DevicesScreen({ isOpen, onClose }: { isOpen: boolean; on
             <div className="sheet-subtitle">Профиль · Устройства</div>
           </div>
         </div>
-        <div className="sheet-note" style={{ marginTop: 0 }}>
+        <div className="sheet-note">
           Тапни устройство — там все действия (мост, подключение, «забыть»). На плитке ничего не отключишь случайно.
         </div>
 
@@ -99,6 +99,13 @@ export default function DevicesScreen({ isOpen, onClose }: { isOpen: boolean; on
           />
         ))}
         <RequirementsCatalogSheet isOpen={reqOpen} onClose={() => setReqOpen(false)} />
+        {/* дубль «назад» внизу — вверху экрана до него не дотянуться большим пальцем */}
+        <div className="page-foot" slot="fixed">
+          <button className="page-back" onClick={close}>
+            <IonIcon icon={chevronBack} />
+            Назад
+          </button>
+        </div>
       </IonContent>
     </IonModal>
   );

@@ -448,7 +448,29 @@ ion-content { --background: var(--color-bg); }
    которую и так закрывают только кнопкой «назад». */
 .full-page { --width: 100%; --height: 100%; --border-radius: 0; }
 .sheet::part(scroll) { padding: 6px 18px 26px; }
-.sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 0 4px; }
+/* gap — чтобы круглая кнопка не липла к заголовку (на телефоне читалось как одно пятно) */
+.sheet-head { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 8px 0 4px; }
+
+/* Полноэкранные разделы: на высоком телефоне кнопка «назад» вверху недостижима большим
+   пальцем, поэтому дублируем её внизу — в зоне досягаемости. Верхняя остаётся: она
+   привычна и нужна на широком экране. */
+.full-page .sheet::part(scroll), .sheet.has-foot::part(scroll) { padding-bottom: 92px; }
+.full-page .sheet-note, .full-page .section-label { padding-left: 2px; }
+.page-foot {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 10px 18px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--color-bg) 72%, transparent);
+  pointer-events: none;
+}
+.page-back {
+  pointer-events: auto;
+  width: 100%; min-height: 48px; border-radius: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
+  color: var(--color-text); font-size: 15px; font-weight: 600; font-family: inherit;
+}
+.page-back:active { background: var(--color-neutral-800); }
+.page-back ion-icon { font-size: 18px; }
 .sheet-title { font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
 /* 44px — минимальный удобный размер касания (рекомендация iOS/Android). Сама иконка
    крупнее пропорционально: раньше в круге 36px сидел значок ~16px и терялся. */

@@ -38,7 +38,7 @@ export default function ServicesScreen({ isOpen, onClose }: { isOpen: boolean; o
             <div className="sheet-subtitle">Профиль · Способы / Сервисы</div>
           </div>
         </div>
-        <div className="sheet-note" style={{ marginTop: 0 }}>
+        <div className="sheet-note">
           Облако — такой же способ подключения, как мост, только со своими адресом/токеном.
           Можно держать несколько одновременно, у каждого своя роль в «Забираем отсюда».
         </div>
@@ -65,6 +65,13 @@ export default function ServicesScreen({ isOpen, onClose }: { isOpen: boolean; o
         </div>
 
         <CloudSheet isOpen={!!open} onClose={() => setOpenId(null)} cloud={open} />
+        {/* дубль «назад» внизу — вверху экрана до него не дотянуться большим пальцем */}
+        <div className="page-foot" slot="fixed">
+          <button className="page-back" onClick={close}>
+            <IonIcon icon={chevronBack} />
+            Назад
+          </button>
+        </div>
       </IonContent>
     </IonModal>
   );
