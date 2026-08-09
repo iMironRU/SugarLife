@@ -113,7 +113,12 @@ export default function Profile() {
   /* Состояние обновления веб-версии. Четыре ответа на три вопроса, которые раньше
      оставались без ответа: есть ли обновление, применилось ли, нужна ли перезагрузка. */
   const upd = useUpdateState();
-  const [justUpdated] = useState(() => consumeJustUpdated()); // разово после перезагрузки
+  const [justUpdated, setJustUpdated] = useState(() => consumeJustUpdated()); // разово после перезагрузки
+  // «Обновлено до X» держится, пока человек не начал новую проверку — иначе оно
+  // висело бы всю сессию и перекрывало «Проверяю…» и ошибки
+  useEffect(() => {
+    if (upd.status === 'checking' || upd.status === 'available') setJustUpdated(false);
+  }, [upd.status]);
   const agoMin = upd.checkedAt ? Math.round((Date.now() - upd.checkedAt) / 60000) : null;
   const webUpdateNote = justUpdated ? `Обновлено до сборки ${APP_BUILD}.`
     : upd.status === 'available' ? 'Новая версия скачана. Применится после перезагрузки.'
