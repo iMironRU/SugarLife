@@ -114,7 +114,9 @@ export type Intent =
   // бэкап конфига/истории в облако пользователя (пережить переустановку)
   | { type: 'configureBackup'; provider: 's3' | 'webdav'; params: Record<string, string> }
   | { type: 'backup' }
-  | { type: 'restore' };
+  | { type: 'restore' }
+  // тест: вручную освободить BLE (пауза всех BLE-устройств → драйвер рвёт GATT)
+  | { type: 'releaseBle' };
 
 export interface SugarLifeBridge {
   bridgeRevision: string;

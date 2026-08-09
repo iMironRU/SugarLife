@@ -1,10 +1,11 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline } from 'ionicons/icons';
+import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline, bluetoothOutline } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../data/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '../data/units';
 import { reportContentScroll } from '../data/panel';
 import { useDeviceExtras } from '../data/deviceExtras';
+import { sendIntent } from '../data/bridge';
 import { reservoirStats } from '../data/treatmentStats';
 import { useCloseOnLeave } from '../data/nav';
 import { notify } from '../data/notify';
@@ -27,6 +28,7 @@ const isPaused = (s?: string | null) => {
 
 export default function Today() {
   const { data } = useStore();
+  const [bleMsg, setBleMsg] = useState('');
   useUnit(); // перерисовка при смене единиц
   const cu = useCarbUnit(); // единицы углеводов (граммы/Х.Е.)
   const [foodOpen, setFoodOpen] = useState(false);
@@ -139,6 +141,20 @@ export default function Today() {
               </div>
             </div>
           )}
+
+          {/* тест: гарантированно освободить BLE (остановить скан + отключить все BLE-устройства → драйвер рвёт GATT) */}
+          <button
+            className="btn-primary"
+            style={{ width: '100%', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 14, borderRadius: 12, border: 0, fontSize: 15, fontWeight: 600 }}
+            onClick={() => {
+              void sendIntent({ type: 'stopScan' });
+              void sendIntent({ type: 'releaseBle' });
+              setBleMsg('BLE отключён — устройства освобождены');
+            }}
+          >
+            <IonIcon icon={bluetoothOutline} /> Отключить BLE
+          </button>
+          {bleMsg && <div className="metric-note" style={{ marginTop: 8, textAlign: 'center' }}>{bleMsg}</div>}
         </div>
         <FoodSheet isOpen={foodOpen} onClose={() => setFoodOpen(false)} />
       </IonContent>
