@@ -1,4 +1,4 @@
-import { IonModal, IonContent, IonIcon } from '@ionic/react';
+import { IonModal, IonContent, IonFooter, IonIcon } from '@ionic/react';
 import { closeOutline, chevronBack, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '../data/deviceConfig';
@@ -269,13 +269,15 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
         {hasModel && hasBleDriver && (cat === 'sensor' || cat === 'pump') && (
           <DeviceScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} kind={cat} title={title} />
         )}
-        <div className="page-foot" slot="fixed">
-          <button className="page-back" onClick={onClose}>
-            <IonIcon icon={chevronBack} />
-            Назад
-          </button>
-        </div>
       </IonContent>
+      {/* подвал ВНЕ прокрутки: фиксированный слой поверх контента перекрывал
+          последнюю кнопку, пока не домотаешь до конца */}
+      <IonFooter className="page-foot">
+        <button className="page-back" onClick={onClose}>
+          <IonIcon icon={chevronBack} />
+          Назад
+        </button>
+      </IonFooter>
     </IonModal>
   );
 }

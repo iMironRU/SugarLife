@@ -1,4 +1,4 @@
-import { IonModal, IonContent, IonInput, IonToggle, IonButton, IonIcon } from '@ionic/react';
+import { IonModal, IonContent, IonFooter, IonInput, IonToggle, IonButton, IonIcon } from '@ionic/react';
 import { linkOutline, keyOutline, closeOutline, chevronBack, gitNetworkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { type CloudConfig, updateCloud, removeCloud } from '../data/clouds';
@@ -137,15 +137,15 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
           <IonIcon icon={trashOutline} />
           Удалить облако
         </button>
-        {/* «назад» внизу: до верхней кнопки не дотянуться, а peek-шторка не давала
-            промотать до «Удалить» — Ionic отдавал жест перетаскиванию, а не прокрутке */}
-        <div className="page-foot" slot="fixed">
-          <button className="page-back" onClick={onClose}>
-            <IonIcon icon={chevronBack} />
-            Назад
-          </button>
-        </div>
       </IonContent>
+      {/* подвал ВНЕ прокрутки: фиксированный слой поверх контента перекрывал
+          последнюю кнопку, пока не домотаешь до конца */}
+      <IonFooter className="page-foot">
+        <button className="page-back" onClick={onClose}>
+          <IonIcon icon={chevronBack} />
+          Назад
+        </button>
+      </IonFooter>
     </IonModal>
   );
 }
