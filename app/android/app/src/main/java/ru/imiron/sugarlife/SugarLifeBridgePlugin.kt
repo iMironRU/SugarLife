@@ -6,12 +6,15 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import ru.imiron.sugarlife.engine.SugarLifeEngine
+import java.io.File
 
 /**
  * Нативная сторона моста на Android — зеркало iOS-плагина, но БЕЗ BLE (этап 1: UI + движок + Nightscout).
@@ -31,6 +34,25 @@ class SugarLifeBridgePlugin : Plugin() {
     private fun ensureProvider() {
         requestBlePermissions()
         EngineHolder.ensureProvider(context.applicationContext)
+    }
+
+    /** Экспорт диагностического лога (редактированный NDJSON из движка) → OS share sheet (Telegram/почта/файл).
+     *  Механизм сбора телеметрии от волонтёров (share sheet, без сервера — по раннему решению; сборщик — позже). */
+    private fun exportAndShare() {
+        try {
+            val file = File(context.cacheDir, "sugarlife-log.ndjson").apply { writeText(engine.exportLog()) }
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "SugarLife — диагностический лог")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            val chooser = Intent.createChooser(send, "Отправить лог").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            activity?.runOnUiThread { (activity ?: context).startActivity(chooser) }
+        } catch (t: Throwable) {
+            Log.e(TAG, "exportLog share error", t)
+        }
     }
 
     private fun requestBlePermissions() {
@@ -65,6 +87,7 @@ class SugarLifeBridgePlugin : Plugin() {
             json.contains("\"startScan\"") -> { ensureProvider(); scanner.start() }
             json.contains("\"stopScan\"") -> scanner.stop()
             json.contains("\"addDevice\"") || json.contains("\"addDiscovered\"") -> ensureProvider()
+            json.contains("\"exportLog\"") -> { exportAndShare(); return call.resolve(JSObject().put("json", """{"accepted":true}""")) }
         }
         val res = try {
             engine.sendIntent(json)
