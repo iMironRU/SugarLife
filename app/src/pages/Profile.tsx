@@ -15,8 +15,9 @@ import { countEntries } from '../data/db';
 import { exportGlucoseCsv } from '../data/export';
 import { useTheme } from '../theme/useTheme';
 import { reportContentScroll } from '../data/panel';
-import { APP_VERSION, APP_BUILD, isNative, platform, checkWebUpdate, checkOtaUpdate, checkNativeUpdate, openApkDownload } from '../data/appUpdate';
+import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload } from '../data/appUpdate';
 import { useCloseOnLeave } from '../data/nav';
+import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '../data/swUpdate';
 import UnitsModal from '../components/UnitsModal';
 import CarbUnitsModal from '../components/CarbUnitsModal';
 import DevicesScreen from '../components/DevicesScreen';
@@ -57,6 +58,7 @@ export default function Profile() {
     location.reload();
   };
 
+  // Нативное обновление (OTA + APK). Веб живёт отдельно — в data/swUpdate.ts.
   const doUpdate = async () => {
     if (updating) return;
     setUpdating(true);
@@ -92,13 +94,6 @@ export default function Profile() {
       if (ota === 'current') window.setTimeout(() => setUpdateMsg(null), 4000);
       return;
     }
-
-    // Веб/PWA — обновляем оболочку через service worker.
-    const r = await checkWebUpdate();
-    setUpdating(false);
-    if (r === 'current') { setUpdateMsg('У вас последняя версия.'); window.setTimeout(() => setUpdateMsg(null), 4000); }
-    else if (r === 'error') setUpdateMsg('Не удалось проверить обновление.');
-    // 'updated' → приложение перезагрузится само
   };
 
   const doExport = async () => {
@@ -114,6 +109,19 @@ export default function Profile() {
     setExporting(false);
     window.setTimeout(() => setExportMsg(null), 4000);
   };
+
+  /* Состояние обновления веб-версии. Четыре ответа на три вопроса, которые раньше
+     оставались без ответа: есть ли обновление, применилось ли, нужна ли перезагрузка. */
+  const upd = useUpdateState();
+  const [justUpdated] = useState(() => consumeJustUpdated()); // разово после перезагрузки
+  const agoMin = upd.checkedAt ? Math.round((Date.now() - upd.checkedAt) / 60000) : null;
+  const webUpdateNote = justUpdated ? `Обновлено до сборки ${APP_BUILD}.`
+    : upd.status === 'available' ? 'Новая версия скачана. Применится после перезагрузки.'
+    : upd.status === 'checking' ? 'Проверяю…'
+    : upd.status === 'error' ? 'Не удалось проверить — похоже, нет сети.'
+    : upd.status === 'unsupported' ? 'Автообновление недоступно — обновите страницу вручную.'
+    : upd.status === 'current' ? `Актуально · проверено ${agoMin != null && agoMin > 0 ? agoMin + ' мин назад' : 'только что'}`
+    : 'Проверяю…';
 
   const gs = data?.entries?.length ? stats(data.entries) : null;
   const gmi = gs ? fmt(gs.gmi) : DASH;
@@ -225,14 +233,27 @@ export default function Profile() {
                 <IonIcon icon={downloadOutline} />
                 Скачать APK
               </button>
-            ) : (
+            ) : isNative ? (
               <button className="about-update" onClick={doUpdate} disabled={updating}>
                 <IonIcon icon={refreshOutline} className={updating ? 'spin' : ''} />
                 {updating ? 'Проверяю…' : 'Обновиться'}
               </button>
+            ) : upd.status === 'available' ? (
+              /* кнопка честно предупреждает, что будет перезагрузка */
+              <button className="about-update accent" onClick={applyUpdate} disabled={upd.applying}>
+                <IonIcon icon={refreshOutline} className={upd.applying ? 'spin' : ''} />
+                {upd.applying ? 'Обновляю…' : 'Обновить и перезагрузить'}
+              </button>
+            ) : (
+              <button className="about-update" onClick={checkNow} disabled={upd.status === 'checking'}>
+                <IonIcon icon={refreshOutline} className={upd.status === 'checking' ? 'spin' : ''} />
+                {upd.status === 'checking' ? 'Проверяю…' : 'Проверить'}
+              </button>
             )}
           </div>
-          {updateMsg && <div className="metric-note" style={{ marginTop: 8 }}>{updateMsg}</div>}
+          {/* состояние обновления — текстом, а не догадками после нажатия */}
+          {!isNative && <div className="metric-note" style={{ marginTop: 8 }}>{webUpdateNote}</div>}
+          {isNative && updateMsg && <div className="metric-note" style={{ marginTop: 8 }}>{updateMsg}</div>}
 
           <button className="logout" onClick={reset}>Сбросить настройки</button>
         </div>

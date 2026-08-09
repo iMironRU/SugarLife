@@ -27,7 +27,9 @@ export default defineConfig(({ command }) => ({
     // В нативной сборке SW не нужен (ассеты локальные) — отключаем.
     VitePWA({
       disable: isCap,
-      registerType: 'autoUpdate',
+      // 'prompt', а не 'autoUpdate': мы показываем состояние и спрашиваем разрешение.
+      // При autoUpdate воркер подменял бы версию сам, и кнопка «Обновить» врала бы.
+      registerType: 'prompt',
       injectRegister: 'auto',
       manifest: false, // используем свой public/manifest.webmanifest
       workbox: {
