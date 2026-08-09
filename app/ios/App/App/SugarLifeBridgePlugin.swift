@@ -203,6 +203,10 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
                 DispatchQueue.main.async { self?.notifyListeners("snapshot", data: ["json": json]) }
             })
             e.startAsync()
+            // Boot-реконнект BLE: если доступ к Bluetooth уже выдан — цепляем провайдер сразу, движок
+            // переподнимет сохранённые сенсор/помпу из БД (без ожидания скана). notDetermined — отложим
+            // до первого скана (не показываем системный запрос на старте; restore сработает при первом attach).
+            if CBManager.authorization == .allowedAlways { self.ensureProvider() }
         }
     }
     deinit { unsubscribe?(); engine?.stop() }

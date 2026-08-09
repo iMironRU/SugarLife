@@ -36,13 +36,15 @@ if (Capacitor.isNativePlatform()) {
   };
   window.SugarLifeBridge = bridge;
 
-  // Движок НЕ хранит состояние между запусками — переприменяем сохранённый облачный источник на старте,
-  // иначе Nightscout отваливается от ядра после каждого перезапуска (в отличие от собственного стора приложения).
+  // Источник правды теперь БД движка: он сам персистит NS-конфиг и переподнимает облачный источник на
+  // старте. Здесь — ОДНОРАЗОВАЯ миграция старого localStorage-конфига в БД (для уже настроенных
+  // пользователей); дальше движок владеет им сам. При смене NS в UI addCloudSource обновит запись в БД.
   const cfg = getCfg();
-  if (cfg?.enabled && cfg.url) {
+  if (cfg?.enabled && cfg.url && !localStorage.getItem('sl-ns-migrated')) {
     void bridge.sendIntent({
       type: 'addCloudSource', url: cfg.url, token: cfg.token || null,
       streams: ['glucose', 'pump', 'treatments'],
     });
+    localStorage.setItem('sl-ns-migrated', '1');
   }
 }

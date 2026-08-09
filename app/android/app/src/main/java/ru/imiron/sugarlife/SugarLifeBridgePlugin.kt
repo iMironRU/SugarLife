@@ -55,11 +55,16 @@ class SugarLifeBridgePlugin : Plugin() {
         }
     }
 
-    private fun requestBlePermissions() {
-        val perms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+    private fun blePermissions(): Array<String> =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
             arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
         else arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-        val missing = perms.filter { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }
+
+    private fun hasBlePermissions(): Boolean =
+        blePermissions().all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
+
+    private fun requestBlePermissions() {
+        val missing = blePermissions().filter { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isNotEmpty()) activity?.let { ActivityCompat.requestPermissions(it, missing.toTypedArray(), 7401) }
     }
 
@@ -72,6 +77,10 @@ class SugarLifeBridgePlugin : Plugin() {
             val data = JSObject().put("json", json)
             activity?.runOnUiThread { notifyListeners("snapshot", data) }
         }
+        // Boot-реконнект BLE: если разрешения уже выданы — цепляем провайдер сразу, движок переподнимет
+        // сохранённые сенсор/помпу из БД (без ожидания скана). Нет разрешений — отложим до первого скана
+        // (не спамим запрос на старте; restore всё равно сработает при первом attachDriverProvider).
+        if (hasBlePermissions()) EngineHolder.ensureProvider(context.applicationContext)
     }
 
     @PluginMethod
