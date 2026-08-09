@@ -1,5 +1,5 @@
 import { IonModal, IonContent, IonInput, IonToggle, IonButton, IonIcon } from '@ionic/react';
-import { linkOutline, keyOutline, closeOutline, gitNetworkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
+import { linkOutline, keyOutline, closeOutline, chevronBack, gitNetworkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { type CloudConfig, updateCloud, removeCloud } from '../data/clouds';
 import { ping } from '../data/nightscout';
@@ -74,7 +74,7 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
   const noRoles = !cloud.sourceGlucose && !cloud.sourcePumpStatus;
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose} initialBreakpoint={0.9} breakpoints={[0, 0.9]} handle>
+    <IonModal isOpen={isOpen} onDidDismiss={onClose} className="full-page">
       <IonContent className="sheet">
         <div className="sheet-head">
           <div className="sheet-title">{cloud.name}</div>
@@ -137,6 +137,14 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
           <IonIcon icon={trashOutline} />
           Удалить облако
         </button>
+        {/* «назад» внизу: до верхней кнопки не дотянуться, а peek-шторка не давала
+            промотать до «Удалить» — Ionic отдавал жест перетаскиванию, а не прокрутке */}
+        <div className="page-foot" slot="fixed">
+          <button className="page-back" onClick={onClose}>
+            <IonIcon icon={chevronBack} />
+            Назад
+          </button>
+        </div>
       </IonContent>
     </IonModal>
   );

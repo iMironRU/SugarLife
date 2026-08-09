@@ -1,5 +1,5 @@
 import { IonModal, IonContent, IonIcon } from '@ionic/react';
-import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, trashOutline, water } from 'ionicons/icons';
+import { closeOutline, chevronBack, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '../data/deviceConfig';
 import { useSnapshot } from '../data/bridge';
@@ -121,7 +121,7 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
   };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={() => { setTab('device'); onClose(); }} initialBreakpoint={0.7} breakpoints={[0, 0.7, 1]} handle>
+    <IonModal isOpen={isOpen} onDidDismiss={() => { setTab('device'); onClose(); }} className="full-page">
       <IonContent className="sheet">
         <div className="sheet-head">
           <div>
@@ -269,6 +269,12 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
         {hasModel && hasBleDriver && (cat === 'sensor' || cat === 'pump') && (
           <DeviceScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} kind={cat} title={title} />
         )}
+        <div className="page-foot" slot="fixed">
+          <button className="page-back" onClick={onClose}>
+            <IonIcon icon={chevronBack} />
+            Назад
+          </button>
+        </div>
       </IonContent>
     </IonModal>
   );
