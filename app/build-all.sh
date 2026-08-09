@@ -16,7 +16,7 @@ step() { printf '\n\033[1m▶ %s\033[0m\n' "$1"; }
 # Профилактика D8 «Error while dexing»: composite-сборка core под android оставляет дубли `X 2.class` в
 # runtime_library_classes_dir (Gradle+APFS quirk при повторном копировании). Чистим их перед Android.
 clean_core_android() {
-  for m in core/contract sim state history bridge drivers/sibionics drivers/medtronic drivers/cloud engine; do
+  for m in core/contract sim state history persistence bridge drivers/sibionics drivers/medtronic drivers/cloud engine; do
     rm -rf "$CORE_DIR/$m/build/intermediates/runtime_library_classes_dir" \
            "$CORE_DIR/$m/build/intermediates/bundleLibRuntimeToDirDebug" 2>/dev/null
   done

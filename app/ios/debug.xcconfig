@@ -1,1 +1,5 @@
 CAPACITOR_DEBUG = true
+
+// Линкуем системный SQLite3 — SQLDelight native-driver (co.touchlab:sqliter) использует его C-символы
+// (_sqlite3_*) из системной libsqlite3. Без этого — «Undefined symbols» на линковке App.
+OTHER_LDFLAGS = $(inherited) -lsqlite3

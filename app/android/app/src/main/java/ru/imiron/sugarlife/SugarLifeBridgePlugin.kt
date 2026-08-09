@@ -24,7 +24,7 @@ import java.io.File
  */
 @CapacitorPlugin(name = "SugarLifeBridge")
 class SugarLifeBridgePlugin : Plugin() {
-    private val engine: SugarLifeEngine get() = EngineHolder.engine()
+    private val engine: SugarLifeEngine get() = EngineHolder.engine(context.applicationContext)
     private var unsubscribe: (() -> Unit)? = null
     private val scanner by lazy {
         SugarLifeScanner(context.applicationContext) { json -> engine.submitAdvertisement(json) }

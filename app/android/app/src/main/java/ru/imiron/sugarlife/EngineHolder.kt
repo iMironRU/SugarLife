@@ -3,6 +3,7 @@ package ru.imiron.sugarlife
 import android.content.Context
 import ru.imiron.sugarlife.engine.DefaultDriverProvider
 import ru.imiron.sugarlife.engine.SugarLifeEngine
+import ru.imiron.sugarlife.persistence.DatabaseDriverFactory
 
 /**
  * Процесс-синглтон движка. Capacitor пересоздаёт Activity/плагин при возврате из фона — если бы движок жил в
@@ -14,10 +15,14 @@ object EngineHolder {
     @Volatile private var providerAttached = false
 
     @Synchronized
-    fun engine(): SugarLifeEngine {
+    fun engine(appContext: Context): SugarLifeEngine {
         var e = engine
         if (e == null) {
-            e = SugarLifeEngine(withSimulators = false)
+            // Персист-БД (SQLite) → история переживает перезапуск. appContext (не Activity) — живёт всё приложение.
+            e = SugarLifeEngine(
+                withSimulators = false,
+                dbDriverFactory = DatabaseDriverFactory(appContext.applicationContext),
+            )
             engine = e
             e.startAsync()
         }
@@ -29,7 +34,7 @@ object EngineHolder {
     fun ensureProvider(appContext: Context) {
         if (providerAttached) return
         providerAttached = true
-        engine().attachDriverProvider(
+        engine(appContext).attachDriverProvider(
             DefaultDriverProvider(
                 nowMs = { System.currentTimeMillis() },
                 sensorBridge = { bleId, _ -> AndroidSensorBridge(appContext, bleId) },

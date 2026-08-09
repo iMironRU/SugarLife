@@ -196,7 +196,8 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     override public func load() {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            let e = SugarLifeEngine(driverProvider: nil, withSimulators: false)
+            // Персист-БД (нативный SQLite) → история переживает перезапуск. Фабрику собирает Swift (экспорт :persistence).
+            let e = SugarLifeEngine(driverProvider: nil, withSimulators: false, dbDriverFactory: DatabaseDriverFactory())
             self.engine = e
             self.unsubscribe = e.subscribe(onSnapshot: { [weak self] json in
                 DispatchQueue.main.async { self?.notifyListeners("snapshot", data: ["json": json]) }
