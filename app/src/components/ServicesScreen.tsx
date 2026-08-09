@@ -1,5 +1,5 @@
 import { IonModal, IonContent, IonIcon } from '@ionic/react';
-import { chevronBack, chevronForward, cloudOutline, addCircleOutline } from 'ionicons/icons';
+import { chevronBack, chevronForward, cloudOutline, addCircleOutline, pulse, flash } from 'ionicons/icons';
 import { useState } from 'react';
 import { useClouds, addCloud, type CloudConfig } from '../data/clouds';
 import CloudSheet from './CloudSheet';
@@ -22,10 +22,18 @@ export default function ServicesScreen({ isOpen, onClose }: { isOpen: boolean; o
     setOpenId(c.id);
   };
 
-  const roleLabel = (c: CloudConfig) => {
-    if (!c.enabled) return 'выкл';
-    const roles = [c.sourceGlucose && 'глюкоза', c.sourcePumpStatus && 'помпа'].filter(Boolean);
-    return roles.length ? roles.join(' · ') : 'подключено, ничего не берём';
+  /* Роли — иконками, а не словами: адрес Nightscout длинный, и подпись «глюкоза · помпа»
+     отбирала у него половину строки, из-за чего адрес переносился посреди слова.
+     Иконки те же, что на панели и в карточках: пульс — глюкоза, молния — помпа. */
+  const roleIcons = (c: CloudConfig) => {
+    if (!c.enabled) return <span className="list-value">выкл</span>;
+    if (!c.sourceGlucose && !c.sourcePumpStatus) return <span className="list-value">ничего не берём</span>;
+    return (
+      <span className="list-roles">
+        {c.sourceGlucose && <IonIcon icon={pulse} aria-label="глюкоза" title="глюкоза" />}
+        {c.sourcePumpStatus && <IonIcon icon={flash} aria-label="статус помпы" title="статус помпы" />}
+      </span>
+    );
   };
 
   return (
@@ -53,8 +61,8 @@ export default function ServicesScreen({ isOpen, onClose }: { isOpen: boolean; o
           {clouds.map((c) => (
             <button key={c.id} className="list-row" onClick={() => setOpenId(c.id)}>
               <IonIcon icon={cloudOutline} className="list-ico" />
-              <span className="list-title">{c.name || 'Nightscout'}</span>
-              <span className="list-value">{roleLabel(c)}</span>
+              <span className="list-title one-line">{c.name || 'Nightscout'}</span>
+              {roleIcons(c)}
               <IonIcon icon={chevronForward} className="list-chev" />
             </button>
           ))}

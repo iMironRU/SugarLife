@@ -367,6 +367,12 @@ ion-content { --background: var(--color-bg); }
 .list-row:not(:disabled):active { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .list-ico { font-size: 19px; color: var(--color-accent); flex-shrink: 0; }
 .list-title { flex: 1; min-width: 0; font-size: 14px; }
+/* Адрес облака — в одну строку с многоточием: он длинный и переносился посреди слова.
+   Правило точечное: у обычных строк списка перенос лучше обрезки (в «Экспорт глюкозы
+   в CSV» многоточие съедало бы смысл). */
+.list-title.one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-roles { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; color: var(--color-accent); }
+.list-roles ion-icon { font-size: 17px; }
 .list-value { font-size: 13px; color: var(--color-neutral-400); }
 .list-value.muted { color: var(--color-accent); }
 .list-chev { font-size: 14px; color: var(--color-neutral-600); }
