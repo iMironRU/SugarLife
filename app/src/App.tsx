@@ -1,5 +1,5 @@
 import { IonApp, IonIcon, createGesture } from '@ionic/react';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { barChart, pulse, home, water, personCircle, medkit } from 'ionicons/icons';
 
 import Today from './pages/Today';
@@ -80,9 +80,7 @@ function Pager() {
     gesture.enable();
     const onResize = () => { t.style.transition = 'none'; rest(getTab()); };
     window.addEventListener('resize', onResize);
-    // вертикальный жест — сворачивает панель там, где прокручивать нечего
-    const detachPanel = attachPanelGesture(vp);
-    return () => { gesture.destroy(); window.removeEventListener('resize', onResize); detachPanel(); };
+    return () => { gesture.destroy(); window.removeEventListener('resize', onResize); };
   }, []);
 
   return (
@@ -120,6 +118,7 @@ function TabBar({ insIcon }: { insIcon: string }) {
 }
 
 export default function App() {
+  const detachPanel = useRef<null | (() => void)>(null);
   const { data, status } = useStore();
   const snap = useSnapshot();
   const onboarded = useOnboarded();
@@ -128,6 +127,17 @@ export default function App() {
   // Спрашиваем разрешение на уведомления сразу при старте (не ждём первого
   // реального события) — так пользователь явно видит и решает.
   useEffect(() => { requestNotifyPermissionOnStart(); }, []);
+
+  /* Вертикальный жест сворачивания панели — на ВСЕЙ оболочке, а не только на области
+     контента: тянуть за саму панель естественнее, а на «Сегодня» контента мало и
+     тянуть внутри него часто не за что.
+     Именно ref-КОЛБЭК, а не useEffect: на первом рендере вместо оболочки может быть
+     лоадер или онбординг, и эффект с пустыми зависимостями привязался бы к пустоте
+     и больше никогда не повторился. */
+  const shellRef = useCallback((el: HTMLDivElement | null) => {
+    detachPanel.current?.();
+    detachPanel.current = el ? attachPanelGesture(el) : null;
+  }, []);
 
   // Если у моста уже есть данные монитора (нативный движок/драйвер) — открываем
   // основной UI, даже без Nightscout. В браузере без нативного моста мост = Nightscout-
@@ -141,7 +151,7 @@ export default function App() {
 
   return (
     <IonApp>
-      <div className="app-shell">
+      <div className="app-shell" ref={shellRef}>
         <HeroPanel />
         <Pager />
         <TabBar insIcon={insIcon} />
