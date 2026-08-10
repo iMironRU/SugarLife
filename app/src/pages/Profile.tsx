@@ -43,7 +43,13 @@ export default function Profile() {
   const [updating, setUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
-  useCloseOnLeave(4, () => setServicesOpen(false), () => setUnitsOpen(false), () => setCarbUnitsOpen(false), () => setDevicesOpen(false)); // «Профиль» — закрыть модалки при уходе
+  /* «Профиль» — закрыть модалки при уходе. Список ручной, и в нём не хватало loopOpen:
+     мастер петли, открытый из «Алгоритма», оставался висеть поверх другого экрана.
+     Теперь карточки не закрывают таббар, и это стало заметно сразу — переключаешь
+     вкладку, а мастер на месте. */
+  useCloseOnLeave(4,
+    () => setServicesOpen(false), () => setUnitsOpen(false),
+    () => setCarbUnitsOpen(false), () => setDevicesOpen(false), () => setLoopOpen(false));
 
   useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
 
