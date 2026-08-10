@@ -170,56 +170,6 @@ export default function Profile() {
             <div className="stat"><div className="stat-label">СУИ</div><div className="stat-val">{ic}<span></span></div></div>
           </div>
 
-          {/* оформление */}
-          <div className="section-label sec">Оформление</div>
-          <div className="theme-chips">
-            {themes.map((t) => {
-              const on = theme === t.key;
-              return (
-                <button key={t.key} className={'theme-chip' + (on ? ' on' : '')} onClick={() => setTheme(t.key)}>
-                  <IonIcon icon={t.icon} />
-                  <span>{t.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* устройства (ЧТО) — отдельный полноэкранный раздел, не инлайн-список
-              (см. docs/CONNECT-UX.md §10 «Карта интерфейса»: Профиль → Устройства) */}
-          <div className="section-label sec">Устройства</div>
-          <div className="list">
-            <button className="list-row" onClick={() => setDevicesOpen(true)}>
-              <IonIcon icon={hardwareChipOutline} className="list-ico" />
-              <span className="list-title">Помпа, сенсоры, глюкометр, петля</span>
-              <IonIcon icon={chevronForward} className="list-chev" />
-            </button>
-          </div>
-
-          {/* способы / сервисы (КАК): облако — такой же транспорт, как мост, только со своими
-              настройками (URL/токен) и статусом (доступность/связь) вместо сигнала/батареи */}
-          <div className="section-label sec">Способы / Сервисы</div>
-          <div className="list">
-            <button className="list-row" onClick={() => setServicesOpen(true)}>
-              <IonIcon icon={cloudOutline} className="list-ico" />
-              <span className="list-title">Облака</span>
-              <span className="list-value">{cloudsValue}</span>
-              <IonIcon icon={chevronForward} className="list-chev" />
-            </button>
-          </div>
-
-          {/* алгоритм: профиль петли. Только настройка — подача не включается (решение 0004) */}
-          <div className="section-label sec">Алгоритм</div>
-          <div className="list">
-            <button className="list-row" onClick={() => setLoopOpen(true)}>
-              <IonIcon icon={repeat} className="list-ico" />
-              <span className="pick-main">
-                <span className="list-title">Профиль петли</span>
-                <span className="pick-sub">{loopSub}</span>
-              </span>
-              <IonIcon icon={chevronForward} className="list-chev" />
-            </button>
-          </div>
-
           {/* настройки */}
           <div className="section-label sec">Настройки</div>
           <div className="list">
@@ -246,6 +196,42 @@ export default function Profile() {
 
           <div className="metric-note" style={{ marginTop: 14 }}>
             Данные хранятся только на этом устройстве, без облака и аккаунта.
+          </div>
+
+          {/* устройства (ЧТО) — отдельный полноэкранный раздел, не инлайн-список
+              (см. docs/CONNECT-UX.md §10 «Карта интерфейса»: Профиль → Устройства) */}
+          <div className="section-label sec">Устройства</div>
+          <div className="list">
+            <button className="list-row" onClick={() => setDevicesOpen(true)}>
+              <IonIcon icon={hardwareChipOutline} className="list-ico" />
+              <span className="list-title">Помпа, сенсоры, глюкометр, петля</span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </button>
+          </div>
+
+          {/* способы / сервисы (КАК): облако — такой же транспорт, как мост, только со своими
+              настройками (URL/токен) и статусом (доступность/связь) вместо сигнала/батареи */}
+          <div className="section-label sec">Сервисы</div>
+          <div className="list">
+            <button className="list-row" onClick={() => setServicesOpen(true)}>
+              <IonIcon icon={cloudOutline} className="list-ico" />
+              <span className="list-title">Облака</span>
+              <span className="list-value">{cloudsValue}</span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </button>
+          </div>
+
+          {/* алгоритм: профиль петли. Только настройка — подача не включается (решение 0004) */}
+          <div className="section-label sec">Алгоритм</div>
+          <div className="list">
+            <button className="list-row" onClick={() => setLoopOpen(true)}>
+              <IonIcon icon={repeat} className="list-ico" />
+              <span className="pick-main">
+                <span className="list-title">Профиль петли</span>
+                <span className="pick-sub">{loopSub}</span>
+              </span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </button>
           </div>
 
           {/* о приложении: версия + сборка + обновление */}
@@ -281,6 +267,20 @@ export default function Profile() {
           {/* состояние обновления — текстом, а не догадками после нажатия */}
           {!isNative && <div className="metric-note" style={{ marginTop: 8 }}>{webUpdateNote}</div>}
           {isNative && updateMsg && <div className="metric-note" style={{ marginTop: 8 }}>{updateMsg}</div>}
+
+          {/* оформление */}
+          <div className="section-label sec">Оформление</div>
+          <div className="theme-chips">
+            {themes.map((t) => {
+              const on = theme === t.key;
+              return (
+                <button key={t.key} className={'theme-chip' + (on ? ' on' : '')} onClick={() => setTheme(t.key)}>
+                  <IonIcon icon={t.icon} />
+                  <span>{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
           <button className="logout" onClick={reset}>Сбросить настройки</button>
         </div>

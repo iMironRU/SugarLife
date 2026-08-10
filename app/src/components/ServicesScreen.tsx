@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useClouds, addCloud, type CloudConfig } from '../data/clouds';
 import CloudSheet from './CloudSheet';
 
-/* Профиль → «Способы / Сервисы» — отдельный полноэкранный раздел (docs/CONNECT-UX.md §10,
+/* Профиль → «Сервисы» — отдельный полноэкранный раздел (docs/CONNECT-UX.md §10,
    §2b). Список облаков, а не одно поле: можно держать несколько Nightscout одновременно
    (свой + партнёра), у каждого — своя роль («забираем» глюкозу и/или статус помпы). */
 export default function ServicesScreen({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -42,8 +42,8 @@ export default function ServicesScreen({ isOpen, onClose }: { isOpen: boolean; o
         <div className="sheet-head">
           <button className="sheet-close" onClick={close} aria-label="Назад"><IonIcon icon={chevronBack} /></button>
           <div style={{ flex: 1 }}>
-            <div className="sheet-title">Способы / Сервисы</div>
-            <div className="sheet-subtitle">Профиль · Способы / Сервисы</div>
+            <div className="sheet-title">Сервисы</div>
+            <div className="sheet-subtitle">Профиль · Сервисы</div>
           </div>
         </div>
         <div className="sheet-note">
