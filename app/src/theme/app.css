@@ -459,53 +459,41 @@ ion-content { --background: var(--color-bg); }
    Способы/Сервисы и т.п. (docs/CONNECT-UX.md §10 «Карта интерфейса»). Без breakpoints/handle:
    те давали нестабильное поведение (самопроизвольное закрытие) без явной пользы для страницы,
    которую и так закрывают только кнопкой «назад». */
-/* Карточка встаёт МЕЖДУ панелью и таббаром, а не поверх всего экрана.
-
-   Полноэкранная модалка закрывала и то, и другое: настраивая устройство, человек
-   переставал видеть свой сахар, а чтобы вернуться на «Сегодня», приходилось
-   закрывать каждый слой по очереди — на каждый своя анимация. Теперь панель и
-   таббар живые: сахар перед глазами, до «Сегодня» одно касание из любой глубины.
-
-   Высоты приходят из data/chrome.ts: в CSS их не вычислить — у панели три
-   состояния разной высоты, а у таббара снизу safe-area, своя на каждом телефоне. */
-/* Сдвигаем padding'ом на ХОСТЕ, а не позиционированием обёртки. Первая попытка
-   переписывала обёртке position/top/bottom — и модалка переставала открываться
-   вовсе: на этой обёртке висит анимация появления Ionic, и подменять ей раскладку
-   нельзя. Хост же — обычный флекс-контейнер, padding он понимает, а обёртка в
-   100% высоты просто занимает то, что осталось. */
-.full-page {
-  --width: 100%; --height: 100%;
-  --border-radius: 18px 18px 0 0;
-  padding-top: var(--sl-panel-h, 0px);
-  padding-bottom: var(--sl-tabbar-h, 0px);
+/* Шторка снизу — для одноразовой подзадачи: выбрать значение, подтвердить перенос.
+   Это как раз то, для чего модалка и предназначена, в отличие от разделов-страниц.
+   Без breakpoints намеренно: с ними вертикальный жест уходит в перетаскивание вместо
+   прокрутки, и нижние кнопки становятся недостижимы — мы это уже проходили. */
+.sheet-modal {
+  --width: 100%; --height: auto; --max-height: 88%;
+  --border-radius: 20px 20px 0 0;
+  align-items: flex-end;
 }
-/* Касания вне карточки должны доходить до таббара, иначе весь смысл («до «Сегодня»
-   одно касание») теряется. Перехватывает не подложка, а САМ хост модалки: он
-   растянут на весь экран (inset: 0) с pointer-events: auto. Поэтому гасим события
-   на хосте и возвращаем их самой карточке. */
-.full-page { pointer-events: none; }
-.full-page::part(content) { pointer-events: auto; }
 
-/* Касание по панели над карточкой закрывает её. Работает штатной подложкой Ionic
-   (backdropDismiss включён), только ужатой до области панели: ниже неё нет ничего,
-   поэтому таббар остаётся живым и переключает вкладку, как раньше.
-   Прозрачная намеренно — панель мы держим на виду ради сахара, затемнять её
-   означало бы отнимать то, ради чего всё и затевалось. */
-.full-page { --backdrop-opacity: 0; }
-.full-page::part(backdrop) {
-  pointer-events: auto;
-  bottom: auto; height: var(--sl-panel-h, 0px);
+/* Страница стека внутри вкладки (data/stack.tsx).
+
+   Никаких вычислений: .pager-pane — это уже область между панелью и таббаром, и
+   страница просто занимает её целиком. Раньше на месте этого блока жили измерение
+   высот панели и таббара в JS, ужатая подложка, гашение событий на хосте модалки и
+   класс для нижнего слоя — всё это было попыткой воспроизвести навигацию модалкой.
+
+   Прокрутка своя (.stack-body), потому что IonContent здесь больше нет. */
+.stack-page {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; flex-direction: column;
+  background: var(--color-bg);
+  animation: stack-in .24s cubic-bezier(.3,.9,.3,1);
 }
-/* Нижний слой, пока открыт верхний: не закрываем его (иначе сработает onDidDismiss
-   и родитель потеряет состояние — «Назад» будет некуда возвращаться), а просто
-   убираем с глаз. Видимым остаётся ровно один слой. */
-.full-page.is-behind::part(content) { opacity: 0; }
-.full-page.is-behind::part(backdrop) { opacity: 0; }
-/* Внутренний контейнер модалки Ionic не колонка — без этого ion-content занимает
-   натуральную высоту, а футер уезжает за нижнюю кромку экрана. */
-.full-page .ion-delegate-host { display: flex; flex-direction: column; height: 100%; }
-.full-page .ion-delegate-host > ion-content { flex: 1 1 auto; min-height: 0; }
-.full-page .ion-delegate-host > ion-footer { flex: 0 0 auto; }
+@keyframes stack-in { from { transform: translate3d(28%,0,0); opacity: .4 } to { transform: none; opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .stack-page { animation: none } }
+/* Нижние страницы стека не рисуем, но и не размонтируем: возврат должен застать
+   набранный адрес и раскрытую часть суток на месте. */
+.stack-page:not(.is-top) { visibility: hidden; }
+.stack-body {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: none;
+  padding: 6px 18px 26px;
+}
+.stack-page > .page-foot { flex: 0 0 auto; }
+
 .sheet::part(scroll) { padding: 6px 18px 26px; }
 /* gap — чтобы круглая кнопка не липла к заголовку (на телефоне читалось как одно пятно) */
 .sheet-head { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 8px 0 4px; }
@@ -514,8 +502,7 @@ ion-content { --background: var(--color-bg); }
    пальцем, поэтому дублируем её внизу — в зоне досягаемости. Верхняя остаётся: она
    привычна и нужна на широком экране. */
 /* подвал теперь ВНЕ прокрутки (IonFooter), запас под него не нужен */
-.full-page .sheet::part(scroll) { padding-bottom: 20px; }
-.full-page .sheet-note, .full-page .section-label { padding-left: 2px; }
+.stack-body .sheet-note, .stack-body .section-label { padding-left: 2px; }
 .page-foot {
   padding: 8px 18px calc(10px + env(safe-area-inset-bottom, 0px));
   background: var(--color-bg);

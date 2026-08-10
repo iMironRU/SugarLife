@@ -1,4 +1,4 @@
-import { IonModal, IonContent, IonIcon } from '@ionic/react';
+import { IonIcon } from '@ionic/react';
 import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '../data/deviceConfig';
@@ -16,6 +16,7 @@ import CatalogPicker from './CatalogPicker';
 import { modelItems, bridgeItems, insulinItems } from './modelItems';
 import DeviceScanSheet from './DeviceScanSheet';
 import BasalProfileSheet from './BasalProfileSheet';
+import { useStack } from '../data/stack';
 import { toSegs, daily } from '../data/basal';
 
 export type DeviceCatKey = 'sensor' | 'pump' | 'meter' | 'loop';
@@ -27,15 +28,15 @@ const ageText = (a: Age) => (a.days >= 1 ? a.days + ' дн' : a.hours + ' ч');
    «НМГ» и «Инсулин». Раньше рядом жили отдельные SensorSheet/PumpSheet/LoopSheet, и в
    PumpSheet был свой второй выбор модели помпы — теперь этого нет.
    Вкладка «Мост» появляется, только если модель известна (иначе неизвестно, нужен ли он). */
-export default function DeviceSheet({ isOpen, onClose, cat, title }: {
-  isOpen: boolean; onClose: () => void; cat: DeviceCatKey; title: string;
+export default function DeviceSheet({ onClose, cat, title }: {
+  onClose: () => void; cat: DeviceCatKey; title: string;
 }) {
+  const { push, pop } = useStack();
   const cfg = useDeviceConfig();
   const { data } = useStore();
   const extras = useDeviceExtras();
   const [pick, setPick] = useState<null | 'model' | 'bridge' | 'insulin'>(null);
   const [scanOpen, setScanOpen] = useState(false);
-  const [basalOpen, setBasalOpen] = useState(false);
 
   const hasModel = cat === 'sensor' || cat === 'pump';
   // Модель не указана (§2b) — мы не знаем, нужен ли мост и вещает ли железка сама,
@@ -80,7 +81,6 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
   const { stateRows, supplies } = useMemo(() => {
     type Row = { k: string; v: string };
     const rows: Row[] = [];
-    if (!isOpen) return { stateRows: rows, supplies: [] as [string, Age][] };
 
     const ages = deviceAges(extras.events);
     if (cat === 'sensor' && ages.sensor) {
@@ -101,7 +101,7 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
         .filter((x): x is [string, Age] => !!x[1])
       : [];
     return { stateRows: rows, supplies: sup };
-  }, [isOpen, cat, extras.events, dev]);
+  }, [cat, extras.events, dev]);
 
   const modelIcon = cat === 'pump' ? flash : hardwareChipOutline;
   const setModel = (id: string) => setDeviceConfig(cat === 'pump' ? { pumpId: id } : { sensorId: id });
@@ -155,8 +155,7 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
   };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose} className="full-page">
-      <IonContent className="sheet">
+    <div className="sheet stack-body">
         <div className="sheet-head">
           <div>
             <div className="sheet-title">{title}</div>
@@ -245,7 +244,7 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
                   </button>
                 )}
                 {cat === 'pump' && (
-                  <button className="list-row" onClick={() => setBasalOpen(true)}>
+                  <button className="list-row" onClick={() => push(<BasalProfileSheet onClose={pop} />)}>
                     <IonIcon icon={pulseOutline} className="list-ico" />
                     <span className="list-title">Базальный профиль</span>
                     <span className={'list-value' + (basalTotal != null ? '' : ' muted')}>
@@ -332,13 +331,9 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
             onSelect={setBridge} currentLabel="только актуальные"
           />
         )}
-        {cat === 'pump' && <BasalProfileSheet isOpen={basalOpen} onClose={() => setBasalOpen(false)} />}
         {hasModel && hasBleDriver && (cat === 'sensor' || cat === 'pump') && (
           <DeviceScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} kind={cat} title={title} />
         )}
-      </IonContent>
-      {/* подвал ВНЕ прокрутки: фиксированный слой поверх контента перекрывал
-          последнюю кнопку, пока не домотаешь до конца */}
-    </IonModal>
+    </div>
   );
 }

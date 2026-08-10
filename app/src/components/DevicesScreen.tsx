@@ -1,19 +1,20 @@
-import { IonModal, IonContent, IonIcon } from '@ionic/react';
+import { IonIcon } from '@ionic/react';
 import { chevronBack, chevronForward, hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '../data/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '../data/deviceConfig';
 import { pumpById, sensorById } from '../data/catalog';
 import DeviceSheet, { type DeviceCatKey } from './DeviceSheet';
+import { useStack } from '../data/stack';
 import RequirementsCatalogSheet from './RequirementsCatalogSheet';
 
 /* Профиль → «Устройства» — отдельный полноэкранный раздел (не вложенная секция), как в
    docs/CONNECT-UX.md §10 «Карта интерфейса». Группировка по классу устройства (§2a: реестр).
    Детали (резервуар/батарея и т.п.) показываем только когда данные реально есть — честно. */
-export default function DevicesScreen({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export default function DevicesScreen({ onClose }: { onClose: () => void }) {
+  const { push, pop } = useStack();
   const { data } = useStore();
   const devCfg = useDeviceConfig();
-  const [cat, setCat] = useState<DeviceCatKey | null>(null);
   const [reqOpen, setReqOpen] = useState(false);
 
   const pump = pumpById(devCfg.pumpId);
@@ -26,13 +27,15 @@ export default function DevicesScreen({ isOpen, onClose }: { isOpen: boolean; on
         .filter(Boolean).join(' · ') || 'нет данных о резервуаре/батарее'
     : null;
 
-  const close = () => { onClose(); setCat(null); setReqOpen(false); };
+  const titles: Record<DeviceCatKey, string> = {
+    sensor: 'Сенсор (НМГ)', pump: 'Ввод инсулина', loop: 'Петля', meter: 'Глюкометр',
+  };
+  const openCat = (c: DeviceCatKey) => push(<DeviceSheet cat={c} title={titles[c]} onClose={pop} />);
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={close} className={'full-page' + (cat || reqOpen ? ' is-behind' : '')}>
-      <IonContent className="sheet">
+    <div className="sheet stack-body">
         <div className="sheet-head">
-          <button className="sheet-close" onClick={close} aria-label="Назад"><IonIcon icon={chevronBack} /></button>
+          <button className="sheet-close" onClick={onClose} aria-label="Назад"><IonIcon icon={chevronBack} /></button>
           <div style={{ flex: 1 }}>
             <div className="sheet-title">Устройства</div>
             <div className="sheet-subtitle">Профиль · Устройства</div>
@@ -44,7 +47,7 @@ export default function DevicesScreen({ isOpen, onClose }: { isOpen: boolean; on
 
         <div className="section-label sec">Помпа</div>
         <div className="list">
-          <button className="list-row" onClick={() => setCat('pump')}>
+          <button className="list-row" onClick={() => openCat('pump')}>
             <IonIcon icon={flash} className="list-ico" />
             <span className="pick-main">
               <span className="list-title">{pump?.model ?? 'Ввод инсулина'}</span>
@@ -57,7 +60,7 @@ export default function DevicesScreen({ isOpen, onClose }: { isOpen: boolean; on
 
         <div className="section-label sec">Сенсоры</div>
         <div className="list">
-          <button className="list-row" onClick={() => setCat('sensor')}>
+          <button className="list-row" onClick={() => openCat('sensor')}>
             <IonIcon icon={hardwareChipOutline} className="list-ico" />
             <span className="pick-main">
               <span className="list-title">{sensor?.name ?? 'Сенсор (НМГ)'}</span>
@@ -69,13 +72,13 @@ export default function DevicesScreen({ isOpen, onClose }: { isOpen: boolean; on
 
         <div className="section-label sec">Глюкометры и петля</div>
         <div className="list">
-          <button className="list-row" onClick={() => setCat('meter')}>
+          <button className="list-row" onClick={() => openCat('meter')}>
             <IonIcon icon={speedometerOutline} className="list-ico" />
             <span className="list-title">Глюкометр</span>
             <span className="list-value">настроить</span>
             <IonIcon icon={chevronForward} className="list-chev" />
           </button>
-          <button className="list-row" onClick={() => setCat('loop')}>
+          <button className="list-row" onClick={() => openCat('loop')}>
             <IonIcon icon={repeat} className="list-ico" />
             <span className="list-title">Петля</span>
             <span className="list-value">настроить</span>
@@ -90,18 +93,7 @@ export default function DevicesScreen({ isOpen, onClose }: { isOpen: boolean; on
             <IonIcon icon={chevronForward} className="list-chev" />
           </button>
         </div>
-
-        {(['sensor', 'pump', 'loop', 'meter'] as DeviceCatKey[]).map((c) => (
-          <DeviceSheet
-            key={c} isOpen={cat === c} onClose={() => setCat(null)} cat={c}
-            title={c === 'sensor' ? 'Сенсор (НМГ)' : c === 'pump' ? 'Ввод инсулина' : c === 'loop' ? 'Петля' : 'Глюкометр'}
-            
-          />
-        ))}
         <RequirementsCatalogSheet isOpen={reqOpen} onClose={() => setReqOpen(false)} />
-      </IonContent>
-      {/* подвал ВНЕ прокрутки: фиксированный слой поверх контента перекрывал
-          последнюю кнопку, пока не домотаешь до конца */}
-    </IonModal>
+    </div>
   );
 }

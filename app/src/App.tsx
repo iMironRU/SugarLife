@@ -17,7 +17,7 @@ import { detectTherapy } from './data/therapy';
 import { useTab, setTab, getTab, TAB_PATHS } from './data/nav';
 import { useOnboarded } from './data/onboarding';
 import { attachPanelGesture } from './data/panelGesture';
-import { watchChrome } from './data/chrome';
+import { StackHost } from './data/stack';
 import { requestNotifyPermissionOnStart } from './data/notify';
 
 // Порядок вкладок: 0 Метрики · 1 НМГ · 2 Сегодня · 3 Инсулин · 4 Профиль
@@ -87,11 +87,11 @@ function Pager() {
   return (
     <div className="pager-viewport" ref={viewportRef}>
       <div className="pager-track" ref={trackRef} style={{ transform: `translate3d(${-idx * 100}%,0,0)` }}>
-        <div className={'pager-pane' + (idx === 0 ? ' is-active' : '')}><Metrics /></div>
-        <div className={'pager-pane' + (idx === 1 ? ' is-active' : '')}><Mon /></div>
-        <div className={'pager-pane' + (idx === 2 ? ' is-active' : '')}><Today /></div>
-        <div className={'pager-pane' + (idx === 3 ? ' is-active' : '')}><Ins /></div>
-        <div className={'pager-pane' + (idx === 4 ? ' is-active' : '')}><Profile /></div>
+        <div className={'pager-pane' + (idx === 0 ? ' is-active' : '')}><StackHost><Metrics /></StackHost></div>
+        <div className={'pager-pane' + (idx === 1 ? ' is-active' : '')}><StackHost><Mon /></StackHost></div>
+        <div className={'pager-pane' + (idx === 2 ? ' is-active' : '')}><StackHost><Today /></StackHost></div>
+        <div className={'pager-pane' + (idx === 3 ? ' is-active' : '')}><StackHost><Ins /></StackHost></div>
+        <div className={'pager-pane' + (idx === 4 ? ' is-active' : '')}><StackHost><Profile /></StackHost></div>
       </div>
     </div>
   );
@@ -128,8 +128,6 @@ export default function App() {
   // Спрашиваем разрешение на уведомления сразу при старте (не ждём первого
   // реального события) — так пользователь явно видит и решает.
   useEffect(() => { requestNotifyPermissionOnStart(); }, []);
-  // высоты панели и таббара → в CSS: по ним карточки встают между ними (data/chrome.ts)
-  useEffect(() => watchChrome(), []);
 
   /* Вертикальный жест сворачивания панели — на ВСЕЙ оболочке, а не только на области
      контента: тянуть за саму панель естественнее, а на «Сегодня» контента мало и

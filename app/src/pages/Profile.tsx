@@ -16,7 +16,7 @@ import { exportGlucoseCsv } from '../data/export';
 import { useTheme } from '../theme/useTheme';
 import { reportContentScroll } from '../data/panel';
 import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload } from '../data/appUpdate';
-import { useCloseOnLeave } from '../data/nav';
+import { useStack } from '../data/stack';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '../data/swUpdate';
 import { useLoopProfile, LOOP_MODES } from '../data/loopProfile';
 import UnitsModal from '../components/UnitsModal';
@@ -31,25 +31,16 @@ export default function Profile() {
   const { status, data } = useStore();
   const { theme, setTheme } = useTheme();
   const unit = useUnit();
-  const [servicesOpen, setServicesOpen] = useState(false);
   const [unitsOpen, setUnitsOpen] = useState(false);
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
   const carbUnit = useCarbUnit();
-  const [devicesOpen, setDevicesOpen] = useState(false);
-  const [loopOpen, setLoopOpen] = useState(false);
+  const { push, pop } = useStack();
   const [count, setCount] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
-  /* «Профиль» — закрыть модалки при уходе. Список ручной, и в нём не хватало loopOpen:
-     мастер петли, открытый из «Алгоритма», оставался висеть поверх другого экрана.
-     Теперь карточки не закрывают таббар, и это стало заметно сразу — переключаешь
-     вкладку, а мастер на месте. */
-  useCloseOnLeave(4,
-    () => setServicesOpen(false), () => setUnitsOpen(false),
-    () => setCarbUnitsOpen(false), () => setDevicesOpen(false), () => setLoopOpen(false));
 
   useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
 
@@ -208,7 +199,7 @@ export default function Profile() {
               (см. docs/CONNECT-UX.md §10 «Карта интерфейса»: Профиль → Устройства) */}
           <div className="section-label sec">Устройства</div>
           <div className="list">
-            <button className="list-row" onClick={() => setDevicesOpen(true)}>
+            <button className="list-row" onClick={() => push(<DevicesScreen onClose={pop} />)}>
               <IonIcon icon={hardwareChipOutline} className="list-ico" />
               <span className="list-title">Помпа, сенсоры, глюкометр, петля</span>
               <IonIcon icon={chevronForward} className="list-chev" />
@@ -219,7 +210,7 @@ export default function Profile() {
               настройками (URL/токен) и статусом (доступность/связь) вместо сигнала/батареи */}
           <div className="section-label sec">Сервисы</div>
           <div className="list">
-            <button className="list-row" onClick={() => setServicesOpen(true)}>
+            <button className="list-row" onClick={() => push(<ServicesScreen onClose={pop} />)}>
               <IonIcon icon={cloudOutline} className="list-ico" />
               <span className="list-title">Облака</span>
               <span className="list-value">{cloudsValue}</span>
@@ -230,7 +221,7 @@ export default function Profile() {
           {/* алгоритм: профиль петли. Только настройка — подача не включается (решение 0004) */}
           <div className="section-label sec">Алгоритм</div>
           <div className="list">
-            <button className="list-row" onClick={() => setLoopOpen(true)}>
+            <button className="list-row" onClick={() => push(<LoopSetupScreen onClose={pop} />)}>
               <IonIcon icon={repeat} className="list-ico" />
               <span className="pick-main">
                 <span className="list-title">Профиль петли</span>
@@ -291,11 +282,8 @@ export default function Profile() {
           <button className="logout" onClick={reset}>Сбросить настройки</button>
         </div>
 
-        <ServicesScreen isOpen={servicesOpen} onClose={() => setServicesOpen(false)} />
-        <LoopSetupScreen isOpen={loopOpen} onClose={() => setLoopOpen(false)} />
         <UnitsModal isOpen={unitsOpen} onClose={() => setUnitsOpen(false)} />
         <CarbUnitsModal isOpen={carbUnitsOpen} onClose={() => setCarbUnitsOpen(false)} />
-        <DevicesScreen isOpen={devicesOpen} onClose={() => setDevicesOpen(false)} />
       </IonContent>
     </IonPage>
   );

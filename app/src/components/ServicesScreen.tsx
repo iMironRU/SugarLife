@@ -1,25 +1,24 @@
-import { IonModal, IonContent, IonIcon } from '@ionic/react';
+import { IonIcon } from '@ionic/react';
 import { chevronBack, chevronForward, cloudOutline, addCircleOutline, pulse, flash } from 'ionicons/icons';
-import { useState } from 'react';
 import { useClouds, addCloud, type CloudConfig } from '../data/clouds';
 import CloudSheet from './CloudSheet';
+import { useStack } from '../data/stack';
 
 /* Профиль → «Сервисы» — отдельный полноэкранный раздел (docs/CONNECT-UX.md §10,
    §2b). Список облаков, а не одно поле: можно держать несколько Nightscout одновременно
    (свой + партнёра), у каждого — своя роль («забираем» глюкозу и/или статус помпы). */
-export default function ServicesScreen({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export default function ServicesScreen({ onClose }: { onClose: () => void }) {
   const clouds = useClouds();
-  const [openId, setOpenId] = useState<string | null>(null);
-  const open = clouds.find((c) => c.id === openId) ?? null;
+  const { push, pop } = useStack();
 
-  const close = () => { onClose(); setOpenId(null); };
+  const openCloud = (id: string) => push(<CloudSheet cloudId={id} onClose={pop} />);
 
   const onAdd = () => {
     const c = addCloud({
       kind: 'nightscout', name: 'Новое облако', url: '', token: '', enabled: false,
       sourceGlucose: true, sourcePumpStatus: true,
     });
-    setOpenId(c.id);
+    openCloud(c.id);
   };
 
   /* Роли — иконками, а не словами: адрес Nightscout длинный, и подпись «глюкоза · помпа»
@@ -37,10 +36,9 @@ export default function ServicesScreen({ isOpen, onClose }: { isOpen: boolean; o
   };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={close} className={'full-page' + (open ? ' is-behind' : '')}>
-      <IonContent className="sheet">
+    <div className="sheet stack-body">
         <div className="sheet-head">
-          <button className="sheet-close" onClick={close} aria-label="Назад"><IonIcon icon={chevronBack} /></button>
+          <button className="sheet-close" onClick={onClose} aria-label="Назад"><IonIcon icon={chevronBack} /></button>
           <div style={{ flex: 1 }}>
             <div className="sheet-title">Сервисы</div>
             <div className="sheet-subtitle">Профиль · Сервисы</div>
@@ -59,7 +57,7 @@ export default function ServicesScreen({ isOpen, onClose }: { isOpen: boolean; o
             </div>
           )}
           {clouds.map((c) => (
-            <button key={c.id} className="list-row" onClick={() => setOpenId(c.id)}>
+            <button key={c.id} className="list-row" onClick={() => openCloud(c.id)}>
               <IonIcon icon={cloudOutline} className="list-ico" />
               <span className="list-title one-line">{c.name || 'Nightscout'}</span>
               {roleIcons(c)}
@@ -71,11 +69,6 @@ export default function ServicesScreen({ isOpen, onClose }: { isOpen: boolean; o
             <span className="list-title">Добавить облако</span>
           </button>
         </div>
-
-        <CloudSheet isOpen={!!open} onClose={() => setOpenId(null)} cloud={open} />
-      </IonContent>
-      {/* подвал ВНЕ прокрутки: фиксированный слой поверх контента перекрывал
-          последнюю кнопку, пока не домотаешь до конца */}
-    </IonModal>
+    </div>
   );
 }

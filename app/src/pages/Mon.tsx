@@ -6,10 +6,10 @@ import { useEntries } from '../data/db';
 import { toUnits, useUnit } from '../data/units';
 import { arrowChar, getCfg, loadEventsRange, type Treatment } from '../data/nightscout';
 import { deviceAges } from '../data/treatmentStats';
-import { useCloseOnLeave } from '../data/nav';
 import GlucoseTimeChart from '../components/GlucoseTimeChart';
 import DeviceSheet from '../components/DeviceSheet';
 import { DataGate } from '../components/NotConfigured';
+import { useStack } from '../data/stack';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
@@ -22,8 +22,7 @@ const fmtWhen = (ms: number) => {
 export default function Mon() {
   useUnit(); // перерисовка при смене единиц
   const [win, setWin] = useState(3);
-  const [sensorOpen, setSensorOpen] = useState(false);
-  useCloseOnLeave(1, () => setSensorOpen(false)); // «НМГ» — закрыть «Датчик» при уходе
+  const { push, pop } = useStack();
   const entries = useEntries(24 * 3600e3);
 
   const cfg = getCfg();
@@ -46,7 +45,7 @@ export default function Mon() {
           <DataGate>
           {/* сахар/тренд/свежесть — в верхней панели; здесь кнопка датчика + график */}
           {ages.sensor && (
-            <button className="pump-btn" style={{ marginTop: 0 }} onClick={() => setSensorOpen(true)}>
+            <button className="pump-btn" style={{ marginTop: 0 }} onClick={() => push(<DeviceSheet cat="sensor" title="Сенсор (НМГ)" onClose={pop} />)}>
               <IonIcon icon={hardwareChipOutline} className="pump-btn-ico" style={{ color: 'var(--color-accent)' }} />
               <div className="pump-btn-txt">
                 <div className="pump-btn-title">Датчик</div>
@@ -84,8 +83,6 @@ export default function Mon() {
           <div className="metric-note">День датчика — из события замены сенсора в Nightscout (Sensor Change). Сахар, тренд и свежесть — вживую.</div>
           </DataGate>
         </div>
-        {/* одна карточка устройства на всё приложение (§7) — та же, что в «Профиль → Устройства» */}
-        <DeviceSheet isOpen={sensorOpen} onClose={() => setSensorOpen(false)} cat="sensor" title="Сенсор (НМГ)" />
       </IonContent>
     </IonPage>
   );

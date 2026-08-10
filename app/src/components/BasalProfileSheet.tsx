@@ -1,6 +1,6 @@
 import { IonModal, IonContent, IonFooter, IonIcon } from '@ionic/react';
 import { closeOutline, arrowUndoOutline } from 'ionicons/icons';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useStore } from '../data/store';
 import {
   type Seg, PARTS, STEP, MIN_RATE, MAX_RATE, fmtH, roundRate, toSegs, rateAt, daily,
@@ -45,7 +45,7 @@ function path(segs: Seg[], max: number): string {
 
 type Inner = null | { kind: 'seg'; i: number } | { kind: 'scale' } | { kind: 'flat' } | { kind: 'transfer' };
 
-export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export default function BasalProfileSheet({ onClose }: { onClose: () => void }) {
   const { data } = useStore();
   const pump = toSegs(data?.profile?.basalSchedule ?? []);
 
@@ -57,14 +57,6 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
   const [scalePct, setScalePct] = useState(0);
   const [done, setDone] = useState<number[]>([]);
   const [saved, setSaved] = useState(false);
-
-  // при каждом открытии начинаем от того, что сейчас в помпе
-  useEffect(() => {
-    if (!isOpen) return;
-    setWork(toSegs(data?.profile?.basalSchedule ?? []));
-    setUndo([]); setEdit(false); setInner(null); setDone([]); setSaved(false); setScalePct(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
 
   const changedAll = !sameProfile(work, pump);
   const changedAt = (i: number) => Math.abs(work[i].v - rateAt(pump, work[i].a)) > 1e-6;
@@ -98,8 +90,7 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
 
   if (!pump.length) {
     return (
-      <IonModal isOpen={isOpen} onDidDismiss={onClose} className="full-page">
-        <IonContent className="sheet">
+      <div className="sheet stack-body">
           <div className="sheet-head">
             <div><div className="sheet-title">Базальный профиль</div></div>
             <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
@@ -112,8 +103,7 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
               профиль, было бы обманом.
             </div>
           </div>
-        </IonContent>
-      </IonModal>
+      </div>
     );
   }
 
@@ -122,8 +112,7 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
 
   return (
     <>
-      <IonModal isOpen={isOpen} onDidDismiss={onClose} backdropDismiss={!changedAll || saved} className={'full-page' + (inner ? ' is-behind' : '')}>
-        <IonContent className="sheet">
+      <div className="sheet stack-body">
           <div className="sheet-head">
             <div>
               <div className="sheet-title">Базальный профиль</div>
@@ -239,8 +228,8 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
               <div className="sheet-note">Значения в ЕД/ч · шаг {STEP.toFixed(2)} · границы кратны 30 минутам — так же, как принимает помпа.</div>
             </>
           )}
-        </IonContent>
-        <IonFooter className="page-foot">
+        </div>
+        <div className="page-foot">
           {!edit ? (
             <button className="page-back" onClick={() => setEdit(true)}>Править профиль</button>
           ) : (
@@ -253,11 +242,10 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
               </button>
             </div>
           )}
-        </IonFooter>
-      </IonModal>
+        </div>
 
-      {/* ---- вложенные шторки ---- */}
-      <IonModal isOpen={inner?.kind === 'seg'} onDidDismiss={() => setInner(null)} className="full-page">
+      {/* ---- вложенные шторки: одноразовые подзадачи, им модалка и подходит ---- */}
+      <IonModal isOpen={inner?.kind === 'seg'} onDidDismiss={() => setInner(null)} className="sheet-modal">
         <IonContent className="sheet">
           {seg && (
             <>
@@ -311,7 +299,7 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
         </IonFooter>
       </IonModal>
 
-      <IonModal isOpen={inner?.kind === 'scale'} onDidDismiss={() => setInner(null)} className="full-page">
+      <IonModal isOpen={inner?.kind === 'scale'} onDidDismiss={() => setInner(null)} className="sheet-modal">
         <IonContent className="sheet">
           <div className="sheet-head">
             <div><div className="sheet-title">Весь профиль</div><div className="sheet-subtitle">пропорционально</div></div>
@@ -339,7 +327,7 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
         </IonFooter>
       </IonModal>
 
-      <IonModal isOpen={inner?.kind === 'flat'} onDidDismiss={() => setInner(null)} className="full-page">
+      <IonModal isOpen={inner?.kind === 'flat'} onDidDismiss={() => setInner(null)} className="sheet-modal">
         <IonContent className="sheet">
           <div className="sheet-head">
             <div><div className="sheet-title">Выровнять</div><div className="sheet-subtitle">один уровень на сутки</div></div>
@@ -356,7 +344,7 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
         </IonFooter>
       </IonModal>
 
-      <IonModal isOpen={inner?.kind === 'transfer'} onDidDismiss={() => setInner(null)} className="full-page">
+      <IonModal isOpen={inner?.kind === 'transfer'} onDidDismiss={() => setInner(null)} className="sheet-modal">
         <IonContent className="sheet">
           <div className="sheet-head">
             <div><div className="sheet-title">Перенос в помпу</div><div className="sheet-subtitle">вручную, по интервалам</div></div>

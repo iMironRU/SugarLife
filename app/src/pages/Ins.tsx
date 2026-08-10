@@ -6,11 +6,11 @@ import { useStore } from '../data/store';
 import { useTreatments } from '../data/db';
 import { detectTherapy } from '../data/therapy';
 import { fmt } from '../data/units';
-import { useCloseOnLeave } from '../data/nav';
 import InsulinTimeChart from '../components/InsulinTimeChart';
 import DeviceSheet from '../components/DeviceSheet';
 import LoopSetupScreen from '../components/LoopSetupScreen';
 import { DataGate } from '../components/NotConfigured';
+import { useStack } from '../data/stack';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
@@ -22,9 +22,7 @@ export default function Ins() {
   const isPen = therapy === 'pen';
 
   const [win, setWin] = useState(3);
-  const [pumpOpen, setPumpOpen] = useState(false);
-  const [loopOpen, setLoopOpen] = useState(false);
-  useCloseOnLeave(3, () => setPumpOpen(false), () => setLoopOpen(false)); // «Инсулин» — закрыть шторки при уходе
+  const { push, pop } = useStack();
 
   // Живьём из локальной БД (обновляется сокетом/бэкфиллом): раньше грузили один раз
   // на старте — новые болюсы в график не попадали, пока не перезапустишь приложение.
@@ -52,7 +50,7 @@ export default function Ins() {
             <>
               {/* помпа (шторка) + петля (шторка) */}
               <div className="pump-row">
-                <button className="pump-btn" onClick={() => setPumpOpen(true)}>
+                <button className="pump-btn" onClick={() => push(<DeviceSheet cat="pump" title="Ввод инсулина" onClose={pop} />)}>
                   <IonIcon icon={flash} className="pump-btn-ico" />
                   <div className="pump-btn-txt">
                     <div className="pump-btn-title">Помпа</div>
@@ -60,7 +58,7 @@ export default function Ins() {
                   </div>
                   <IonIcon icon={chevronForward} className="pump-btn-chev" />
                 </button>
-                <button className="loop-btn" onClick={() => setLoopOpen(true)} aria-label="Петля">
+                <button className="loop-btn" onClick={() => push(<LoopSetupScreen onClose={pop} />)} aria-label="Петля">
                   <IonIcon icon={repeat} />
                 </button>
               </div>
@@ -82,12 +80,6 @@ export default function Ins() {
           </DataGate>
         </div>
 
-        {/* одна карточка устройства на всё приложение (§7) — та же, что в «Профиль → Устройства» */}
-        <DeviceSheet isOpen={pumpOpen} onClose={() => setPumpOpen(false)} cat="pump" title="Ввод инсулина" />
-        {/* Кнопка петли ведёт в профиль петли, а не в карточку устройства-заглушки:
-            у петли нет модели, моста и расходников — настраивают у неё пределы. Это тот
-            же мастер, что в «Профиль → Алгоритм», один на всё приложение. */}
-        <LoopSetupScreen isOpen={loopOpen} onClose={() => setLoopOpen(false)} />
       </IonContent>
     </IonPage>
   );

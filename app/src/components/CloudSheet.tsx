@@ -1,22 +1,26 @@
-import { IonModal, IonContent, IonInput, IonToggle, IonButton, IonIcon } from '@ionic/react';
+import { IonInput, IonToggle, IonButton, IonIcon } from '@ionic/react';
 import { linkOutline, keyOutline, closeOutline, chevronForward, gitNetworkOutline, copyOutline, checkmarkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
-import { type CloudConfig, updateCloud, removeCloud } from '../data/clouds';
+import { useClouds, updateCloud, removeCloud } from '../data/clouds';
 import { ping, checkReadAccess, type ReadAccess } from '../data/nightscout';
 import { refresh } from '../data/store';
 import { toUnits } from '../data/units';
 import { useDeviceConfig, isRecorded, isModelKnown } from '../data/deviceConfig';
 import { pumpById, sensorById } from '../data/catalog';
 import DeviceSheet from './DeviceSheet';
+import { useStack } from '../data/stack';
 
 /* Карточка одного облака (docs/CONNECT-UX.md §2b, §7). «Забираем отсюда» — по конкретным
    устройствам из реестра (не по абстрактным ролям «глюкоза»/«помпа»): облако — способ
    подключения для КОНКРЕТНОГО зарегистрированного устройства, честно называем его моделью.
    Если устройство ещё не записано в «Устройствах» — показываем строку выключенной, без
    выдумывания несуществующей связи. «Выгрузка сюда» (запись в это облако) — отдельная задача. */
-export default function CloudSheet({ isOpen, onClose, cloud }: {
-  isOpen: boolean; onClose: () => void; cloud: CloudConfig | null;
-}) {
+export default function CloudSheet({ cloudId, onClose }: { cloudId: string; onClose: () => void }) {
+  /* Облако берём из хранилища по id, а не приходящим объектом: страница живёт в стеке,
+     и пока она открыта, запись успевает измениться (сохранили адрес, переключили роль).
+     Копия в пропсе к этому моменту устарела бы. */
+  const cloud = useClouds().find((c) => c.id === cloudId) ?? null;
+  const { push, pop } = useStack();
   const [url, setUrl] = useState('');
   const [token, setToken] = useState('');
   const [msg, setMsg] = useState('');
@@ -28,7 +32,6 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
      Запись (еда, болюсы) — отдельная функция; токен под неё спросим, когда дойдёт. */
   const [access, setAccess] = useState<ReadAccess | 'checking' | null>(null);
   const [tokenShown, setTokenShown] = useState(false);
-  const [devOpen, setDevOpen] = useState<'sensor' | 'pump' | null>(null);
   const [copied, setCopied] = useState<null | 'ok' | 'fail'>(null);
   const devCfg = useDeviceConfig();
   // Запись в реестре может быть без модели (§2b) — тогда облако для неё единственный
@@ -49,7 +52,7 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
     : isModelKnown(devCfg.pumpId) ? 'настроить' : 'модель не указана';
 
   useEffect(() => {
-    if (!isOpen || !cloud) return;
+    if (!cloud) return;
     setUrl(cloud.url || '');
     setToken(cloud.token || '');
     setMsg('');
@@ -61,7 +64,7 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
       .then((a) => { if (!cancel) setAccess(a); })
       .catch(() => { if (!cancel) setAccess(null); });
     return () => { cancel = true; };
-  }, [isOpen, cloud?.id]);
+  }, [cloud?.id]);
 
   if (!cloud) return null;
 
@@ -125,8 +128,7 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
   const needToken = access === 'needsToken' || tokenShown;
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose} backdropDismiss={!dirty} className={'full-page' + (devOpen ? ' is-behind' : '')}>
-      <IonContent className="sheet">
+    <div className="sheet stack-body">
         <div className="sheet-head">
           <div className="sheet-title">{cloud.name}</div>
           <button className="sheet-close" onClick={askClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
@@ -187,7 +189,7 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
               не указана» — это ровно то место, где хочется на неё нажать. Переключатель
               вынесен из кнопки: он про источник данных, а не про переход. */}
           <div className="list-row src-row">
-            <button className="src-main" onClick={() => setDevOpen('sensor')}>
+            <button className="src-main" onClick={() => push(<DeviceSheet cat="sensor" title="Сенсор (НМГ)" onClose={pop} />)}>
               <IonIcon icon={hardwareChipOutline} className="list-ico" />
               <span className="pick-main">
                 <span className={'list-title' + (sensorRecorded ? '' : ' muted')}>{sensorLabel}</span>
@@ -198,7 +200,7 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
             <IonToggle checked={cloud.sourceGlucose} disabled={!sensorRecorded} onIonChange={(e) => onToggleSensor(e.detail.checked)} />
           </div>
           <div className="list-row src-row">
-            <button className="src-main" onClick={() => setDevOpen('pump')}>
+            <button className="src-main" onClick={() => push(<DeviceSheet cat="pump" title="Помпа" onClose={pop} />)}>
               <IonIcon icon={flash} className="list-ico" />
               <span className="pick-main">
                 <span className={'list-title' + (pumpRecorded ? '' : ' muted')}>{pumpLabel}</span>
@@ -217,21 +219,7 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
           <IonIcon icon={trashOutline} />
           Удалить облако
         </button>
-
-        {/* Та же карточка устройства, что в «Профиль → Устройства» (§7): одна на всё
-            приложение, чтобы модель указывалась в одном месте, а не в двух похожих. */}
-        <DeviceSheet
-          isOpen={devOpen === 'sensor'} onClose={() => setDevOpen(null)}
-          cat="sensor" title="Сенсор (НМГ)"
-        />
-        <DeviceSheet
-          isOpen={devOpen === 'pump'} onClose={() => setDevOpen(null)}
-          cat="pump" title="Помпа"
-        />
-      </IonContent>
-      {/* подвал ВНЕ прокрутки: фиксированный слой поверх контента перекрывал
-          последнюю кнопку, пока не домотаешь до конца */}
-    </IonModal>
+    </div>
   );
 }
 

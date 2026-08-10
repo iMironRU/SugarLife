@@ -1,4 +1,4 @@
-import { IonModal, IonContent, IonFooter, IonIcon } from '@ionic/react';
+import { IonIcon } from '@ionic/react';
 import { chevronBack, checkmarkCircle, closeCircle, alertCircle, lockClosedOutline, createOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '../data/store';
@@ -24,7 +24,7 @@ const STEPS = ['Оборудование', 'Режим петли', 'Лимит�
 
 type Check = { ok: 'yes' | 'no' | 'maybe'; name: string; note: string };
 
-export default function LoopSetupScreen({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export default function LoopSetupScreen({ onClose }: { onClose: () => void }) {
   const profile = useLoopProfile();
   const [step, setStep] = useState<Step>(0);
   const [editing, setEditing] = useState<string | null>(null);
@@ -66,8 +66,8 @@ export default function LoopSetupScreen({ isOpen, onClose }: { isOpen: boolean; 
   const canNext = step !== 1 || picked != null;
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={close} className="full-page">
-      <IonContent className="sheet wz">
+    <>
+      <div className="sheet wz stack-body">
         <div className="wz-top">ШАГ {step + 1} ИЗ 5 · {STEPS[step].toUpperCase()}</div>
         <div className="wz-prog">
           {STEPS.map((s, i) => (
@@ -282,9 +282,9 @@ export default function LoopSetupScreen({ isOpen, onClose }: { isOpen: boolean; 
             )}
           </>
         )}
-      </IonContent>
+      </div>
 
-      <IonFooter className="page-foot">
+      <div className="page-foot">
         <div className="wz-nav">
           {done ? (
             <button className="page-next" onClick={close}>Понятно</button>
@@ -308,7 +308,7 @@ export default function LoopSetupScreen({ isOpen, onClose }: { isOpen: boolean; 
             </>
           )}
         </div>
-      </IonFooter>
-    </IonModal>
+      </div>
+    </>
   );
 }
