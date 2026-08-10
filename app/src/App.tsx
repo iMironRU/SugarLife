@@ -17,6 +17,7 @@ import { detectTherapy } from './data/therapy';
 import { useTab, setTab, getTab, TAB_PATHS } from './data/nav';
 import { useOnboarded } from './data/onboarding';
 import { attachPanelGesture } from './data/panelGesture';
+import { watchChrome } from './data/chrome';
 import { requestNotifyPermissionOnStart } from './data/notify';
 
 // Порядок вкладок: 0 Метрики · 1 НМГ · 2 Сегодня · 3 Инсулин · 4 Профиль
@@ -127,6 +128,8 @@ export default function App() {
   // Спрашиваем разрешение на уведомления сразу при старте (не ждём первого
   // реального события) — так пользователь явно видит и решает.
   useEffect(() => { requestNotifyPermissionOnStart(); }, []);
+  // высоты панели и таббара → в CSS: по ним карточки встают между ними (data/chrome.ts)
+  useEffect(() => watchChrome(), []);
 
   /* Вертикальный жест сворачивания панели — на ВСЕЙ оболочке, а не только на области
      контента: тянуть за саму панель естественнее, а на «Сегодня» контента мало и

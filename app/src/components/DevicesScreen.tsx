@@ -29,7 +29,7 @@ export default function DevicesScreen({ isOpen, onClose }: { isOpen: boolean; on
   const close = () => { onClose(); setCat(null); setReqOpen(false); };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={close} className="full-page">
+    <IonModal isOpen={isOpen} onDidDismiss={close} className={'full-page' + (cat || reqOpen ? ' is-behind' : '')}>
       <IonContent className="sheet">
         <div className="sheet-head">
           <button className="sheet-close" onClick={close} aria-label="Назад"><IonIcon icon={chevronBack} /></button>

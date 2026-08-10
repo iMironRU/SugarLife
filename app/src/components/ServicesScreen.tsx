@@ -37,7 +37,7 @@ export default function ServicesScreen({ isOpen, onClose }: { isOpen: boolean; o
   };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={close} className="full-page">
+    <IonModal isOpen={isOpen} onDidDismiss={close} className={'full-page' + (open ? ' is-behind' : '')}>
       <IonContent className="sheet">
         <div className="sheet-head">
           <button className="sheet-close" onClick={close} aria-label="Назад"><IonIcon icon={chevronBack} /></button>

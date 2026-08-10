@@ -115,7 +115,7 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
   const needToken = access === 'needsToken' || tokenShown;
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose} className="full-page">
+    <IonModal isOpen={isOpen} onDidDismiss={onClose} className={'full-page' + (devOpen ? ' is-behind' : '')}>
       <IonContent className="sheet">
         <div className="sheet-head">
           <div className="sheet-title">{cloud.name}</div>
