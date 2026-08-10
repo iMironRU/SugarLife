@@ -9,6 +9,7 @@ import { fmt } from '../data/units';
 import { useCloseOnLeave } from '../data/nav';
 import InsulinTimeChart from '../components/InsulinTimeChart';
 import DeviceSheet from '../components/DeviceSheet';
+import LoopSetupScreen from '../components/LoopSetupScreen';
 import { DataGate } from '../components/NotConfigured';
 
 const WINDOWS = [1, 3, 6, 12, 24];
@@ -83,7 +84,10 @@ export default function Ins() {
 
         {/* одна карточка устройства на всё приложение (§7) — та же, что в «Профиль → Устройства» */}
         <DeviceSheet isOpen={pumpOpen} onClose={() => setPumpOpen(false)} cat="pump" title="Ввод инсулина" />
-        <DeviceSheet isOpen={loopOpen} onClose={() => setLoopOpen(false)} cat="loop" title="Петля" />
+        {/* Кнопка петли ведёт в профиль петли, а не в карточку устройства-заглушки:
+            у петли нет модели, моста и расходников — настраивают у неё пределы. Это тот
+            же мастер, что в «Профиль → Алгоритм», один на всё приложение. */}
+        <LoopSetupScreen isOpen={loopOpen} onClose={() => setLoopOpen(false)} />
       </IonContent>
     </IonPage>
   );
