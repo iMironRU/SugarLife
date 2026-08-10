@@ -1,0 +1,184 @@
+/* Оболочка: верхняя панель, карусель вкладок, таб-бар, стек страниц */
+
+/* ===== Общая верхняя панель: НМГ | круг | Помпа — живёт на ВСЕХ экранах =====
+   Три состояния плавно перетекают (--hp-dur на .hero-panel — один тайминг на все части):
+   .is-full (Сегодня) → .is-compact (прочие) → .is-line (прочие + прокрутка). */
+/* Один фон на всё приложение (панель + все экраны) — Ionic-палитра тянет свой
+   чёрный --ion-background-color, поэтому единый цвет задаём явно из --color-bg. */
+ion-app { background: var(--color-bg); }
+ion-content { --background: var(--color-bg); }
+
+.app-shell { display: flex; flex-direction: column; height: 100%; background: var(--color-bg); overflow: hidden; }
+
+/* ===== Карусель вкладок (свайп между экранами) ===== */
+.pager-viewport { flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; }
+.pager-track { display: flex; height: 100%; will-change: transform; }
+.pager-pane { flex: 0 0 100%; width: 100%; height: 100%; position: relative; overflow: hidden; }
+/* каждая .pager-pane содержит экран (IonPage absolute inset:0) */
+.pager-pane > .ion-page { position: absolute; inset: 0; }
+.pager-pane .ion-page-invisible { opacity: 1; }
+
+/* ===== Свой таб-бар (заменяет IonTabBar) ===== */
+.tabbar {
+  flex-shrink: 0; display: flex; align-items: stretch;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: color-mix(in srgb, var(--color-neutral-900) 70%, var(--color-bg));
+  border-top: 1px solid var(--color-neutral-800);
+}
+.tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 8px 0 7px; background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
+  color: var(--color-neutral-500);
+}
+.tab ion-icon { font-size: 22px; }
+.tab span { font-size: 10px; }
+.tab.on { color: var(--color-accent); }
+
+.hero-panel {
+  /* один тайминг на все части панели — иначе они разъезжаются во времени и
+     переход читается как несколько отдельных рывков вместо одного движения */
+  --hp-dur: .28s;
+  --hp-ease: cubic-bezier(.3,.9,.3,1);
+  flex-shrink: 0; background: transparent;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 20px 0;
+  transition: padding-top var(--hp-dur) var(--hp-ease);
+}
+/* Переходов по font-size здесь НЕТ намеренно: это свойство пересчитывает раскладку
+   каждый кадр, и на восьми селекторах сразу давало заметные тормоза на Android.
+   Движение читается по геометрии круга и рамки, а размер текста меняется за один
+   кадр — глаз этого не ловит. */
+.hp-val { transition: margin-top var(--hp-dur) var(--hp-ease); }
+.hero-panel.is-compact { padding-top: calc(env(safe-area-inset-top, 0px) + 8px); }
+.hero-panel.is-line { padding-top: calc(env(safe-area-inset-top, 0px) + 6px); }
+
+/* Статус связи + заряды — ВСЕГДА одной строкой, в любом состоянии панели.
+   Не исчезает при сворачивании: это то, что нужно видеть постоянно. */
+.hp-status {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; padding: 0 0 10px; min-width: 0;
+  transition: padding-bottom var(--hp-dur) var(--hp-ease);
+}
+.hp-status .hp-synctext { min-width: 0; font-size: 11px; gap: 5px; }
+.hp-status .hp-batteries { gap: 9px; }
+/* связь ужимается первой — заряды короткие и должны остаться целыми */
+.hp-status .hp-synctext > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hp-status .hp-batteries { flex-shrink: 0; }
+.hp-synctext { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-400); min-width: 0; }
+.hp-synctext .sync-ico { font-size: 13px; flex-shrink: 0; }
+.hp-synctext .sync-reading { color: var(--color-neutral-500); white-space: nowrap; }
+.hp-synctext.warn { color: var(--c-danger-2); }
+.hp-synctext.warn .sync-ico { color: var(--c-danger-2); }
+.hp-synctext.warn .sync-reading { color: color-mix(in srgb, var(--c-danger-2) 60%, var(--color-neutral-500)); }
+
+/* полоса зарядов устройств над панелью — расширяемо (помпа/телефон/мост/…),
+   рисуем только то, что реально известно. Скрыта в тонкой строке (line). */
+.hp-batteries { display: flex; justify-content: center; gap: 14px; }
+/* Размер один на все состояния: строка статуса больше не перестраивается.
+   Компактно намеренно — связь и три заряда должны уместиться даже на 320px. */
+.hp-batt-item { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; }
+.hp-batt-item ion-icon { font-size: 13px; color: currentColor; }
+
+.hp-row { position: relative; height: 150px; transition: height var(--hp-dur) var(--hp-ease); }
+.is-compact .hp-row { height: 92px; }
+.is-line .hp-row { height: 54px; }
+
+.hp-rect {
+  position: absolute; left: 0; right: 0; top: 10px; height: 130px;
+  display: flex; border-radius: 20px; overflow: hidden;
+  border: 1.5px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 14%, transparent), color-mix(in srgb, var(--color-accent) 4%, transparent));
+  transition: height var(--hp-dur) var(--hp-ease), top var(--hp-dur) var(--hp-ease);
+}
+.is-compact .hp-rect { top: 7px; height: 78px; }
+.is-line .hp-rect { top: 4px; height: 46px; }
+
+.hp-wing {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 3px;
+  background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
+  color: var(--color-text); transition: background .16s; overflow: hidden;
+}
+.hp-wing-l { align-items: flex-start; text-align: left; padding: 0 10px 0 16px; }
+.hp-wing-r { align-items: flex-end; text-align: right; padding: 0 16px 0 10px; }
+.hp-wing:active { background: color-mix(in srgb, var(--color-accent) 20%, transparent); }
+.is-line .hp-wing { flex-direction: row; align-items: center; gap: 6px; }
+.is-line .hp-wing-l { padding: 0 8px 0 12px; }
+.is-line .hp-wing-r { padding: 0 12px 0 8px; }
+.is-line .hp-name { flex-shrink: 0; }
+.live-dot { transition: opacity var(--hp-dur) var(--hp-ease), width var(--hp-dur) var(--hp-ease); }
+.is-line .live-dot { opacity: 0; width: 0; }
+
+.hp-head, .hp-name, .hp-sub, .hp-val { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hp-head { display: flex; align-items: center; gap: 5px; }
+.hp-ico { display: flex; line-height: 1; margin-bottom: 5px; color: var(--color-accent); font-size: 24px; }
+.hp-ico ion-icon { font-size: 24px; color: var(--color-accent); }
+.is-compact .hp-ico, .is-compact .hp-ico ion-icon { font-size: 17px; }
+.is-line .hp-ico, .is-line .hp-ico ion-icon { font-size: 15px; }
+.is-line .hp-ico { margin-bottom: 0; }
+.hp-name { font-size: 14px; font-weight: 600; color: var(--color-text); }
+.is-compact .hp-name { font-size: 12px; }
+.is-line .hp-name { font-size: 11px; }
+.hp-val { font-size: 15px; font-weight: 600; color: var(--color-text); line-height: 1; margin-top: 3px; }
+.is-compact .hp-val { font-size: 14px; }
+.is-line .hp-val { font-size: 12px; margin-top: 0; }
+/* подписи-детали (обновлено / резервуар / статус) — только в полном режиме */
+.hp-sub {
+  display: block; font-size: 10px; color: var(--color-neutral-400); line-height: 1.4;
+  max-height: 16px; overflow: hidden;
+  transition: max-height var(--hp-dur) var(--hp-ease), opacity var(--hp-dur) var(--hp-ease),
+              max-width var(--hp-dur) var(--hp-ease);
+}
+/* В «строке» крыло становится горизонтальным, поэтому свёрнутую подпись надо убрать
+   и по ширине: max-height её только сплющивает, место в ряду она продолжает занимать
+   (в отличие от display:none) — иначе «НМГ день 6» ужимается до «Н… де…». */
+.is-compact .hp-sub, .is-line .hp-sub { max-height: 0; opacity: 0; max-width: 0; margin: 0; }
+/* часики: значение из кеша, идёт обновление */
+.hp-stale { font-size: 10px; vertical-align: -1px; margin-left: 3px; opacity: 0.55; color: currentColor; }
+
+.hp-gap { flex-shrink: 0; width: 146px; transition: width var(--hp-dur) var(--hp-ease); }
+.is-compact .hp-gap { width: 96px; }
+.is-line .hp-gap { width: 58px; }
+
+.hp-circle {
+  position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+  width: 150px; height: 150px; border-radius: 50%; padding: 0; cursor: pointer; z-index: 2;
+  border: 2px solid var(--color-accent); font-family: var(--font-body); overflow: hidden;
+  box-shadow: 0 0 0 8px var(--color-bg), 0 0 22px color-mix(in srgb, var(--color-accent) 22%, transparent), inset 0 0 30px color-mix(in srgb, var(--color-accent) 16%, transparent);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--color-accent) 14%, var(--color-bg)), var(--color-bg) 74%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: width var(--hp-dur) var(--hp-ease), height var(--hp-dur) var(--hp-ease), box-shadow .16s;
+}
+.is-compact .hp-circle { width: 92px; height: 92px; }
+.is-line .hp-circle { width: 54px; height: 54px; }
+.hp-circle .circle-spark { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.hp-circle-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+.hp-circle-val { display: flex; align-items: center; gap: 6px; }
+.hp-value { font-size: 44px; font-weight: 600; letter-spacing: -.02em; line-height: 1; color: var(--color-text); }
+.is-compact .hp-value { font-size: 27px; }
+.is-line .hp-value { font-size: 17px; }
+.hp-arrow { font-size: 22px; color: var(--c-glu); font-weight: 700; }
+.is-compact .hp-arrow { font-size: 15px; }
+.is-line .hp-arrow { font-size: 11px; }
+.hp-unit {
+  font-size: 12px; color: var(--color-neutral-300); margin-top: 4px;
+  max-height: 18px; overflow: hidden;
+  transition: max-height var(--hp-dur) var(--hp-ease),
+              opacity var(--hp-dur) var(--hp-ease), margin-top var(--hp-dur) var(--hp-ease);
+}
+.is-compact .hp-unit { font-size: 9px; }
+.is-line .hp-unit { max-height: 0; opacity: 0; margin-top: 0; }
+.hp-ago {
+  font-size: 10px; color: var(--color-neutral-400); margin-top: 5px;
+  max-height: 16px; overflow: hidden;
+  transition: max-height var(--hp-dur) var(--hp-ease), opacity var(--hp-dur) var(--hp-ease), margin-top var(--hp-dur) var(--hp-ease);
+}
+.is-compact .hp-ago, .is-line .hp-ago { max-height: 0; opacity: 0; margin-top: 0; }
+/* активный инсулин в круге — цветом инсулина; в compact мельче, в line скрыт */
+.hp-iob { font-size: 11px; font-weight: 600; color: var(--c-ins); margin-top: 4px; }
+.is-compact .hp-iob { font-size: 10px; margin-top: 2px; }
+.is-line .hp-iob { display: none; }
+.sync { font-size: 12px; color: var(--color-neutral-400); }
+.heart { color: var(--c-danger); }
+/* Верхний блок: три кнопки — НМГ | круг | Помпа (по макету) */
+.hero { position: relative; height: 150px; margin-top: 4px; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-glu); box-shadow: 0 0 6px var(--c-glu); flex-shrink: 0; }
+.circle-spark { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
