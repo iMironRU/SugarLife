@@ -1,4 +1,4 @@
-import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { IonPage, IonContent, IonIcon, IonToast } from '@ionic/react';
 import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline, bluetoothOutline } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../data/store';
@@ -149,12 +149,20 @@ export default function Today() {
             onClick={() => {
               void sendIntent({ type: 'stopScan' });
               void sendIntent({ type: 'releaseBle' });
-              setBleMsg('BLE отключён — устройства освобождены');
+              setBleMsg('Все устройства отключены — Bluetooth освобождён');
             }}
           >
             <IonIcon icon={bluetoothOutline} /> Отключить BLE
           </button>
-          {bleMsg && <div className="metric-note" style={{ marginTop: 8, textAlign: 'center' }}>{bleMsg}</div>}
+          <IonToast
+            isOpen={!!bleMsg}
+            message={bleMsg}
+            duration={2600}
+            position="bottom"
+            color="success"
+            icon={bluetoothOutline}
+            onDidDismiss={() => setBleMsg('')}
+          />
         </div>
         <FoodSheet isOpen={foodOpen} onClose={() => setFoodOpen(false)} />
       </IonContent>
