@@ -63,6 +63,27 @@ export async function pruneBefore(before: number) {
   await tx.done;
 }
 
+/* Хук с признаком «ещё читаю».
+
+   Пустой массив означает две разные вещи: «в базе нет ничего» и «чтение не
+   закончилось». Экран разбора на этом и спотыкался: пока читались две недели
+   истории, он успевал показать вердикт «данных пока мало» — то есть неверный вывод
+   вместо ожидания. */
+export function useHistory(windowMs: number): { entries: Entry[]; loading: boolean } {
+  const [state, setState] = useState<{ entries: Entry[]; loading: boolean }>({ entries: [], loading: true });
+  useEffect(() => {
+    let cancel = false;
+    setState((s) => ({ ...s, loading: true }));
+    const load = () => getSince(Date.now() - windowMs)
+      .then((e) => { if (!cancel) setState({ entries: e, loading: false }); })
+      .catch(() => { if (!cancel) setState((s) => ({ ...s, loading: false })); });
+    load();
+    const off = onDbChange(load);
+    return () => { cancel = true; off(); };
+  }, [windowMs]);
+  return state;
+}
+
 // Хук: entries из БД за окно windowMs, с перезапросом при обновлениях/докачке.
 export function useEntries(windowMs: number): Entry[] {
   const [entries, setEntries] = useState<Entry[]>([]);

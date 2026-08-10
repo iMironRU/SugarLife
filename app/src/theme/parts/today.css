@@ -47,20 +47,26 @@
 .macros b { font-weight: 600; }
 .carbs { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 10px; }
 
-/* Плитка «Аналитика» — вход в разбор данных.
-   Выключённая не исчезает, а гаснет: иначе тот, кто однажды выключил, уже не
-   вспомнит, что такая возможность вообще была. */
-.tile-an {
-  display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px;
-  padding: 14px 16px; border-radius: 18px; border: 0; cursor: pointer;
-  background: var(--color-neutral-900); color: var(--color-text);
-  font-family: var(--font-body); text-align: left;
+/* Плитка «Аналитика» — рядом с панелью углеводов и в её же логике: рамка цветом
+   темы, мягкая заливка, крупная область нажатия. Разный вид у двух соседних входов
+   читался бы как разная важность. */
+.an-panel {
+  width: 100%; margin-top: 10px; display: flex; align-items: stretch; overflow: hidden;
+  border-radius: 20px; cursor: pointer; font-family: var(--font-body); color: var(--color-text);
+  border: 1.5px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 14%, transparent), color-mix(in srgb, var(--color-accent) 4%, transparent));
+  transition: background .16s;
 }
-.tile-an:active { background: var(--color-neutral-800); }
-.tile-an.is-off { cursor: default; opacity: .55; }
-.tile-an-ico { font-size: 22px; color: var(--color-accent); flex-shrink: 0; }
-.tile-an.is-off .tile-an-ico { color: var(--color-neutral-500); }
-.tile-an-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.tile-an-t { font-size: 15px; font-weight: 600; }
-.tile-an-s { font-size: 11px; color: var(--color-neutral-400); text-wrap: pretty; }
-.tile-an-chev { font-size: 16px; color: var(--color-neutral-500); flex-shrink: 0; }
+.an-panel:active { background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 20%, transparent), color-mix(in srgb, var(--color-accent) 7%, transparent)); }
+.an-panel.is-off {
+  cursor: default; opacity: .5;
+  border-color: var(--color-neutral-800); background: var(--color-neutral-900);
+}
+.an-ico { display: flex; align-items: center; padding: 16px 0 16px 18px; }
+.an-ico ion-icon { font-size: 26px; color: var(--color-accent); }
+.an-panel.is-off .an-ico ion-icon { color: var(--color-neutral-500); }
+.an-center { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 16px 14px; }
+.an-t { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.an-s { font-size: 11.5px; color: var(--color-neutral-400); text-wrap: pretty; }
+.an-go { display: flex; align-items: center; padding-right: 16px; }
+.an-go ion-icon { font-size: 18px; color: var(--color-neutral-500); }

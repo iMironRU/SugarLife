@@ -2,12 +2,13 @@ import { useMemo, useState } from 'react';
 import { IonIcon } from '@ionic/react';
 import { checkmarkCircle, warning, alertCircle } from 'ionicons/icons';
 import PageHead from '@/ui/PageHead';
+import PageLoading from '@/ui/PageLoading';
 import Insights from '@/ui/Insights';
-import { analyze, type InsightKind } from '@/domain/analysis';
+import { type InsightKind } from '@/domain/analysis';
+import { analyzeCached } from '@/domain/analysisCache';
 import { insulinDaily } from '@/domain/treatmentStats';
 import { useStore } from '@/sources/store';
-import { useEntries, useTreatments } from '@/sources/db';
-import { useDeviceExtras } from '@/sources/deviceExtras';
+import { useHistory, useTreatments } from '@/sources/db';
 
 /* Разбор данных — отдельный раздел, а не врезка на главном экране.
 
@@ -31,30 +32,34 @@ const ГРУППЫ: { key: InsightKind | 'all'; label: string }[] = [
 
 export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
   const { data } = useStore();
-  const extras = useDeviceExtras();
   const [days, setDays] = useState(14);
   /* История берётся из локальной БД, а не из data.entries: стор держит короткое окно
      для главного экрана, и разбор за две недели по нему показывал «пропусков 98 %» —
      не потому что данных нет, а потому что я дал ему не тот срез. Ошибка вредная
      вдвойне: человек пошёл бы чинить выгрузку, с которой всё в порядке. */
-  const история = useEntries(days * 86400e3);
+  const { entries: история, loading: читаю } = useHistory(days * 86400e3);
   const лечение = useTreatments(days * 86400e3);
   const [kind, setKind] = useState<InsightKind | 'all'>('all');
+  const батарея = data?.device?.uploaderBattery ?? null;
 
-  /* Здесь мемоизация уместна, в отличие от панели: разбор проходит всю историю
-     несколько раз и строит AGP, а пересчитывать это на каждое нажатие фильтра
-     (который на сам расчёт не влияет) незачем. */
+  /* Результат разбора берём из общей памяти (domain/analysisCache): она переживает
+     закрытие экрана, поэтому возврат и переключение периода туда-обратно уже не
+     стоят ста миллисекунд счёта. Здешний useMemo остаётся ради фильтров — они на
+     сам расчёт не влияют и не должны его дёргать. */
+  const тик = Math.floor((история[история.length - 1]?.t ?? 0) / 60000);
+
   const analysis = useMemo(() => {
-    const entries = история.length ? история : (data?.entries ?? []);
-    const events = лечение.length ? лечение : (extras.events ?? []);
+    const entries = история;
+    const events = лечение;
     const tb = events.filter((e) => e.type === 'Temp Basal');
     const bo = events.filter((e) => e.type !== 'Temp Basal' && (e.insulin ?? 0) > 0);
     const ins = insulinDaily(tb, bo);
-    return analyze(entries, events, days, {
+    return analyzeCached(entries, events, days, {
       basalCoverage: { covered: ins.coveredDays, total: ins.totalDays },
-      uploaderBattery: data?.device?.uploaderBattery ?? null,
+      uploaderBattery: батарея,
     });
-  }, [история, лечение, data?.entries, data?.device?.uploaderBattery, extras.events, days]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [тик, days, батарея]);
 
   const отфильтровано = useMemo(
     () => (kind === 'all' ? analysis : { ...analysis, insights: analysis.insights.filter((i) => i.kind === kind) }),
@@ -70,6 +75,10 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
     : r.level === 'partial'
       ? { icon: warning, color: 'var(--c-carb)', title: 'Разбор возможен, но с оговорками' }
       : { icon: alertCircle, color: 'var(--c-danger)', title: 'Данных пока мало' };
+
+  /* Пока история читается — показываем ожидание, а не поспешный вердикт. Разбор по
+     ещё не приехавшим данным сказал бы «данных пока мало», и это прочли бы как ответ. */
+  if (читаю) return <PageLoading title="Аналитика" />;
 
   return (
     <div className="sheet stack-body">
