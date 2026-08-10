@@ -153,9 +153,10 @@ final class SugarLifeScanner: NSObject, CBCentralManagerDelegate {
     private var central: CBCentralManager!
     private let onAdvertisement: (String) -> Void
     private var wantScan = false
-    private let filterServices = [sibService, rlService]
     init(onAdvertisement: @escaping (String) -> Void) { self.onAdvertisement = onAdvertisement; super.init(); central = CBCentralManager(delegate: self, queue: nil) }
-    func start() { wantScan = true; if central.state == .poweredOn { central.scanForPeripherals(withServices: filterServices) } }
+    // Скан БЕЗ фильтра сервисов (как Android): iOS scanForPeripherals(withServices:[FF30]) отсекает сенсоры,
+    // которые не кладут FF30 в основной advertisement (Sibionics не виден). Распознавание — в ядре по каталогу.
+    func start() { wantScan = true; if central.state == .poweredOn { central.scanForPeripherals(withServices: nil) } }
     func stop() { wantScan = false; central.stopScan() }
     func centralManagerDidUpdateState(_ c: CBCentralManager) { if c.state == .poweredOn && wantScan { start() } }
     func centralManager(_ c: CBCentralManager, didDiscover p: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
