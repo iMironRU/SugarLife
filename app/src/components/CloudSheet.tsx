@@ -2,7 +2,7 @@ import { IonModal, IonContent, IonFooter, IonInput, IonToggle, IonButton, IonIco
 import { linkOutline, keyOutline, closeOutline, chevronBack, gitNetworkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { type CloudConfig, updateCloud, removeCloud } from '../data/clouds';
-import { ping } from '../data/nightscout';
+import { ping, checkReadAccess, type ReadAccess } from '../data/nightscout';
 import { refresh } from '../data/store';
 import { toUnits } from '../data/units';
 import { useDeviceConfig, isRecorded, isModelKnown } from '../data/deviceConfig';
@@ -20,6 +20,13 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
   const [token, setToken] = useState('');
   const [msg, setMsg] = useState('');
   const [checking, setChecking] = useState(false);
+  /* Токен показываем, только если он на что-то влияет: либо чтение без него закрыто,
+     либо он уже сохранён (чужие данные не прячем — их надо видеть и уметь стереть).
+     У Nightscout по умолчанию роль readable, и на открытом сайте пустое поле с
+     подписью «нужен для записи» — просто повод для беспокойства на ровном месте.
+     Запись (еда, болюсы) — отдельная функция; токен под неё спросим, когда дойдёт. */
+  const [access, setAccess] = useState<ReadAccess | 'checking' | null>(null);
+  const [tokenShown, setTokenShown] = useState(false);
   const devCfg = useDeviceConfig();
   // Запись в реестре может быть без модели (§2b) — тогда облако для неё единственный
   // способ, и переключатель обязан быть доступен. Заперт он только если записи нет вовсе.
@@ -37,6 +44,14 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
     setUrl(cloud.url || '');
     setToken(cloud.token || '');
     setMsg('');
+    setTokenShown(!!cloud.token);
+    if (!cloud.url) { setAccess(null); return; }
+    let cancel = false;
+    setAccess('checking');
+    checkReadAccess(cloud.url, cloud.token || undefined)
+      .then((a) => { if (!cancel) setAccess(a); })
+      .catch(() => { if (!cancel) setAccess(null); });
+    return () => { cancel = true; };
   }, [isOpen, cloud?.id]);
 
   if (!cloud) return null;
@@ -46,6 +61,8 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
     updateCloud(cloud.id, { url: u, token: t, name: hostLabel(u) || cloud.name });
     setChecking(true);
     setMsg('Проверяю подключение…');
+    // адрес мог смениться — вместе с ним меняется и ответ на вопрос «нужен ли токен»
+    checkReadAccess(u, t || undefined).then(setAccess).catch(() => setAccess(null));
     try {
       const res = await ping(u, t);
       setMsg(res.ok
@@ -72,6 +89,8 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
   };
 
   const noRoles = !cloud.sourceGlucose && !cloud.sourcePumpStatus;
+  // Пока проверка не ответила — поле не мигаем: показываем, только когда есть за что.
+  const needToken = access === 'needsToken' || tokenShown;
 
   return (
     <IonModal isOpen={isOpen} onDidDismiss={onClose} className="full-page">
@@ -81,7 +100,7 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
           <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
         </div>
 
-        <p className="sheet-desc">Читаем сахар и тренд напрямую из Nightscout. Для записи (еда, болюсы) нужен токен с правом записи. Адрес и токен хранятся локально на устройстве.</p>
+        <p className="sheet-desc">Читаем сахар и тренд напрямую из Nightscout. Адрес хранится локально на устройстве.</p>
 
         <div className="field-label">Адрес сайта</div>
         <div className="field">
@@ -89,11 +108,22 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
           <IonInput value={url} onIonInput={(e) => setUrl(e.detail.value ?? '')} placeholder="https://ваш-сайт.nightscout…" inputmode="url" autocapitalize="off" />
         </div>
 
-        <div className="field-label">Токен доступа · нужен для записи (еда, болюсы)</div>
-        <div className="field">
-          <IonIcon icon={keyOutline} className="field-ico" />
-          <IonInput value={token} onIonInput={(e) => setToken(e.detail.value ?? '')} placeholder="токен с ролью записи (careportal/admin)" autocapitalize="off" />
-        </div>
+        {needToken && (
+          <>
+            <div className="field-label">
+              {access === 'needsToken' ? 'Токен доступа · этот Nightscout закрыт' : 'Токен доступа'}
+            </div>
+            <div className="field">
+              <IonIcon icon={keyOutline} className="field-ico" />
+              <IonInput value={token} onIonInput={(e) => setToken(e.detail.value ?? '')} placeholder="токен из Nightscout" autocapitalize="off" />
+            </div>
+          </>
+        )}
+        {!needToken && access === 'open' && (
+          <button className="token-hint" onClick={() => setTokenShown(true)}>
+            Чтение открыто — токен не нужен. <u>Всё равно указать</u>
+          </button>
+        )}
 
         <IonButton expand="block" className="connect-btn" onClick={save} disabled={checking}>
           <IonIcon icon={gitNetworkOutline} slot="start" />

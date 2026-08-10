@@ -603,6 +603,20 @@ ion-content { --background: var(--color-bg); }
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 16px; border-radius: 16px; background: var(--color-neutral-900);
 }
+/* Вместо пустого поля токена на открытом сайте — строка о том, что он не нужен,
+   и выход для тех, кому он всё же понадобился (запись). */
+.token-hint {
+  display: block; width: 100%; text-align: left; margin: 12px 0 12px; padding: 0;
+  background: none; border: 0; cursor: pointer;
+  font-size: 12px; color: var(--color-neutral-400); text-wrap: pretty;
+}
+.token-hint u { color: var(--color-accent); text-underline-offset: 2px; }
+
+/* Кнопка и переключатель — два сплошных блока подряд; вплотную (было 4px) они
+   читаются как один элемент. Через соседний селектор, чтобы не разогнать
+   переключатели в списке DeviceSettingsForm, где они идут стопкой намеренно. */
+.connect-btn + .sync-toggle,
+.sheet-msg + .sync-toggle { margin-top: 14px; }
 .sync-toggle-title { font-size: 14px; }
 .sync-toggle-sub { font-size: 11px; color: var(--color-neutral-400); margin-top: 2px; }
 
