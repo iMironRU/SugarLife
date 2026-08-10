@@ -73,6 +73,11 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
   const undo = () => { if (!undoStack.length) return; setWork(undoStack[undoStack.length - 1]); setUndo((u) => u.slice(0, -1)); };
 
   const max = Math.max(1.05, ...pump.map((s) => s.v), ...work.map((s) => s.v)) * 1.05;
+  /* Линии шкалы — по «круглому» шагу, чтобы подписи читались (0.5, а не 0.42).
+     Берём первый шаг, при котором линий выходит не больше четырёх: гуще — рябит. */
+  const gridStep = [0.1, 0.2, 0.25, 0.5, 1, 2].find((s) => max / s <= 4) ?? 5;
+  const grid: number[] = [];
+  for (let g = gridStep; g < max; g += gridStep) grid.push(+g.toFixed(2));
   const changedList = work.map((s, i) => ({ s, i })).filter((x) => changedAt(x.i));
 
   /* Правка профиля живёт в состоянии до переноса в помпу. Здесь цена потери выше,
@@ -132,14 +137,31 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
             <button className={'dev-seg-btn' + (edit ? ' on' : '')} onClick={() => setEdit(true)}>Правка</button>
           </div>
 
-          {/* график: ступени за сутки, полосы частей суток для ориентира */}
+          {/* График: ступени за сутки.
+
+              Полосы частей суток были и в прототипе, но у меня они не читались: заливка
+              совпадала с цветом карточки. Поле графика сделано темнее карточки, полосы —
+              двумя разными тонами, как в прототипе.
+
+              Горизонтальных линий с подписями в прототипе не было, и это его слабое
+              место: по одной ломаной без шкалы не понять, 1.2 ЕД/ч — это много или мало,
+              и насколько правка сдвинула уровень. На экране, где меняют дозу инсулина,
+              шкала нужнее декора. */}
           <div className="bas-card">
             <svg className="bas-chart" viewBox="0 0 300 132" preserveAspectRatio="none" aria-hidden="true">
-              {PARTS.map((p, k) => (
+              <rect x="0" y="0" width={W} height={H} fill="var(--color-bg)" />
+              {PARTS.map((p, k) => (k % 2 ? (
                 <rect key={p.nm} x={(p.a / 24) * W} y="0" width={((p.b - p.a) / 24) * W} height={H}
-                  fill={k % 2 ? 'var(--color-neutral-900)' : 'transparent'} />
+                  fill="color-mix(in srgb, var(--color-neutral-800) 45%, var(--color-bg))" />
+              ) : null))}
+              {grid.map((g) => (
+                <g key={g}>
+                  <line x1="0" y1={H - (g / max) * H} x2={W} y2={H - (g / max) * H}
+                    stroke="var(--color-neutral-800)" strokeWidth="0.7" />
+                  <text x="2" y={H - (g / max) * H - 2.5} fill="var(--color-neutral-500)" fontSize="7.5">{g.toFixed(1)}</text>
+                </g>
               ))}
-              <line x1="0" y1={H} x2={W} y2={H} stroke="var(--color-neutral-800)" strokeWidth="1" />
+              <line x1="0" y1={H} x2={W} y2={H} stroke="var(--color-neutral-700, var(--color-neutral-800))" strokeWidth="1" />
               <path d={path(pump, max)} fill="none" stroke="var(--color-accent)" strokeWidth="2.5" opacity={edit ? 0.45 : 1} />
               {edit && changedAll && <path d={path(work, max)} fill="none" stroke="var(--c-glu)" strokeWidth="2.5" />}
               {PARTS.map((p) => (
