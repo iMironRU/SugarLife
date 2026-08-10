@@ -6,6 +6,7 @@ import {
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '../data/store';
+import { useSnapshot } from '../data/bridge';
 import { getCfg, setCfg } from '../data/nightscout';
 import { stats } from '../data/agp';
 import { detectTherapy, therapyLabel } from '../data/therapy';
@@ -37,6 +38,7 @@ const DASH = '—';
 
 export default function Profile() {
   const { status, data } = useStore();
+  const coreCommit = useSnapshot()?.coreCommit;
   const { theme, setTheme } = useTheme();
   const unit = useUnit();
   const [nsOpen, setNsOpen] = useState(false);
@@ -238,6 +240,7 @@ export default function Profile() {
             <div className="about-info">
               <div className="about-ver">Версия {APP_VERSION}</div>
               <div className="about-build">сборка {APP_BUILD}{isNative ? ' · нативное' : ' · PWA'}</div>
+              {coreCommit && <div className="about-build">ядро {coreCommit}</div>}
             </div>
             {apkUrl ? (
               <button className="about-update accent" onClick={() => openApkDownload(apkUrl)}>

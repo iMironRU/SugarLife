@@ -68,6 +68,7 @@ export interface DriverDescriptor {
 
 export interface UiSnapshot {
   bridgeRevision: string;
+  coreCommit?: string;   // штамп коммита ядра — сверка идентичности сборок Android/iOS
   monitor: Monitor;
   devices: DeviceInfo[];
   insights: Insights | null;
