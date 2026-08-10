@@ -1,5 +1,5 @@
 import { IonModal, IonContent, IonFooter, IonInput, IonToggle, IonButton, IonIcon } from '@ionic/react';
-import { linkOutline, keyOutline, closeOutline, chevronBack, chevronForward, gitNetworkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
+import { linkOutline, keyOutline, closeOutline, chevronBack, chevronForward, gitNetworkOutline, copyOutline, checkmarkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { type CloudConfig, updateCloud, removeCloud } from '../data/clouds';
 import { ping, checkReadAccess, type ReadAccess } from '../data/nightscout';
@@ -29,6 +29,7 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
   const [access, setAccess] = useState<ReadAccess | 'checking' | null>(null);
   const [tokenShown, setTokenShown] = useState(false);
   const [devOpen, setDevOpen] = useState<'sensor' | 'pump' | null>(null);
+  const [copied, setCopied] = useState<null | 'ok' | 'fail'>(null);
   const devCfg = useDeviceConfig();
   // Запись в реестре может быть без модели (§2b) — тогда облако для неё единственный
   // способ, и переключатель обязан быть доступен. Заперт он только если записи нет вовсе.
@@ -83,6 +84,19 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
     setChecking(false);
   };
 
+  /* Clipboard API есть не везде: в небезопасном контексте (http на телефоне в локальной
+     сети) его просто нет. Молча ничего не делать в таком случае нельзя — человек нажал
+     и ждёт результата, поэтому честно говорим, что не вышло. */
+  const copyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(url.trim());
+      setCopied('ok');
+    } catch {
+      setCopied('fail');
+    }
+    setTimeout(() => setCopied(null), 2000);
+  };
+
   const onToggleEnabled = (val: boolean) => {
     updateCloud(cloud.id, { enabled: val });
     refresh();
@@ -114,7 +128,16 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
         <div className="field">
           <IonIcon icon={linkOutline} className="field-ico" />
           <IonInput value={url} onIonInput={(e) => setUrl(e.detail.value ?? '')} placeholder="https://ваш-сайт.nightscout…" inputmode="url" autocapitalize="off" />
+          {/* Адрес длинный и набирать его руками мучительно — а перенести на другое
+              устройство или отправить в поддержку хочется целиком. Выделять пальцем
+              внутри поля неудобно: попадаешь в правку. */}
+          {url.trim() && (
+            <button className={'field-copy' + (copied === 'ok' ? ' ok' : '')} onClick={copyUrl} aria-label="Скопировать адрес">
+              <IonIcon icon={copied === 'ok' ? checkmarkOutline : copyOutline} />
+            </button>
+          )}
         </div>
+        {copied === 'fail' && <div className="field-hint">Буфер обмена недоступен — скопируйте вручную.</div>}
 
         {needToken && (
           <>

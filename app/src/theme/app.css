@@ -556,6 +556,7 @@ ion-content { --background: var(--color-bg); }
   background: var(--color-neutral-900);
 }
 .field-ico { font-size: 17px; color: var(--color-neutral-500); flex-shrink: 0; }
+.field-hint { font-size: 11px; color: var(--color-neutral-500); margin: -8px 0 12px; }
 .field ion-input { --padding-start: 0; --padding-end: 0; font-size: 14px; }
 .field-copy {
   flex-shrink: 0; display: flex; align-items: center; justify-content: center;
@@ -564,6 +565,12 @@ ion-content { --background: var(--color-bg); }
   transition: background .15s, color .15s;
 }
 .field-copy ion-icon { font-size: 17px; }
+/* Видимый кружок остаётся 30×30 — он и так на своём месте, — а палец получает 44×44
+   через невидимую подложку. Так же было бы правильно сделать сразу: 30px по краю
+   поля промахиваешь. Правило общее, поэтому чинится заодно и кнопка QR в форме
+   устройства, где та же кнопка. */
+.field-copy { position: relative; }
+.field-copy::after { content: ''; position: absolute; inset: -7px; }
 .field-copy.ok { color: var(--c-glu); }
 .connect-btn { --border-radius: 16px; margin-top: 4px; font-weight: 600; }
 .sheet-msg { min-height: 18px; font-size: 13px; color: var(--color-neutral-300); text-align: center; margin: 12px 0; }
