@@ -17,7 +17,7 @@ import { detectTherapy } from './data/therapy';
 import { useTab, setTab, getTab, TAB_PATHS } from './data/nav';
 import { useOnboarded } from './data/onboarding';
 import { attachPanelGesture } from './data/panelGesture';
-import { StackHost } from './data/stack';
+import { StackHost } from '@/data/stack';
 import { requestNotifyPermissionOnStart } from './data/notify';
 
 // Порядок вкладок: 0 Метрики · 1 НМГ · 2 Сегодня · 3 Инсулин · 4 Профиль

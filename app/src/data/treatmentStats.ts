@@ -85,14 +85,14 @@ export function bolusStats(events: Treatment[], days: number) {
   return { perDay: total / d, count: Math.round(b.length / d), avg: b.length ? total / b.length : 0, total };
 }
 
-export interface CarbStats { perDay: number; mealCount: number; avgPerMeal: number; breakfast: number; dinner: number; hasData: boolean; }
+export interface CarbStats { perDay: number; mealsPerDay: number; avgPerMeal: number; breakfast: number; dinner: number; hasData: boolean; }
 export function carbStats(events: Treatment[], days: number): CarbStats {
   const carbs = events.filter((t) => t.carbs && t.carbs > 0);
   const total = carbs.reduce((a, b) => a + (b.carbs || 0), 0);
   const d = Math.max(1, days);
   const inH = (t: Treatment, lo: number, hi: number) => { const h = new Date(t.t).getHours(); return h >= lo && h < hi; };
   return {
-    perDay: total / d, mealCount: Math.round(carbs.length / d),
+    perDay: total / d, mealsPerDay: Math.round(carbs.length / d),
     avgPerMeal: carbs.length ? total / carbs.length : 0,
     breakfast: carbs.filter((t) => inH(t, 5, 11)).reduce((a, b) => a + (b.carbs || 0), 0) / d,
     dinner: carbs.filter((t) => inH(t, 17, 23)).reduce((a, b) => a + (b.carbs || 0), 0) / d,

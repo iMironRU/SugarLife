@@ -57,7 +57,7 @@ export default function Metrics() {
     title: 'Углеводы', color: 'var(--c-carb)', icon: nutrition,
     hero: ['Всего за день', toCarbs(cs.perDay, cu), cl],
     cards: [['Завтрак', toCarbs(cs.breakfast, cu), cl], ['Ужин', toCarbs(cs.dinner, cu), cl]],
-    stats: [['Ср. за приём', toCarbs(cs.avgPerMeal, cu), cl], ['Приёмов пищи', String(cs.mealCount), '']],
+    stats: [['Ср. за приём', toCarbs(cs.avgPerMeal, cu), cl], ['Приёмов в день', String(cs.mealsPerDay), '']],
     note: cs.hasData
       ? 'Считаются только объявленные углеводы (внесённые в приложении или петле). Незалогированная еда сюда не попадает — реальное потребление может быть выше.'
       : 'Углеводы не логируются в ваш Nightscout — тут будет 0. Появятся, если объявлять еду в петле/приложении.',
