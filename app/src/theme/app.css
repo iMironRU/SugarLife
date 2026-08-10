@@ -603,6 +603,24 @@ ion-content { --background: var(--color-bg); }
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 16px; border-radius: 16px; background: var(--color-neutral-900);
 }
+/* Способы получения данных в карточке устройства (§2b) */
+/* Подписи здесь объясняют, почему способ недоступен — обрезать их многоточием
+   («браузер н…») бессмысленно, пусть переносятся. */
+.meth .pick-sub { white-space: normal; overflow: visible; text-overflow: clip; }
+.meth .list-ico.muted { opacity: .45; }
+.meth .list-title.muted { color: var(--color-neutral-400); }
+/* мост — вложен в «прямое чтение»: сдвиг и отсутствие верхней границы показывают
+   подчинённость, а не соседство */
+.meth-in { padding-left: 40px; border-top: 0; }
+.meth-in .list-ico { font-size: 16px; }
+/* откуда данные идут прямо сейчас */
+.meth-on { background: color-mix(in srgb, var(--color-accent) 7%, transparent); }
+.meth-now {
+  flex-shrink: 0; font-size: 10px; letter-spacing: .04em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px; color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+}
+
 /* Строка «Забираем отсюда»: слева переход в карточку устройства, справа переключатель
    источника. Кнопка внутри строки, а не строка-кнопка — вложенные интерактивные
    элементы иначе перехватывали бы нажатие друг у друга. */

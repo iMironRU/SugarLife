@@ -1,5 +1,5 @@
 import { IonModal, IonContent, IonFooter, IonIcon } from '@ionic/react';
-import { closeOutline, chevronBack, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, trashOutline, water } from 'ionicons/icons';
+import { closeOutline, chevronBack, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '../data/deviceConfig';
 import { useSnapshot } from '../data/bridge';
@@ -7,7 +7,11 @@ import { useStore } from '../data/store';
 import { useDeviceExtras } from '../data/deviceExtras';
 import { deviceAges, type Age } from '../data/treatmentStats';
 import { fmt } from '../data/units';
+import { Capacitor } from '@capacitor/core';
 import { pumpById, sensorById, bridgeById, pumpNeedsBridge, insulinById } from '../data/catalog';
+
+// В браузере прямого BLE нет и не будет — это свойство платформы, а не «пока не сделали»
+const isNative = Capacitor.isNativePlatform();
 import CatalogPicker from './CatalogPicker';
 import { modelItems, bridgeItems, insulinItems } from './modelItems';
 import DeviceScanSheet from './DeviceScanSheet';
@@ -27,7 +31,6 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
   const cfg = useDeviceConfig();
   const { data } = useStore();
   const extras = useDeviceExtras();
-  const [rawTab, setTab] = useState<'device' | 'bridge'>('device');
   const [pick, setPick] = useState<null | 'model' | 'bridge' | 'insulin'>(null);
   const [scanOpen, setScanOpen] = useState(false);
 
@@ -38,9 +41,6 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
   const modelKnown = isModelKnown(modelId);
   const recordedNoModel = hasModel && isRecorded(modelId) && !modelKnown;
   const hasBridge = (cat === 'sensor' || cat === 'pump') && modelKnown;
-  // вкладки «Мост» может не быть (модель неизвестна) — тогда всегда показываем «Устройство»,
-  // иначе шторка осталась бы пустой
-  const tab = hasBridge ? rawTab : 'device';
 
   // реальное BLE-подключение показываем ТОЛЬКО когда мост действительно предлагает
   // драйвер для этой категории (прямой или через мост) — иначе секции нет вообще
@@ -113,6 +113,35 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
     : cat === 'sensor' ? (data?.latest ? 'сахар и тренд' : null)
     : null;
 
+  /* --- Способы получения данных (§2b) ---
+     Устройство одно, путей к нему несколько. Мост при этом НЕ отдельный путь: нужен
+     он или нет — свойство модели, а не выбор человека (Libre 1 не вещает сам, Paradigm
+     говорит по радио). Поэтому он живёт внутри «прямого чтения», а не рядом с ним.
+     Ручной ввод вынесен из группы: он ничего не исключает, показания глюкометра вносят
+     и при живом сенсоре.
+     Выбора активного способа здесь намеренно нет — сначала честная картина того, что
+     есть; приоритет и резерв при обрыве решаем отдельно. */
+  const bleLive = (snap?.devices ?? []).some(
+    (d) => d.kind === cat && (d.connection === 'Connected' || d.connection === 'Streaming'),
+  );
+  const activeMeth: 'direct' | 'cloud' | null = bleLive ? 'direct' : nsFeed ? 'cloud' : null;
+  const needsBridge = cat === 'pump' ? pumpNeedsBridge(pump) : !!sensor?.needsBridge;
+
+  // Порядок условий = порядок препятствий: без модели не знаем даже, что искать;
+  // в браузере BLE нет как класса; дальше — мост и наличие драйвера.
+  const directSub =
+    recordedNoModel ? 'сначала укажите модель — иначе неизвестно, как читать'
+    : !isNative ? 'только в приложении для телефона — браузер не умеет BLE'
+    : needsBridge && !bridge ? 'нужен мост — выбрать'
+    : !hasBleDriver ? 'драйвер этого устройства ещё в разработке'
+    : bleLive ? 'подключено' : 'подключить';
+  const directTap =
+    recordedNoModel ? () => setPick('model')
+    : !isNative ? undefined
+    : needsBridge && !bridge ? () => setPick('bridge')
+    : hasBleDriver ? () => setScanOpen(true)
+    : undefined;
+
   const onForget = () => {
     if (cat !== 'sensor' && cat !== 'pump') return;
     if (!window.confirm(`Забыть ${title.toLowerCase()}? Модель и мост нужно будет выбрать заново.`)) return;
@@ -121,7 +150,7 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
   };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={() => { setTab('device'); onClose(); }} className="full-page">
+    <IonModal isOpen={isOpen} onDidDismiss={onClose} className="full-page">
       <IonContent className="sheet">
         <div className="sheet-head">
           <div>
@@ -131,15 +160,7 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
           <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
         </div>
 
-        {hasBridge && (
-          <div className="dev-seg">
-            <button className={'dev-seg-btn' + (tab === 'device' ? ' on' : '')} onClick={() => setTab('device')}>Устройство</button>
-            <button className={'dev-seg-btn' + (tab === 'bridge' ? ' on' : '')} onClick={() => setTab('bridge')}>Мост</button>
-          </div>
-        )}
-
-        {tab === 'device' && (
-          <>
+        <>
             {/* Состояние — только то, что реально знаем; пустых строк не рисуем */}
             {stateRows.length > 0 && (
               <div className="basal-rows">
@@ -175,11 +196,6 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
                     <IonIcon icon={chevronForward} className="list-chev" />
                   </button>
                 )}
-                <div className="list-row" style={{ cursor: 'default' }}>
-                  <IonIcon icon={cloudOutline} className="list-ico" />
-                  <span className="list-title">Через Nightscout</span>
-                  <span className={'list-value' + (nsFeed ? '' : ' muted')}>{nsFeed ?? 'пока нет данных'}</span>
-                </div>
               </div>
             ) : (
               <div className="loop-empty">
@@ -191,32 +207,73 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
               </div>
             )}
             {hasModel && (
-              <div className="sheet-note">
-                {cat === 'pump' && 'В помпе один быстрый инсулин — он идёт и на базал, и на болюс. '}
-                Модель выше — для учёта, хранится только на этом устройстве. Nightscout — способ
-                получать данные удалённо: работает уже сейчас, даже без прямого моста, вместе с ним,
-                а не вместо.
-              </div>
+              <>
+                <div className="section-label sec">Как получаем данные</div>
+                <div className="list">
+                  {/* Прямое чтение. Мост — вложенной строкой, а не соседом: его не выбирают
+                      вместо блютуса, он и есть способ добраться до такой железки. */}
+                  {directTap ? (
+                    <button className={'list-row meth' + (activeMeth === 'direct' ? ' meth-on' : '')} onClick={directTap}>
+                      <IonIcon icon={bluetoothOutline} className="list-ico" />
+                      <span className="pick-main">
+                        <span className="list-title">Прямое чтение</span>
+                        <span className="pick-sub">{directSub}</span>
+                      </span>
+                      {activeMeth === 'direct' && <span className="meth-now">сейчас</span>}
+                      <IonIcon icon={chevronForward} className="list-chev" />
+                    </button>
+                  ) : (
+                    <div className="list-row meth" style={{ cursor: 'default' }}>
+                      <IonIcon icon={bluetoothOutline} className="list-ico muted" />
+                      <span className="pick-main">
+                        <span className="list-title muted">Прямое чтение</span>
+                        <span className="pick-sub">{directSub}</span>
+                      </span>
+                    </div>
+                  )}
+                  {needsBridge && modelKnown && (
+                    <button className="list-row meth meth-in" onClick={() => setPick('bridge')}>
+                      <IonIcon icon={gitNetworkOutline} className="list-ico" />
+                      <span className="pick-main">
+                        <span className="list-title">Мост / трансмиттер</span>
+                        <span className="pick-sub">{bridge ? bridge.name : 'не выбран'}</span>
+                      </span>
+                      <IonIcon icon={chevronForward} className="list-chev" />
+                    </button>
+                  )}
+
+                  {/* Облако. Отсюда в карточку облака не ведём: путь туда уже есть в обратную
+                      сторону («Забираем отсюда» → устройство), а взаимные ссылки запутали бы. */}
+                  <div className={'list-row meth' + (activeMeth === 'cloud' ? ' meth-on' : '')} style={{ cursor: 'default' }}>
+                    <IonIcon icon={cloudOutline} className="list-ico" />
+                    <span className="pick-main">
+                      <span className="list-title">Через Nightscout</span>
+                      <span className="pick-sub">{nsFeed ? 'приходит: ' + nsFeed : 'данных пока нет'}</span>
+                    </span>
+                    {activeMeth === 'cloud' && <span className="meth-now">сейчас</span>}
+                  </div>
+
+                  <div className="list-row meth" style={{ cursor: 'default' }}>
+                    <IonIcon icon={createOutline} className="list-ico muted" />
+                    <span className="pick-main">
+                      <span className="list-title muted">Ручной ввод</span>
+                      <span className="pick-sub">в разработке · не заменяет остальные, а дополняет</span>
+                    </span>
+                  </div>
+                </div>
+                <div className="sheet-note">
+                  {needsBridge ? bridgeHint + ' ' : ''}
+                  {cat === 'pump' && 'В помпе один быстрый инсулин — он идёт и на базал, и на болюс. '}
+                  Способы не спорят друг с другом: Nightscout работает вместе с прямым чтением,
+                  а не вместо него. Пометка «сейчас» — откуда данные приходят в эту минуту.
+                </div>
+              </>
             )}
             {recordedNoModel && (
               <div className="sheet-note">
-                Модель не указана — поэтому доступно только облако. Мы не знаем, нужен ли этой
-                железке мост или она вещает сама. Укажите модель, когда захотите перейти
-                с Nightscout на прямое чтение — данные при этом не потеряются.
+                Пока модель не указана, остаётся только облако: мы не знаем, вещает ли эта
+                железка сама или ей нужен мост. Данные при переходе на прямое чтение не потеряются.
               </div>
-            )}
-            {hasModel && !recordedNoModel && (
-              hasBleDriver ? (
-                <div className="list" style={{ marginTop: 12 }}>
-                  <button className="list-row" onClick={() => setScanOpen(true)}>
-                    <IonIcon icon={bluetoothOutline} className="list-ico" />
-                    <span className="list-title">Подключить по BLE</span>
-                    <IonIcon icon={chevronForward} className="list-chev" />
-                  </button>
-                </div>
-              ) : (
-                <div className="sheet-note">Прямое подключение по BLE появится, когда будет готов драйвер этого устройства.</div>
-              )
             )}
             {hasModel && modelName && (
               <button className="sheet-danger" onClick={onForget}>
@@ -225,21 +282,6 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
               </button>
             )}
           </>
-        )}
-
-        {tab === 'bridge' && hasBridge && (
-          <>
-            <div className="list">
-              <button className="list-row" onClick={() => setPick('bridge')}>
-                <IonIcon icon={gitNetworkOutline} className="list-ico" />
-                <span className="list-title">Мост / трансмиттер</span>
-                <span className={'list-value' + (bridge ? '' : ' muted')}>{bridge ? bridge.name : 'нет'}</span>
-                <IonIcon icon={chevronForward} className="list-chev" />
-              </button>
-            </div>
-            <div className="sheet-note">{bridgeHint} Подключение моста по BLE — с нативным драйвером (в разработке).</div>
-          </>
-        )}
 
         {hasModel && (
           <CatalogPicker
