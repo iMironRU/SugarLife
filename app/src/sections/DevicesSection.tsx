@@ -1,7 +1,6 @@
-import { IonIcon } from '@ionic/react';
 import PageHead from '@/ui/PageHead';
 import Row from '@/ui/Row';
-import { chevronForward, hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline } from 'ionicons/icons';
+import { hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/deviceConfig';
@@ -43,27 +42,14 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
 
         <div className="section-label sec">Помпа</div>
         <div className="list">
-          <button className="list-row" onClick={() => openCat('pump')}>
-            <IonIcon icon={flash} className="list-ico" />
-            <span className="pick-main">
-              <span className="list-title">{pump?.model ?? 'Ввод инсулина'}</span>
-              {pumpDetail && <span className="pick-sub">{pumpDetail}</span>}
-            </span>
-            <span className="list-value">{deviceStatusLabel(deviceStatus('pump', devCfg))}</span>
-            <IonIcon icon={chevronForward} className="list-chev" />
-          </button>
+          <Row icon={flash} title={pump?.model ?? 'Ввод инсулина'} sub={pumpDetail || undefined}
+            value={deviceStatusLabel(deviceStatus('pump', devCfg))} onClick={() => openCat('pump')} />
         </div>
 
         <div className="section-label sec">Сенсоры</div>
         <div className="list">
-          <button className="list-row" onClick={() => openCat('sensor')}>
-            <IonIcon icon={hardwareChipOutline} className="list-ico" />
-            <span className="pick-main">
-              <span className="list-title">{sensor?.name ?? 'Сенсор (НМГ)'}</span>
-            </span>
-            <span className="list-value">{deviceStatusLabel(deviceStatus('sensor', devCfg))}</span>
-            <IonIcon icon={chevronForward} className="list-chev" />
-          </button>
+          <Row icon={hardwareChipOutline} title={sensor?.name ?? 'Сенсор (НМГ)'}
+            value={deviceStatusLabel(deviceStatus('sensor', devCfg))} onClick={() => openCat('sensor')} />
         </div>
 
         <div className="section-label sec">Глюкометры и петля</div>

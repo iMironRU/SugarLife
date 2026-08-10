@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import Row from '@/ui/Row';
 import { IonIcon, IonInput, IonButton } from '@ionic/react';
 import {
   linkOutline, keyOutline, chevronForward, chevronBack, qrCodeOutline, cloudOutline,
@@ -157,50 +158,21 @@ export default function Onboarding() {
         {/* Прямое подключение: в вебе BLE нет — не изображаем поиск, ведём в приложение */}
         <div className="list">
           {isNative ? (
-            <button className="list-row" onClick={() => setCatalogOpen(true)}>
-              <IonIcon icon={bluetoothOutline} className="list-ico" />
-              <span className="pick-main">
-                <span className="list-title">Найти рядом</span>
-                <span className="pick-sub">поиск устройств по Bluetooth</span>
-              </span>
-              <IonIcon icon={chevronForward} className="list-chev" />
-            </button>
+            <Row icon={bluetoothOutline} title="Найти рядом" sub="поиск устройств по Bluetooth"
+              onClick={() => setCatalogOpen(true)} />
           ) : (
-            <a className="list-row" href={RELEASES_URL} target="_blank" rel="noreferrer">
-              <IonIcon icon={downloadOutline} className="list-ico" />
-              <span className="pick-main">
-                <span className="list-title">Найти рядом — в приложении</span>
-                <span className="pick-sub">браузер не умеет Bluetooth · скачать сборку</span>
-              </span>
-              <IonIcon icon={chevronForward} className="list-chev" />
-            </a>
+            <Row icon={downloadOutline} title="Найти рядом — в приложении"
+              sub="браузер не умеет Bluetooth · скачать сборку" href={RELEASES_URL} />
           )}
 
-          <button className="list-row" onClick={() => setStep('cloud')}>
-            <IonIcon icon={cloudOutline} className="list-ico" />
-            <span className="pick-main">
-              <span className="list-title">Через облако</span>
-              <span className="pick-sub">данные из Nightscout — работает уже сейчас</span>
-            </span>
-            <IonIcon icon={chevronForward} className="list-chev" />
-          </button>
+          <Row icon={cloudOutline} title="Через облако" sub="данные из Nightscout — работает уже сейчас"
+            onClick={() => setStep('cloud')} />
 
-          <button className="list-row" onClick={() => setCatalogOpen(true)}>
-            <IonIcon icon={listOutline} className="list-ico" />
-            <span className="pick-main">
-              <span className="list-title">Выбрать модель</span>
-              <span className="pick-sub">скажем, что нужно для вашей модели</span>
-            </span>
-            <IonIcon icon={chevronForward} className="list-chev" />
-          </button>
+          <Row icon={listOutline} title="Выбрать модель" sub="скажем, что нужно для вашей модели"
+            onClick={() => setCatalogOpen(true)} />
 
-          <div className="list-row" style={{ cursor: 'default', opacity: 0.55 }}>
-            <IonIcon icon={qrCodeOutline} className="list-ico" />
-            <span className="pick-main">
-              <span className="list-title">По QR-коду</span>
-              <span className="pick-sub">для новых сенсоров · сканер камеры в разработке</span>
-            </span>
-          </div>
+          <Row className="is-soon" icon={qrCodeOutline} title="По QR-коду"
+            sub="для новых сенсоров · сканер камеры в разработке" />
         </div>
 
         <button className="ob-skip" onClick={skip}>Пропустить — настрою потом</button>
@@ -275,29 +247,16 @@ export default function Onboarding() {
 
       <div className="list">
         {probe?.glucose && (
-          <button className="list-row" onClick={() => setPick('sensor')}>
-            <IonIcon icon={hardwareChipOutline} className="list-ico" />
-            <span className="pick-main">
-              <span className="list-title">Глюкоза · {toUnits(probe.glucose.mmol)} {unitLabel()}</span>
-              <span className="pick-sub">
-                {glucoseAt ? `последнее в ${glucoseAt} · ` : ''}
-                {modelTitle('sensor', sensorId) ?? 'какой у вас сенсор?'}
-              </span>
-            </span>
-            {sensorId ? <IonIcon icon={checkmarkCircle} className="list-chev" /> : <IonIcon icon={chevronForward} className="list-chev" />}
-          </button>
+          <Row icon={hardwareChipOutline} onClick={() => setPick('sensor')}
+            title={`Глюкоза · ${toUnits(probe.glucose.mmol)} ${unitLabel()}`}
+            sub={(glucoseAt ? `последнее в ${glucoseAt} · ` : '') + (modelTitle('sensor', sensorId) ?? 'какой у вас сенсор?')}
+            right={sensorId ? <IonIcon icon={checkmarkCircle} className="list-chev" /> : undefined} />
         )}
         {probe?.pump && (
-          <button className="list-row" onClick={() => setPick('pump')}>
-            <IonIcon icon={flash} className="list-ico" />
-            <span className="pick-main">
-              <span className="list-title">Статус помпы{pumpBits ? ' · ' + pumpBits : ''}</span>
-              <span className="pick-sub">
-                {modelTitle('pump', pumpId) ?? 'какая у вас помпа?'}
-              </span>
-            </span>
-            {pumpId ? <IonIcon icon={checkmarkCircle} className="list-chev" /> : <IonIcon icon={chevronForward} className="list-chev" />}
-          </button>
+          <Row icon={flash} onClick={() => setPick('pump')}
+            title={`Статус помпы${pumpBits ? ' · ' + pumpBits : ''}`}
+            sub={modelTitle('pump', pumpId) ?? 'какая у вас помпа?'}
+            right={pumpId ? <IonIcon icon={checkmarkCircle} className="list-chev" /> : undefined} />
         )}
       </div>
 

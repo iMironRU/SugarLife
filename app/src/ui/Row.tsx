@@ -15,8 +15,14 @@ import type { ReactNode } from 'react';
    переход, и стрелка там врала бы, обещая следующий экран. Для них chevron={false}.
 
    Строку без действия рисуем как div, а не как отключённую кнопку: у неё не должно
-   быть ни фокуса, ни отклика на нажатие. */
-export default function Row({ icon, title, sub, value, valueMuted, chevron = true, onClick, disabled, titleMuted, oneLine, className }: {
+   быть ни фокуса, ни отклика на нажатие.
+
+   Два исключения потребовали пропсов, и оба про семантику, а не про вид:
+   href — это настоящая ссылка (скачать сборку), её должно быть видно как ссылку
+   браузеру и читалке экрана; right — своё содержимое справа вместо шеврона там,
+   где строка не ведёт дальше, а показывает состояние (галочка выбранного,
+   переключатель настройки). */
+export default function Row({ icon, title, sub, value, valueMuted, chevron = true, onClick, href, right, disabled, titleMuted, oneLine, className }: {
   icon?: string;
   title: ReactNode;
   sub?: ReactNode;
@@ -24,6 +30,10 @@ export default function Row({ icon, title, sub, value, valueMuted, chevron = tru
   valueMuted?: boolean;
   chevron?: boolean;
   onClick?: () => void;
+  /** внешняя ссылка — тот же вид, но настоящий <a> для браузера и читалки экрана */
+  href?: string;
+  /** своё содержимое справа вместо шеврона: галочка, переключатель */
+  right?: ReactNode;
   disabled?: boolean;
   titleMuted?: boolean;
   /** длинный текст (адрес сайта) — в одну строку с многоточием вместо переноса */
@@ -45,10 +55,12 @@ export default function Row({ icon, title, sub, value, valueMuted, chevron = tru
         <span className={tcls}>{title}</span>
       )}
       {value != null && <span className={'list-value' + (valueMuted ? ' muted' : '')}>{value}</span>}
-      {onClick && chevron && <IonIcon icon={chevronForward} className="list-chev" />}
+      {right}
+      {!right && (onClick || href) && chevron && <IonIcon icon={chevronForward} className="list-chev" />}
     </>
   );
 
+  if (href) return <a className={cls} href={href} target="_blank" rel="noreferrer">{inner}</a>;
   return onClick
     ? <button className={cls} onClick={onClick} disabled={disabled}>{inner}</button>
     : <div className={cls} style={{ cursor: 'default' }}>{inner}</div>;

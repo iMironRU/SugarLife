@@ -130,3 +130,5 @@
 .about-update.accent:active { background: color-mix(in srgb, var(--color-accent) 85%, #000); }
 .about-update .spin { animation: sl-spin 0.9s linear infinite; }
 @keyframes sl-spin { to { transform: rotate(360deg); } }
+/* Строка о том, что появится позже: приглушена, но видна — обещание, а не заглушка. */
+.list-row.is-soon { opacity: .55; }

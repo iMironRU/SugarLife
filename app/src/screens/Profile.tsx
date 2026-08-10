@@ -1,6 +1,6 @@
 import { IonPage, IonContent, IonIcon, IonToggle } from '@ionic/react';
 import {
-  personCircle, chevronForward, downloadOutline,
+  personCircle, downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
   hardwareChipOutline, cloudOutline, repeat, sparklesOutline,
 } from 'ionicons/icons';
@@ -175,14 +175,9 @@ export default function Profile() {
           <div className="list">
             <Row icon={optionsOutline} title="Единицы глюкозы" value={unitLabel(unit)} onClick={() => setUnitsOpen(true)} />
             <Row icon={nutritionOutline} title="Единицы еды" value={carbUnitLabel(carbUnit)} onClick={() => setCarbUnitsOpen(true)} />
-            <div className="list-row" style={{ cursor: 'default' }}>
-              <IonIcon icon={sparklesOutline} className="list-ico" />
-              <span className="pick-main">
-                <span className="list-title">Выводить аналитику</span>
-                <span className="pick-sub">разбор данных на «Сегодня» и отдельным экраном</span>
-              </span>
-              <IonToggle checked={analyticsOn} onIonChange={(e) => setAnalyticsOn(e.detail.checked)} />
-            </div>
+            <Row icon={sparklesOutline} title="Выводить аналитику"
+              sub="разбор данных на «Сегодня» и отдельным экраном"
+              right={<IonToggle checked={analyticsOn} onIonChange={(e) => setAnalyticsOn(e.detail.checked)} />} />
             <Row icon={downloadOutline} title="Экспорт глюкозы в CSV" chevron={false} onClick={doExport} disabled={exporting}
               value={exporting ? 'выгрузка…' : count != null ? `${count} зап.` : DASH} />
           </div>
@@ -211,14 +206,8 @@ export default function Profile() {
           {/* алгоритм: профиль петли. Только настройка — подача не включается (решение 0004) */}
           <div className="section-label sec">Алгоритм</div>
           <div className="list">
-            <button className="list-row" onClick={() => push(<LoopSetupSection onClose={pop} />)}>
-              <IonIcon icon={repeat} className="list-ico" />
-              <span className="pick-main">
-                <span className="list-title">Профиль петли</span>
-                <span className="pick-sub">{loopSub}</span>
-              </span>
-              <IonIcon icon={chevronForward} className="list-chev" />
-            </button>
+            <Row icon={repeat} title="Профиль петли" sub={loopSub}
+              onClick={() => push(<LoopSetupSection onClose={pop} />)} />
           </div>
 
           {/* о приложении: версия + сборка + обновление */}

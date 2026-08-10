@@ -1,4 +1,5 @@
 import { IonIcon } from '@ionic/react';
+import Row from '@/ui/Row';
 import PageHead from '@/ui/PageHead';
 import { chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
@@ -224,29 +225,17 @@ export default function DeviceSection({ onClose, cat, title }: {
             )}
             {hasModel ? (
               <div className="list">
-                <button className="list-row" onClick={() => setPick('model')}>
-                  <IonIcon icon={modelIcon} className="list-ico" />
-                  <span className="list-title">Модель</span>
-                  <span className={'list-value' + (modelName ? '' : ' muted')}>{modelName || 'выбрать'}</span>
-                  <IonIcon icon={chevronForward} className="list-chev" />
-                </button>
+                <Row icon={modelIcon} title="Модель" value={modelName || 'выбрать'}
+                  valueMuted={!modelName} onClick={() => setPick('model')} />
                 {cat === 'pump' && (
-                  <button className="list-row" onClick={() => setPick('insulin')}>
-                    <IonIcon icon={water} className="list-ico" />
-                    <span className="list-title">Инсулин</span>
-                    <span className={'list-value' + (insulin ? '' : ' muted')}>{insulin ? insulin.name : 'выбрать'}</span>
-                    <IonIcon icon={chevronForward} className="list-chev" />
-                  </button>
+                  <Row icon={water} title="Инсулин" value={insulin ? insulin.name : 'выбрать'}
+                    valueMuted={!insulin} onClick={() => setPick('insulin')} />
                 )}
                 {cat === 'pump' && (
-                  <button className="list-row" onClick={() => push(<BasalProfileSection onClose={pop} />)}>
-                    <IonIcon icon={pulseOutline} className="list-ico" />
-                    <span className="list-title">Базальный профиль</span>
-                    <span className={'list-value' + (basalTotal != null ? '' : ' muted')}>
-                      {basalTotal != null ? basalTotal.toFixed(2) + ' ЕД/сут' : 'нет данных'}
-                    </span>
-                    <IonIcon icon={chevronForward} className="list-chev" />
-                  </button>
+                  <Row icon={pulseOutline} title="Базальный профиль"
+                    value={basalTotal != null ? basalTotal.toFixed(2) + ' ЕД/сут' : 'нет данных'}
+                    valueMuted={basalTotal == null}
+                    onClick={() => push(<BasalProfileSection onClose={pop} />)} />
                 )}
               </div>
             ) : (

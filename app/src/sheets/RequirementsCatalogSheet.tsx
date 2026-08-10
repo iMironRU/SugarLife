@@ -1,5 +1,6 @@
 import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
-import { closeOutline, searchOutline, chevronForward, chevronBack, lockClosedOutline } from 'ionicons/icons';
+import Row from '@/ui/Row';
+import { closeOutline, searchOutline, chevronBack, lockClosedOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { REQUIREMENTS, supportLabel, categoryLabel, type RequirementEntry } from '@/domain/requirementsCatalog';
 
@@ -42,14 +43,9 @@ export default function RequirementsCatalogSheet({ isOpen, onClose }: {
             </div>
             <div className="list" style={{ marginTop: 10 }}>
               {filtered.map((r) => (
-                <button key={r.id} className="list-row" onClick={() => setPicked(r)}>
-                  <span className="pick-main">
-                    <span className="list-title">{r.name}</span>
-                    <span className="pick-sub">{r.brand} · {categoryLabel(r.category)}</span>
-                  </span>
-                  <span className="list-value">{r.support === 'blocked' ? '⛔' : r.support === 'bridge' ? '✓ мост' : '✓'}</span>
-                  <IonIcon icon={chevronForward} className="list-chev" />
-                </button>
+                <Row key={r.id} title={r.name} sub={`${r.brand} · ${categoryLabel(r.category)}`}
+                  value={r.support === 'blocked' ? '⛔' : r.support === 'bridge' ? '✓ мост' : '✓'}
+                  onClick={() => setPicked(r)} />
               ))}
               {!filtered.length && <div className="metric-note">Не нашли — но справочник моделей в разделе устройства шире, попробуй там.</div>}
             </div>
@@ -57,14 +53,8 @@ export default function RequirementsCatalogSheet({ isOpen, onClose }: {
         ) : (
           <>
             <div className="list">
-              <div className="list-row" style={{ cursor: 'default' }}>
-                <span className="list-title">Поддержка</span>
-                <span className="list-value">{supportLabel(picked.support)}</span>
-              </div>
-              <div className="list-row" style={{ cursor: 'default' }}>
-                <span className="list-title">Что нужно</span>
-                <span className="list-value">{picked.requirement}</span>
-              </div>
+              <Row title="Поддержка" value={supportLabel(picked.support)} />
+              <Row title="Что нужно" value={picked.requirement} />
             </div>
             {picked.support === 'blocked' ? (
               <div className="sheet-note">

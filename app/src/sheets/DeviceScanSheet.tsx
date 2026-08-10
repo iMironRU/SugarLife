@@ -1,5 +1,6 @@
 import { IonModal, IonContent, IonIcon, IonSpinner } from '@ionic/react';
-import { closeOutline, bluetoothOutline, chevronForward, radioOutline, checkmarkCircle } from 'ionicons/icons';
+import Row from '@/ui/Row';
+import { closeOutline, bluetoothOutline, radioOutline, checkmarkCircle } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import type { Discovered, DriverDescriptor } from '@/sources/bridge';
@@ -77,15 +78,9 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title }: {
             </div>
             <div className="list">
               {relevant.map((d) => (
-                <button key={d.bleId} className="list-row" onClick={() => pick(d)}>
-                  <IonIcon icon={d.isTransport ? radioOutline : bluetoothOutline} className="list-ico" />
-                  <span className="pick-main">
-                    <span className="list-title">{d.displayName}</span>
-                    {d.name && <span className="pick-sub">{d.name}</span>}
-                  </span>
-                  {d.rssi != null && <span className="list-value">{d.rssi} дБм</span>}
-                  <IonIcon icon={chevronForward} className="list-chev" />
-                </button>
+                <Row key={d.bleId} icon={d.isTransport ? radioOutline : bluetoothOutline}
+                  title={d.displayName} sub={d.name || undefined}
+                  value={d.rssi != null ? `${d.rssi} дБм` : undefined} onClick={() => pick(d)} />
               ))}
             </div>
             {!relevant.length && (
@@ -104,11 +99,8 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title }: {
                 const t = driverById(tid);
                 if (!t || t.kind !== kind) return null;
                 return (
-                  <button key={tid} className="list-row" onClick={() => pickTarget(step.item, tid)}>
-                    <IonIcon icon={bluetoothOutline} className="list-ico" />
-                    <span className="list-title">{t.displayName}</span>
-                    <IonIcon icon={chevronForward} className="list-chev" />
-                  </button>
+                  <Row key={tid} icon={bluetoothOutline} title={t.displayName}
+                    onClick={() => pickTarget(step.item, tid)} />
                 );
               })}
             </div>
