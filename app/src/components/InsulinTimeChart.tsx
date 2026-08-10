@@ -1,6 +1,6 @@
 import EChart from './Chart';
 import { cssVar } from './cssVar';
-import type { Treatment } from '../data/nightscout';
+import type { Treatment } from '@/sources/nightscout';
 
 /* График подачи инсулина: ступенчатая кривая базала (ед/ч) из temp basal +
    болюсы столбиками (ед) на второй оси. Всё из реальных treatments Nightscout. */

@@ -8,13 +8,13 @@ import BrandDrop from '../components/BrandDrop';
 import CatalogPicker from '../components/CatalogPicker';
 import { pumpItems, sensorItems, modelTitle } from '../components/modelItems';
 import RequirementsCatalogSheet from '../components/RequirementsCatalogSheet';
-import { probeCloud, checkReadAccess, type CloudProbe } from '../data/nightscout';
-import { addCloud } from '../data/clouds';
-import { refresh } from '../data/store';
-import { setDeviceConfig, UNKNOWN_MODEL } from '../data/deviceConfig';
-import { setOnboarded } from '../data/onboarding';
+import { probeCloud, checkReadAccess, type CloudProbe } from '@/sources/nightscout';
+import { addCloud } from '@/sources/clouds';
+import { refresh } from '@/sources/store';
+import { setDeviceConfig, UNKNOWN_MODEL } from '@/settings/deviceConfig';
+import { setOnboarded } from '@/settings/onboarding';
 import { toUnits, unitLabel } from '@/domain/units';
-import { isNative } from '../data/appUpdate';
+import { isNative } from '@/platform/appUpdate';
 
 const RELEASES_URL = 'https://github.com/iMironRU/SugarLife/releases';
 

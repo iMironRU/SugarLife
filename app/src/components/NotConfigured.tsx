@@ -1,7 +1,7 @@
 import { IonIcon } from '@ionic/react';
 import { cloudOfflineOutline, chevronForward } from 'ionicons/icons';
-import { useStore } from '../data/store';
-import { setOnboarded } from '../data/onboarding';
+import { useStore } from '@/sources/store';
+import { setOnboarded } from '@/settings/onboarding';
 
 /* Приложение не настроено — заметный выход, а не мелкая надпись.
 

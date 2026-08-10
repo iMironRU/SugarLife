@@ -1,9 +1,9 @@
 import { IonPage, IonContent, IonIcon, IonSpinner } from '@ionic/react';
-import { reportContentScroll } from '../data/panel';
+import { reportContentScroll } from '@/app/panel';
 import { water, nutrition, medkit } from 'ionicons/icons';
 import { useState } from 'react';
-import { useEntries, useTreatments } from '../data/db';
-import { useBackfilling } from '../data/backfill';
+import { useEntries, useTreatments } from '@/sources/db';
+import { useBackfilling } from '@/sources/backfill';
 import { stats } from '@/domain/agp';
 import { carbStats, insulinDaily, carbsByDay, insulinByDay } from '@/domain/treatmentStats';
 import { fmt, toUnits, unitLabel, useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '@/domain/units';

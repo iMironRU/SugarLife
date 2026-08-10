@@ -1,7 +1,7 @@
 import { IonInput, IonToggle, IonIcon } from '@ionic/react';
 import { qrCodeOutline } from 'ionicons/icons';
 import { useState } from 'react';
-import type { Param } from '../data/bridge';
+import type { Param } from '@/sources/bridge';
 
 /* Generic-форма настроек устройства: рисуется ИЗ settings.parameters, без хардкода
    под конкретное устройство (контракт §2.5/§3). Text/Secret/Number — поле ввода,

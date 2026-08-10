@@ -2,7 +2,7 @@ import EChart from './Chart';
 import { cssVar } from './cssVar';
 import { agp, LOW, HIGH } from '@/domain/agp';
 import { useUnit, gluValue } from '@/domain/units';
-import type { Entry } from '../data/nightscout';
+import type { Entry } from '@/sources/nightscout';
 
 export default function AgpChart({ entries }: { entries: Entry[] }) {
   const unit = useUnit();

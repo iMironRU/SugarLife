@@ -3,7 +3,7 @@
    сам подхватит Nightscout-шим. Импортировать РАНО (в main.tsx до рендера).
    ВАЖНО: sendIntent подтверждает лишь приём действия, не выполнение (см. bridge.ts). */
 import { registerPlugin, Capacitor } from '@capacitor/core';
-import type { SugarLifeBridge, UiSnapshot, Intent, HistoryQuery, HistoryResult } from '../data/bridge';
+import type { SugarLifeBridge, UiSnapshot, Intent, HistoryQuery, HistoryResult } from '@/sources/bridge';
 
 interface NativePlugin {
   requestSnapshot(): Promise<{ json: string }>;

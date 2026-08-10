@@ -1,15 +1,15 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { reportContentScroll } from '../data/panel';
+import { reportContentScroll } from '@/app/panel';
 import { hardwareChipOutline, chevronForward } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
-import { useEntries } from '../data/db';
+import { useEntries } from '@/sources/db';
 import { toUnits, useUnit } from '@/domain/units';
-import { arrowChar, getCfg, loadEventsRange, type Treatment } from '../data/nightscout';
+import { arrowChar, getCfg, loadEventsRange, type Treatment } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
 import GlucoseTimeChart from '../components/GlucoseTimeChart';
 import DeviceSheet from '../components/DeviceSheet';
 import { DataGate } from '../components/NotConfigured';
-import { useStack } from '../data/stackCtx';
+import { useStack } from '@/app/stackCtx';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 

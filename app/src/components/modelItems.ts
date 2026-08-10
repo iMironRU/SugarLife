@@ -7,7 +7,7 @@ import {
   PUMPS, SENSORS, BRIDGES, INSULINS, pumpById, sensorById, pumpBrand,
   isCurrentPump, isFastInsulin, isCurrentInsulin,
 } from '@/domain/catalog';
-import { UNKNOWN_MODEL, isModelKnown } from '../data/deviceConfig';
+import { UNKNOWN_MODEL, isModelKnown } from '@/settings/deviceConfig';
 
 /* «Не знаю модель» — полноценный выбор, а не отказ (docs/CONNECT-UX.md §2b):
    запись в реестре появляется, данные из облака идут, модель уточняется позже. */

@@ -11,14 +11,14 @@ import Onboarding from './pages/Onboarding';
 import Loader from './pages/Loader';
 import InstallPrompt from './components/InstallPrompt';
 import HeroPanel from './components/HeroPanel';
-import { useStore } from './data/store';
-import { useSnapshot } from './data/bridge';
+import { useStore } from '@/sources/store';
+import { useSnapshot } from '@/sources/bridge';
 import { detectTherapy } from '@/domain/therapy';
-import { useTab, setTab, getTab, TAB_PATHS } from './data/nav';
-import { useOnboarded } from './data/onboarding';
-import { attachPanelGesture } from './data/panelGesture';
-import { StackHost } from '@/data/stack';
-import { requestNotifyPermissionOnStart } from './data/notify';
+import { useTab, setTab, getTab, TAB_PATHS } from '@/app/nav';
+import { useOnboarded } from '@/settings/onboarding';
+import { attachPanelGesture } from '@/app/panelGesture';
+import { StackHost } from '@/app/stack';
+import { requestNotifyPermissionOnStart } from '@/platform/notify';
 
 // Порядок вкладок: 0 Метрики · 1 НМГ · 2 Сегодня · 3 Инсулин · 4 Профиль
 function Pager() {

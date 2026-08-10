@@ -1,7 +1,7 @@
 import { IonModal, IonContent, IonFooter, IonIcon } from '@ionic/react';
 import { closeOutline, arrowUndoOutline } from 'ionicons/icons';
 import { useState } from 'react';
-import { useStore } from '../data/store';
+import { useStore } from '@/sources/store';
 import {
   type Seg, PARTS, STEP, MIN_RATE, MAX_RATE, fmtH, roundRate, toSegs, rateAt, daily,
   partDose, partAvg, segsIn, sameProfile, splitSeg, mergeSeg, scaleAll, flatten,

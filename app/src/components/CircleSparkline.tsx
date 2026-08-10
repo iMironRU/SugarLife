@@ -1,4 +1,4 @@
-import type { Entry } from '../data/nightscout';
+import type { Entry } from '@/sources/nightscout';
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const LOW = 3.9, HIGH = 10.0;

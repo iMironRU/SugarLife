@@ -1,8 +1,8 @@
 import { IonModal, IonContent, IonIcon, IonSpinner } from '@ionic/react';
 import { closeOutline, bluetoothOutline, chevronForward, radioOutline, checkmarkCircle } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
-import { useSnapshot, sendIntent } from '../data/bridge';
-import type { Discovered, DriverDescriptor } from '../data/bridge';
+import { useSnapshot, sendIntent } from '@/sources/bridge';
+import type { Discovered, DriverDescriptor } from '@/sources/bridge';
 import DeviceSettingsForm from './DeviceSettingsForm';
 
 type Step = { kind: 'list' } | { kind: 'target'; item: Discovered } | { kind: 'params'; item: Discovered; target: DriverDescriptor | null };

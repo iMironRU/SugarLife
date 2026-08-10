@@ -1,14 +1,14 @@
 import { IonIcon } from '@ionic/react';
 import { chevronBack, checkmarkCircle, closeCircle, alertCircle, lockClosedOutline, createOutline } from 'ionicons/icons';
 import { useState } from 'react';
-import { useStore } from '../data/store';
-import { useDeviceConfig, isModelKnown } from '../data/deviceConfig';
+import { useStore } from '@/sources/store';
+import { useDeviceConfig, isModelKnown } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
 import HoldButton from './HoldButton';
 import {
   LOOP_MODES, limitsFor, outOfRec, anyOutOfRec, fmtLimit,
   useLoopProfile, saveLoopProfile, type LoopModeId, type LoopLimit,
-} from '../data/loopProfile';
+} from '@/settings/loopProfile';
 
 /* Мастер настройки профиля петли — пять шагов из прототипа (inbox/loop.zip):
    Оборудование → Режим → Лимиты → Деградация → Проверка.

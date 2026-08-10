@@ -1,16 +1,16 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { reportContentScroll } from '../data/panel';
+import { reportContentScroll } from '@/app/panel';
 import { flash, repeat, chevronForward } from 'ionicons/icons';
 import { useState } from 'react';
-import { useStore } from '../data/store';
-import { useTreatments } from '../data/db';
+import { useStore } from '@/sources/store';
+import { useTreatments } from '@/sources/db';
 import { detectTherapy } from '@/domain/therapy';
 import { fmt } from '@/domain/units';
 import InsulinTimeChart from '../components/InsulinTimeChart';
 import DeviceSheet from '../components/DeviceSheet';
 import LoopSetupScreen from '../components/LoopSetupScreen';
 import { DataGate } from '../components/NotConfigured';
-import { useStack } from '../data/stackCtx';
+import { useStack } from '@/app/stackCtx';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 

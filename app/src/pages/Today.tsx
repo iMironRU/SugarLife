@@ -1,13 +1,13 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline, batteryDeadOutline } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
-import { useStore } from '../data/store';
+import { useStore } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt } from '@/domain/units';
-import { reportContentScroll } from '../data/panel';
-import { useDeviceExtras } from '../data/deviceExtras';
+import { reportContentScroll } from '@/app/panel';
+import { useDeviceExtras } from '@/sources/deviceExtras';
 import { reservoirStats } from '@/domain/treatmentStats';
-import { useCloseOnLeave } from '../data/nav';
-import { notify } from '../data/notify';
+import { useCloseOnLeave } from '@/app/nav';
+import { notify } from '@/platform/notify';
 import FoodSheet from '../components/FoodSheet';
 import { DataGate } from '../components/NotConfigured';
 

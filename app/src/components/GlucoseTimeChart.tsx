@@ -1,7 +1,7 @@
 import EChart from './Chart';
 import { cssVar } from './cssVar';
 import { useUnit, gluValue } from '@/domain/units';
-import type { Entry } from '../data/nightscout';
+import type { Entry } from '@/sources/nightscout';
 
 export default function GlucoseTimeChart({
   entries, windowH, low = 3.9, high = 10.0,

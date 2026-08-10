@@ -1,15 +1,15 @@
 import { IonIcon } from '@ionic/react';
 import { useEffect, useState } from 'react';
 import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline } from 'ionicons/icons';
-import { useTab, setTab } from '../data/nav';
-import { useStore } from '../data/store';
+import { useTab, setTab } from '@/app/nav';
+import { useStore } from '@/sources/store';
 import { toUnits, agoText, unitLabel, useUnit, fmt, daysHoursText } from '@/domain/units';
-import { arrowChar, getCfg } from '../data/nightscout';
+import { arrowChar, getCfg } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
-import { useDeviceExtras, loadDeviceExtras } from '../data/deviceExtras';
-import { usePanelLevel, setPanelLevel } from '../data/panel';
-import { resetPanelGesture } from '../data/panelGesture';
-import { useSnapshot } from '../data/bridge';
+import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
+import { usePanelLevel, setPanelLevel } from '@/app/panel';
+import { resetPanelGesture } from '@/app/panelGesture';
+import { useSnapshot } from '@/sources/bridge';
 import CircleSparkline from './CircleSparkline';
 
 const DASH = '—';

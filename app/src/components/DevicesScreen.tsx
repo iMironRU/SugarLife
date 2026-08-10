@@ -3,11 +3,11 @@ import PageHead from './PageHead';
 import Row from './Row';
 import { chevronForward, hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline } from 'ionicons/icons';
 import { useState } from 'react';
-import { useStore } from '../data/store';
-import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '../data/deviceConfig';
+import { useStore } from '@/sources/store';
+import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
 import DeviceSheet, { type DeviceCatKey } from './DeviceSheet';
-import { useStack } from '../data/stackCtx';
+import { useStack } from '@/app/stackCtx';
 import RequirementsCatalogSheet from './RequirementsCatalogSheet';
 
 /* Профиль → «Устройства» — отдельный полноэкранный раздел (не вложенная секция), как в

@@ -2,14 +2,14 @@ import { IonInput, IonToggle, IonButton, IonIcon } from '@ionic/react';
 import PageHead from './PageHead';
 import { linkOutline, keyOutline, chevronForward, gitNetworkOutline, copyOutline, checkmarkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
-import { useClouds, updateCloud, removeCloud } from '../data/clouds';
-import { ping, checkReadAccess, type ReadAccess } from '../data/nightscout';
-import { refresh } from '../data/store';
+import { useClouds, updateCloud, removeCloud } from '@/sources/clouds';
+import { ping, checkReadAccess, type ReadAccess } from '@/sources/nightscout';
+import { refresh } from '@/sources/store';
 import { toUnits } from '@/domain/units';
-import { useDeviceConfig, isRecorded, isModelKnown } from '../data/deviceConfig';
+import { useDeviceConfig, isRecorded, isModelKnown } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
 import DeviceSheet from './DeviceSheet';
-import { useStack } from '../data/stackCtx';
+import { useStack } from '@/app/stackCtx';
 
 /* Карточка одного облака (docs/CONNECT-UX.md §2b, §7). «Забираем отсюда» — по конкретным
    устройствам из реестра (не по абстрактным ролям «глюкоза»/«помпа»): облако — способ

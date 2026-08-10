@@ -1,6 +1,6 @@
 /* Экспорт локальной истории глюкозы (IndexedDB) в CSV — данные пользователя,
    выгружаются на его устройство одним файлом. */
-import { getSince } from './db';
+import { getSince } from '@/sources/db';
 
 function csvName() {
   const d = new Date();
