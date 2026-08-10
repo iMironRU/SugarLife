@@ -11,6 +11,8 @@ export const STORAGE_KEYS = [
   'sl.extras.cache.v1', // кэш расширенных данных устройства
   'sl.device.v1',       // реестр устройств: модели, мосты, инсулин
   'sl.onboarded.v1',    // пройден ли мастер первого запуска
+  'sl.loop.v1',         // профиль петли: режим и лимиты
+  'sl.justUpdated.v1',  // техфлаг «только что обновились», живёт до первого показа
 ] as const;
 
 // Настройки отображения — переживают сброс данных намеренно: это про удобство,
@@ -22,4 +24,17 @@ export function resetLocalData(): void {
     try { localStorage.removeItem(k); } catch { /* ignore */ }
   }
   try { indexedDB.deleteDatabase('sugarlife'); } catch { /* ignore */ }
+}
+
+/* Самопроверка (только в разработке). Список ключей уже дважды отставал от жизни:
+   сначала забыли реестр устройств и флаг онбординга, потом профиль петли. Теперь
+   приложение само скажет, что появился ключ, не учтённый ни в одном списке. */
+if (import.meta.env.DEV) {
+  try {
+    const known = new Set<string>([...STORAGE_KEYS, ...KEPT_KEYS]);
+    const stray = Object.keys(localStorage).filter((k) => k.startsWith('sl.') && !known.has(k));
+    if (stray.length) {
+      console.warn('[reset] ключи не учтены в data/reset.ts — сброс их не тронет:', stray);
+    }
+  } catch { /* ignore */ }
 }
