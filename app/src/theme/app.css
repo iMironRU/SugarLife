@@ -603,6 +603,18 @@ ion-content { --background: var(--color-bg); }
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 16px; border-radius: 16px; background: var(--color-neutral-900);
 }
+/* Строка «Забираем отсюда»: слева переход в карточку устройства, справа переключатель
+   источника. Кнопка внутри строки, а не строка-кнопка — вложенные интерактивные
+   элементы иначе перехватывали бы нажатие друг у друга. */
+.src-row { cursor: default; }
+.src-main {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
+  margin: -14px 0; padding: 14px 0; /* зона нажатия во всю высоту строки */
+  background: none; border: 0; cursor: pointer;
+  font-family: var(--font-body); color: var(--color-text); text-align: left;
+}
+.src-main:active { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+
 /* Вместо пустого поля токена на открытом сайте — строка о том, что он не нужен,
    и выход для тех, кому он всё же понадобился (запись). */
 .token-hint {

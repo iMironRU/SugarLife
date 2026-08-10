@@ -1,5 +1,5 @@
 import { IonModal, IonContent, IonFooter, IonInput, IonToggle, IonButton, IonIcon } from '@ionic/react';
-import { linkOutline, keyOutline, closeOutline, chevronBack, gitNetworkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
+import { linkOutline, keyOutline, closeOutline, chevronBack, chevronForward, gitNetworkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { type CloudConfig, updateCloud, removeCloud } from '../data/clouds';
 import { ping, checkReadAccess, type ReadAccess } from '../data/nightscout';
@@ -7,6 +7,7 @@ import { refresh } from '../data/store';
 import { toUnits } from '../data/units';
 import { useDeviceConfig, isRecorded, isModelKnown } from '../data/deviceConfig';
 import { pumpById, sensorById } from '../data/catalog';
+import DeviceSheet from './DeviceSheet';
 
 /* Карточка одного облака (docs/CONNECT-UX.md §2b, §7). «Забираем отсюда» — по конкретным
    устройствам из реестра (не по абстрактным ролям «глюкоза»/«помпа»): облако — способ
@@ -27,17 +28,24 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
      Запись (еда, болюсы) — отдельная функция; токен под неё спросим, когда дойдёт. */
   const [access, setAccess] = useState<ReadAccess | 'checking' | null>(null);
   const [tokenShown, setTokenShown] = useState(false);
+  const [devOpen, setDevOpen] = useState<'sensor' | 'pump' | null>(null);
   const devCfg = useDeviceConfig();
   // Запись в реестре может быть без модели (§2b) — тогда облако для неё единственный
   // способ, и переключатель обязан быть доступен. Заперт он только если записи нет вовсе.
   const sensorRecorded = isRecorded(devCfg.sensorId);
   const pumpRecorded = isRecorded(devCfg.pumpId);
+  /* Название в заголовке, состояние — во второй строке. «Сенсор · модель не указана»
+     одной строкой не влезало рядом с шевроном и переключателем и переносилось надвое. */
   const sensorLabel = isModelKnown(devCfg.sensorId)
     ? (sensorById(devCfg.sensorId)?.name ?? 'Сенсор')
-    : sensorRecorded ? 'Сенсор · модель не указана' : 'Сенсор';
+    : 'Сенсор';
   const pumpLabel = isModelKnown(devCfg.pumpId)
     ? (pumpById(devCfg.pumpId)?.model ?? 'Помпа')
-    : pumpRecorded ? 'Помпа · модель не указана' : 'Помпа';
+    : 'Помпа';
+  const sensorSub = !sensorRecorded ? 'не записан в «Устройствах»'
+    : isModelKnown(devCfg.sensorId) ? 'настроить' : 'модель не указана';
+  const pumpSub = !pumpRecorded ? 'не записана в «Устройствах»'
+    : isModelKnown(devCfg.pumpId) ? 'настроить' : 'модель не указана';
 
   useEffect(() => {
     if (!isOpen || !cloud) return;
@@ -142,20 +150,29 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
 
         <div className="section-label sec">Забираем отсюда</div>
         <div className="list">
-          <div className="list-row" style={{ cursor: 'default' }}>
-            <IonIcon icon={hardwareChipOutline} className="list-ico" />
-            <span className="pick-main">
-              <span className={'list-title' + (sensorRecorded ? '' : ' muted')}>{sensorLabel}</span>
-              {!sensorRecorded && <span className="pick-sub">не записан в «Устройствах»</span>}
-            </span>
+          {/* Строка ведёт в карточку устройства: именно там указывают модель, а «модель
+              не указана» — это ровно то место, где хочется на неё нажать. Переключатель
+              вынесен из кнопки: он про источник данных, а не про переход. */}
+          <div className="list-row src-row">
+            <button className="src-main" onClick={() => setDevOpen('sensor')}>
+              <IonIcon icon={hardwareChipOutline} className="list-ico" />
+              <span className="pick-main">
+                <span className={'list-title' + (sensorRecorded ? '' : ' muted')}>{sensorLabel}</span>
+                <span className="pick-sub">{sensorSub}</span>
+              </span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </button>
             <IonToggle checked={cloud.sourceGlucose} disabled={!sensorRecorded} onIonChange={(e) => onToggleSensor(e.detail.checked)} />
           </div>
-          <div className="list-row" style={{ cursor: 'default' }}>
-            <IonIcon icon={flash} className="list-ico" />
-            <span className="pick-main">
-              <span className={'list-title' + (pumpRecorded ? '' : ' muted')}>{pumpLabel}</span>
-              {!pumpRecorded && <span className="pick-sub">не записана в «Устройствах»</span>}
-            </span>
+          <div className="list-row src-row">
+            <button className="src-main" onClick={() => setDevOpen('pump')}>
+              <IonIcon icon={flash} className="list-ico" />
+              <span className="pick-main">
+                <span className={'list-title' + (pumpRecorded ? '' : ' muted')}>{pumpLabel}</span>
+                <span className="pick-sub">{pumpSub}</span>
+              </span>
+              <IonIcon icon={chevronForward} className="list-chev" />
+            </button>
             <IonToggle checked={cloud.sourcePumpStatus} disabled={!pumpRecorded} onIonChange={(e) => onTogglePump(e.detail.checked)} />
           </div>
         </div>
@@ -167,6 +184,17 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
           <IonIcon icon={trashOutline} />
           Удалить облако
         </button>
+
+        {/* Та же карточка устройства, что в «Профиль → Устройства» (§7): одна на всё
+            приложение, чтобы модель указывалась в одном месте, а не в двух похожих. */}
+        <DeviceSheet
+          isOpen={devOpen === 'sensor'} onClose={() => setDevOpen(null)}
+          cat="sensor" title="Сенсор (НМГ)"
+        />
+        <DeviceSheet
+          isOpen={devOpen === 'pump'} onClose={() => setDevOpen(null)}
+          cat="pump" title="Помпа"
+        />
       </IonContent>
       {/* подвал ВНЕ прокрутки: фиксированный слой поверх контента перекрывал
           последнюю кнопку, пока не домотаешь до конца */}
