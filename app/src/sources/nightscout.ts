@@ -318,7 +318,7 @@ async function loadProfile(base: string, token?: string): Promise<Profile | null
   return {
     name: key, ic: slotValue(p.carbratio), isf: slotValue(p.sens), basal: slotValue(p.basal),
     basalSchedule: schedule(p.basal),
-    targetLow: slotValue(p.target_low), targetHigh: slotValue(p.target_high), dia: num(p.dia), units: p.units,
+    targetLow: slotValue(p.target_low), targetHigh: slotValue(p.target_high), dia: num(p.dia), units: p.units, timezone: p.timezone || undefined,
   };
 }
 

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useStore } from '@/sources/store';
 import {
   type Seg, PARTS, STEP, fmtH, roundRate, toSegs, rateAt, daily,
-  partDose, partAvg, segsIn, sameProfile,
+  partDose, partAvg, segsIn, sameProfile, tzShiftMinutes, tzShiftText,
 } from '@/domain/basal';
 import BasalSteps, { type Inner } from './BasalSteps';
 import PageHead from '@/ui/PageHead';
@@ -61,6 +61,11 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
   const changedAll = !sameProfile(work, pump);
   const changedAt = (i: number) => Math.abs(work[i].v - rateAt(pump, work[i].a)) > 1e-6;
 
+  /* Расхождение с часами телефона. Время интервалов оставляем помповым — значения
+     вводят на самой помпе, глядя на её часы, — но молчать о разнице нельзя: иначе
+     в поездке человек правит «ночь», которая у помпы вовсе не ночь. */
+  const сдвиг = tzShiftMinutes(data?.profile?.timezone);
+
   const apply = (next: Seg[]) => { setUndo((u) => [...u.slice(-19), work]); setWork(next); };
   const undo = () => { if (!undoStack.length) return; setWork(undoStack[undoStack.length - 1]); setUndo((u) => u.slice(0, -1)); };
 
@@ -107,6 +112,14 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
     <>
       <div className="sheet stack-body">
           <PageHead title="Базальный профиль" subtitle={data?.profile?.name ?? 'из Nightscout'} onBack={askClose} />
+
+          {сдвиг !== 0 && (
+            <div className="lim-kid warn">
+              <b>Время помпы отличается от времени телефона {tzShiftText(сдвиг)}.</b> Часы
+              интервалов ниже — помповые ({data?.profile?.timezone}), потому что значения
+              вы будете вводить на самой помпе. С местным временем они не совпадают.
+            </div>
+          )}
 
           <div className="dev-seg">
             <button className={'dev-seg-btn' + (!edit ? ' on' : '')} onClick={() => setEdit(false)}>Как есть</button>

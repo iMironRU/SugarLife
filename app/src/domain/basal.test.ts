@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   toSegs, daily, partDose, partAvg, PARTS, segsIn, splitSeg, mergeSeg,
   scaleAll, flatten, roundRate, sameProfile, rateAt, fmtH, MIN_RATE, MAX_RATE,
+  tzOffsetMinutes, tzShiftMinutes, tzShiftText,
 } from './basal';
 
 /* Арифметика базального профиля. Это единственное место в приложении, где считаются
@@ -126,5 +127,35 @@ describe('сравнение и выборка', () => {
   it('время печатается получасами', () => {
     expect(fmtH(0)).toBe('00:00');
     expect(fmtH(9.5)).toBe('09:30');
+  });
+});
+
+describe('часовой пояс профиля', () => {
+  it('смещение считается с учётом перехода на летнее время', () => {
+    // Европа/Москва зимой и летом одинаково UTC+3, а Берлин переходит
+    expect(tzOffsetMinutes('Europe/Moscow', new Date('2026-01-15T12:00:00Z'))).toBe(180);
+    expect(tzOffsetMinutes('Europe/Moscow', new Date('2026-07-15T12:00:00Z'))).toBe(180);
+    expect(tzOffsetMinutes('Europe/Berlin', new Date('2026-01-15T12:00:00Z'))).toBe(60);
+    expect(tzOffsetMinutes('Europe/Berlin', new Date('2026-07-15T12:00:00Z'))).toBe(120);
+  });
+
+  it('полночь не ломает расчёт: Intl отдаёт «24» вместо «00»', () => {
+    // момент, когда в Екатеринбурге ровно полночь
+    expect(tzOffsetMinutes('Asia/Yekaterinburg', new Date('2026-07-14T19:00:00Z'))).toBe(300);
+  });
+
+  it('незнакомый пояс не даёт выдуманной разницы', () => {
+    expect(tzOffsetMinutes('Не/Пояс')).toBeNull();
+    expect(tzShiftMinutes('Не/Пояс')).toBe(0);
+  });
+
+  it('без пояса в профиле разницы нет', () => {
+    expect(tzShiftMinutes(undefined)).toBe(0);
+  });
+
+  it('подпись читается по-человечески', () => {
+    expect(tzShiftText(120)).toBe('на 2 ч вперёд');
+    expect(tzShiftText(-90)).toBe('на 1 ч 30 мин назад');
+    expect(tzShiftText(-30)).toBe('на 30 мин назад');
   });
 });

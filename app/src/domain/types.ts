@@ -28,6 +28,11 @@ export interface Profile {
   targetLow: number | null; targetHigh: number | null; dia: number | null; units?: string;
   // всё расписание, а не только текущая скорость: редактору профиля нужны сутки целиком
   basalSchedule: BasalStep[];
+  /* Часовой пояс, в котором ЗАПИСАН профиль, — это время помпы. Расписание базала
+     размечено по нему, и значения человек вводит на самой помпе, глядя на её часы.
+     Показывать эти интервалы по времени телефона нельзя: в поездке он правил бы
+     не тот интервал. */
+  timezone?: string;
 }
 
 export interface Treatment { t: number; type: string; carbs: number | null; insulin: number | null; rate: number | null; duration: number | null }
