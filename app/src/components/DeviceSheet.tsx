@@ -161,51 +161,6 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
         </div>
 
         <>
-            {/* Состояние — только то, что реально знаем; пустых строк не рисуем */}
-            {stateRows.length > 0 && (
-              <div className="basal-rows">
-                {stateRows.map((r) => (
-                  <div key={r.k} className="basal-row"><span>{r.k}</span><b>{r.v}</b></div>
-                ))}
-              </div>
-            )}
-            {supplies.length > 0 && (
-              <>
-                <div className="section-label sec">Расходники</div>
-                <div className="sensor-ages sensor-ages-solo">
-                  {supplies.map(([name, a]) => (
-                    <div key={name} className="age-pill"><span>{name}</span><b>{ageText(a!)}</b></div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {hasModel ? (
-              <div className="list">
-                <button className="list-row" onClick={() => setPick('model')}>
-                  <IonIcon icon={modelIcon} className="list-ico" />
-                  <span className="list-title">Модель</span>
-                  <span className={'list-value' + (modelName ? '' : ' muted')}>{modelName || 'выбрать'}</span>
-                  <IonIcon icon={chevronForward} className="list-chev" />
-                </button>
-                {cat === 'pump' && (
-                  <button className="list-row" onClick={() => setPick('insulin')}>
-                    <IonIcon icon={water} className="list-ico" />
-                    <span className="list-title">Инсулин</span>
-                    <span className={'list-value' + (insulin ? '' : ' muted')}>{insulin ? insulin.name : 'выбрать'}</span>
-                    <IonIcon icon={chevronForward} className="list-chev" />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="loop-empty">
-                <IonIcon icon={cat === 'loop' ? gitNetworkOutline : hardwareChipOutline} />
-                <div className="loop-empty-t">{cat === 'loop' ? 'Петля' : 'Глюкометр'}</div>
-                <div className="loop-empty-s">{cat === 'loop'
-                  ? 'Алгоритм замкнутого цикла (AAPS/Loop/встроенный) и статус — в разработке.'
-                  : 'Модель глюкометра и расходники (тест-полоски, ланцеты) — в разработке.'}</div>
-              </div>
-            )}
             {hasModel && (
               <>
                 <div className="section-label sec">Как получаем данные</div>
@@ -263,11 +218,36 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
                 </div>
                 <div className="sheet-note">
                   {needsBridge ? bridgeHint + ' ' : ''}
-                  {cat === 'pump' && 'В помпе один быстрый инсулин — он идёт и на базал, и на болюс. '}
                   Способы не спорят друг с другом: Nightscout работает вместе с прямым чтением,
                   а не вместо него. Пометка «сейчас» — откуда данные приходят в эту минуту.
                 </div>
               </>
+            )}
+            {hasModel ? (
+              <div className="list">
+                <button className="list-row" onClick={() => setPick('model')}>
+                  <IonIcon icon={modelIcon} className="list-ico" />
+                  <span className="list-title">Модель</span>
+                  <span className={'list-value' + (modelName ? '' : ' muted')}>{modelName || 'выбрать'}</span>
+                  <IonIcon icon={chevronForward} className="list-chev" />
+                </button>
+                {cat === 'pump' && (
+                  <button className="list-row" onClick={() => setPick('insulin')}>
+                    <IonIcon icon={water} className="list-ico" />
+                    <span className="list-title">Инсулин</span>
+                    <span className={'list-value' + (insulin ? '' : ' muted')}>{insulin ? insulin.name : 'выбрать'}</span>
+                    <IonIcon icon={chevronForward} className="list-chev" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="loop-empty">
+                <IonIcon icon={cat === 'loop' ? gitNetworkOutline : hardwareChipOutline} />
+                <div className="loop-empty-t">{cat === 'loop' ? 'Петля' : 'Глюкометр'}</div>
+                <div className="loop-empty-s">{cat === 'loop'
+                  ? 'Алгоритм замкнутого цикла (AAPS/Loop/встроенный) и статус — в разработке.'
+                  : 'Модель глюкометра и расходники (тест-полоски, ланцеты) — в разработке.'}</div>
+              </div>
             )}
             {recordedNoModel && (
               <div className="sheet-note">
@@ -275,6 +255,35 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
                 железка сама или ей нужен мост. Данные при переходе на прямое чтение не потеряются.
               </div>
             )}
+            {cat === 'pump' && hasModel && (
+              <div className="sheet-note">
+                В помпе один быстрый инсулин — он идёт и на базал, и на болюс.
+              </div>
+            )}
+
+            {/* Состояние — только то, что реально знаем; пустых строк не рисуем.
+                Идёт последним: это следствие настройки, а не то, что настраивают. */}
+            {stateRows.length > 0 && (
+              <>
+              <div className="section-label sec">Сейчас на устройстве</div>
+              <div className="basal-rows">
+                {stateRows.map((r) => (
+                  <div key={r.k} className="basal-row"><span>{r.k}</span><b>{r.v}</b></div>
+                ))}
+              </div>
+              </>
+            )}
+            {supplies.length > 0 && (
+              <>
+                <div className="section-label sec">Расходники</div>
+                <div className="sensor-ages sensor-ages-solo">
+                  {supplies.map(([name, a]) => (
+                    <div key={name} className="age-pill"><span>{name}</span><b>{ageText(a!)}</b></div>
+                  ))}
+                </div>
+              </>
+            )}
+
             {hasModel && modelName && (
               <button className="sheet-danger" onClick={onForget}>
                 <IonIcon icon={trashOutline} />
