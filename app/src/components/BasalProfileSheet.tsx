@@ -1,5 +1,5 @@
 import { IonModal, IonContent, IonFooter, IonIcon } from '@ionic/react';
-import { closeOutline, chevronBack, arrowUndoOutline } from 'ionicons/icons';
+import { closeOutline, arrowUndoOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useStore } from '../data/store';
 import {
@@ -97,9 +97,6 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
             </div>
           </div>
         </IonContent>
-        <IonFooter className="page-foot">
-          <button className="page-back" onClick={onClose}><IonIcon icon={chevronBack} />Назад</button>
-        </IonFooter>
       </IonModal>
     );
   }

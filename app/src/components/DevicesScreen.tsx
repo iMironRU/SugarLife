@@ -1,4 +1,4 @@
-import { IonModal, IonContent, IonFooter, IonIcon } from '@ionic/react';
+import { IonModal, IonContent, IonIcon } from '@ionic/react';
 import { chevronBack, chevronForward, hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '../data/store';
@@ -102,12 +102,6 @@ export default function DevicesScreen({ isOpen, onClose }: { isOpen: boolean; on
       </IonContent>
       {/* подвал ВНЕ прокрутки: фиксированный слой поверх контента перекрывал
           последнюю кнопку, пока не домотаешь до конца */}
-      <IonFooter className="page-foot">
-        <button className="page-back" onClick={close}>
-          <IonIcon icon={chevronBack} />
-          Назад
-        </button>
-      </IonFooter>
     </IonModal>
   );
 }

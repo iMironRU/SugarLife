@@ -1,4 +1,4 @@
-import { IonModal, IonContent, IonFooter, IonIcon } from '@ionic/react';
+import { IonModal, IonContent, IonIcon } from '@ionic/react';
 import { chevronBack, chevronForward, cloudOutline, addCircleOutline, pulse, flash } from 'ionicons/icons';
 import { useState } from 'react';
 import { useClouds, addCloud, type CloudConfig } from '../data/clouds';
@@ -76,12 +76,6 @@ export default function ServicesScreen({ isOpen, onClose }: { isOpen: boolean; o
       </IonContent>
       {/* подвал ВНЕ прокрутки: фиксированный слой поверх контента перекрывал
           последнюю кнопку, пока не домотаешь до конца */}
-      <IonFooter className="page-foot">
-        <button className="page-back" onClick={close}>
-          <IonIcon icon={chevronBack} />
-          Назад
-        </button>
-      </IonFooter>
     </IonModal>
   );
 }

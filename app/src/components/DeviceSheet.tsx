@@ -1,5 +1,5 @@
-import { IonModal, IonContent, IonFooter, IonIcon } from '@ionic/react';
-import { closeOutline, chevronBack, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
+import { IonModal, IonContent, IonIcon } from '@ionic/react';
+import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '../data/deviceConfig';
 import { useSnapshot } from '../data/bridge';
@@ -339,12 +339,6 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
       </IonContent>
       {/* подвал ВНЕ прокрутки: фиксированный слой поверх контента перекрывал
           последнюю кнопку, пока не домотаешь до конца */}
-      <IonFooter className="page-foot">
-        <button className="page-back" onClick={onClose}>
-          <IonIcon icon={chevronBack} />
-          Назад
-        </button>
-      </IonFooter>
     </IonModal>
   );
 }
