@@ -1,5 +1,6 @@
 import { IonIcon } from '@ionic/react';
 import PageHead from './PageHead';
+import Row from './Row';
 import { chevronForward, hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '../data/store';
@@ -67,26 +68,12 @@ export default function DevicesScreen({ onClose }: { onClose: () => void }) {
 
         <div className="section-label sec">Глюкометры и петля</div>
         <div className="list">
-          <button className="list-row" onClick={() => openCat('meter')}>
-            <IonIcon icon={speedometerOutline} className="list-ico" />
-            <span className="list-title">Глюкометр</span>
-            <span className="list-value">настроить</span>
-            <IonIcon icon={chevronForward} className="list-chev" />
-          </button>
-          <button className="list-row" onClick={() => openCat('loop')}>
-            <IonIcon icon={repeat} className="list-ico" />
-            <span className="list-title">Петля</span>
-            <span className="list-value">настроить</span>
-            <IonIcon icon={chevronForward} className="list-chev" />
-          </button>
+          <Row icon={speedometerOutline} title="Глюкометр" value="настроить" onClick={() => openCat('meter')} />
+          <Row icon={repeat} title="Петля" value="настроить" onClick={() => openCat('loop')} />
         </div>
 
         <div className="list" style={{ marginTop: 12 }}>
-          <button className="list-row" onClick={() => setReqOpen(true)}>
-            <IonIcon icon={helpCircleOutline} className="list-ico" />
-            <span className="list-title">Проверить / записать по модели</span>
-            <IonIcon icon={chevronForward} className="list-chev" />
-          </button>
+          <Row icon={helpCircleOutline} title="Проверить / записать по модели" onClick={() => setReqOpen(true)} />
         </div>
         <RequirementsCatalogSheet isOpen={reqOpen} onClose={() => setReqOpen(false)} />
     </div>

@@ -1,6 +1,7 @@
 import { IonIcon } from '@ionic/react';
 import PageHead from './PageHead';
-import { chevronForward, cloudOutline, addCircleOutline, pulse, flash } from 'ionicons/icons';
+import Row from './Row';
+import { cloudOutline, addCircleOutline, pulse, flash } from 'ionicons/icons';
 import { useClouds, addCloud, type CloudConfig } from '../data/clouds';
 import CloudSheet from './CloudSheet';
 import { useStack } from '../data/stackCtx';
@@ -47,22 +48,13 @@ export default function ServicesScreen({ onClose }: { onClose: () => void }) {
         <div className="section-label sec">Облака</div>
         <div className="list">
           {clouds.length === 0 && (
-            <div className="list-row" style={{ cursor: 'default' }}>
-              <span className="list-title muted">Нет ни одного облака</span>
-            </div>
+            <Row title="Нет ни одного облака" titleMuted />
           )}
           {clouds.map((c) => (
-            <button key={c.id} className="list-row" onClick={() => openCloud(c.id)}>
-              <IonIcon icon={cloudOutline} className="list-ico" />
-              <span className="list-title one-line">{c.name || 'Nightscout'}</span>
-              {roleIcons(c)}
-              <IonIcon icon={chevronForward} className="list-chev" />
-            </button>
+            <Row key={c.id} icon={cloudOutline} title={c.name || 'Nightscout'} oneLine
+              value={roleIcons(c)} onClick={() => openCloud(c.id)} />
           ))}
-          <button className="list-row" onClick={onAdd}>
-            <IonIcon icon={addCircleOutline} className="list-ico" />
-            <span className="list-title">Добавить облако</span>
-          </button>
+          <Row icon={addCircleOutline} title="Добавить облако" chevron={false} onClick={onAdd} />
         </div>
     </div>
   );

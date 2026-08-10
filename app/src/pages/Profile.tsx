@@ -19,6 +19,7 @@ import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNative
 import { useStack } from '../data/stackCtx';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '../data/swUpdate';
 import { useLoopProfile, LOOP_MODES } from '../data/loopProfile';
+import Row from '../components/Row';
 import UnitsModal from '../components/UnitsModal';
 import CarbUnitsModal from '../components/CarbUnitsModal';
 import DevicesScreen from '../components/DevicesScreen';
@@ -170,24 +171,10 @@ export default function Profile() {
           {/* настройки */}
           <div className="section-label sec">Настройки</div>
           <div className="list">
-            <button className="list-row" onClick={() => setUnitsOpen(true)}>
-              <IonIcon icon={optionsOutline} className="list-ico" />
-              <span className="list-title">Единицы глюкозы</span>
-              <span className="list-value">{unitLabel(unit)}</span>
-              <IonIcon icon={chevronForward} className="list-chev" />
-            </button>
-            <button className="list-row" onClick={() => setCarbUnitsOpen(true)}>
-              <IonIcon icon={nutritionOutline} className="list-ico" />
-              <span className="list-title">Единицы еды</span>
-              <span className="list-value">{carbUnitLabel(carbUnit)}</span>
-              <IonIcon icon={chevronForward} className="list-chev" />
-            </button>
-            <button className="list-row" onClick={doExport} disabled={exporting}>
-              <IonIcon icon={downloadOutline} className="list-ico" />
-              <span className="list-title">Экспорт глюкозы в CSV</span>
-              <span className="list-value">{exporting ? 'выгрузка…' : count != null ? `${count} зап.` : DASH}</span>
-              <IonIcon icon={chevronForward} className="list-chev" />
-            </button>
+            <Row icon={optionsOutline} title="Единицы глюкозы" value={unitLabel(unit)} onClick={() => setUnitsOpen(true)} />
+            <Row icon={nutritionOutline} title="Единицы еды" value={carbUnitLabel(carbUnit)} onClick={() => setCarbUnitsOpen(true)} />
+            <Row icon={downloadOutline} title="Экспорт глюкозы в CSV" chevron={false} onClick={doExport} disabled={exporting}
+              value={exporting ? 'выгрузка…' : count != null ? `${count} зап.` : DASH} />
           </div>
           {exportMsg && <div className="metric-note" style={{ marginTop: 8 }}>{exportMsg}</div>}
 
@@ -199,23 +186,16 @@ export default function Profile() {
               (см. docs/CONNECT-UX.md §10 «Карта интерфейса»: Профиль → Устройства) */}
           <div className="section-label sec">Устройства</div>
           <div className="list">
-            <button className="list-row" onClick={() => push(<DevicesScreen onClose={pop} />)}>
-              <IonIcon icon={hardwareChipOutline} className="list-ico" />
-              <span className="list-title">Помпа, сенсоры, глюкометр, петля</span>
-              <IonIcon icon={chevronForward} className="list-chev" />
-            </button>
+            <Row icon={hardwareChipOutline} title="Помпа, сенсоры, глюкометр, петля"
+              onClick={() => push(<DevicesScreen onClose={pop} />)} />
           </div>
 
           {/* способы / сервисы (КАК): облако — такой же транспорт, как мост, только со своими
               настройками (URL/токен) и статусом (доступность/связь) вместо сигнала/батареи */}
           <div className="section-label sec">Сервисы</div>
           <div className="list">
-            <button className="list-row" onClick={() => push(<ServicesScreen onClose={pop} />)}>
-              <IonIcon icon={cloudOutline} className="list-ico" />
-              <span className="list-title">Облака</span>
-              <span className="list-value">{cloudsValue}</span>
-              <IonIcon icon={chevronForward} className="list-chev" />
-            </button>
+            <Row icon={cloudOutline} title="Облака" value={cloudsValue}
+              onClick={() => push(<ServicesScreen onClose={pop} />)} />
           </div>
 
           {/* алгоритм: профиль петли. Только настройка — подача не включается (решение 0004) */}
