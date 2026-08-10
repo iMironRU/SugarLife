@@ -1,12 +1,12 @@
-import { IonModal, IonContent, IonFooter, IonIcon } from '@ionic/react';
-import { closeOutline, arrowUndoOutline } from 'ionicons/icons';
+import { IonIcon } from '@ionic/react';
+import { arrowUndoOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '@/sources/store';
 import {
-  type Seg, PARTS, STEP, MIN_RATE, MAX_RATE, fmtH, roundRate, toSegs, rateAt, daily,
-  partDose, partAvg, segsIn, sameProfile, splitSeg, mergeSeg, scaleAll, flatten,
+  type Seg, PARTS, STEP, fmtH, roundRate, toSegs, rateAt, daily,
+  partDose, partAvg, segsIn, sameProfile,
 } from '@/domain/basal';
-import HoldButton from '@/ui/HoldButton';
+import BasalSteps, { type Inner } from './BasalSteps';
 import PageHead from '@/ui/PageHead';
 
 /* Редактор базального профиля (docs/prototypes/basal-profile.html).
@@ -44,7 +44,6 @@ function path(segs: Seg[], max: number): string {
   return d;
 }
 
-type Inner = null | { kind: 'seg'; i: number } | { kind: 'scale' } | { kind: 'flat' } | { kind: 'transfer' };
 
 export default function BasalProfileSection({ onClose }: { onClose: () => void }) {
   const { data } = useStore();
@@ -71,7 +70,6 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
   const gridStep = [0.1, 0.2, 0.25, 0.5, 1, 2].find((s) => max / s <= 4) ?? 5;
   const grid: number[] = [];
   for (let g = gridStep; g < max; g += gridStep) grid.push(+g.toFixed(2));
-  const changedList = work.map((s, i) => ({ s, i })).filter((x) => changedAt(x.i));
 
   /* Правка профиля живёт в состоянии до переноса в помпу. Здесь цена потери выше,
      чем где-либо ещё в приложении: человек мог перебрать все интервалы за сутки, и
@@ -104,15 +102,6 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
       </div>
     );
   }
-
-  /* Индекс правимого интервала достаём ОДИН раз с сужением типа. Раньше по всему
-     блоку стояло (inner as any).i: приведение отключает проверку, а обработчик мог
-     оказаться вызванным при inner другого вида — тогда i был бы undefined и правка
-     ушла бы «в никуда» вместо интервала. */
-  const segIdx = inner?.kind === 'seg' ? inner.i : -1;
-  const seg = segIdx >= 0 ? work[segIdx] ?? null : null;
-  const segPump = seg ? rateAt(pump, seg.a) : 0;
-  const setSegRate = (v: number) => apply(work.map((s, i) => (i === segIdx ? { ...s, v } : s)));
 
   return (
     <>
@@ -249,150 +238,15 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
           </div>
         )}
 
-      {/* ---- вложенные шторки: одноразовые подзадачи, им модалка и подходит ---- */}
-      <IonModal isOpen={inner?.kind === 'seg'} onDidDismiss={() => setInner(null)} className="sheet-modal">
-        <IonContent className="sheet">
-          {seg && (
-            <>
-              <div className="sheet-head">
-                <div>
-                  <div className="sheet-title">{fmtH(seg.a)}–{fmtH(seg.b)}</div>
-                  <div className="sheet-subtitle">интервал профиля</div>
-                </div>
-                <button className="sheet-close" onClick={() => setInner(null)} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-              </div>
-              <div className="lim-kid">В помпе <b>{segPump.toFixed(2)} ЕД/ч</b>.</div>
-              <div className="bas-stepper">
-                <button className="bas-pm" disabled={seg.v <= MIN_RATE}
-                  onClick={() => setSegRate(roundRate(seg.v - STEP))}>−</button>
-                <div className="bas-stepval">{seg.v.toFixed(2)}<small>ЕД/ч · шаг {STEP.toFixed(2)}</small></div>
-                <button className="bas-pm" disabled={seg.v >= MAX_RATE}
-                  onClick={() => setSegRate(roundRate(seg.v + STEP))}>+</button>
-              </div>
-              <div className="bas-under">
-                за интервал {((seg.b - seg.a) * seg.v).toFixed(2)} ЕД · суточный станет {daily(work).toFixed(2)} ЕД
-              </div>
-              {(() => {
-                const i = segIdx;
-                const prev = i > 0 ? work[i - 1].v : null, next = i < work.length - 1 ? work[i + 1].v : null;
-                const jump = [prev, next].filter((x): x is number => x !== null)
-                  .some((x) => Math.abs(seg.v - x) / Math.max(x, MIN_RATE) > 0.5);
-                return jump ? (
-                  <div className="lim-kid warn"><b>Резкий перепад с соседним интервалом</b> — больше чем в полтора раза. Так бывает, но чаще это опечатка.</div>
-                ) : null;
-              })()}
-              <div className="bas-mini" style={{ marginTop: 12 }}>
-                <button className="bas-mb" disabled={seg.b - seg.a < 1}
-                  onClick={() => { apply(splitSeg(work, segIdx)); setInner(null); }}>Разделить пополам</button>
-                <button className="bas-mb" disabled={segIdx >= work.length - 1}
-                  onClick={() => { apply(mergeSeg(work, segIdx)); setInner(null); }}>Слить со следующим</button>
-              </div>
-            </>
-          )}
-        </IonContent>
-        <IonFooter className="page-foot">
-          {seg && Math.abs(seg.v - segPump) > 1e-6 ? (
-            <div className="bas-act-col">
-              <button className="page-back bas-go" onClick={() => setSegRate(segPump)}>
-                ↺ Вернуть как в помпе {segPump.toFixed(2)}
-              </button>
-              <button className="page-back" onClick={() => setInner(null)}>Всё же оставить {seg.v.toFixed(2)}</button>
-            </div>
-          ) : (
-            <button className="page-back" onClick={() => setInner(null)}>Готово</button>
-          )}
-        </IonFooter>
-      </IonModal>
-
-      <IonModal isOpen={inner?.kind === 'scale'} onDidDismiss={() => setInner(null)} className="sheet-modal">
-        <IonContent className="sheet">
-          <div className="sheet-head">
-            <div><div className="sheet-title">Весь профиль</div><div className="sheet-subtitle">пропорционально</div></div>
-            <button className="sheet-close" onClick={() => setInner(null)} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-          </div>
-          <div className="lim-kid">Меняет <b>весь профиль пропорционально</b>. Форма сохраняется, сдвигается уровень целиком — так поступают при болезни, смене сезона или после заметного изменения веса.</div>
-          <div className="bas-stepper">
-            <button className="bas-pm" onClick={() => setScalePct((f) => f - 5)}>−</button>
-            <div className="bas-stepval">{scalePct > 0 ? '+' : ''}{scalePct} %<small>шаг 5 %</small></div>
-            <button className="bas-pm" onClick={() => setScalePct((f) => f + 5)}>+</button>
-          </div>
-          <div className="bas-under">
-            суточный {daily(work).toFixed(2)} → <span style={{ color: 'var(--c-glu)' }}>{daily(scaleAll(work, scalePct)).toFixed(2)}</span> ЕД
-          </div>
-          {Math.abs(scalePct) > 20 && (
-            <div className="lim-kid warn"><b>Изменение больше 20 %.</b> Такие сдвиги обычно делят на несколько шагов и проверяют по несколько дней.</div>
-          )}
-        </IonContent>
-        <IonFooter className="page-foot">
-          <div className="bas-act-col">
-            <button className="page-back bas-go" disabled={!scalePct}
-              onClick={() => { apply(scaleAll(work, scalePct)); setInner(null); }}>Применить</button>
-            <button className="page-back" onClick={() => setInner(null)}>Отмена</button>
-          </div>
-        </IonFooter>
-      </IonModal>
-
-      <IonModal isOpen={inner?.kind === 'flat'} onDidDismiss={() => setInner(null)} className="sheet-modal">
-        <IonContent className="sheet">
-          <div className="sheet-head">
-            <div><div className="sheet-title">Выровнять</div><div className="sheet-subtitle">один уровень на сутки</div></div>
-            <button className="sheet-close" onClick={() => setInner(null)} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-          </div>
-          <div className="lim-kid">Все интервалы станут равными <b>{roundRate(daily(work) / 24).toFixed(2)} ЕД/ч</b> — суточная доза не изменится, исчезнет только форма.</div>
-          <div className="sheet-note">Годится как исходная точка, когда профиль строится с нуля и данных о потребности по часам ещё нет.</div>
-        </IonContent>
-        <IonFooter className="page-foot">
-          <div className="bas-act-col">
-            <button className="page-back bas-go" onClick={() => { apply(flatten(work)); setInner(null); }}>Выровнять</button>
-            <button className="page-back" onClick={() => setInner(null)}>Отмена</button>
-          </div>
-        </IonFooter>
-      </IonModal>
-
-      <IonModal isOpen={inner?.kind === 'transfer'} onDidDismiss={() => setInner(null)} className="sheet-modal">
-        <IonContent className="sheet">
-          <div className="sheet-head">
-            <div><div className="sheet-title">Перенос в помпу</div><div className="sheet-subtitle">вручную, по интервалам</div></div>
-            <button className="sheet-close" onClick={() => setInner(null)} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-          </div>
-          {saved ? (
-            <>
-              <div className="lim-kid">Изменение профиля сохранено с датой и временем. При следующем разборе сравнение пойдёт <b>от этой точки</b>, а не от старого профиля.</div>
-              <div className="sheet-note">Через две-три недели станет видно, помогло ли.</div>
-            </>
-          ) : (
-            <>
-              <div className="lim-kid">Приложение не отправляет команды в помпу. Введите значения на самой помпе, затем отметьте здесь — <b>это попадёт в историю профиля</b>.</div>
-              {changedList.map((x) => {
-                const on = done.includes(x.i);
-                return (
-                  <button key={x.i} className={'bas-chk' + (on ? ' on' : '')}
-                    onClick={() => setDone((d) => (on ? d.filter((k) => k !== x.i) : [...d, x.i]))}>
-                    <span className="bas-box">✓</span>
-                    <span className="bas-chk-n">{fmtH(x.s.a)}–{fmtH(x.s.b)}</span>
-                    <span className="bas-chk-t">{rateAt(pump, x.s.a).toFixed(2)} → <b>{x.s.v.toFixed(2)}</b> ЕД/ч</span>
-                  </button>
-                );
-              })}
-              <div className="sheet-note">Остальные интервалы не трогайте.</div>
-            </>
-          )}
-        </IonContent>
-        <IonFooter className="page-foot">
-          {saved ? (
-            <button className="page-back" onClick={() => setInner(null)}>Понятно</button>
-          ) : (
-            <div className="bas-act-col">
-              <HoldButton
-                label={done.length === changedList.length ? 'Удерживайте — записать в историю' : 'Отметьте все интервалы'}
-                disabled={done.length !== changedList.length}
-                onComplete={saveToHistory}
-              />
-              <button className="page-back" onClick={() => setInner(null)}>Позже</button>
-            </div>
-          )}
-        </IonFooter>
-      </IonModal>
+      {/* Шаги правки — одноразовые подзадачи, им шторка и подходит. Вынесены в
+          отдельный файл: пять экранов в одном компоненте не помещались в голову,
+          и правка одного заставляла прокручивать четыре чужих. */}
+      <BasalSteps
+        inner={inner} onClose={() => setInner(null)}
+        work={work} pump={pump} apply={apply}
+        scalePct={scalePct} setScalePct={setScalePct}
+        done={done} setDone={setDone} saved={saved} saveToHistory={saveToHistory}
+      />
     </>
   );
 }
