@@ -1,4 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { AnalyticsSection } from '@/sections/lazy';
 import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, sparklesOutline, chevronForward } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/sources/store';
@@ -12,7 +13,6 @@ import FoodSheet from '@/sheets/FoodSheet';
 import { DataGate } from '@/ui/NotConfigured';
 import { useStack } from '@/app/stackCtx';
 import { useAnalyticsOn } from '@/settings/analytics';
-import AnalyticsSection from '@/sections/AnalyticsSection';
 
 const DASH = '—';
 

@@ -1,4 +1,5 @@
 import { IonInput, IonToggle, IonButton, IonIcon } from '@ionic/react';
+import { DeviceSection } from '@/sections/lazy';
 import PageHead from '@/ui/PageHead';
 import { linkOutline, keyOutline, chevronForward, gitNetworkOutline, copyOutline, checkmarkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
@@ -8,7 +9,6 @@ import { refresh } from '@/sources/store';
 import { toUnits } from '@/domain/units';
 import { useDeviceConfig, isRecorded, isModelKnown } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
-import DeviceSection from '@/sections/DeviceSection';
 import { useStack } from '@/app/stackCtx';
 
 /* Карточка одного облака (docs/CONNECT-UX.md §2b, §7). «Забираем отсюда» — по конкретным

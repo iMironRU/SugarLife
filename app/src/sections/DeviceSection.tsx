@@ -1,4 +1,5 @@
 import { IonIcon } from '@ionic/react';
+import { BasalProfileSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
 import PageHead from '@/ui/PageHead';
 import { chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
@@ -17,7 +18,6 @@ const isNative = Capacitor.isNativePlatform();
 import CatalogPicker from '@/sheets/CatalogPicker';
 import { modelItems, bridgeItems, insulinItems } from '@/sheets/modelItems';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
-import BasalProfileSection from '@/sections/BasalProfileSection';
 import { useStack } from '@/app/stackCtx';
 import { toSegs, daily } from '@/domain/basal';
 

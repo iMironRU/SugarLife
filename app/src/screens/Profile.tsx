@@ -1,4 +1,5 @@
 import { IonPage, IonContent, IonIcon, IonToggle } from '@ionic/react';
+import { DevicesSection, LoopSetupSection, ServicesSection } from '@/sections/lazy';
 import {
   personCircle, downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
@@ -23,9 +24,6 @@ import Row from '@/ui/Row';
 import { useAnalyticsOn, setAnalyticsOn } from '@/settings/analytics';
 import UnitsModal from '@/sheets/UnitsModal';
 import CarbUnitsModal from '@/sheets/CarbUnitsModal';
-import DevicesSection from '@/sections/DevicesSection';
-import ServicesSection from '@/sections/ServicesSection';
-import LoopSetupSection from '@/sections/LoopSetupSection';
 
 const DASH = '—';
 

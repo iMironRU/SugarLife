@@ -1,9 +1,9 @@
 import { IonIcon } from '@ionic/react';
+import { CloudSection } from '@/sections/lazy';
 import PageHead from '@/ui/PageHead';
 import Row from '@/ui/Row';
 import { cloudOutline, addCircleOutline, pulse, flash } from 'ionicons/icons';
 import { useClouds, addCloud, type CloudConfig } from '@/sources/clouds';
-import CloudSection from '@/sections/CloudSection';
 import { useStack } from '@/app/stackCtx';
 
 /* Профиль → «Сервисы» — отдельный полноэкранный раздел (docs/CONNECT-UX.md §10,

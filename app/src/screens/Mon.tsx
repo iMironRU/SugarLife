@@ -1,4 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { DeviceSection } from '@/sections/lazy';
 import { reportContentScroll } from '@/app/panel';
 import { hardwareChipOutline, chevronForward } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
@@ -7,7 +8,6 @@ import { toUnits, useUnit } from '@/domain/units';
 import { arrowChar, getCfg, loadEventsRange, type Treatment } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
 import GlucoseTimeChart from '@/charts/GlucoseTimeChart';
-import DeviceSection from '@/sections/DeviceSection';
 import { DataGate } from '@/ui/NotConfigured';
 import { useStack } from '@/app/stackCtx';
 

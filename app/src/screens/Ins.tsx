@@ -1,4 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { DeviceSection, LoopSetupSection } from '@/sections/lazy';
 import { reportContentScroll } from '@/app/panel';
 import { flash, repeat, chevronForward } from 'ionicons/icons';
 import { useState } from 'react';
@@ -7,8 +8,6 @@ import { useTreatments } from '@/sources/db';
 import { detectTherapy } from '@/domain/therapy';
 import { fmt } from '@/domain/units';
 import InsulinTimeChart from '@/charts/InsulinTimeChart';
-import DeviceSection from '@/sections/DeviceSection';
-import LoopSetupSection from '@/sections/LoopSetupSection';
 import { DataGate } from '@/ui/NotConfigured';
 import { useStack } from '@/app/stackCtx';
 

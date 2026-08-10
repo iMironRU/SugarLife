@@ -1,5 +1,5 @@
 import { IonApp, IonIcon, createGesture } from '@ionic/react';
-import { useCallback, useEffect, useRef } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef } from 'react';
 import { barChart, pulse, home, water, personCircle, medkit } from 'ionicons/icons';
 
 import Today from '@/screens/Today';
@@ -7,7 +7,11 @@ import Profile from '@/screens/Profile';
 import Metrics from '@/screens/Metrics';
 import Mon from '@/screens/Mon';
 import Ins from '@/screens/Ins';
-import Onboarding from '@/screens/Onboarding';
+/* Мастер первого запуска — отдельным куском: он нужен, пока ничего не подключено,
+   а тянет за собой справочник помп, сенсоров и инсулинов (132 КБ). Держать это в
+   первом куске значит заставлять каждый запуск ждать данные, которые понадобятся
+   один раз в жизни. */
+const Onboarding = lazy(() => import('@/screens/Onboarding'));
 import Loader from '@/screens/Loader';
 import InstallPrompt from '@/ui/InstallPrompt';
 import HeroPanel from '@/app/HeroPanel';
@@ -147,7 +151,9 @@ export default function App() {
 
   // Онбординг — главный путь, но не стена (CONNECT-UX §7): показываем, пока ничего не
   // подключено И человек его ещё не прошёл/не пропустил. Пропустил → приложение с прочерками.
-  if (status === 'off' && !bridgeHasData && !onboarded) return <IonApp><Onboarding /></IonApp>;
+  if (status === 'off' && !bridgeHasData && !onboarded) {
+    return <IonApp><Suspense fallback={<Loader />}><Onboarding /></Suspense></IonApp>;
+  }
   if (!data && !bridgeHasData && (status === 'idle' || status === 'loading')) return <IonApp><Loader /></IonApp>;
 
   return (

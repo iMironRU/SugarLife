@@ -1,11 +1,12 @@
 import PageHead from '@/ui/PageHead';
+import { DeviceSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
 import { hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
-import DeviceSection, { type DeviceCatKey } from '@/sections/DeviceSection';
+import type { DeviceCatKey } from './DeviceSection';
 import { useStack } from '@/app/stackCtx';
 import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
 
