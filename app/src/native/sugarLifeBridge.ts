@@ -5,6 +5,20 @@
 import { registerPlugin, Capacitor } from '@capacitor/core';
 import type { SugarLifeBridge, UiSnapshot, Intent, HistoryQuery, HistoryResult } from '../data/bridge';
 import { getCfg } from '../data/nightscout';
+import { putEntries } from '../data/db';
+
+/** Тренд движка → NS-направление (для локального Entry). Единый формат для таблицы/графика. */
+function trendToDir(t?: string | null): string {
+  switch (t) {
+    case 'RisingRapidly': return 'DoubleUp';
+    case 'Rising': return 'SingleUp';
+    case 'RisingSlowly': return 'FortyFiveUp';
+    case 'FallingSlowly': return 'FortyFiveDown';
+    case 'Falling': return 'SingleDown';
+    case 'FallingRapidly': return 'DoubleDown';
+    default: return 'Flat';
+  }
+}
 
 interface NativePlugin {
   requestSnapshot(): Promise<{ json: string }>;
@@ -35,6 +49,27 @@ if (Capacitor.isNativePlatform()) {
     },
   };
   window.SugarLifeBridge = bridge;
+
+  // ЕДИНАЯ история: движок — источник правды для глюкозы (сенсор + NS вместе). Синхронизируем его историю в
+  // локальную БД (putEntries) → НМГ-таблица/график/строка возраста видят СЕНСОР, а не только NS. Троттлим по
+  // снимкам (при новых данных), плюс раз на старте.
+  let lastGlucoseSync = 0;
+  const syncEngineGlucose = async () => {
+    try {
+      const now = Date.now();
+      const res = await bridge.query?.({ kind: 'Glucose', fromMs: now - 24 * 3600e3, toMs: now });
+      if (!res) return;
+      const entries = res.glucose
+        .filter((g) => g.mmol != null)
+        .map((g) => ({ t: g.atMs, mmol: g.mmol as number, mgdl: Math.round((g.mmol as number) * 18), dir: trendToDir(g.trend) }));
+      if (entries.length) await putEntries(entries);
+    } catch { /* движок ещё не готов — повторим на следующем снимке */ }
+  };
+  bridge.subscribe(() => {
+    const now = Date.now();
+    if (now - lastGlucoseSync > 12000) { lastGlucoseSync = now; void syncEngineGlucose(); }
+  });
+  void syncEngineGlucose();
 
   // Источник правды теперь БД движка: он сам персистит NS-конфиг и переподнимает облачный источник на
   // старте. Здесь — ОДНОРАЗОВАЯ миграция старого localStorage-конфига в БД (для уже настроенных

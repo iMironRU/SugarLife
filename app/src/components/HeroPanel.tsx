@@ -101,7 +101,8 @@ export default function HeroPanel() {
 
   // строка синхронизации: слева — как мы получаем (нами), справа — возраст
   // последнего значения в Nightscout, чтобы видеть задержку. + офлайн.
-  const readingAge = latest ? agoText(latest.t) : null;
+  // Возраст в верхней строке — по НАСТОЯЩЕМУ времени показания из движка (едино для сенсора/NS), фолбэк на стор.
+  const readingAge = m?.latestAtMs ? agoText(m.latestAtMs) : latest ? agoText(latest.t) : null;
   const syncState = !online ? 'offline'
     : (status === 'stale' || status === 'error') ? 'stale'
     : live ? 'live'
