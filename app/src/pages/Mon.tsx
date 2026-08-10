@@ -77,7 +77,7 @@ export default function Mon() {
                 <span className="reading-arrow">{arrowChar(e.dir)}</span>
               </div>
             ))}
-            {!readings.length && <><NotConfigured compact /><div className="mon-empty">Нет данных.</div></>}
+            {!readings.length && <><NotConfigured /><div className="mon-empty">Нет данных.</div></>}
           </div>
 
           <div className="metric-note">День датчика — из события замены сенсора в Nightscout (Sensor Change). Сахар, тренд и свежесть — вживую.</div>

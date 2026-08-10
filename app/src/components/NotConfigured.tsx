@@ -10,23 +10,22 @@ import { setOnboarded } from '../data/onboarding';
    профиле» — то есть его отправляли искать настройку самому.
 
    Кнопка возвращает мастер первого запуска: снимаем флаг «онбординг пройден», и гейт
-   в App.tsx показывает его снова. Данные при этом не трогаются. */
-export default function NotConfigured({ compact = false }: { compact?: boolean }) {
+   в App.tsx показывает его снова. Данные при этом не трогаются.
+
+   ОДИН вид на всех экранах, без вариантов: две разные версии читались как разные
+   вещи, хотя это одна и та же кнопка про одно и то же. */
+export default function NotConfigured() {
   const { status } = useStore();
   // 'off' = ни одного включённого облака. Только это и значит «не настроено»;
   // при обрыве связи (stale/error) настройки на месте, мастер предлагать незачем.
   if (status !== 'off') return null;
 
   return (
-    <button className={'nocfg' + (compact ? ' compact' : '')} onClick={() => setOnboarded(false)}>
+    <button className="nocfg" onClick={() => setOnboarded(false)}>
       <IonIcon icon={cloudOfflineOutline} className="nocfg-ico" />
       <span className="nocfg-txt">
         <span className="nocfg-t">Приложение не настроено</span>
-        <span className="nocfg-d">
-          {compact
-            ? 'Подключить источник данных'
-            : 'Данных нет, потому что не подключён ни один источник. Мастер займёт минуту.'}
-        </span>
+        <span className="nocfg-d">Не подключён ни один источник данных. Мастер займёт минуту.</span>
       </span>
       <IonIcon icon={chevronForward} className="nocfg-chev" />
     </button>

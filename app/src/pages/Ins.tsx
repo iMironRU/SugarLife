@@ -39,7 +39,7 @@ export default function Ins() {
       <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
           {/* не настроено — заметный выход к мастеру */}
-          <NotConfigured compact />
+          <NotConfigured />
 
           {isPen ? (
             <div className="basal-card">

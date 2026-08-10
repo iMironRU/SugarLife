@@ -125,7 +125,7 @@ export default function Metrics() {
                 <div className="metric-note">Стандарт AGP: медиана и коридоры 25–75% и 5–95% по времени суток. Цели: время в диапазоне &gt; 70%, CV &lt; 36%.</div>
               </>
             ) : (
-              <><NotConfigured compact /><div className="metric-note" style={{ marginTop: 14 }}>Нет данных.</div></>
+              <><NotConfigured /><div className="metric-note" style={{ marginTop: 14 }}>Нет данных.</div></>
             )
           ) : (
             (() => {
