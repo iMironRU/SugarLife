@@ -10,7 +10,7 @@ import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
 import { usePanelLevel, setPanelLevel } from '@/app/panel';
 import { resetPanelGesture } from '@/app/panelGesture';
 import { useSnapshot } from '@/sources/bridge';
-import CircleSparkline from './CircleSparkline';
+import CircleSparkline from '@/charts/CircleSparkline';
 
 const DASH = '—';
 

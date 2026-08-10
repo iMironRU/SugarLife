@@ -6,8 +6,8 @@ import {
   type Seg, PARTS, STEP, MIN_RATE, MAX_RATE, fmtH, roundRate, toSegs, rateAt, daily,
   partDose, partAvg, segsIn, sameProfile, splitSeg, mergeSeg, scaleAll, flatten,
 } from '@/domain/basal';
-import HoldButton from './HoldButton';
-import PageHead from './PageHead';
+import HoldButton from '@/ui/HoldButton';
+import PageHead from '@/ui/PageHead';
 
 /* Редактор базального профиля (docs/prototypes/basal-profile.html).
 
@@ -46,7 +46,7 @@ function path(segs: Seg[], max: number): string {
 
 type Inner = null | { kind: 'seg'; i: number } | { kind: 'scale' } | { kind: 'flat' } | { kind: 'transfer' };
 
-export default function BasalProfileSheet({ onClose }: { onClose: () => void }) {
+export default function BasalProfileSection({ onClose }: { onClose: () => void }) {
   const { data } = useStore();
   const pump = toSegs(data?.profile?.basalSchedule ?? []);
 

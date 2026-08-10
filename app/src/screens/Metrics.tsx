@@ -7,10 +7,10 @@ import { useBackfilling } from '@/sources/backfill';
 import { stats } from '@/domain/agp';
 import { carbStats, insulinDaily, carbsByDay, insulinByDay } from '@/domain/treatmentStats';
 import { fmt, toUnits, unitLabel, useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '@/domain/units';
-import TirBar from '../components/TirBar';
-import AgpChart from '../components/AgpChart';
-import { DataGate } from '../components/NotConfigured';
-import MetricBars from '../components/MetricBars';
+import TirBar from '@/charts/TirBar';
+import AgpChart from '@/charts/AgpChart';
+import { DataGate } from '@/ui/NotConfigured';
+import MetricBars from '@/charts/MetricBars';
 
 type MetricKey = 'glucose' | 'carbs' | 'insulin';
 type Cell = [string, string, string];

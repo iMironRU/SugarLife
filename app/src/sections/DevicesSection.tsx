@@ -1,19 +1,19 @@
 import { IonIcon } from '@ionic/react';
-import PageHead from './PageHead';
-import Row from './Row';
+import PageHead from '@/ui/PageHead';
+import Row from '@/ui/Row';
 import { chevronForward, hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
-import DeviceSheet, { type DeviceCatKey } from './DeviceSheet';
+import DeviceSection, { type DeviceCatKey } from '@/sections/DeviceSection';
 import { useStack } from '@/app/stackCtx';
-import RequirementsCatalogSheet from './RequirementsCatalogSheet';
+import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
 
 /* Профиль → «Устройства» — отдельный полноэкранный раздел (не вложенная секция), как в
    docs/CONNECT-UX.md §10 «Карта интерфейса». Группировка по классу устройства (§2a: реестр).
    Детали (резервуар/батарея и т.п.) показываем только когда данные реально есть — честно. */
-export default function DevicesScreen({ onClose }: { onClose: () => void }) {
+export default function DevicesSection({ onClose }: { onClose: () => void }) {
   const { push, pop } = useStack();
   const { data } = useStore();
   const devCfg = useDeviceConfig();
@@ -32,7 +32,7 @@ export default function DevicesScreen({ onClose }: { onClose: () => void }) {
   const titles: Record<DeviceCatKey, string> = {
     sensor: 'Сенсор (НМГ)', pump: 'Ввод инсулина', loop: 'Петля', meter: 'Глюкометр',
   };
-  const openCat = (c: DeviceCatKey) => push(<DeviceSheet cat={c} title={titles[c]} onClose={pop} />);
+  const openCat = (c: DeviceCatKey) => push(<DeviceSection cat={c} title={titles[c]} onClose={pop} />);
 
   return (
     <div className="sheet stack-body">

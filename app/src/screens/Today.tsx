@@ -8,8 +8,8 @@ import { useDeviceExtras } from '@/sources/deviceExtras';
 import { reservoirStats } from '@/domain/treatmentStats';
 import { useCloseOnLeave } from '@/app/nav';
 import { notify } from '@/platform/notify';
-import FoodSheet from '../components/FoodSheet';
-import { DataGate } from '../components/NotConfigured';
+import FoodSheet from '@/sheets/FoodSheet';
+import { DataGate } from '@/ui/NotConfigured';
 
 const DASH = '—';
 

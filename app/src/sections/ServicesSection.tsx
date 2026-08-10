@@ -1,19 +1,19 @@
 import { IonIcon } from '@ionic/react';
-import PageHead from './PageHead';
-import Row from './Row';
+import PageHead from '@/ui/PageHead';
+import Row from '@/ui/Row';
 import { cloudOutline, addCircleOutline, pulse, flash } from 'ionicons/icons';
 import { useClouds, addCloud, type CloudConfig } from '@/sources/clouds';
-import CloudSheet from './CloudSheet';
+import CloudSection from '@/sections/CloudSection';
 import { useStack } from '@/app/stackCtx';
 
 /* Профиль → «Сервисы» — отдельный полноэкранный раздел (docs/CONNECT-UX.md §10,
    §2b). Список облаков, а не одно поле: можно держать несколько Nightscout одновременно
    (свой + партнёра), у каждого — своя роль («забираем» глюкозу и/или статус помпы). */
-export default function ServicesScreen({ onClose }: { onClose: () => void }) {
+export default function ServicesSection({ onClose }: { onClose: () => void }) {
   const clouds = useClouds();
   const { push, pop } = useStack();
 
-  const openCloud = (id: string) => push(<CloudSheet cloudId={id} onClose={pop} />);
+  const openCloud = (id: string) => push(<CloudSection cloudId={id} onClose={pop} />);
 
   const onAdd = () => {
     const c = addCloud({

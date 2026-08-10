@@ -1,4 +1,4 @@
-import BrandDrop from '../components/BrandDrop';
+import BrandDrop from '@/ui/BrandDrop';
 
 export default function Loader({ text = 'Загрузка данных…' }: { text?: string }) {
   return (

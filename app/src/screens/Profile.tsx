@@ -19,12 +19,12 @@ import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNative
 import { useStack } from '@/app/stackCtx';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
 import { useLoopProfile, LOOP_MODES } from '@/settings/loopProfile';
-import Row from '../components/Row';
-import UnitsModal from '../components/UnitsModal';
-import CarbUnitsModal from '../components/CarbUnitsModal';
-import DevicesScreen from '../components/DevicesScreen';
-import ServicesScreen from '../components/ServicesScreen';
-import LoopSetupScreen from '../components/LoopSetupScreen';
+import Row from '@/ui/Row';
+import UnitsModal from '@/sheets/UnitsModal';
+import CarbUnitsModal from '@/sheets/CarbUnitsModal';
+import DevicesSection from '@/sections/DevicesSection';
+import ServicesSection from '@/sections/ServicesSection';
+import LoopSetupSection from '@/sections/LoopSetupSection';
 
 const DASH = '—';
 
@@ -187,7 +187,7 @@ export default function Profile() {
           <div className="section-label sec">Устройства</div>
           <div className="list">
             <Row icon={hardwareChipOutline} title="Помпа, сенсоры, глюкометр, петля"
-              onClick={() => push(<DevicesScreen onClose={pop} />)} />
+              onClick={() => push(<DevicesSection onClose={pop} />)} />
           </div>
 
           {/* способы / сервисы (КАК): облако — такой же транспорт, как мост, только со своими
@@ -195,13 +195,13 @@ export default function Profile() {
           <div className="section-label sec">Сервисы</div>
           <div className="list">
             <Row icon={cloudOutline} title="Облака" value={cloudsValue}
-              onClick={() => push(<ServicesScreen onClose={pop} />)} />
+              onClick={() => push(<ServicesSection onClose={pop} />)} />
           </div>
 
           {/* алгоритм: профиль петли. Только настройка — подача не включается (решение 0004) */}
           <div className="section-label sec">Алгоритм</div>
           <div className="list">
-            <button className="list-row" onClick={() => push(<LoopSetupScreen onClose={pop} />)}>
+            <button className="list-row" onClick={() => push(<LoopSetupSection onClose={pop} />)}>
               <IonIcon icon={repeat} className="list-ico" />
               <span className="pick-main">
                 <span className="list-title">Профиль петли</span>

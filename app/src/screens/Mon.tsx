@@ -6,9 +6,9 @@ import { useEntries } from '@/sources/db';
 import { toUnits, useUnit } from '@/domain/units';
 import { arrowChar, getCfg, loadEventsRange, type Treatment } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
-import GlucoseTimeChart from '../components/GlucoseTimeChart';
-import DeviceSheet from '../components/DeviceSheet';
-import { DataGate } from '../components/NotConfigured';
+import GlucoseTimeChart from '@/charts/GlucoseTimeChart';
+import DeviceSection from '@/sections/DeviceSection';
+import { DataGate } from '@/ui/NotConfigured';
 import { useStack } from '@/app/stackCtx';
 
 const WINDOWS = [1, 3, 6, 12, 24];
@@ -45,7 +45,7 @@ export default function Mon() {
           <DataGate>
           {/* сахар/тренд/свежесть — в верхней панели; здесь кнопка датчика + график */}
           {ages.sensor && (
-            <button className="pump-btn" style={{ marginTop: 0 }} onClick={() => push(<DeviceSheet cat="sensor" title="Сенсор (НМГ)" onClose={pop} />)}>
+            <button className="pump-btn" style={{ marginTop: 0 }} onClick={() => push(<DeviceSection cat="sensor" title="Сенсор (НМГ)" onClose={pop} />)}>
               <IonIcon icon={hardwareChipOutline} className="pump-btn-ico" style={{ color: 'var(--color-accent)' }} />
               <div className="pump-btn-txt">
                 <div className="pump-btn-title">Датчик</div>

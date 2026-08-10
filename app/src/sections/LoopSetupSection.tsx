@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useDeviceConfig, isModelKnown } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
-import HoldButton from './HoldButton';
+import HoldButton from '@/ui/HoldButton';
 import {
   LOOP_MODES, limitsFor, outOfRec, anyOutOfRec, fmtLimit,
   useLoopProfile, saveLoopProfile, type LoopModeId, type LoopLimit,
@@ -24,7 +24,7 @@ const STEPS = ['Оборудование', 'Режим петли', 'Лимит�
 
 type Check = { ok: 'yes' | 'no' | 'maybe'; name: string; note: string };
 
-export default function LoopSetupScreen({ onClose }: { onClose: () => void }) {
+export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
   const profile = useLoopProfile();
   const [step, setStep] = useState<Step>(0);
   const [editing, setEditing] = useState<string | null>(null);

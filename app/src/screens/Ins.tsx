@@ -6,10 +6,10 @@ import { useStore } from '@/sources/store';
 import { useTreatments } from '@/sources/db';
 import { detectTherapy } from '@/domain/therapy';
 import { fmt } from '@/domain/units';
-import InsulinTimeChart from '../components/InsulinTimeChart';
-import DeviceSheet from '../components/DeviceSheet';
-import LoopSetupScreen from '../components/LoopSetupScreen';
-import { DataGate } from '../components/NotConfigured';
+import InsulinTimeChart from '@/charts/InsulinTimeChart';
+import DeviceSection from '@/sections/DeviceSection';
+import LoopSetupSection from '@/sections/LoopSetupSection';
+import { DataGate } from '@/ui/NotConfigured';
 import { useStack } from '@/app/stackCtx';
 
 const WINDOWS = [1, 3, 6, 12, 24];
@@ -50,7 +50,7 @@ export default function Ins() {
             <>
               {/* помпа (шторка) + петля (шторка) */}
               <div className="pump-row">
-                <button className="pump-btn" onClick={() => push(<DeviceSheet cat="pump" title="Ввод инсулина" onClose={pop} />)}>
+                <button className="pump-btn" onClick={() => push(<DeviceSection cat="pump" title="Ввод инсулина" onClose={pop} />)}>
                   <IonIcon icon={flash} className="pump-btn-ico" />
                   <div className="pump-btn-txt">
                     <div className="pump-btn-title">Помпа</div>
@@ -58,7 +58,7 @@ export default function Ins() {
                   </div>
                   <IonIcon icon={chevronForward} className="pump-btn-chev" />
                 </button>
-                <button className="loop-btn" onClick={() => push(<LoopSetupScreen onClose={pop} />)} aria-label="Петля">
+                <button className="loop-btn" onClick={() => push(<LoopSetupSection onClose={pop} />)} aria-label="Петля">
                   <IonIcon icon={repeat} />
                 </button>
               </div>

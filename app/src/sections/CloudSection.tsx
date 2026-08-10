@@ -1,5 +1,5 @@
 import { IonInput, IonToggle, IonButton, IonIcon } from '@ionic/react';
-import PageHead from './PageHead';
+import PageHead from '@/ui/PageHead';
 import { linkOutline, keyOutline, chevronForward, gitNetworkOutline, copyOutline, checkmarkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useClouds, updateCloud, removeCloud } from '@/sources/clouds';
@@ -8,7 +8,7 @@ import { refresh } from '@/sources/store';
 import { toUnits } from '@/domain/units';
 import { useDeviceConfig, isRecorded, isModelKnown } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
-import DeviceSheet from './DeviceSheet';
+import DeviceSection from '@/sections/DeviceSection';
 import { useStack } from '@/app/stackCtx';
 
 /* Карточка одного облака (docs/CONNECT-UX.md §2b, §7). «Забираем отсюда» — по конкретным
@@ -16,7 +16,7 @@ import { useStack } from '@/app/stackCtx';
    подключения для КОНКРЕТНОГО зарегистрированного устройства, честно называем его моделью.
    Если устройство ещё не записано в «Устройствах» — показываем строку выключенной, без
    выдумывания несуществующей связи. «Выгрузка сюда» (запись в это облако) — отдельная задача. */
-export default function CloudSheet({ cloudId, onClose }: { cloudId: string; onClose: () => void }) {
+export default function CloudSection({ cloudId, onClose }: { cloudId: string; onClose: () => void }) {
   /* Облако берём из хранилища по id, а не приходящим объектом: страница живёт в стеке,
      и пока она открыта, запись успевает измениться (сохранили адрес, переключили роль).
      Копия в пропсе к этому моменту устарела бы. */
@@ -190,7 +190,7 @@ export default function CloudSheet({ cloudId, onClose }: { cloudId: string; onCl
               не указана» — это ровно то место, где хочется на неё нажать. Переключатель
               вынесен из кнопки: он про источник данных, а не про переход. */}
           <div className="list-row src-row">
-            <button className="src-main" onClick={() => push(<DeviceSheet cat="sensor" title="Сенсор (НМГ)" onClose={pop} />)}>
+            <button className="src-main" onClick={() => push(<DeviceSection cat="sensor" title="Сенсор (НМГ)" onClose={pop} />)}>
               <IonIcon icon={hardwareChipOutline} className="list-ico" />
               <span className="pick-main">
                 <span className={'list-title' + (sensorRecorded ? '' : ' muted')}>{sensorLabel}</span>
@@ -201,7 +201,7 @@ export default function CloudSheet({ cloudId, onClose }: { cloudId: string; onCl
             <IonToggle checked={cloud.sourceGlucose} disabled={!sensorRecorded} onIonChange={(e) => onToggleSensor(e.detail.checked)} />
           </div>
           <div className="list-row src-row">
-            <button className="src-main" onClick={() => push(<DeviceSheet cat="pump" title="Помпа" onClose={pop} />)}>
+            <button className="src-main" onClick={() => push(<DeviceSection cat="pump" title="Помпа" onClose={pop} />)}>
               <IonIcon icon={flash} className="list-ico" />
               <span className="pick-main">
                 <span className={'list-title' + (pumpRecorded ? '' : ' muted')}>{pumpLabel}</span>

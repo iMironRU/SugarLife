@@ -19,7 +19,7 @@ import '@ionic/react/css/palettes/dark.class.css'
 import './theme/variables.css'
 import './theme/app.css'
 
-import App from './App.tsx'
+import App from '@/app/App'
 import { notifyAppReady } from '@/platform/appUpdate'
 
 setupIonicReact({ mode: 'ios' })

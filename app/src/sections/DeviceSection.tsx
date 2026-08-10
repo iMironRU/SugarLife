@@ -1,5 +1,5 @@
 import { IonIcon } from '@ionic/react';
-import PageHead from './PageHead';
+import PageHead from '@/ui/PageHead';
 import { chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
@@ -13,10 +13,10 @@ import { pumpById, sensorById, bridgeById, pumpNeedsBridge, insulinById } from '
 
 // В браузере прямого BLE нет и не будет — это свойство платформы, а не «пока не сделали»
 const isNative = Capacitor.isNativePlatform();
-import CatalogPicker from './CatalogPicker';
-import { modelItems, bridgeItems, insulinItems } from './modelItems';
-import DeviceScanSheet from './DeviceScanSheet';
-import BasalProfileSheet from './BasalProfileSheet';
+import CatalogPicker from '@/sheets/CatalogPicker';
+import { modelItems, bridgeItems, insulinItems } from '@/sheets/modelItems';
+import DeviceScanSheet from '@/sheets/DeviceScanSheet';
+import BasalProfileSection from '@/sections/BasalProfileSection';
 import { useStack } from '@/app/stackCtx';
 import { toSegs, daily } from '@/domain/basal';
 
@@ -29,7 +29,7 @@ const ageText = (a: Age) => (a.days >= 1 ? a.days + ' дн' : a.hours + ' ч');
    «НМГ» и «Инсулин». Раньше рядом жили отдельные SensorSheet/PumpSheet/LoopSheet, и в
    PumpSheet был свой второй выбор модели помпы — теперь этого нет.
    Вкладка «Мост» появляется, только если модель известна (иначе неизвестно, нужен ли он). */
-export default function DeviceSheet({ onClose, cat, title }: {
+export default function DeviceSection({ onClose, cat, title }: {
   onClose: () => void; cat: DeviceCatKey; title: string;
 }) {
   const { push, pop } = useStack();
@@ -71,7 +71,7 @@ export default function DeviceSheet({ onClose, cat, title }: {
 
   /* --- Состояние: то, что реально известно прямо сейчас (было в SensorSheet/PumpSheet) ---
      Считаем ТОЛЬКО когда шторка открыта и только при смене данных. Инстансов
-     DeviceSheet смонтировано несколько сразу (список устройств + «НМГ» + «Инсулин»),
+     DeviceSection смонтировано несколько сразу (список устройств + «НМГ» + «Инсулин»),
      а deviceAges проходит по всем событиям замен — без этой памятки закрытые шторки
      молотили бы тысячи проходов на каждое обновление данных. */
   const dev = data?.device ?? null;
@@ -239,7 +239,7 @@ export default function DeviceSheet({ onClose, cat, title }: {
                   </button>
                 )}
                 {cat === 'pump' && (
-                  <button className="list-row" onClick={() => push(<BasalProfileSheet onClose={pop} />)}>
+                  <button className="list-row" onClick={() => push(<BasalProfileSection onClose={pop} />)}>
                     <IonIcon icon={pulseOutline} className="list-ico" />
                     <span className="list-title">Базальный профиль</span>
                     <span className={'list-value' + (basalTotal != null ? '' : ' muted')}>

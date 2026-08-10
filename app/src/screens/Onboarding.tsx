@@ -4,10 +4,10 @@ import {
   linkOutline, keyOutline, chevronForward, chevronBack, qrCodeOutline, cloudOutline,
   listOutline, bluetoothOutline, downloadOutline, checkmarkCircle, hardwareChipOutline, flash,
 } from 'ionicons/icons';
-import BrandDrop from '../components/BrandDrop';
-import CatalogPicker from '../components/CatalogPicker';
-import { pumpItems, sensorItems, modelTitle } from '../components/modelItems';
-import RequirementsCatalogSheet from '../components/RequirementsCatalogSheet';
+import BrandDrop from '@/ui/BrandDrop';
+import CatalogPicker from '@/sheets/CatalogPicker';
+import { pumpItems, sensorItems, modelTitle } from '@/sheets/modelItems';
+import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
 import { probeCloud, checkReadAccess, type CloudProbe } from '@/sources/nightscout';
 import { addCloud } from '@/sources/clouds';
 import { refresh } from '@/sources/store';
