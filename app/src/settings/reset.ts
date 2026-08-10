@@ -18,7 +18,7 @@ export const STORAGE_KEYS = [
 
 // Настройки отображения — переживают сброс данных намеренно: это про удобство,
 // а не про «чьё это устройство». Тема/единицы не раскрывают ничего о человеке.
-export const KEPT_KEYS = ['sl.theme', 'sl.units', 'sl.carbunits', 'sl.install.v1'] as const;
+export const KEPT_KEYS = ['sl.theme', 'sl.units', 'sl.carbunits', 'sl.install.v1', 'sl.analytics.v1'] as const;
 
 export function resetLocalData(): void {
   for (const k of STORAGE_KEYS) {

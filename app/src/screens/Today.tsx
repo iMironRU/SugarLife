@@ -1,5 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline, batteryDeadOutline } from 'ionicons/icons';
+import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, sparklesOutline, chevronForward } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt } from '@/domain/units';
@@ -10,6 +10,9 @@ import { useCloseOnLeave } from '@/app/nav';
 import { notify } from '@/platform/notify';
 import FoodSheet from '@/sheets/FoodSheet';
 import { DataGate } from '@/ui/NotConfigured';
+import { useStack } from '@/app/stackCtx';
+import { useAnalyticsOn } from '@/settings/analytics';
+import AnalyticsSection from '@/sections/AnalyticsSection';
 
 const DASH = '—';
 
@@ -33,6 +36,8 @@ export default function Today() {
   const [foodOpen, setFoodOpen] = useState(false);
   useCloseOnLeave(2, () => setFoodOpen(false)); // «Сегодня» — закрыть «Еду» при уходе
   const dev = data?.device || null;
+  const { push, pop } = useStack();
+  const analyticsOn = useAnalyticsOn();
 
   // общие расширенные данные (грузит панель) — события/резервуар
   const extras = useDeviceExtras();
@@ -145,6 +150,28 @@ export default function Today() {
       <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen">
           <DataGate>
+          {/* Разбор — отдельный экран, а не врезка: «Сегодня» про то, что делать
+              сейчас, разбор про то, что было. Выключённый показываем погасшим, а не
+              прячем — иначе выключивший однажды уже не вспомнит, что это было. */}
+          {analyticsOn ? (
+            <button className="tile-an" onClick={() => push(<AnalyticsSection onClose={pop} />)}>
+              <IonIcon icon={sparklesOutline} className="tile-an-ico" />
+              <span className="tile-an-txt">
+                <span className="tile-an-t">Аналитика</span>
+                <span className="tile-an-s">разбор данных: расходники, сахар, пропуски</span>
+              </span>
+              <IonIcon icon={chevronForward} className="tile-an-chev" />
+            </button>
+          ) : (
+            <div className="tile-an is-off">
+              <IonIcon icon={sparklesOutline} className="tile-an-ico" />
+              <span className="tile-an-txt">
+                <span className="tile-an-t">Аналитика выключена</span>
+                <span className="tile-an-s">включить: Профиль → Настройки → Выводить аналитику</span>
+              </span>
+            </div>
+          )}
+
           {/* панель углеводов (по макету): Б/Ж/У · активные · Еда.
               Б/Ж пусто — Nightscout не отдаёт белки/жиры, фейк не рисуем. */}
           <button className="carb-panel" onClick={() => setFoodOpen(true)}>

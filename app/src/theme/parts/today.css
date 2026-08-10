@@ -46,3 +46,21 @@
 .macros span { color: var(--color-neutral-400); font-size: 11px; font-weight: 400; display: inline-block; width: 12px; }
 .macros b { font-weight: 600; }
 .carbs { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 10px; }
+
+/* Плитка «Аналитика» — вход в разбор данных.
+   Выключённая не исчезает, а гаснет: иначе тот, кто однажды выключил, уже не
+   вспомнит, что такая возможность вообще была. */
+.tile-an {
+  display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px;
+  padding: 14px 16px; border-radius: 18px; border: 0; cursor: pointer;
+  background: var(--color-neutral-900); color: var(--color-text);
+  font-family: var(--font-body); text-align: left;
+}
+.tile-an:active { background: var(--color-neutral-800); }
+.tile-an.is-off { cursor: default; opacity: .55; }
+.tile-an-ico { font-size: 22px; color: var(--color-accent); flex-shrink: 0; }
+.tile-an.is-off .tile-an-ico { color: var(--color-neutral-500); }
+.tile-an-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tile-an-t { font-size: 15px; font-weight: 600; }
+.tile-an-s { font-size: 11px; color: var(--color-neutral-400); text-wrap: pretty; }
+.tile-an-chev { font-size: 16px; color: var(--color-neutral-500); flex-shrink: 0; }

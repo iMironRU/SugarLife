@@ -121,3 +121,25 @@
 }
 .age-pill span { font-size: 10px; color: var(--color-neutral-400); }
 .age-pill b { font-size: 15px; font-weight: 600; }
+
+/* Готовность данных к разбору — шапка раздела «Аналитика».
+   Стоит выше находок, потому что говорит, насколько им вообще верить. */
+.rd {
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-neutral-900);
+  border-radius: 0 14px 14px 0; padding: 12px 14px; margin: 12px 0 4px;
+}
+.rd-top { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 600; }
+.rd-top ion-icon { font-size: 18px; flex-shrink: 0; }
+.rd-why { font-size: 12px; color: var(--color-neutral-400); margin-top: 6px; text-wrap: pretty; }
+/* счётчик находок в чипе-фильтре */
+.chip-n {
+  margin-left: 6px; font-size: 11px; color: var(--color-neutral-400);
+  background: color-mix(in srgb, var(--color-neutral-500) 22%, transparent);
+  border-radius: 999px; padding: 1px 6px;
+}
+/* Пять фильтров в строку не помещаются: подписи сжимались до нечитаемого, а счётчики
+   отрывались от своих чипов. Прокрутка вбок честнее сжатия — видно, что есть ещё. */
+.chips-scroll { overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.chips-scroll::-webkit-scrollbar { height: 0; }
+.chips-scroll .metric-chip { flex: 0 0 auto; white-space: nowrap; }

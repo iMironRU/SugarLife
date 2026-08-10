@@ -1,8 +1,8 @@
-import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { IonPage, IonContent, IonIcon, IonToggle } from '@ionic/react';
 import {
   personCircle, chevronForward, downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
-  hardwareChipOutline, cloudOutline, repeat,
+  hardwareChipOutline, cloudOutline, repeat, sparklesOutline,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '@/sources/store';
@@ -20,6 +20,7 @@ import { useStack } from '@/app/stackCtx';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
 import { useLoopProfile, LOOP_MODES } from '@/settings/loopProfile';
 import Row from '@/ui/Row';
+import { useAnalyticsOn, setAnalyticsOn } from '@/settings/analytics';
 import UnitsModal from '@/sheets/UnitsModal';
 import CarbUnitsModal from '@/sheets/CarbUnitsModal';
 import DevicesSection from '@/sections/DevicesSection';
@@ -36,6 +37,7 @@ export default function Profile() {
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
   const carbUnit = useCarbUnit();
   const { push, pop } = useStack();
+  const analyticsOn = useAnalyticsOn();
   const [count, setCount] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
@@ -173,6 +175,14 @@ export default function Profile() {
           <div className="list">
             <Row icon={optionsOutline} title="Единицы глюкозы" value={unitLabel(unit)} onClick={() => setUnitsOpen(true)} />
             <Row icon={nutritionOutline} title="Единицы еды" value={carbUnitLabel(carbUnit)} onClick={() => setCarbUnitsOpen(true)} />
+            <div className="list-row" style={{ cursor: 'default' }}>
+              <IonIcon icon={sparklesOutline} className="list-ico" />
+              <span className="pick-main">
+                <span className="list-title">Выводить аналитику</span>
+                <span className="pick-sub">разбор данных на «Сегодня» и отдельным экраном</span>
+              </span>
+              <IonToggle checked={analyticsOn} onIonChange={(e) => setAnalyticsOn(e.detail.checked)} />
+            </div>
             <Row icon={downloadOutline} title="Экспорт глюкозы в CSV" chevron={false} onClick={doExport} disabled={exporting}
               value={exporting ? 'выгрузка…' : count != null ? `${count} зап.` : DASH} />
           </div>
