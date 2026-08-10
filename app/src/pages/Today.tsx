@@ -9,6 +9,7 @@ import { reservoirStats } from '../data/treatmentStats';
 import { useCloseOnLeave } from '../data/nav';
 import { notify } from '../data/notify';
 import FoodSheet from '../components/FoodSheet';
+import NotConfigured from '../components/NotConfigured';
 
 const DASH = '—';
 
@@ -164,6 +165,9 @@ export default function Today() {
               <div className="carb-food-s">{mealCount} {mealsWord(mealCount)}</div>
             </div>
           </button>
+
+          {/* не настроено — заметный выход к мастеру, а не мелкая подпись */}
+          <NotConfigured />
 
           {/* помпа на паузе — важный статус, не прячем (авторитетно из AAPS) */}
           {dev?.suspended === true && (

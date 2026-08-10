@@ -9,6 +9,7 @@ import { deviceAges } from '../data/treatmentStats';
 import { useCloseOnLeave } from '../data/nav';
 import GlucoseTimeChart from '../components/GlucoseTimeChart';
 import DeviceSheet from '../components/DeviceSheet';
+import NotConfigured from '../components/NotConfigured';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
@@ -76,7 +77,7 @@ export default function Mon() {
                 <span className="reading-arrow">{arrowChar(e.dir)}</span>
               </div>
             ))}
-            {!readings.length && <div className="mon-empty">Нет данных. Подключите Nightscout в профиле.</div>}
+            {!readings.length && <><NotConfigured compact /><div className="mon-empty">Нет данных.</div></>}
           </div>
 
           <div className="metric-note">День датчика — из события замены сенсора в Nightscout (Sensor Change). Сахар, тренд и свежесть — вживую.</div>
