@@ -13,9 +13,14 @@ export interface Device {
   // авторитетный флаг паузы помпы. Отсутствие ключа = неизвестно (не 0%/false).
   mountBattery: number | null; suspended: boolean | null;
 }
+/* Одна ступень базального расписания: с h часов (может быть дробным — шаг 30 мин)
+   до следующей ступени, скорость v ЕД/ч. */
+export interface BasalStep { h: number; v: number }
 export interface Profile {
   name: string; ic: number | null; isf: number | null; basal: number | null;
   targetLow: number | null; targetHigh: number | null; dia: number | null; units?: string;
+  // всё расписание, а не только текущая скорость: редактору профиля нужны сутки целиком
+  basalSchedule: BasalStep[];
 }
 export interface Treatment { t: number; type: string; carbs: number | null; insulin: number | null; rate: number | null; duration: number | null }
 
@@ -214,6 +219,21 @@ async function loadEntries(base: string, token?: string, count = 288): Promise<E
     .sort((a: Entry, b: Entry) => a.t - b.t);
 }
 
+/* Расписание целиком, отсортированное по времени. Nightscout отдаёт время либо
+   секундами от полуночи, либо строкой «HH:MM» — принимаем оба. */
+function schedule(raw: any[]): BasalStep[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((s) => {
+      const sec = s.timeAsSeconds != null ? Number(s.timeAsSeconds)
+        : typeof s.time === 'string' ? (Number(s.time.slice(0, 2)) * 3600 + Number(s.time.slice(3, 5)) * 60)
+        : 0;
+      return { h: sec / 3600, v: Number(s.value) };
+    })
+    .filter((s) => Number.isFinite(s.h) && Number.isFinite(s.v))
+    .sort((a, b) => a.h - b.h);
+}
+
 function slotValue(schedule: any[]): number | null {
   if (!Array.isArray(schedule) || !schedule.length) return null;
   const now = new Date();
@@ -319,6 +339,7 @@ async function loadProfile(base: string, token?: string): Promise<Profile | null
   const p = doc.store[key] || {};
   return {
     name: key, ic: slotValue(p.carbratio), isf: slotValue(p.sens), basal: slotValue(p.basal),
+    basalSchedule: schedule(p.basal),
     targetLow: slotValue(p.target_low), targetHigh: slotValue(p.target_high), dia: num(p.dia), units: p.units,
   };
 }

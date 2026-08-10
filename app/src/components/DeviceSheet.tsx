@@ -1,5 +1,5 @@
 import { IonModal, IonContent, IonFooter, IonIcon } from '@ionic/react';
-import { closeOutline, chevronBack, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, trashOutline, water } from 'ionicons/icons';
+import { closeOutline, chevronBack, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '../data/deviceConfig';
 import { useSnapshot } from '../data/bridge';
@@ -15,6 +15,8 @@ const isNative = Capacitor.isNativePlatform();
 import CatalogPicker from './CatalogPicker';
 import { modelItems, bridgeItems, insulinItems } from './modelItems';
 import DeviceScanSheet from './DeviceScanSheet';
+import BasalProfileSheet from './BasalProfileSheet';
+import { toSegs, daily } from '../data/basal';
 
 export type DeviceCatKey = 'sensor' | 'pump' | 'meter' | 'loop';
 
@@ -33,6 +35,7 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
   const extras = useDeviceExtras();
   const [pick, setPick] = useState<null | 'model' | 'bridge' | 'insulin'>(null);
   const [scanOpen, setScanOpen] = useState(false);
+  const [basalOpen, setBasalOpen] = useState(false);
 
   const hasModel = cat === 'sensor' || cat === 'pump';
   // Модель не указана (§2b) — мы не знаем, нужен ли мост и вещает ли железка сама,
@@ -71,6 +74,8 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
      молотили бы тысячи проходов на каждое обновление данных. */
   const dev = data?.device ?? null;
   const insulin = insulinById(cfg.fastInsulinId);
+  const basalSegs = toSegs(data?.profile?.basalSchedule ?? []);
+  const basalTotal = basalSegs.length ? daily(basalSegs) : null;
 
   const { stateRows, supplies } = useMemo(() => {
     type Row = { k: string; v: string };
@@ -239,6 +244,16 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
                     <IonIcon icon={chevronForward} className="list-chev" />
                   </button>
                 )}
+                {cat === 'pump' && (
+                  <button className="list-row" onClick={() => setBasalOpen(true)}>
+                    <IonIcon icon={pulseOutline} className="list-ico" />
+                    <span className="list-title">Базальный профиль</span>
+                    <span className={'list-value' + (basalTotal != null ? '' : ' muted')}>
+                      {basalTotal != null ? basalTotal.toFixed(2) + ' ЕД/сут' : 'нет данных'}
+                    </span>
+                    <IonIcon icon={chevronForward} className="list-chev" />
+                  </button>
+                )}
               </div>
             ) : (
               <div className="loop-empty">
@@ -317,6 +332,7 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
             onSelect={setBridge} currentLabel="только актуальные"
           />
         )}
+        {cat === 'pump' && <BasalProfileSheet isOpen={basalOpen} onClose={() => setBasalOpen(false)} />}
         {hasModel && hasBleDriver && (cat === 'sensor' || cat === 'pump') && (
           <DeviceScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} kind={cat} title={title} />
         )}
