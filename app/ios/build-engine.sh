@@ -10,6 +10,11 @@ if [ ! -d "$CORE_DIR" ]; then
   echo "error: sugarlife-core не найден ('$CORE_DIR'). Укажи путь в app/ios/engine-path.local или env SUGARLIFE_CORE_DIR." >&2
   exit 1
 fi
-echo "sugarlife-core: $CORE_DIR"
+echo "sugarlife-core: $CORE_DIR (commit $(git -C "$CORE_DIR" rev-parse --short HEAD 2>/dev/null || echo '?'))"
 cd "$CORE_DIR"
+# Профилактика APFS-дублей 'SugarLifeKit N.framework': Finder/APFS плодит их при копировании поверх занятого
+# файла, из-за чего Xcode встраивал УСТАРЕВШИЙ фреймворк → iOS крутил старый движок, пока Android свежий
+# (composite). Чистим прежний выход копии перед сборкой и сносим дубли после — фреймворк всегда свежий из ядра.
+rm -rf engine/build/xcode-frameworks 2>/dev/null || true
 ./gradlew :engine:embedAndSignAppleFrameworkForXcode --no-daemon
+find engine/build/xcode-frameworks -name '* [0-9].framework' -exec rm -rf {} + 2>/dev/null || true
