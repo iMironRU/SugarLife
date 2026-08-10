@@ -45,7 +45,15 @@ function loadCache() {
     if (c && c.entries) set({ data: c, status: 'stale' });
   } catch { /* ignore */ }
 }
-function saveCache() {
+/* Кэш пишем не чаще раза в полминуты. Он нужен, чтобы при следующем запуске экран
+   не был пустым, — для этого достаточно «примерно последнего» состояния. Раньше
+   писался на каждое сообщение сокета: сериализация 288 измерений и 200 событий
+   несколько раз в минуту ради данных, которые прочитают один раз при старте. */
+let cacheAt = 0;
+function saveCache(force = false) {
+  const now = Date.now();
+  if (!force && now - cacheAt < 30000) return;
+  cacheAt = now;
   try { localStorage.setItem(CACHE_KEY, JSON.stringify(state.data)); } catch { /* ignore */ }
 }
 
@@ -155,7 +163,7 @@ export async function refresh() {
     const treatments = [...tmap.values()].sort((a, b) => a.t - b.t);
 
     set({ data: { entries, device, profile, treatments, latest, updatedAt: Date.now() }, status: 'ok', error: null });
-    saveCache();
+    saveCache(true); // после полного слияния — сразу, это опорное состояние
     putEntries(entries);
     backfill(); // фоновая докачка истории глюкозы в БД (пока только основное облако)
     backfillTreatments(); // и истории лечения

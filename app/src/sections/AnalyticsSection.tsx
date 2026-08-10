@@ -37,8 +37,10 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
      для главного экрана, и разбор за две недели по нему показывал «пропусков 98 %» —
      не потому что данных нет, а потому что я дал ему не тот срез. Ошибка вредная
      вдвойне: человек пошёл бы чинить выгрузку, с которой всё в порядке. */
-  const { entries: история, loading: читаю } = useHistory(days * 86400e3);
-  const лечение = useTreatments(days * 86400e3);
+  /* Разбор пересчитывается раз в час (см. domain/analysisCache), и перечитывать
+     историю чаще нечему помогать — только рывки на ровном месте. */
+  const { entries: история, loading: читаю } = useHistory(days * 86400e3, { minRefreshMs: 3600e3 });
+  const лечение = useTreatments(days * 86400e3, { minRefreshMs: 3600e3 });
   const [kind, setKind] = useState<InsightKind | 'all'>('all');
   const батарея = data?.device?.uploaderBattery ?? null;
 

@@ -1,4 +1,5 @@
 import { IonPage, IonContent, IonIcon, IonSpinner } from '@ionic/react';
+import { useTab } from '@/app/nav';
 import { reportContentScroll } from '@/app/panel';
 import { water, nutrition, medkit } from 'ionicons/icons';
 import { useState } from 'react';
@@ -23,6 +24,9 @@ const PERIODS: { days: number; label: string }[] = [
 
 
 export default function Metrics() {
+  /* Вкладка видна? Все пять смонтированы разом ради свайпа, но читать базу
+     невидимому экрану незачем — это и были рывки на соседних вкладках. */
+  const активна = useTab() === 0;
   const [days, setDays] = useState(3);
   const [metric, setMetric] = useState<MetricKey>('glucose');
   useUnit(); // перерисовка при смене единиц
@@ -31,8 +35,8 @@ export default function Metrics() {
   // всё из локальной БД (накапливается фоновым бэкфиллом на 90 дней): глюкоза —
   // entries; лечение — treatments (temp basal + болюсы/углеводы). Больше не грузим
   // при каждом открытии и не режем окно инсулина — считаем за выбранный период.
-  const entries = useEntries(days * 86400e3);
-  const treatments = useTreatments(days * 86400e3);
+  const entries = useEntries(days * 86400e3, { paused: !активна, minRefreshMs: 60e3 });
+  const treatments = useTreatments(days * 86400e3, { paused: !активна, minRefreshMs: 60e3 });
   const events = treatments.filter((t) => t.type !== 'Temp Basal'); // болюсы/углеводы/замены
   const tempBasals = treatments; // insulinDaily/insulinByDay сами выберут Temp Basal
 

@@ -22,10 +22,24 @@ describe('память разбора', () => {
     expect(analyzeCached(e, [], 7)).not.toBe(analyzeCached(e, [], 14));
   });
 
-  it('новая точка через минуту заставляет пересчитать: выводы должны быть свежими', () => {
+  it('точка раз в минуту НЕ вызывает пересчёт — иначе кэш не работал бы вовсе', () => {
+    /* Сенсор пишет ровно раз в минуту. При минутной гранулярности ключ менялся при
+       каждом приходе данных, и разбор считался заново каждую минуту. */
     const e = мк(500);
-    const позже = [...e, { t: e[e.length - 1].t + 61_000, mmol: 7, mgdl: 126, dir: 'Flat' } as Entry];
-    expect(analyzeCached(позже, [], 14)).not.toBe(analyzeCached(e, [], 14));
+    const через5мин = [...e, { t: e[e.length - 1].t + 5 * 60e3, mmol: 7, mgdl: 126, dir: 'Flat' } as Entry];
+    expect(analyzeCached(через5мин, [], 14)).toBe(analyzeCached(e, [], 14));
+  });
+
+  it('через час пересчитывает: возраст расходников успевает сдвинуться', () => {
+    const e = мк(500);
+    const черезЧас = [...e, { t: e[e.length - 1].t + 3600e3 + 1000, mmol: 7, mgdl: 126, dir: 'Flat' } as Entry];
+    expect(analyzeCached(черезЧас, [], 14)).not.toBe(analyzeCached(e, [], 14));
+  });
+
+  it('заряд телефона живой: его изменение обновляет разбор сразу', () => {
+    const e = мк(500);
+    expect(analyzeCached(e, [], 14, { uploaderBattery: 80 }))
+      .not.toBe(analyzeCached(e, [], 14, { uploaderBattery: 15 }));
   });
 
   it('сброс освобождает память: после него объект уже другой', () => {

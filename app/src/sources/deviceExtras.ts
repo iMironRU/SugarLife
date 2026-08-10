@@ -39,18 +39,43 @@ let extras: DeviceExtras = cached
 const subs = new Set<() => void>();
 let inflight = false;
 
-// Подгрузить/обновить расширенные данные. Безопасно звать часто — параллельные
-// вызовы схлопываются (inflight).
-export async function loadDeviceExtras(): Promise<void> {
+/* Как часто обновлять — по существу данных, а не «почаще на всякий случай».
+
+   Раньше всё это грузилось каждые 2 минуты, и разбор ответов блокировал поток:
+   2000 статусов помпы — 576 мс, 90 дней лечения — 373 мс, 50 дней событий — 318 мс.
+   Полторы секунды рывков каждые две минуты, на любом экране. Именно это и
+   ощущалось как «спотыкается», хотя искали мы сперва в аналитике.
+
+   Что здесь на самом деле меняется:
+   • события замен (день датчика, возраст канюли) — раз в несколько дней;
+   • история резервуара — нужна, чтобы заметить «подача идёт, а остаток стоит»,
+     и порог там 8 часов;
+   • средний расход за 90 дней — от одного дня не сдвигается.
+
+   Поэтому: события и резервуар раз в 15 минут, расход — раз в час. */
+const ЧАСТО = 15 * 60e3;
+const РЕДКО = 60 * 60e3;
+let времяСобытий = 0, времяРасхода = 0;
+let tbКеш: Treatment[] = [];
+
+export async function loadDeviceExtras(force = false): Promise<void> {
   const cfg = getCfg();
   if (!cfg?.enabled || !cfg.url || inflight) return;
+  const now = Date.now();
+  const пораСобытия = force || now - времяСобытий >= ЧАСТО;
+  const пораРасход = force || now - времяРасхода >= РЕДКО;
+  if (!пораСобытия && !пораРасход) return;
   inflight = true;
   try {
     const [events, devHist, tb] = await Promise.all([
-      loadEventsRange(cfg.url, cfg.token, 50),
-      loadDeviceStatusRange(cfg.url, cfg.token, 2000),
-      loadTreatmentsRange(cfg.url, cfg.token, 90),
+      пораСобытия ? loadEventsRange(cfg.url, cfg.token, 50) : Promise.resolve(extras.events),
+      /* Двух суток статусов хватает: длиннее окна «остаток стоит» всё равно нет,
+         а 2000 точек — это неделя и полсекунды разбора. */
+      пораСобытия ? loadDeviceStatusRange(cfg.url, cfg.token, 600) : Promise.resolve(extras.devHist),
+      пораРасход ? loadTreatmentsRange(cfg.url, cfg.token, 90) : Promise.resolve(tbКеш),
     ]);
+    if (пораСобытия) времяСобытий = now;
+    if (пораРасход) { времяРасхода = now; tbКеш = tb; }
     const id = insulinDaily(tb, []);
     extras = { events, devHist, tdd: id.tddPerDay > 5 ? id.tddPerDay : null, loaded: true, stale: false };
     saveCache();

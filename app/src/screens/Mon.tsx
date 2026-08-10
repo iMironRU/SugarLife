@@ -1,4 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { useTab } from '@/app/nav';
 import { DeviceSection } from '@/sections/lazy';
 import { reportContentScroll } from '@/app/panel';
 import { hardwareChipOutline, chevronForward } from 'ionicons/icons';
@@ -20,10 +21,13 @@ const fmtWhen = (ms: number) => {
 };
 
 export default function Mon() {
+  /* Вкладка видна? Все пять смонтированы разом ради свайпа, но читать базу
+     невидимому экрану незачем — это и были рывки на соседних вкладках. */
+  const активна = useTab() === 1;
   useUnit(); // перерисовка при смене единиц
   const [win, setWin] = useState(3);
   const { push, pop } = useStack();
-  const entries = useEntries(24 * 3600e3);
+  const entries = useEntries(24 * 3600e3, { paused: !активна });
 
   const cfg = getCfg();
   const [events, setEvents] = useState<Treatment[]>([]);

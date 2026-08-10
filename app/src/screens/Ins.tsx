@@ -1,4 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { useTab } from '@/app/nav';
 import { DeviceSection, LoopSetupSection } from '@/sections/lazy';
 import { reportContentScroll } from '@/app/panel';
 import { flash, repeat, chevronForward } from 'ionicons/icons';
@@ -14,6 +15,9 @@ import { useStack } from '@/app/stackCtx';
 const WINDOWS = [1, 3, 6, 12, 24];
 
 export default function Ins() {
+  /* Вкладка видна? Все пять смонтированы разом ради свайпа, но читать базу
+     невидимому экрану незачем — это и были рывки на соседних вкладках. */
+  const активна = useTab() === 3;
   const { data } = useStore();
   const dev = data?.device || null;
   const profile = data?.profile || null;
@@ -25,7 +29,7 @@ export default function Ins() {
 
   // Живьём из локальной БД (обновляется сокетом/бэкфиллом): раньше грузили один раз
   // на старте — новые болюсы в график не попадали, пока не перезапустишь приложение.
-  const treatments = useTreatments(31 * 3600e3); // 24ч окна графика + запас на ступень базала
+  const treatments = useTreatments(31 * 3600e3, { paused: !активна }); // 24ч окна графика + запас на ступень базала
   const tempBasals = treatments.filter((t) => t.type === 'Temp Basal');
   const boluses = treatments.filter((t) => t.type !== 'Temp Basal' && (t.insulin ?? 0) > 0);
   const baseBasal = dev?.baseBasal ?? profile?.basal ?? null;

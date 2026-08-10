@@ -69,8 +69,8 @@ export default function HeroPanel() {
 
   // панель — владелец загрузки расширенных данных (датчик/резервуар/расход)
   useEffect(() => {
-    loadDeviceExtras();
-    const id = window.setInterval(loadDeviceExtras, 120000);
+    loadDeviceExtras(true); // при открытии — сразу, дальше по внутренним срокам
+    const id = window.setInterval(() => loadDeviceExtras(), 5 * 60e3);
     return () => window.clearInterval(id);
   }, [cfg?.url, cfg?.enabled]);
 
