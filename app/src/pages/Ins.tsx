@@ -9,7 +9,7 @@ import { fmt } from '../data/units';
 import { useCloseOnLeave } from '../data/nav';
 import InsulinTimeChart from '../components/InsulinTimeChart';
 import DeviceSheet from '../components/DeviceSheet';
-import NotConfigured from '../components/NotConfigured';
+import { DataGate } from '../components/NotConfigured';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
@@ -38,9 +38,7 @@ export default function Ins() {
     <IonPage>
       <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
-          {/* не настроено — заметный выход к мастеру */}
-          <NotConfigured />
-
+          <DataGate>
           {isPen ? (
             <div className="basal-card">
               <div className="basal-head"><IonIcon icon={flash} style={{ color: 'var(--c-ins)' }} /><span>Шприц-ручка</span></div>
@@ -80,6 +78,7 @@ export default function Ins() {
               </div>
             </>
           )}
+          </DataGate>
         </div>
 
         {/* одна карточка устройства на всё приложение (§7) — та же, что в «Профиль → Устройства» */}

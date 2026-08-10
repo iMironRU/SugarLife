@@ -9,7 +9,7 @@ import { deviceAges } from '../data/treatmentStats';
 import { useCloseOnLeave } from '../data/nav';
 import GlucoseTimeChart from '../components/GlucoseTimeChart';
 import DeviceSheet from '../components/DeviceSheet';
-import NotConfigured from '../components/NotConfigured';
+import { DataGate } from '../components/NotConfigured';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
@@ -43,6 +43,7 @@ export default function Mon() {
     <IonPage>
       <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
+          <DataGate>
           {/* сахар/тренд/свежесть — в верхней панели; здесь кнопка датчика + график */}
           {ages.sensor && (
             <button className="pump-btn" style={{ marginTop: 0 }} onClick={() => setSensorOpen(true)}>
@@ -77,10 +78,11 @@ export default function Mon() {
                 <span className="reading-arrow">{arrowChar(e.dir)}</span>
               </div>
             ))}
-            {!readings.length && <><NotConfigured /><div className="mon-empty">Нет данных.</div></>}
+            {!readings.length && <div className="mon-empty">Нет данных.</div>}
           </div>
 
           <div className="metric-note">День датчика — из события замены сенсора в Nightscout (Sensor Change). Сахар, тренд и свежесть — вживую.</div>
+          </DataGate>
         </div>
         {/* одна карточка устройства на всё приложение (§7) — та же, что в «Профиль → Устройства» */}
         <DeviceSheet isOpen={sensorOpen} onClose={() => setSensorOpen(false)} cat="sensor" title="Сенсор (НМГ)" />

@@ -9,7 +9,7 @@ import { reservoirStats } from '../data/treatmentStats';
 import { useCloseOnLeave } from '../data/nav';
 import { notify } from '../data/notify';
 import FoodSheet from '../components/FoodSheet';
-import NotConfigured from '../components/NotConfigured';
+import { DataGate } from '../components/NotConfigured';
 
 const DASH = '—';
 
@@ -144,6 +144,7 @@ export default function Today() {
     <IonPage>
       <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen">
+          <DataGate>
           {/* панель углеводов (по макету): Б/Ж/У · активные · Еда.
               Б/Ж пусто — Nightscout не отдаёт белки/жиры, фейк не рисуем. */}
           <button className="carb-panel" onClick={() => setFoodOpen(true)}>
@@ -165,9 +166,6 @@ export default function Today() {
               <div className="carb-food-s">{mealCount} {mealsWord(mealCount)}</div>
             </div>
           </button>
-
-          {/* не настроено — заметный выход к мастеру, а не мелкая подпись */}
-          <NotConfigured />
 
           {/* помпа на паузе — важный статус, не прячем (авторитетно из AAPS) */}
           {dev?.suspended === true && (
@@ -245,6 +243,7 @@ export default function Today() {
               </div>
             </div>
           )}
+          </DataGate>
         </div>
         <FoodSheet isOpen={foodOpen} onClose={() => setFoodOpen(false)} />
       </IonContent>

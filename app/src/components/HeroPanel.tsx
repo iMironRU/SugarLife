@@ -118,7 +118,10 @@ export default function HeroPanel() {
 
   // датчик (день N) — слева; запас инсулина (≈N дн) — справа
   const ages = deviceAges(extras.events);
-  const sensorDay = ages.sensor ? ages.sensor.days + 1 : null;
+  /* Без настроенного источника день датчика не показываем: события замены лежат
+     в локальной истории и пережили бы отключение, а «день 8» рядом с прочерками
+     читается как живое состояние. Дальше см. DataGate в NotConfigured.tsx. */
+  const sensorDay = status !== 'off' && ages.sensor ? ages.sensor.days + 1 : null;
   const nmgSub = sensorDay != null ? 'датчик' : 'обновлено';
   const nmgVal = sensorDay != null ? 'день ' + sensorDay : fresh;
   const daysLeft = dev?.reservoir != null && extras.tdd ? dev.reservoir / extras.tdd : null;

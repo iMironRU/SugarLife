@@ -37,6 +37,9 @@ function emit() { for (const l of listeners) l(); }
 function set(patch: Partial<StoreState>) { state = { ...state, ...patch }; emit(); }
 
 function loadCache() {
+  // Без настроенного источника кэш не поднимаем вовсе — иначе на старте успевал
+  // мелькнуть экран со старыми цифрами, пока refresh не сотрёт их
+  if (!getClouds().some((c) => c.enabled && c.url)) return;
   try {
     const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
     if (c && c.entries) set({ data: c, status: 'stale' });
@@ -109,7 +112,18 @@ export async function refresh() {
   ensureSockets(clouds);
   ensureWriteCheck(clouds[0] ?? null);
   if (inflight) return;
-  if (!clouds.length) { set({ status: 'off', error: null, writable: false }); return; }
+  /* Источника нет — показывать нечего. Данные из кэша тут обнуляем намеренно: иначе
+     экран рисовал живой на вид сахар и график помпы, а рядом висел баннер «приложение
+     не настроено». В медицинском приложении это худший вид вранья — цифры выглядят
+     текущими, хотя обновляться им неоткуда.
+
+     Обрыва связи это не касается: при нём статус 'stale'/'error', и последние
+     известные значения остаются на месте с пометкой давности — это как раз то, что
+     ночью может быть важнее всего. Разница принципиальная: 'off' — источник не
+     настроен вовсе, 'stale' — настроен, но сейчас молчит.
+
+     Сама история в IndexedDB не трогается: подключат облако — всё вернётся. */
+  if (!clouds.length) { set({ data: null, status: 'off', error: null, writable: false }); return; }
   inflight = true;
   if (!state.data) set({ status: 'loading' });
   try {

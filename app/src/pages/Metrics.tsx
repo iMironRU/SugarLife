@@ -9,7 +9,7 @@ import { carbStats, insulinDaily, carbsByDay, insulinByDay } from '../data/treat
 import { fmt, toUnits, unitLabel, useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '../data/units';
 import TirBar from '../components/TirBar';
 import AgpChart from '../components/AgpChart';
-import NotConfigured from '../components/NotConfigured';
+import { DataGate } from '../components/NotConfigured';
 import MetricBars from '../components/MetricBars';
 
 type MetricKey = 'glucose' | 'carbs' | 'insulin';
@@ -83,6 +83,7 @@ export default function Metrics() {
     <IonPage>
       <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
+          <DataGate>
           <div className="period">
             {PERIODS.map((p) => (
               <button key={p.days} className={'period-seg' + (days === p.days ? ' on' : '')} onClick={() => setDays(p.days)}>{p.label}</button>
@@ -125,7 +126,7 @@ export default function Metrics() {
                 <div className="metric-note">Стандарт AGP: медиана и коридоры 25–75% и 5–95% по времени суток. Цели: время в диапазоне &gt; 70%, CV &lt; 36%.</div>
               </>
             ) : (
-              <><NotConfigured /><div className="metric-note" style={{ marginTop: 14 }}>Нет данных.</div></>
+              <div className="metric-note" style={{ marginTop: 14 }}>Нет данных.</div>
             )
           ) : (
             (() => {
@@ -161,6 +162,7 @@ export default function Metrics() {
               );
             })()
           )}
+          </DataGate>
         </div>
       </IonContent>
     </IonPage>
