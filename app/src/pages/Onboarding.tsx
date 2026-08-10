@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { IonIcon, IonInput, IonButton } from '@ionic/react';
 import {
   linkOutline, keyOutline, chevronForward, chevronBack, qrCodeOutline, cloudOutline,
@@ -11,7 +11,7 @@ import RequirementsCatalogSheet from '../components/RequirementsCatalogSheet';
 import { probeCloud, checkReadAccess, type CloudProbe } from '../data/nightscout';
 import { addCloud } from '../data/clouds';
 import { refresh } from '../data/store';
-import { setDeviceConfig } from '../data/deviceConfig';
+import { setDeviceConfig, UNKNOWN_MODEL } from '../data/deviceConfig';
 import { setOnboarded } from '../data/onboarding';
 import { toUnits, unitLabel } from '../data/units';
 import { isNative } from '../data/appUpdate';
@@ -83,17 +83,37 @@ export default function Onboarding() {
   };
 
   // Записываем облако + устройства под найденные потоки и открываем приложение.
+  /* Одно нажатие — одно облако. Двойной тап по кнопке (на телефоне это обычное дело)
+     иначе добавляет второй экземпляр того же адреса: дублей в данных не будет, их
+     отсеет слияние по времени, но опрашивать сайт мы станем дважды, и в списке
+     источников появится непонятный близнец. Флаг вместо состояния — он должен
+     сработать в том же кадре, до перерисовки. */
+  const done = useRef(false);
+
   const finish = () => {
+    if (done.current) return;
+    done.current = true;
+    /* Модель — необязательный ответ, и подключение от неё не зависит.
+       Раньше поток включался только вместе с выбранной моделью, а кнопка «Готово»
+       была заблокирована без неё — то есть проверенное рабочее облако выбрасывалось
+       из-за вопроса, на который мы сами разрешили не отвечать.
+
+       Нашли поток — значит источник есть, его и включаем. Устройство при этом
+       записываем со статусом «модель неизвестна» (§2a): это законное состояние —
+       чтение из облака работает, недоступно только прямое, для которого и нужно
+       знать, требуется ли железке мост. */
+    const sensor = probe?.glucose ? sensorId ?? UNKNOWN_MODEL : sensorId;
+    const pump = probe?.pump ? pumpId ?? UNKNOWN_MODEL : pumpId;
     addCloud({
       kind: 'nightscout',
       name: (() => { try { return new URL(url.trim()).host; } catch { return url.trim(); } })(),
       url: url.trim(), token: token.trim(), enabled: true,
-      sourceGlucose: !!probe?.glucose && sensorId != null,
-      sourcePumpStatus: !!probe?.pump && pumpId != null,
+      sourceGlucose: !!probe?.glucose,
+      sourcePumpStatus: !!probe?.pump,
     });
     setDeviceConfig({
-      ...(sensorId ? { sensorId } : {}),
-      ...(pumpId ? { pumpId } : {}),
+      ...(sensor ? { sensorId: sensor } : {}),
+      ...(pump ? { pumpId: pump } : {}),
     });
     setOnboarded(true);
     refresh();
@@ -282,17 +302,20 @@ export default function Onboarding() {
       </div>
 
       <div className="sheet-note">
-        Модель нужна, чтобы позже перейти с облака на прямое чтение — мы должны знать, нужен ли
-        железке мост. Не знаете — так и скажите, данные всё равно пойдут.
+        Модель можно не указывать — данные пойдут в любом случае. Она нужна только для
+        будущего перехода с облака на прямое чтение: чтобы знать, нужен ли железке мост.
+        Спросим ещё раз, когда до этого дойдёт.
       </div>
 
       <div className="connect-form">
-        <IonButton expand="block" className="connect-btn" onClick={finish} disabled={!sensorId && !pumpId}>
+        {/* Не блокируется: модели необязательны, а облако уже проверено и работает. */}
+        <IonButton expand="block" className="connect-btn" onClick={finish}>
           <IonIcon icon={checkmarkCircle} slot="start" />
-          Готово
+          Подключить
         </IonButton>
       </div>
-      <button className="ob-skip" onClick={skip}>Пропустить — настрою потом</button>
+      {/* «Пропустить» здесь нет намеренно: на этом шаге пропуск молча выбрасывал
+          рабочее подключение. Отказаться можно шагом назад, до проверки. */}
 
       <CatalogPicker
         isOpen={pick === 'sensor'} onClose={() => setPick(null)}
