@@ -1,5 +1,5 @@
 /* Авто-определение режима терапии из данных Nightscout. */
-import type { Device, Treatment } from './nightscout';
+import type { Device, Treatment } from '@/domain/types';
 
 export type Therapy = 'loop' | 'pump' | 'pen';
 

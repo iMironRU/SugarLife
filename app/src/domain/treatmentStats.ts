@@ -1,5 +1,5 @@
 /* Живые метрики из treatments: болюсы, углеводы, базал, возрасты устройств. */
-import type { Treatment, DevPoint } from './nightscout';
+import type { Treatment, DevPoint } from '@/domain/types';
 
 // Статистика резервуара из истории devicestatus.
 // ВАЖНО: значение резервуара у Medtronic через AAPS ненадёжно (AAPS плохо считывает

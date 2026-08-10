@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { stats, LOW, HIGH, VLOW, VHIGH } from './agp';
-import type { Entry } from './nightscout';
+import type { Entry } from '@/domain/types';
 
 /* Показатели гликемии — то, на что человек смотрит, оценивая, стало ли лучше.
    Проверяем свойства, а не конкретные числа: сумма зон равна 100 %, границы зон

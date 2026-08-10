@@ -1,9 +1,9 @@
 /* AGP / консенсус CGM (Battelino 2019, Bergenstal GMI 2018).
    Стандартные зоны (ммоль/л): <3.0 очень низко · 3.0–3.9 низко · 3.9–10.0 цель ·
    10.0–13.9 высоко · >13.9 очень высоко. */
-import type { Entry } from './nightscout';
+import { type Entry, MGDL_PER_MMOL } from '@/domain/types';
 
-const MGDL = 18.0;
+
 export const LOW = 3.9, HIGH = 10.0, VLOW = 3.0, VHIGH = 13.9;
 
 export interface Stats {
@@ -24,7 +24,7 @@ export function stats(entries: Entry[]): Stats | null {
   const mean = v.reduce((a, b) => a + b, 0) / n;
   const sd = Math.sqrt(v.reduce((a, b) => a + (b - mean) ** 2, 0) / n);
   const cv = mean ? (sd / mean) * 100 : 0;
-  const gmi = 3.31 + 0.02392 * (mean * MGDL); // среднее в мг/дл
+  const gmi = 3.31 + 0.02392 * (mean * MGDL_PER_MMOL); // среднее в мг/дл
   return { n, veryLow, low, target, high, veryHigh, tbr: veryLow + low, tar: high + veryHigh, mean, sd, cv, gmi };
 }
 

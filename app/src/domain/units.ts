@@ -1,10 +1,11 @@
+import { MGDL_PER_MMOL } from '@/domain/types';
 /* Форматирование глюкозы/времени + глобальный выбор единиц (ммоль/л ⇄ мг/дл).
    Внимание: конвертируется ТОЛЬКО глюкоза. Инсулин/углеводы форматируются
    через fmt() и единицами не затрагиваются. */
 import { useSyncExternalStore } from 'react';
 
 export type Unit = 'mmol' | 'mgdl';
-const MGDL_PER_MMOL = 18;
+
 const KEY = 'sl.units';
 
 let unit: Unit = (typeof localStorage !== 'undefined' && (localStorage.getItem(KEY) as Unit)) || 'mmol';

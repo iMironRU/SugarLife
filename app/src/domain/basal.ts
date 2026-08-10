@@ -7,7 +7,7 @@
    Шаг значения 0.05 ЕД/ч и границы кратно 30 минутам — это не наша выдумка, а то,
    что умеют помпы. Считать и показывать точнее, чем можно ввести в железку, значит
    обещать несуществующую точность. */
-import type { BasalStep } from './nightscout';
+import type { BasalStep } from '@/domain/types';
 
 export interface Seg { a: number; b: number; v: number }
 

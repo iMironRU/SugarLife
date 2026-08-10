@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react';
 import { useClouds, updateCloud, removeCloud } from '../data/clouds';
 import { ping, checkReadAccess, type ReadAccess } from '../data/nightscout';
 import { refresh } from '../data/store';
-import { toUnits } from '../data/units';
+import { toUnits } from '@/domain/units';
 import { useDeviceConfig, isRecorded, isModelKnown } from '../data/deviceConfig';
-import { pumpById, sensorById } from '../data/catalog';
+import { pumpById, sensorById } from '@/domain/catalog';
 import DeviceSheet from './DeviceSheet';
 import { useStack } from '../data/stackCtx';
 

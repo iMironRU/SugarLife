@@ -13,7 +13,7 @@ import { addCloud } from '../data/clouds';
 import { refresh } from '../data/store';
 import { setDeviceConfig, UNKNOWN_MODEL } from '../data/deviceConfig';
 import { setOnboarded } from '../data/onboarding';
-import { toUnits, unitLabel } from '../data/units';
+import { toUnits, unitLabel } from '@/domain/units';
 import { isNative } from '../data/appUpdate';
 
 const RELEASES_URL = 'https://github.com/iMironRU/SugarLife/releases';

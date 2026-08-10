@@ -6,10 +6,10 @@ import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forg
 import { useSnapshot } from '../data/bridge';
 import { useStore } from '../data/store';
 import { useDeviceExtras } from '../data/deviceExtras';
-import { deviceAges, type Age } from '../data/treatmentStats';
-import { fmt } from '../data/units';
+import { deviceAges, type Age } from '@/domain/treatmentStats';
+import { fmt } from '@/domain/units';
 import { Capacitor } from '@capacitor/core';
-import { pumpById, sensorById, bridgeById, pumpNeedsBridge, insulinById } from '../data/catalog';
+import { pumpById, sensorById, bridgeById, pumpNeedsBridge, insulinById } from '@/domain/catalog';
 
 // В браузере прямого BLE нет и не будет — это свойство платформы, а не «пока не сделали»
 const isNative = Capacitor.isNativePlatform();
@@ -18,7 +18,7 @@ import { modelItems, bridgeItems, insulinItems } from './modelItems';
 import DeviceScanSheet from './DeviceScanSheet';
 import BasalProfileSheet from './BasalProfileSheet';
 import { useStack } from '../data/stackCtx';
-import { toSegs, daily } from '../data/basal';
+import { toSegs, daily } from '@/domain/basal';
 
 export type DeviceCatKey = 'sensor' | 'pump' | 'meter' | 'loop';
 

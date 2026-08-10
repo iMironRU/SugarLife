@@ -6,7 +6,7 @@ import { type PickerItem } from './CatalogPicker';
 import {
   PUMPS, SENSORS, BRIDGES, INSULINS, pumpById, sensorById, pumpBrand,
   isCurrentPump, isFastInsulin, isCurrentInsulin,
-} from '../data/catalog';
+} from '@/domain/catalog';
 import { UNKNOWN_MODEL, isModelKnown } from '../data/deviceConfig';
 
 /* «Не знаю модель» — полноценный выбор, а не отказ (docs/CONNECT-UX.md §2b):

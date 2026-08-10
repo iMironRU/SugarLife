@@ -1,30 +1,14 @@
+import { type Entry, type Device, type BasalStep, type Profile, type Treatment, type DevPoint, type NsData, MGDL_PER_MMOL } from '@/domain/types';
+export type { Entry, Device, BasalStep, Profile, Treatment, DevPoint, NsData };
 /* Адаптер Nightscout (read-only). Порт из ваниль-версии.
    Ходит напрямую из браузера (у Nightscout по умолчанию CORS + роль readable). */
 import { primaryCloud, addCloud, updateCloud, setClouds } from './clouds';
 
 export interface NsConfig { url: string; token?: string; enabled: boolean }
-export interface Entry { t: number; mgdl: number; mmol: number; dir: string }
-export interface Device {
-  iob: number | null; cob: number | null; reservoir: number | null;
-  pumpBattery: number | null; status: string | null; baseBasal: number | null;
-  tempRate: number | null; tempRemaining: number | null; lastBolus: number | null;
-  uploaderBattery: number | null; loop: boolean; pump: boolean; at: number | null;
-  // AAPS extended (кастомные поля этого пользователя): заряд OrangeLink/RileyLink и
-  // авторитетный флаг паузы помпы. Отсутствие ключа = неизвестно (не 0%/false).
-  mountBattery: number | null; suspended: boolean | null;
-}
 /* Одна ступень базального расписания: с h часов (может быть дробным — шаг 30 мин)
    до следующей ступени, скорость v ЕД/ч. */
-export interface BasalStep { h: number; v: number }
-export interface Profile {
-  name: string; ic: number | null; isf: number | null; basal: number | null;
-  targetLow: number | null; targetHigh: number | null; dia: number | null; units?: string;
-  // всё расписание, а не только текущая скорость: редактору профиля нужны сутки целиком
-  basalSchedule: BasalStep[];
-}
-export interface Treatment { t: number; type: string; carbs: number | null; insulin: number | null; rate: number | null; duration: number | null }
 
-export const MGDL_PER_MMOL = 18.0;
+export { MGDL_PER_MMOL } from '@/domain/types';
 
 // Шим для старых мест использования (одно облако). Реальный список — data/clouds.ts.
 // «Основное» облако — первое включённое, иначе первое в списке.
@@ -309,7 +293,6 @@ async function loadDeviceStatus(base: string, token?: string): Promise<Device | 
   return normDeviceDoc(Array.isArray(raw) ? raw[0] : null);
 }
 
-export interface DevPoint { t: number; reservoir: number | null; pumpBattery: number | null; uploaderBattery: number | null; }
 
 // История devicestatus (резервуар/батареи во времени) — для расхода инсулина и заправок.
 export async function loadDeviceStatusRange(base: string, token: string | undefined, count = 2000): Promise<DevPoint[]> {
@@ -344,7 +327,6 @@ async function loadTreatments(base: string, token?: string, count = 120): Promis
   return (Array.isArray(raw) ? raw : []).map(normTreatment).filter((x): x is Treatment => x != null);
 }
 
-export interface NsData { entries: Entry[]; device: Device | null; profile: Profile | null; treatments: Treatment[] }
 export async function loadAll(cfg: NsConfig): Promise<NsData> {
   const { url, token } = cfg;
   const [entries, device, profile, treatments] = await Promise.all([

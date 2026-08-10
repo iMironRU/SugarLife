@@ -7,7 +7,7 @@ import {
   getCfg, loadEventsRange, loadDeviceStatusRange, loadTreatmentsRange,
   type Treatment, type DevPoint,
 } from './nightscout';
-import { insulinDaily } from './treatmentStats';
+import { insulinDaily } from '@/domain/treatmentStats';
 
 export interface DeviceExtras {
   events: Treatment[];

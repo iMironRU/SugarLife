@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { deviceAges, insulinDaily, carbStats, reservoirStats } from './treatmentStats';
-import type { Treatment } from './nightscout';
+import type { Treatment } from '@/domain/types';
 
 /* Расходники и суточные дозы. Эти числа человек видит как «канюля 3 дня» и
    «инсулина 28 ЕД» — по ним принимают решение менять набор и оценивать терапию. */

@@ -5,7 +5,7 @@ import { useStore } from '../data/store';
 import {
   type Seg, PARTS, STEP, MIN_RATE, MAX_RATE, fmtH, roundRate, toSegs, rateAt, daily,
   partDose, partAvg, segsIn, sameProfile, splitSeg, mergeSeg, scaleAll, flatten,
-} from '../data/basal';
+} from '@/domain/basal';
 import HoldButton from './HoldButton';
 import PageHead from './PageHead';
 

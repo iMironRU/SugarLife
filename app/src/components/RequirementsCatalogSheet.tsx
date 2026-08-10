@@ -1,7 +1,7 @@
 import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
 import { closeOutline, searchOutline, chevronForward, chevronBack, lockClosedOutline } from 'ionicons/icons';
 import { useState } from 'react';
-import { REQUIREMENTS, supportLabel, categoryLabel, type RequirementEntry } from '../data/requirementsCatalog';
+import { REQUIREMENTS, supportLabel, categoryLabel, type RequirementEntry } from '@/domain/requirementsCatalog';
 
 /* Каталог требований (docs/CONNECT-UX.md §7a): для человека, у которого скан ничего не нашёл
    (устройство ещё не в эфире/не активировано) или он просто хочет узнать заранее, что нужно

@@ -1,7 +1,7 @@
 import EChart from './Chart';
 import { cssVar } from './cssVar';
-import { agp, LOW, HIGH } from '../data/agp';
-import { useUnit, gluValue } from '../data/units';
+import { agp, LOW, HIGH } from '@/domain/agp';
+import { useUnit, gluValue } from '@/domain/units';
 import type { Entry } from '../data/nightscout';
 
 export default function AgpChart({ entries }: { entries: Entry[] }) {

@@ -5,7 +5,7 @@ import { chevronForward, hardwareChipOutline, flash, repeat, speedometerOutline,
 import { useState } from 'react';
 import { useStore } from '../data/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '../data/deviceConfig';
-import { pumpById, sensorById } from '../data/catalog';
+import { pumpById, sensorById } from '@/domain/catalog';
 import DeviceSheet, { type DeviceCatKey } from './DeviceSheet';
 import { useStack } from '../data/stackCtx';
 import RequirementsCatalogSheet from './RequirementsCatalogSheet';

@@ -3,7 +3,7 @@ import { chevronBack, checkmarkCircle, closeCircle, alertCircle, lockClosedOutli
 import { useState } from 'react';
 import { useStore } from '../data/store';
 import { useDeviceConfig, isModelKnown } from '../data/deviceConfig';
-import { pumpById, sensorById } from '../data/catalog';
+import { pumpById, sensorById } from '@/domain/catalog';
 import HoldButton from './HoldButton';
 import {
   LOOP_MODES, limitsFor, outOfRec, anyOutOfRec, fmtLimit,

@@ -2,7 +2,7 @@
    Всё считается из того, что уже есть — CGM-история, события Nightscout,
    возрасты устройств. Никаких выдумок: чего нет в данных — то и подсвечиваем.
    Значения глюкозы форматируются в текущих единицах (ммоль/л ⇄ мг/дл). */
-import type { Entry, Treatment } from './nightscout';
+import type { Entry, Treatment } from '@/domain/types';
 import { deviceAges } from './treatmentStats';
 import { stats, agp, LOW, HIGH, VLOW, VHIGH } from './agp';
 import { toUnits, unitLabel } from './units';

@@ -1,5 +1,5 @@
-import type { Stats } from '../data/agp';
-import { useUnit } from '../data/units';
+import type { Stats } from '@/domain/agp';
+import { useUnit } from '@/domain/units';
 
 const RANGES = {
   mmol: ['> 13,9', '10,0–13,9', '3,9–10,0', '3,0–3,9', '< 3,0'],

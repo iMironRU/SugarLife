@@ -1,6 +1,6 @@
 import { IonModal, IonContent, IonIcon } from '@ionic/react';
 import { closeOutline, checkmarkCircle, ellipseOutline } from 'ionicons/icons';
-import { useUnit, setUnit, type Unit } from '../data/units';
+import { useUnit, setUnit, type Unit } from '@/domain/units';
 
 const OPTS: { key: Unit; title: string; sub: string; unit: string; normal: string; low: string; high: string; scale: string }[] = [
   {

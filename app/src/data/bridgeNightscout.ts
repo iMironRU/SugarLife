@@ -4,7 +4,7 @@
    Гэпы честно: один IOB (→ conservative), нет истории/транзакций/wiring/insights. */
 import type { SugarLifeBridge, UiSnapshot, Monitor, Trend, Link, DeviceInfo, Alert, Intent, DriverDescriptor } from './bridge';
 import { subscribeStore, getStoreState, refresh } from './store';
-import { getUnit, subscribeUnit, toUnits } from './units';
+import { getUnit, subscribeUnit, toUnits } from '@/domain/units';
 import { getCfg, setCfg } from './nightscout';
 
 function trendOf(dir: string): Trend {

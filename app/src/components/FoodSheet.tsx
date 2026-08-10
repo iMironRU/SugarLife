@@ -2,7 +2,7 @@ import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
 import { closeOutline, restaurantOutline, nutritionOutline, searchOutline, removeOutline, addOutline, lockClosed } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore, useWritable } from '../data/store';
-import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS } from '../data/units';
+import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS } from '@/domain/units';
 
 const DASH = '—';
 const MEALS = ['Завтрак', 'Обед', 'Ужин', 'Перекус'];

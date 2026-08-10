@@ -4,7 +4,7 @@ import {
   checkmarkCircle, informationCircle, warning, alertCircle,
   helpCircleOutline, chevronForward,
 } from 'ionicons/icons';
-import type { Analysis, Insight, Severity } from '../data/analysis';
+import type { Analysis, Insight, Severity } from '@/domain/analysis';
 
 const SEV_COLOR: Record<Severity, string> = {
   good: 'var(--c-glu)',

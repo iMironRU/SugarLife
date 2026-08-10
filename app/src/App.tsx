@@ -13,7 +13,7 @@ import InstallPrompt from './components/InstallPrompt';
 import HeroPanel from './components/HeroPanel';
 import { useStore } from './data/store';
 import { useSnapshot } from './data/bridge';
-import { detectTherapy } from './data/therapy';
+import { detectTherapy } from '@/domain/therapy';
 import { useTab, setTab, getTab, TAB_PATHS } from './data/nav';
 import { useOnboarded } from './data/onboarding';
 import { attachPanelGesture } from './data/panelGesture';

@@ -2,7 +2,7 @@
    в Nightscout этого нет и писать некуда. v1: помпа + один быстрый инсулин.
    На будущее сюда добавятся режим (помпа/МДИ), базальный инсулин, мульти-профиль. */
 import { useSyncExternalStore } from 'react';
-import { pumpById, sensorById, pumpNeedsBridge } from './catalog';
+import { pumpById, sensorById, pumpNeedsBridge } from '@/domain/catalog';
 
 const KEY = 'sl.device.v1';
 

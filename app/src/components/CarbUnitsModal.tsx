@@ -1,6 +1,6 @@
 import { IonModal, IonContent, IonIcon } from '@ionic/react';
 import { closeOutline, checkmarkCircle, ellipseOutline } from 'ionicons/icons';
-import { useCarbUnit, setCarbUnit, type CarbUnit } from '../data/units';
+import { useCarbUnit, setCarbUnit, type CarbUnit } from '@/domain/units';
 
 const OPTS: { key: CarbUnit; title: string; sub: string; unit: string; ex1: string; ex2: string; ex3: string; scale: string }[] = [
   {
