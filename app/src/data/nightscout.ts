@@ -60,14 +60,43 @@ function joinUrl(base: string, path: string, token?: string) {
   return u;
 }
 
+/* Ошибка с кодом ответа: без него 401 «нужен токен» неотличим от обрыва сети,
+   а это принципиально разные вещи для человека. */
+export class HttpError extends Error {
+  status: number;
+  constructor(status: number, path: string) {
+    super('Nightscout ' + path + ' → HTTP ' + status);
+    this.status = status;
+  }
+}
+
 async function getJSON(base: string, path: string, token?: string, timeoutMs = 12000): Promise<any> {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const r = await fetch(joinUrl(base, path, token), { headers: { Accept: 'application/json' }, signal: ctrl.signal });
-    if (!r.ok) throw new Error('Nightscout ' + path + ' → HTTP ' + r.status);
+    if (!r.ok) throw new HttpError(r.status, path);
     return await r.json();
   } finally { clearTimeout(to); }
+}
+
+/* Нужен ли токен, чтобы ЧИТАТЬ. У Nightscout по умолчанию роль readable — тогда
+   не нужен вовсе, и спрашивать его значит требовать лишнего. Закрытые сайты
+   (AUTH_DEFAULT_ROLES=denied) отвечают 401/403 — только там токен обязателен.
+
+   Право ЗАПИСИ здесь не проверяется намеренно: запись (еда, болюсы) — отдельная
+   история, и токен под неё запрашивается тогда, когда запись реально понадобится. */
+export type ReadAccess = 'open' | 'needsToken' | 'unreachable';
+
+export async function checkReadAccess(base: string, token?: string): Promise<ReadAccess> {
+  try {
+    await getJSON(base, '/api/v1/entries.json?count=1', token);
+    return 'open';
+  } catch (e) {
+    const st = e instanceof HttpError ? e.status : 0;
+    if (st === 401 || st === 403) return 'needsToken';
+    return 'unreachable';
+  }
 }
 
 export async function ping(base: string, token?: string) {

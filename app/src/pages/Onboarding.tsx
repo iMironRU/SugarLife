@@ -8,7 +8,7 @@ import BrandDrop from '../components/BrandDrop';
 import CatalogPicker from '../components/CatalogPicker';
 import { pumpItems, sensorItems, modelTitle } from '../components/modelItems';
 import RequirementsCatalogSheet from '../components/RequirementsCatalogSheet';
-import { probeCloud, type CloudProbe } from '../data/nightscout';
+import { probeCloud, checkReadAccess, type CloudProbe } from '../data/nightscout';
 import { addCloud } from '../data/clouds';
 import { refresh } from '../data/store';
 import { setDeviceConfig } from '../data/deviceConfig';
@@ -33,6 +33,10 @@ export default function Onboarding() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [probe, setProbe] = useState<CloudProbe | null>(null);
+  // Поле токена показываем, только если сервер РЕАЛЬНО закрыт (ответил 401/403).
+  // У Nightscout по умолчанию чтение открыто — просить токен «на всякий случай»
+  // значит требовать лишнего и отпугивать на первом же шаге.
+  const [needToken, setNeedToken] = useState(false);
 
   // --- шаг «потоки → устройства» ---
   const [sensorId, setSensorId] = useState<string | null>(null);
@@ -45,8 +49,25 @@ export default function Onboarding() {
   const doProbe = async () => {
     const u = url.trim(), t = token.trim();
     if (!u) { setMsg('Введите адрес сайта'); return; }
-    setBusy(true); setMsg('Смотрю, что есть в облаке…'); setProbe(null);
+    setBusy(true); setMsg('Проверяю доступ…'); setProbe(null);
     try {
+      // сначала — нужен ли вообще токен
+      const access = await checkReadAccess(u, t || undefined);
+      if (access === 'needsToken') {
+        setNeedToken(true);
+        setBusy(false);
+        setMsg(t
+          ? 'Токен не подошёл — нужен с правом чтения.'
+          : 'Этот Nightscout закрыт: нужен токен с правом чтения.');
+        return;
+      }
+      if (access === 'unreachable') {
+        setBusy(false);
+        setMsg('Сайт не отвечает. Проверьте адрес.');
+        return;
+      }
+      setNeedToken(false);
+      setMsg('Смотрю, что есть в облаке…');
       const p = await probeCloud(u, t);
       setProbe(p);
       if (!p.glucose && !p.pump) {
@@ -184,7 +205,7 @@ export default function Onboarding() {
 
         <p className="connect-desc">
           Посмотрим, какие данные там реально есть, и подключим только их. Только чтение.
-          Адрес и токен хранятся на этом устройстве.
+          Токен спросим, лишь если ваш Nightscout закрыт. Всё хранится на этом устройстве.
         </p>
 
         <div className="connect-form">
@@ -192,13 +213,18 @@ export default function Onboarding() {
             <IonIcon icon={linkOutline} className="field-ico" />
             <IonInput value={url} onIonInput={(e) => setUrl(e.detail.value ?? '')} placeholder="https://ваш-сайт.nightscout…" inputmode="url" autocapitalize="off" />
           </div>
-          <div className="field">
-            <IonIcon icon={keyOutline} className="field-ico" />
-            <IonInput value={token} onIonInput={(e) => setToken(e.detail.value ?? '')} placeholder="токен доступа (если требуется)" autocapitalize="off" />
-          </div>
+          {needToken && (
+            <>
+              <div className="field-label">Токен доступа · с правом чтения</div>
+              <div className="field">
+                <IonIcon icon={keyOutline} className="field-ico" />
+                <IonInput value={token} onIonInput={(e) => setToken(e.detail.value ?? '')} placeholder="токен с ролью readable" autocapitalize="off" />
+              </div>
+            </>
+          )}
           <IonButton expand="block" className="connect-btn" onClick={doProbe} disabled={busy}>
             <IonIcon icon={cloudOutline} slot="start" />
-            {busy ? 'Смотрю…' : 'Посмотреть, что есть'}
+            {busy ? 'Проверяю…' : needToken ? 'Проверить с токеном' : 'Посмотреть, что есть'}
           </IonButton>
           <div className="connect-msg">{msg}</div>
         </div>
