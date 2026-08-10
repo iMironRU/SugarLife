@@ -726,6 +726,20 @@ ion-toggle {
 }
 
 /* ===== Метрики ===== */
+/* Переключатели периода и метрики на «Метриках» — липнут под панелью.
+
+   Сама панель контент не накрывает (position: static, обычный флекс-элемент над
+   скроллером), поэтому top: 0 — это и есть «сразу под панелью», подгонять под её
+   меняющуюся высоту нечего: панель сжимается, и скроллпорт уезжает вверх вместе с ней.
+
+   Поля вытянуты в минус на 20px (padding у .screen) и возвращены своим padding'ом:
+   без этого фон полосы обрывался бы по краям и контент проезжал бы в щели по бокам.
+   Фон непрозрачный по той же причине — иначе график виден сквозь чипы. */
+.metrics-sticky {
+  position: sticky; top: 0; z-index: 5;
+  margin: 0 -20px; padding: 6px 20px 10px;
+  background: var(--color-bg);
+}
 .period { display: flex; background: var(--color-neutral-900); border-radius: 12px; padding: 4px; gap: 2px; }
 .period-seg {
   flex: 1; text-align: center; padding: 9px 0; border-radius: 9px; border: 0; cursor: pointer;

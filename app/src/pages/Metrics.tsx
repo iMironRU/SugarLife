@@ -84,6 +84,11 @@ export default function Metrics() {
       <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
           <DataGate>
+          {/* Переключатели периода и метрики липнут под панелью: на длинных экранах
+              (90 дней, AGP) они уезжали вверх, и чтобы сменить период, надо было
+              прокрутить обратно. Панель контент не накрывает — она обычный флекс-элемент
+              над скроллером, — поэтому липнет ровно под ней, без подгонки под её высоту. */}
+          <div className="metrics-sticky">
           <div className="period">
             {PERIODS.map((p) => (
               <button key={p.days} className={'period-seg' + (days === p.days ? ' on' : '')} onClick={() => setDays(p.days)}>{p.label}</button>
@@ -101,6 +106,7 @@ export default function Metrics() {
                 </button>
               );
             })}
+          </div>
           </div>
 
           {gathering && (
