@@ -75,6 +75,17 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
   const max = Math.max(1.05, ...pump.map((s) => s.v), ...work.map((s) => s.v)) * 1.05;
   const changedList = work.map((s, i) => ({ s, i })).filter((x) => changedAt(x.i));
 
+  /* Правка профиля живёт в состоянии до переноса в помпу. Здесь цена потери выше,
+     чем где-либо ещё в приложении: человек мог перебрать все интервалы за сутки, и
+     один случайный тап по панели стирал бы всю работу. Пока есть правки — по панели
+     не закрываем, крестик переспрашивает. */
+  const askClose = () => {
+    // после записи в историю переспрашивать не за что: работа не потеряна.
+    // Профиль в Nightscout при этом остаётся прежним — значения вводят на самой помпе.
+    if (changedAll && !saved && !window.confirm('Правки профиля не перенесены в помпу и не записаны в историю. Закрыть и потерять их?')) return;
+    onClose();
+  };
+
   const saveToHistory = () => {
     writeLog([...readLog(), { at: Date.now(), segs: work }]);
     setSaved(true);
@@ -106,14 +117,14 @@ export default function BasalProfileSheet({ isOpen, onClose }: { isOpen: boolean
 
   return (
     <>
-      <IonModal isOpen={isOpen} onDidDismiss={onClose} className={'full-page' + (inner ? ' is-behind' : '')}>
+      <IonModal isOpen={isOpen} onDidDismiss={onClose} backdropDismiss={!changedAll || saved} className={'full-page' + (inner ? ' is-behind' : '')}>
         <IonContent className="sheet">
           <div className="sheet-head">
             <div>
               <div className="sheet-title">Базальный профиль</div>
               <div className="sheet-subtitle">{data?.profile?.name ?? 'из Nightscout'}</div>
             </div>
-            <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
+            <button className="sheet-close" onClick={askClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
           </div>
 
           <div className="dev-seg">

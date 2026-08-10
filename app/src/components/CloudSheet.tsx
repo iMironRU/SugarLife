@@ -111,15 +111,25 @@ export default function CloudSheet({ isOpen, onClose, cloud }: {
   };
 
   const noRoles = !cloud.sourceGlucose && !cloud.sourcePumpStatus;
+  /* Введённое в поля живёт в состоянии до «Проверить и сохранить». Раньше карточку
+     закрывали только крестиком, и потерять набранное было трудно; теперь её закрывает
+     касание по панели — то есть случайный тап рядом стирал бы адрес, который человек
+     переписывал с другого устройства. Пока есть несохранённое: по панели не закрываем
+     вовсе, а крестик переспрашивает. */
+  const dirty = url.trim() !== (cloud.url || '') || token.trim() !== (cloud.token || '');
+  const askClose = () => {
+    if (dirty && !window.confirm('Адрес или токен изменены, но не сохранены. Закрыть и потерять правки?')) return;
+    onClose();
+  };
   // Пока проверка не ответила — поле не мигаем: показываем, только когда есть за что.
   const needToken = access === 'needsToken' || tokenShown;
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose} className={'full-page' + (devOpen ? ' is-behind' : '')}>
+    <IonModal isOpen={isOpen} onDidDismiss={onClose} backdropDismiss={!dirty} className={'full-page' + (devOpen ? ' is-behind' : '')}>
       <IonContent className="sheet">
         <div className="sheet-head">
           <div className="sheet-title">{cloud.name}</div>
-          <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
+          <button className="sheet-close" onClick={askClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
         </div>
 
         <p className="sheet-desc">Читаем сахар и тренд напрямую из Nightscout. Адрес хранится локально на устройстве.</p>
