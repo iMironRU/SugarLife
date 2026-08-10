@@ -9,7 +9,7 @@ import { deviceAges } from '../data/treatmentStats';
 import GlucoseTimeChart from '../components/GlucoseTimeChart';
 import DeviceSheet from '../components/DeviceSheet';
 import { DataGate } from '../components/NotConfigured';
-import { useStack } from '../data/stack';
+import { useStack } from '../data/stackCtx';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
@@ -33,7 +33,7 @@ export default function Mon() {
       loadEventsRange(cfg.url, cfg.token, 30).then((e) => { if (!cancel) setEvents(e); }).catch(() => {});
     }
     return () => { cancel = true; };
-  }, [cfg?.url, cfg?.enabled]);
+  }, [cfg?.url, cfg?.token, cfg?.enabled]);
   const ages = deviceAges(events);
 
   const readings = entries.slice(-8).reverse();

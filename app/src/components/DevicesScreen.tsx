@@ -6,7 +6,7 @@ import { useStore } from '../data/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '../data/deviceConfig';
 import { pumpById, sensorById } from '../data/catalog';
 import DeviceSheet, { type DeviceCatKey } from './DeviceSheet';
-import { useStack } from '../data/stack';
+import { useStack } from '../data/stackCtx';
 import RequirementsCatalogSheet from './RequirementsCatalogSheet';
 
 /* Профиль → «Устройства» — отдельный полноэкранный раздел (не вложенная секция), как в

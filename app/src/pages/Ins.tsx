@@ -10,7 +10,7 @@ import InsulinTimeChart from '../components/InsulinTimeChart';
 import DeviceSheet from '../components/DeviceSheet';
 import LoopSetupScreen from '../components/LoopSetupScreen';
 import { DataGate } from '../components/NotConfigured';
-import { useStack } from '../data/stack';
+import { useStack } from '../data/stackCtx';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 

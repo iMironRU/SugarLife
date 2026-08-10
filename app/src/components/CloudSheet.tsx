@@ -9,7 +9,7 @@ import { toUnits } from '../data/units';
 import { useDeviceConfig, isRecorded, isModelKnown } from '../data/deviceConfig';
 import { pumpById, sensorById } from '../data/catalog';
 import DeviceSheet from './DeviceSheet';
-import { useStack } from '../data/stack';
+import { useStack } from '../data/stackCtx';
 
 /* Карточка одного облака (docs/CONNECT-UX.md §2b, §7). «Забираем отсюда» — по конкретным
    устройствам из реестра (не по абстрактным ролям «глюкоза»/«помпа»): облако — способ
@@ -65,7 +65,10 @@ export default function CloudSheet({ cloudId, onClose }: { cloudId: string; onCl
       .then((a) => { if (!cancel) setAccess(a); })
       .catch(() => { if (!cancel) setAccess(null); });
     return () => { cancel = true; };
-  }, [cloud?.id]);
+    /* Зависим от адреса и токена, а не только от id: карточка живёт в стеке, и запись
+       может обновиться прямо под ней (сохранили адрес) — тогда поля и проверка доступа
+       должны перечитаться. По одному id эффект бы не сработал. */
+  }, [cloud?.id, cloud?.url, cloud?.token]);
 
   if (!cloud) return null;
 

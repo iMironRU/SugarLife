@@ -105,8 +105,14 @@ export default function BasalProfileSheet({ onClose }: { onClose: () => void }) 
     );
   }
 
-  const seg = inner?.kind === 'seg' ? work[inner.i] : null;
+  /* Индекс правимого интервала достаём ОДИН раз с сужением типа. Раньше по всему
+     блоку стояло (inner as any).i: приведение отключает проверку, а обработчик мог
+     оказаться вызванным при inner другого вида — тогда i был бы undefined и правка
+     ушла бы «в никуда» вместо интервала. */
+  const segIdx = inner?.kind === 'seg' ? inner.i : -1;
+  const seg = segIdx >= 0 ? work[segIdx] ?? null : null;
   const segPump = seg ? rateAt(pump, seg.a) : 0;
+  const setSegRate = (v: number) => apply(work.map((s, i) => (i === segIdx ? { ...s, v } : s)));
 
   return (
     <>
@@ -258,16 +264,16 @@ export default function BasalProfileSheet({ onClose }: { onClose: () => void }) 
               <div className="lim-kid">В помпе <b>{segPump.toFixed(2)} ЕД/ч</b>.</div>
               <div className="bas-stepper">
                 <button className="bas-pm" disabled={seg.v <= MIN_RATE}
-                  onClick={() => apply(work.map((s, i) => (i === (inner as any).i ? { ...s, v: roundRate(s.v - STEP) } : s)))}>−</button>
+                  onClick={() => setSegRate(roundRate(seg.v - STEP))}>−</button>
                 <div className="bas-stepval">{seg.v.toFixed(2)}<small>ЕД/ч · шаг {STEP.toFixed(2)}</small></div>
                 <button className="bas-pm" disabled={seg.v >= MAX_RATE}
-                  onClick={() => apply(work.map((s, i) => (i === (inner as any).i ? { ...s, v: roundRate(s.v + STEP) } : s)))}>+</button>
+                  onClick={() => setSegRate(roundRate(seg.v + STEP))}>+</button>
               </div>
               <div className="bas-under">
                 за интервал {((seg.b - seg.a) * seg.v).toFixed(2)} ЕД · суточный станет {daily(work).toFixed(2)} ЕД
               </div>
               {(() => {
-                const i = (inner as any).i as number;
+                const i = segIdx;
                 const prev = i > 0 ? work[i - 1].v : null, next = i < work.length - 1 ? work[i + 1].v : null;
                 const jump = [prev, next].filter((x): x is number => x !== null)
                   .some((x) => Math.abs(seg.v - x) / Math.max(x, MIN_RATE) > 0.5);
@@ -277,9 +283,9 @@ export default function BasalProfileSheet({ onClose }: { onClose: () => void }) 
               })()}
               <div className="bas-mini" style={{ marginTop: 12 }}>
                 <button className="bas-mb" disabled={seg.b - seg.a < 1}
-                  onClick={() => { apply(splitSeg(work, (inner as any).i)); setInner(null); }}>Разделить пополам</button>
-                <button className="bas-mb" disabled={(inner as any).i >= work.length - 1}
-                  onClick={() => { apply(mergeSeg(work, (inner as any).i)); setInner(null); }}>Слить со следующим</button>
+                  onClick={() => { apply(splitSeg(work, segIdx)); setInner(null); }}>Разделить пополам</button>
+                <button className="bas-mb" disabled={segIdx >= work.length - 1}
+                  onClick={() => { apply(mergeSeg(work, segIdx)); setInner(null); }}>Слить со следующим</button>
               </div>
             </>
           )}
@@ -287,7 +293,7 @@ export default function BasalProfileSheet({ onClose }: { onClose: () => void }) 
         <IonFooter className="page-foot">
           {seg && Math.abs(seg.v - segPump) > 1e-6 ? (
             <div className="bas-act-col">
-              <button className="page-back bas-go" onClick={() => apply(work.map((s, i) => (i === (inner as any).i ? { ...s, v: segPump } : s)))}>
+              <button className="page-back bas-go" onClick={() => setSegRate(segPump)}>
                 ↺ Вернуть как в помпе {segPump.toFixed(2)}
               </button>
               <button className="page-back" onClick={() => setInner(null)}>Всё же оставить {seg.v.toFixed(2)}</button>

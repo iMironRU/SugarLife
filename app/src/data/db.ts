@@ -18,12 +18,12 @@ function db() {
   return dbp;
 }
 
-// подписка на изменения БД (для перезапроса графиков)
-let version = 0;
+/* Подписка на изменения БД (для перезапроса графиков). Счётчик версии тут был, но
+   читать его стало некому — подписчики просто перезапрашивают данные, — и он
+   молча увеличивался в никуда. */
 const listeners = new Set<() => void>();
 export function onDbChange(cb: () => void) { listeners.add(cb); return () => { listeners.delete(cb); }; }
-export function dbVersion() { return version; }
-function bump() { version++; for (const l of listeners) l(); }
+function bump() { for (const l of listeners) l(); }
 
 export async function putEntries(entries: Entry[]) {
   if (!entries.length) return;

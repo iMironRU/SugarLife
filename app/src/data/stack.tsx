@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { StackCtx, type StackApi } from './stackCtx';
 
 /* Стек страниц внутри вкладки.
 
@@ -17,16 +18,6 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
    Стек свой у каждой вкладки: уходя на другую и возвращаясь, человек ожидает застать
    то же место, где был. */
 
-export interface StackApi {
-  push: (node: ReactNode) => void;
-  pop: () => void;
-  depth: number;
-}
-
-const Ctx = createContext<StackApi>({ push: () => {}, pop: () => {}, depth: 0 });
-
-export const useStack = (): StackApi => useContext(Ctx);
-
 export function StackHost({ children }: { children: ReactNode }) {
   const [pages, setPages] = useState<{ key: number; node: ReactNode }[]>([]);
 
@@ -38,7 +29,7 @@ export function StackHost({ children }: { children: ReactNode }) {
   const api = useMemo<StackApi>(() => ({ push, pop, depth: pages.length }), [push, pop, pages.length]);
 
   return (
-    <Ctx.Provider value={api}>
+    <StackCtx.Provider value={api}>
       {children}
       {pages.map((p, i) => (
         /* Ниже верхней страницы всё скрыто: рисовать нижние незачем, а вот держать
@@ -48,6 +39,6 @@ export function StackHost({ children }: { children: ReactNode }) {
           {p.node}
         </div>
       ))}
-    </Ctx.Provider>
+    </StackCtx.Provider>
   );
 }

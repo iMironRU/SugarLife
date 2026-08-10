@@ -16,7 +16,7 @@ import { exportGlucoseCsv } from '../data/export';
 import { useTheme } from '../theme/useTheme';
 import { reportContentScroll } from '../data/panel';
 import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload } from '../data/appUpdate';
-import { useStack } from '../data/stack';
+import { useStack } from '../data/stackCtx';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '../data/swUpdate';
 import { useLoopProfile, LOOP_MODES } from '../data/loopProfile';
 import UnitsModal from '../components/UnitsModal';

@@ -3,7 +3,7 @@ import PageHead from './PageHead';
 import { chevronForward, cloudOutline, addCircleOutline, pulse, flash } from 'ionicons/icons';
 import { useClouds, addCloud, type CloudConfig } from '../data/clouds';
 import CloudSheet from './CloudSheet';
-import { useStack } from '../data/stack';
+import { useStack } from '../data/stackCtx';
 
 /* Профиль → «Сервисы» — отдельный полноэкранный раздел (docs/CONNECT-UX.md §10,
    §2b). Список облаков, а не одно поле: можно держать несколько Nightscout одновременно

@@ -17,7 +17,7 @@ import CatalogPicker from './CatalogPicker';
 import { modelItems, bridgeItems, insulinItems } from './modelItems';
 import DeviceScanSheet from './DeviceScanSheet';
 import BasalProfileSheet from './BasalProfileSheet';
-import { useStack } from '../data/stack';
+import { useStack } from '../data/stackCtx';
 import { toSegs, daily } from '../data/basal';
 
 export type DeviceCatKey = 'sensor' | 'pump' | 'meter' | 'loop';

@@ -30,12 +30,6 @@ ion-content::part(scroll)::-webkit-scrollbar { width: 0; height: 0; }
   height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 16px; padding: 32px 26px; text-align: center; background: var(--color-bg); color: var(--color-text);
 }
-.b-ring {
-  width: 96px; height: 96px; border-radius: 50%; border: 2px solid var(--color-accent); flex-shrink: 0;
-  box-shadow: 0 0 0 8px var(--color-bg), 0 0 26px color-mix(in srgb, var(--color-accent) 35%, transparent), inset 0 0 34px color-mix(in srgb, var(--color-accent) 18%, transparent);
-  display: flex; align-items: center; justify-content: center;
-}
-.b-ring span { font-size: 30px; font-weight: 600; letter-spacing: -.02em; }
 .b-drop { flex-shrink: 0; filter: drop-shadow(0 0 16px color-mix(in srgb, var(--color-accent) 45%, transparent)); }
 .b-drop.pulse { animation: bpulse 1.8s ease-in-out infinite; }
 @keyframes bpulse {
@@ -260,12 +254,6 @@ ion-content { --background: var(--color-bg); }
 /* Верхний блок: три кнопки — НМГ | круг | Помпа (по макету) */
 .hero { position: relative; height: 150px; margin-top: 4px; }
 .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-glu); box-shadow: 0 0 6px var(--c-glu); flex-shrink: 0; }
-.badge {
-  display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 7px;
-  font-size: 9px; font-weight: 600; line-height: 1; color: var(--c-glu);
-  background: color-mix(in srgb, var(--c-glu) 18%, transparent);
-}
-.badge .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--c-glu); }
 .circle-spark { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 
 /* ===== Панель углеводов (по макету): Б/Ж/У · активные · Еда ===== */
@@ -320,13 +308,6 @@ ion-content { --background: var(--color-bg); }
 .sec { margin: 24px 2px 8px; }
 
 /* сворачиваемый заголовок секции */
-.section-toggle {
-  width: 100%; display: flex; align-items: center; justify-content: space-between;
-  background: none; border: none; padding: 0; cursor: pointer;
-  margin: 22px 0 10px; font-family: var(--font-body);
-}
-.section-chev { font-size: 18px; color: var(--color-neutral-500); transition: transform .2s; }
-.section-chev.open { transform: rotate(90deg); }
 
 .profile-head { display: flex; align-items: center; gap: 14px; }
 .avatar {
@@ -691,17 +672,6 @@ ion-content { --background: var(--color-bg); }
 .sync-toggle-sub { font-size: 11px; color: var(--color-neutral-400); margin-top: 2px; }
 
 /* режим доступа Nightscout (чтение / чтение+запись) */
-.ns-access {
-  display: flex; align-items: flex-start; gap: 11px; margin: 4px 0 14px;
-  padding: 13px 14px; border-radius: 16px;
-  background: color-mix(in srgb, var(--color-neutral-500) 12%, var(--color-neutral-900));
-  border: 1px solid var(--color-neutral-800);
-}
-.ns-access.rw { background: color-mix(in srgb, var(--c-glu) 12%, var(--color-neutral-900)); border-color: color-mix(in srgb, var(--c-glu) 40%, transparent); }
-.ns-access > ion-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; color: var(--color-neutral-400); }
-.ns-access.rw > ion-icon { color: var(--c-glu); }
-.ns-access-title { font-size: 14px; font-weight: 600; }
-.ns-access-sub { font-size: 11.5px; color: var(--color-neutral-400); line-height: 1.4; margin-top: 3px; text-wrap: pretty; }
 
 .insights { display: flex; flex-direction: column; gap: 10px; }
 .insight {
@@ -751,8 +721,6 @@ ion-content { --background: var(--color-bg); }
 }
 .ins-tab.on { color: var(--color-text); font-weight: 600; }
 .ins-tab-count { font-size: 12px; font-weight: 700; color: var(--color-neutral-500); }
-.ins-group-btn .chev { margin-left: auto; font-size: 16px; color: var(--color-neutral-500); transition: transform .2s; }
-.ins-group-btn.open .chev { transform: rotate(90deg); }
 ion-toggle {
   --track-background: var(--color-neutral-800);
   --track-background-checked: var(--color-accent);
@@ -910,7 +878,6 @@ ion-toggle {
 .loop-empty ion-icon { font-size: 40px; color: var(--color-neutral-700); }
 .loop-empty-t { font-size: 15px; font-weight: 500; color: var(--color-neutral-300); }
 .loop-empty-s { font-size: 13px; color: var(--color-neutral-500); }
-.sheet-basal { margin-top: 4px; }
 
 .win-chips { display: flex; gap: 6px; margin-top: 18px; }
 .win-chip {
@@ -956,7 +923,6 @@ ion-toggle {
   height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 12px; color: var(--color-neutral-500); text-align: center; padding: 40px;
 }
-.placeholder-ico { font-size: 44px; opacity: .5; }
 .placeholder h2 { font-size: 20px; font-weight: 600; color: var(--color-text); margin: 0; }
 .placeholder p { font-size: 13px; margin: 0; max-width: 260px; }
 
@@ -1035,7 +1001,6 @@ ion-toggle {
   background: var(--color-neutral-800); color: var(--color-neutral-200);
 }
 .wz-impact b { color: var(--color-accent); }
-.wz-impact-sm { font-size: 13px; color: var(--color-neutral-400); line-height: 1.4; margin-top: 6px; }
 .wz-done {
   width: 100%; min-height: 46px; margin-top: 14px; border-radius: 14px; border: 0; cursor: pointer;
   background: var(--color-neutral-800); color: var(--color-text); font-size: 15px; font-weight: 600; font-family: inherit;

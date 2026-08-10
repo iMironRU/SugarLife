@@ -42,16 +42,11 @@ export function setCfg(cfg: NsConfig | null) {
   });
 }
 
-const ARROWS: Record<string, string> = {
-  DoubleUp: 'arrow-up', SingleUp: 'arrow-up', FortyFiveUp: 'arrow-up',
-  Flat: 'arrow-forward', FortyFiveDown: 'arrow-down', SingleDown: 'arrow-down', DoubleDown: 'arrow-down',
-};
 // Стрелка тренда как символ (для крупного значения)
 const ARROW_CHAR: Record<string, string> = {
   DoubleUp: '⇈', SingleUp: '↑', FortyFiveUp: '↗', Flat: '→',
   FortyFiveDown: '↘', SingleDown: '↓', DoubleDown: '⇊',
 };
-export function arrowIcon(dir: string) { return ARROWS[dir] || 'arrow-forward'; }
 export function arrowChar(dir: string) { return ARROW_CHAR[dir] || '→'; }
 
 function num(...xs: any[]): number | null {
