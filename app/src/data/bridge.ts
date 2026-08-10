@@ -44,6 +44,9 @@ export interface DeviceInfo {
   expiresAtMs?: number | null;
   primary?: boolean;
   live?: boolean;   // rev ≥ 1.7: отдаёт свежее (true) или идёт синхронизация/бэкфилл (false)
+  status?: string;  // единый статус источника: Disconnected/Connecting/Acquiring/Live/Delayed
+  latestAtMs?: number | null;   // время новейшего показания (возраст в карточке)
+  autoConnect?: boolean;        // подключать на старте автоматически (тумблер «авто»)
 }
 export interface Insights { mode: 'Observe' | 'Advisory' | 'ClosedLoop'; messages: string[]; }
 export interface PendingWrite { id: string; description: string; state: string; needsAttention: boolean; }
@@ -96,6 +99,7 @@ export type Intent =
   | { type: 'addDevice'; driverType: string; params: Record<string, string>; mode?: 'attach' | 'activate' }
   | { type: 'connect'; deviceId: string }
   | { type: 'disconnect'; deviceId: string }
+  | { type: 'setAutoConnect'; deviceId: string; autoConnect: boolean }
   | { type: 'testDevice'; deviceId: string }
   | { type: 'setParams'; deviceId: string; params: Record<string, string> }
   | { type: 'setWiring'; deviceId: string; asInput: boolean; asOutput: boolean }

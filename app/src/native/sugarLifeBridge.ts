@@ -6,6 +6,7 @@ import { registerPlugin, Capacitor } from '@capacitor/core';
 import type { SugarLifeBridge, UiSnapshot, Intent, HistoryQuery, HistoryResult } from '../data/bridge';
 import { getCfg } from '../data/nightscout';
 import { putEntries } from '../data/db';
+import { diffBleActivity } from '../data/bleActivity';
 
 /** Тренд движка → NS-направление (для локального Entry). Единый формат для таблицы/графика. */
 function trendToDir(t?: string | null): string {
@@ -65,7 +66,9 @@ if (Capacitor.isNativePlatform()) {
       if (entries.length) await putEntries(entries);
     } catch { /* движок ещё не готов — повторим на следующем снимке */ }
   };
-  bridge.subscribe(() => {
+  bridge.subscribe((s) => {
+    // Ощутимый захват/освобождение BLE: диффим статусы устройств → вибро + баннер на переходах.
+    try { diffBleActivity(s.devices || []); } catch { /* без сенсорики не критично */ }
     const now = Date.now();
     if (now - lastGlucoseSync > 12000) { lastGlucoseSync = now; void syncEngineGlucose(); }
   });

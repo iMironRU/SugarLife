@@ -34,6 +34,8 @@ export default defineConfig(({ command }) => ({
         globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
         cleanupOutdatedCaches: true,
         navigateFallbackDenylist: [/^\/api\//],
+        // Основной бандл ~2 МБ (Ionic+React+ECharts) — прекэшируем целиком (дефолт 2 МБ его отсекал).
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
     }),
   ],

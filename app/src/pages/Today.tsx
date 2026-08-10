@@ -9,6 +9,7 @@ import { sendIntent } from '../data/bridge';
 import { reservoirStats } from '../data/treatmentStats';
 import { useCloseOnLeave } from '../data/nav';
 import { notify } from '../data/notify';
+import { useBleActivity } from '../data/bleActivity';
 import FoodSheet from '../components/FoodSheet';
 
 const DASH = '—';
@@ -29,6 +30,15 @@ const isPaused = (s?: string | null) => {
 export default function Today() {
   const { data } = useStore();
   const [bleMsg, setBleMsg] = useState('');
+  const [bleColor, setBleColor] = useState<'success' | 'medium' | 'warning'>('success');
+  // Ощутимый захват/освобождение BLE: последнее событие → тост (вибро уже дал bleActivity).
+  const ble = useBleActivity();
+  useEffect(() => {
+    if (!ble) return;
+    if (ble.phase === 'capturing') { setBleColor('medium'); setBleMsg(`Подключаюсь к ${ble.name}…`); }
+    else if (ble.phase === 'captured') { setBleColor('success'); setBleMsg(`${ble.name} — на связи`); }
+    else { setBleColor('warning'); setBleMsg(`${ble.name} — BLE освобождён`); }
+  }, [ble]);
   useUnit(); // перерисовка при смене единиц
   const cu = useCarbUnit(); // единицы углеводов (граммы/Х.Е.)
   const [foodOpen, setFoodOpen] = useState(false);
@@ -149,6 +159,7 @@ export default function Today() {
             onClick={() => {
               void sendIntent({ type: 'stopScan' });
               void sendIntent({ type: 'releaseBle' });
+              setBleColor('warning');
               setBleMsg('Все устройства отключены — Bluetooth освобождён');
             }}
           >
@@ -159,7 +170,7 @@ export default function Today() {
             message={bleMsg}
             duration={2600}
             position="bottom"
-            color="success"
+            color={bleColor}
             icon={bluetoothOutline}
             onDidDismiss={() => setBleMsg('')}
           />

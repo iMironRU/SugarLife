@@ -1,4 +1,4 @@
-import { IonModal, IonContent, IonIcon } from '@ionic/react';
+import { IonModal, IonContent, IonIcon, IonSpinner, IonToggle } from '@ionic/react';
 import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, pulseOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useDeviceConfig, setDeviceConfig } from '../data/deviceConfig';
@@ -25,6 +25,17 @@ const CONN_RU: Record<string, string> = {
   Streaming: 'поток', Connected: 'связь', Connecting: 'подключение', Disconnected: 'нет связи', Error: 'ошибка',
 };
 function connLabel(c: string): string { return CONN_RU[c] ?? c; }
+// Единый статус источника (ядро) → человекочитаемо. Приоритет над connLabel.
+const STATUS_RU: Record<string, string> = {
+  Disconnected: 'нет связи', Connecting: 'подключаюсь…', Acquiring: 'получаю данные…', Live: 'на связи', Delayed: 'задержка',
+};
+function statusText(d: DeviceInfo): string {
+  const s = d.status;
+  return (s && STATUS_RU[s]) ? STATUS_RU[s] : connLabel(d.connection);
+}
+// Идёт захват BLE (крутим спиннер) vs догрузка истории.
+function isCapturing(d: DeviceInfo): boolean { return d.status === 'Connecting' || (!d.status && d.connection === 'Connecting'); }
+function isBusy(d: DeviceInfo): boolean { return isCapturing(d) || d.status === 'Acquiring'; }
 import {
   PUMPS, SENSORS, BRIDGES, pumpById, sensorById, bridgeById,
   isCurrentPump, pumpBrand, pumpNeedsBridge,
@@ -146,24 +157,38 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
             {connected.length > 0 && (
               <div className="list" style={{ marginTop: 12 }}>
                 {connected.map((d) => (
-                  <div key={d.id} className="list-row" style={{ cursor: 'default' }}>
-                    <IonIcon icon={pulseOutline} className="list-ico" />
-                    <span className="pick-main">
-                      <span className="list-title">
-                        {d.name}
-                        {d.primary && <span className="badge-primary">основной</span>}
+                  <div key={d.id} style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div className="list-row" style={{ cursor: 'default' }}>
+                      <IonIcon icon={pulseOutline} className="list-ico" />
+                      <span className="pick-main">
+                        <span className="list-title">
+                          {d.name}
+                          {d.primary && <span className="badge-primary">основной</span>}
+                        </span>
+                        <span className="pick-sub">{sessionLabel(d)}</span>
                       </span>
-                      <span className="pick-sub">{sessionLabel(d)}</span>
-                    </span>
-                    <span className="list-value">{connLabel(d.connection)}</span>
-                    <button
-                      onClick={() => void sendIntent(d.connection === 'Disconnected'
-                        ? { type: 'connect', deviceId: d.id }
-                        : { type: 'disconnect', deviceId: d.id })}
-                      style={{ marginLeft: 8, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--line2, #3a3d50)', background: 'transparent', color: 'inherit', fontSize: 13, fontWeight: 600 }}
-                    >
-                      {d.connection === 'Disconnected' ? 'Подключить' : 'Пауза'}
-                    </button>
+                      <span className="list-value" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        {isBusy(d) && <IonSpinner name="crescent" style={{ width: 14, height: 14 }} />}
+                        {statusText(d)}
+                      </span>
+                      <button
+                        onClick={() => void sendIntent(d.connection === 'Disconnected'
+                          ? { type: 'connect', deviceId: d.id }
+                          : { type: 'disconnect', deviceId: d.id })}
+                        style={{ marginLeft: 8, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--line2, #3a3d50)', background: 'transparent', color: 'inherit', fontSize: 13, fontWeight: 600 }}
+                      >
+                        {d.connection === 'Disconnected' ? 'Подключить' : (isCapturing(d) ? 'Отмена' : 'Пауза')}
+                      </button>
+                    </div>
+                    {/* Настройка: подключать это устройство автоматически на старте (реконнект без ручного ввода). */}
+                    <div className="list-row" style={{ cursor: 'default', paddingTop: 0, opacity: 0.9 }}>
+                      <span className="list-ico" />
+                      <span className="list-title" style={{ fontSize: 13 }}>Подключать автоматически</span>
+                      <IonToggle
+                        checked={d.autoConnect !== false}
+                        onIonChange={(e) => void sendIntent({ type: 'setAutoConnect', deviceId: d.id, autoConnect: e.detail.checked })}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
