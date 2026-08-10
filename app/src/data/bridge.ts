@@ -13,6 +13,10 @@ export interface Monitor {
   // rev ≥ 1.7: основной источник отдаёт свежее (true) или идёт синхронизация/бэкфилл (false).
   // false → показываем индикатор «синхронизация», алгоритм эти данные пока не берёт.
   live?: boolean;
+  /** Единый статус источника: Disconnected/Connecting/Acquiring/Live/Delayed — UI рисует состояние по нему. */
+  status?: string;
+  /** Время новейшего показания (мс) — единый возраст «N мин назад» для любого источника. */
+  latestAtMs?: number | null;
 }
 export type Trend =
   | 'RisingRapidly' | 'Rising' | 'RisingSlowly' | 'Stable'

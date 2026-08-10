@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import { IonIcon, IonSpinner } from '@ionic/react';
 import { useEffect, useState } from 'react';
 import { pulse, flash, moon, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline } from 'ionicons/icons';
 import { useTab, setTab } from '../data/nav';
@@ -77,7 +77,12 @@ export default function HeroPanel() {
   // Головное значение и тренд — из моста (контракт); фолбэк на стор до первого снимка.
   const glucose = m ? m.glucose : latest ? toUnits(latest.mmol) : DASH;
   const arrow = m ? (TREND_CHAR[m.trend] ?? '') : latest ? arrowChar(latest.dir) : '';
-  const ago = latest ? agoText(latest.t) : DASH;
+  // Возраст — по НАСТОЯЩЕМУ времени показания из моста (едино для любого источника), фолбэк на стор.
+  const ago = m?.latestAtMs ? agoText(m.latestAtMs) : latest ? agoText(latest.t) : DASH;
+  // Единый статус источника → что показать в кружке.
+  const srcStatus = m?.status;
+  const syncing = srcStatus === 'Connecting' || srcStatus === 'Acquiring';
+  const delayed = srcStatus === 'Delayed';
   const minsAgo = latest ? Math.round((Date.now() - latest.t) / 60000) : null;
   const fresh = minsAgo == null ? DASH : minsAgo < 1 ? 'сейчас' : minsAgo + ' мин';
 
@@ -171,12 +176,19 @@ export default function HeroPanel() {
           <CircleSparkline entries={data?.entries || []} />
           <span className="hp-circle-inner">
             <span className="hp-circle-val">
-              <span className="hp-value">{glucose}</span>
-              {arrow && <span className="hp-arrow">{arrow}</span>}
+              <span className="hp-value">
+                {syncing && glucose === DASH ? <IonSpinner name="dots" /> : glucose}
+              </span>
+              {arrow && !syncing && <span className="hp-arrow">{arrow}</span>}
             </span>
             <span className="hp-unit">{unitLabel()}</span>
             {iob != null && <span className="hp-iob">инс. {iob} ед</span>}
-            <span className="hp-ago">{ago}</span>
+            <span className={'hp-ago' + (delayed ? ' warn' : '')}>
+              {srcStatus === 'Connecting' ? 'подключение…'
+                : srcStatus === 'Acquiring' ? 'загрузка истории…'
+                : delayed ? '⚠ задержка · ' + ago
+                : ago}
+            </span>
           </span>
         </button>
       </div>
