@@ -7,6 +7,7 @@ import {
   partDose, partAvg, segsIn, sameProfile, splitSeg, mergeSeg, scaleAll, flatten,
 } from '../data/basal';
 import HoldButton from './HoldButton';
+import PageHead from './PageHead';
 
 /* Редактор базального профиля (docs/prototypes/basal-profile.html).
 
@@ -91,10 +92,7 @@ export default function BasalProfileSheet({ onClose }: { onClose: () => void }) 
   if (!pump.length) {
     return (
       <div className="sheet stack-body">
-          <div className="sheet-head">
-            <div><div className="sheet-title">Базальный профиль</div></div>
-            <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-          </div>
+          <PageHead title="Базальный профиль" onBack={onClose} />
           <div className="loop-empty">
             <div className="loop-empty-t">Профиль не получен</div>
             <div className="loop-empty-s">
@@ -113,13 +111,7 @@ export default function BasalProfileSheet({ onClose }: { onClose: () => void }) 
   return (
     <>
       <div className="sheet stack-body">
-          <div className="sheet-head">
-            <div>
-              <div className="sheet-title">Базальный профиль</div>
-              <div className="sheet-subtitle">{data?.profile?.name ?? 'из Nightscout'}</div>
-            </div>
-            <button className="sheet-close" onClick={askClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-          </div>
+          <PageHead title="Базальный профиль" subtitle={data?.profile?.name ?? 'из Nightscout'} onBack={askClose} />
 
           <div className="dev-seg">
             <button className={'dev-seg-btn' + (!edit ? ' on' : '')} onClick={() => setEdit(false)}>Как есть</button>
@@ -229,20 +221,27 @@ export default function BasalProfileSheet({ onClose }: { onClose: () => void }) 
             </>
           )}
         </div>
-        <div className="page-foot">
-          {!edit ? (
-            <button className="page-back" onClick={() => setEdit(true)}>Править профиль</button>
-          ) : (
+        {/* Подвал появляется, только когда есть что делать.
+
+            «Править профиль» отсюда убрано совсем: ровно то же делает переключатель
+            «Как есть / Правка» вверху, а полоса внизу отнимала место у графика
+            постоянно ради кнопки-дубликата.
+
+            В правке подвал показываем, лишь когда правки есть: заблокированная
+            кнопка «Перенести в помпу» занимала столько же места, сколько рабочая,
+            но ничего не делала. */}
+        {edit && changedAll && (
+          <div className="page-foot">
             <div className="bas-act">
               <button className="page-back bas-undo" onClick={undo} disabled={!undoStack.length} aria-label="Отменить">
                 <IonIcon icon={arrowUndoOutline} />
               </button>
-              <button className="page-back bas-go" onClick={() => { setDone([]); setSaved(false); setInner({ kind: 'transfer' }); }} disabled={!changedAll}>
+              <button className="page-back bas-go" onClick={() => { setDone([]); setSaved(false); setInner({ kind: 'transfer' }); }}>
                 Перенести в помпу
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
       {/* ---- вложенные шторки: одноразовые подзадачи, им модалка и подходит ---- */}
       <IonModal isOpen={inner?.kind === 'seg'} onDidDismiss={() => setInner(null)} className="sheet-modal">

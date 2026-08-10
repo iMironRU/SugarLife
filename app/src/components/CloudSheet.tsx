@@ -1,5 +1,6 @@
 import { IonInput, IonToggle, IonButton, IonIcon } from '@ionic/react';
-import { linkOutline, keyOutline, closeOutline, chevronForward, gitNetworkOutline, copyOutline, checkmarkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
+import PageHead from './PageHead';
+import { linkOutline, keyOutline, chevronForward, gitNetworkOutline, copyOutline, checkmarkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useClouds, updateCloud, removeCloud } from '../data/clouds';
 import { ping, checkReadAccess, type ReadAccess } from '../data/nightscout';
@@ -129,10 +130,7 @@ export default function CloudSheet({ cloudId, onClose }: { cloudId: string; onCl
 
   return (
     <div className="sheet stack-body">
-        <div className="sheet-head">
-          <div className="sheet-title">{cloud.name}</div>
-          <button className="sheet-close" onClick={askClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-        </div>
+        <PageHead title={cloud.name} onBack={askClose} />
 
         <p className="sheet-desc">Читаем сахар и тренд напрямую из Nightscout. Адрес хранится локально на устройстве.</p>
 

@@ -1,5 +1,6 @@
 import { IonIcon } from '@ionic/react';
-import { chevronBack, chevronForward, hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline } from 'ionicons/icons';
+import PageHead from './PageHead';
+import { chevronForward, hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '../data/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '../data/deviceConfig';
@@ -34,13 +35,7 @@ export default function DevicesScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet stack-body">
-        <div className="sheet-head">
-          <button className="sheet-close" onClick={onClose} aria-label="Назад"><IonIcon icon={chevronBack} /></button>
-          <div style={{ flex: 1 }}>
-            <div className="sheet-title">Устройства</div>
-            <div className="sheet-subtitle">Профиль · Устройства</div>
-          </div>
-        </div>
+        <PageHead title="Устройства" subtitle="Профиль · Устройства" onBack={onClose} />
         <div className="sheet-note">
           Тапни устройство — там все действия (мост, подключение, «забыть»). На плитке ничего не отключишь случайно.
         </div>

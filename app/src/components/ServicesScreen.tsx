@@ -1,5 +1,6 @@
 import { IonIcon } from '@ionic/react';
-import { chevronBack, chevronForward, cloudOutline, addCircleOutline, pulse, flash } from 'ionicons/icons';
+import PageHead from './PageHead';
+import { chevronForward, cloudOutline, addCircleOutline, pulse, flash } from 'ionicons/icons';
 import { useClouds, addCloud, type CloudConfig } from '../data/clouds';
 import CloudSheet from './CloudSheet';
 import { useStack } from '../data/stack';
@@ -37,13 +38,7 @@ export default function ServicesScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="sheet stack-body">
-        <div className="sheet-head">
-          <button className="sheet-close" onClick={onClose} aria-label="Назад"><IonIcon icon={chevronBack} /></button>
-          <div style={{ flex: 1 }}>
-            <div className="sheet-title">Сервисы</div>
-            <div className="sheet-subtitle">Профиль · Сервисы</div>
-          </div>
-        </div>
+        <PageHead title="Сервисы" subtitle="Профиль · Сервисы" onBack={onClose} />
         <div className="sheet-note">
           Облако — такой же способ подключения, как мост, только со своими адресом/токеном.
           Можно держать несколько одновременно, у каждого своя роль в «Забираем отсюда».

@@ -1,5 +1,6 @@
 import { IonIcon } from '@ionic/react';
-import { closeOutline, chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
+import PageHead from './PageHead';
+import { chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '../data/deviceConfig';
 import { useSnapshot } from '../data/bridge';
@@ -156,13 +157,7 @@ export default function DeviceSheet({ onClose, cat, title }: {
 
   return (
     <div className="sheet stack-body">
-        <div className="sheet-head">
-          <div>
-            <div className="sheet-title">{title}</div>
-            <div className="sheet-subtitle">{status ? deviceStatusLabel(status) : 'Устройство'}</div>
-          </div>
-          <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-        </div>
+        <PageHead title={title} subtitle={status ? deviceStatusLabel(status) : 'Устройство'} onBack={onClose} />
 
         <>
             {hasModel && (
