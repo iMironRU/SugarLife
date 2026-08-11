@@ -21,14 +21,14 @@
 
 ## Открытые запросы
 
-| # | Чего не хватает | Предложение | Документ | Статус |
+| # | Чего не хватает | Предложение | Документ | Issue |
 |---|---|---|---|---|
-| 1 | `confirmedIOB` не умеет «неизвестно»: ноль означает «инсулина нет», а не «нет данных» | `Monitor.iobAtMs?: number \| null` | [bridge-iob-proposal](bridge-iob-proposal.md) | отправлено |
-| 2 | Жизненный цикл записи в реестре и «модель неизвестна» | `DeviceInfo.registryState`, `driverId`, интент `recordDevice` | [bridge-registry-proposal](bridge-registry-proposal.md) | отправлено |
-| 3 | Аккаунт производителя (Ottai) как предусловие работы сенсора; секреты только на запись | `UiSnapshot.accounts[]`, `linkAccount`/`unlinkAccount`, `Secret` write-only | [bridge-accounts-proposal](bridge-accounts-proposal.md) | отправлено |
+| 1 | `confirmedIOB` не умеет «неизвестно»: ноль означает «инсулина нет», а не «нет данных» | `Monitor.iobAtMs?: number \| null` | [bridge-iob-proposal](bridge-iob-proposal.md) | [core#1](https://github.com/iMironRU/SugarLifeCore/issues/1) |
+| 2 | Жизненный цикл записи в реестре и «модель неизвестна» | `DeviceInfo.registryState`, `driverId`, интент `recordDevice` | [bridge-registry-proposal](bridge-registry-proposal.md) | [core#2](https://github.com/iMironRU/SugarLifeCore/issues/2) |
+| 3 | Аккаунт производителя (Ottai) как предусловие работы сенсора; секреты только на запись | `UiSnapshot.accounts[]`, `linkAccount`/`unlinkAccount`, `Secret` write-only | [bridge-accounts-proposal](bridge-accounts-proposal.md) | [core#3](https://github.com/iMironRU/SugarLifeCore/issues/3) |
 
 ## Вопросы к ядру без изменения контракта
 
-| # | Вопрос | Зачем нам | Статус |
+| # | Вопрос | Зачем нам | Issue |
 |---|---|---|---|
-| 4 | Точный список параметров мостов OrangeLink и RileyLink | Рисуем универсальную карточку настроек по `SettingsSpec`; выдумывать частоты и режимы радиомоста нельзя | отправлено |
+| 4 | Точный список параметров мостов OrangeLink и RileyLink | Рисуем универсальную карточку настроек по `SettingsSpec`; выдумывать частоты и режимы радиомоста нельзя | [core#4](https://github.com/iMironRU/SugarLifeCore/issues/4) |
