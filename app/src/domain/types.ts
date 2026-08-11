@@ -16,6 +16,11 @@ export interface Device {
   pumpBattery: number | null; status: string | null; baseBasal: number | null;
   tempRate: number | null; tempRemaining: number | null; lastBolus: number | null;
   uploaderBattery: number | null; loop: boolean; pump: boolean; at: number | null;
+  /* Когда цикл в последний раз считал. Это НЕ то же, что at: помпа отчитывается
+     сама по себе и чаще, а активный инсулин и активные углеводы существуют только
+     в расчёте цикла. Без этого времени нельзя отличить «инсулина нет» от «неизвестно,
+     сколько инсулина» — а на медицинском экране это разные вещи. */
+  loopAt: number | null;
   // AAPS extended (кастомные поля этого пользователя): заряд OrangeLink/RileyLink и
   // авторитетный флаг паузы помпы. Отсутствие ключа = неизвестно (не 0%/false).
   mountBattery: number | null; suspended: boolean | null;

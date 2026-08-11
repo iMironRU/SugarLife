@@ -187,13 +187,16 @@ ion-content { --background: var(--color-bg); }
   margin-top: calc(5px * (1 - var(--k-sub)));
   opacity: calc(1 - var(--k-sub));
 }
-/* активный инсулин в круге — цветом инсулина */
+/* Активный инсулин в круге — цветом инсулина. Когда цикл молчит, строка остаётся
+   на месте, но становится прочерком приглушённого цвета: пустота на её месте
+   читалась как «инсулина нет», а это разные вещи (domain/loopValue.ts). */
 .hp-iob {
   font-size: calc(11px - 1px * var(--p)); font-weight: 600; color: var(--c-ins); overflow: hidden;
   max-height: calc(15px * (1 - var(--k-late)));
   margin-top: calc(4px * (1 - var(--k-late)));
   opacity: calc(1 - var(--k-late));
 }
+.hp-iob.is-unknown { color: var(--color-neutral-500); }
 .sync { font-size: 12px; color: var(--color-neutral-400); }
 .heart { color: var(--c-danger); }
 /* зелёная точка «реальное время» — уходит вместе с мелочью, когда панель уже узкая */

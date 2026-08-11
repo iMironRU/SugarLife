@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useStorePart } from '@/sources/store';
 import { useTreatments } from '@/sources/db';
 import { detectTherapy } from '@/domain/therapy';
+import { activeInsulin } from '@/domain/loopValue';
 import { fmt } from '@/domain/units';
 import InsulinTimeChart from '@/charts/InsulinTimeChart';
 import { DataGate } from '@/ui/NotConfigured';
@@ -36,6 +37,7 @@ export default function Ins() {
   const boluses = treatments.filter((t) => t.type !== 'Temp Basal' && (t.insulin ?? 0) > 0);
   const baseBasal = dev?.baseBasal ?? profile?.basal ?? null;
   const pumpStatus = dev?.status || (therapy === 'loop' ? 'Замкнутый цикл' : 'Помпа');
+  const ai = activeInsulin(dev);
   const baseBasalTxt = dev?.baseBasal != null ? fmt(dev.baseBasal) : profile?.basal != null ? fmt(profile.basal) : '—';
 
   return (
@@ -48,7 +50,13 @@ export default function Ins() {
               <div className="basal-head"><IonIcon icon={flash} style={{ color: 'var(--c-ins)' }} /><span>Шприц-ручка</span></div>
               <div className="basal-rows">
                 <div className="basal-row"><span>Последняя инъекция</span><b>{dev?.lastBolus != null ? fmt(dev.lastBolus) + ' ед' : '—'}</b></div>
-                <div className="basal-row"><span>Активный инсулин</span><b>{dev?.iob != null ? fmt(dev.iob) + ' ед' : '—'}</b></div>
+                {/* «Нет инсулина» и «неизвестно, сколько» — разные вещи (domain/loopValue.ts):
+                    неизвестное показываем прочерком и объясняем почему, а не молчим. */}
+                <div className="basal-row">
+                  <span>Активный инсулин</span>
+                  <b className={ai.known ? undefined : 'val-unknown'}>{ai.known ? fmt(dev!.iob as number) + ' ед' : '—'}</b>
+                </div>
+                {ai.reason && <div className="basal-note">{ai.reason}</div>}
               </div>
             </div>
           ) : (

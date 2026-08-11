@@ -8,6 +8,7 @@ import { arrowChar, getCfg } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
 import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
 import { syncToActiveScreen } from '@/app/panel';
+import { activeInsulin } from '@/domain/loopValue';
 import { useSnapshot } from '@/sources/bridge';
 import CircleSparkline from '@/charts/CircleSparkline';
 
@@ -82,7 +83,11 @@ export default function HeroPanel() {
 
   const reservoir = dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : DASH;
   const pumpStatus = shortStatus(dev?.status);
-  const iob = dev?.iob != null ? fmt(dev.iob) : null; // активный инсулин — в круг
+  /* Активный инсулин в круге. Раньше строка просто исчезала, когда цикл молчал, —
+     и пустота читалась как «инсулина нет». Теперь она на месте всегда, а неизвестное
+     показано прочерком и приглушённым цветом (см. domain/loopValue.ts). */
+  const ai = activeInsulin(dev);
+  const iobText = ai.known ? 'инс. ' + fmt(dev!.iob as number) + ' ед' : 'инс. ' + DASH;
 
   // Полоса зарядов устройств над панелью — расширяемо: помпа, телефон-аплоадер, мост
   // (OrangeLink/RileyLink, pump.extended.OrangeLinkBattery от AAPS). Показываем только
@@ -187,7 +192,7 @@ export default function HeroPanel() {
               {arrow && <span className="hp-arrow">{arrow}</span>}
             </span>
             <span className="hp-unit">{unitLabel()}</span>
-            {iob != null && <span className="hp-iob">инс. {iob} ед</span>}
+            <span className={'hp-iob' + (ai.known ? '' : ' is-unknown')} title={ai.reason ?? undefined}>{iobText}</span>
             <span className="hp-ago">{ago}</span>
           </span>
         </button>

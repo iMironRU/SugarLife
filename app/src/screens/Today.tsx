@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt } from '@/domain/units';
 import { reportContentScroll } from '@/app/panel';
+import { activeCarbs } from '@/domain/loopValue';
 import { useDeviceExtras } from '@/sources/deviceExtras';
 import { reservoirStats } from '@/domain/treatmentStats';
 import { useCloseOnLeave } from '@/app/nav';
@@ -48,7 +49,10 @@ export default function Today() {
   const todayCarbs = extras.events.filter((e) => (e.carbs ?? 0) > 0 && e.t >= dayStart.getTime());
   const dayCarbs = Math.round(todayCarbs.reduce((a, b) => a + (b.carbs || 0), 0));
   const mealCount = todayCarbs.length;
-  const cob = dev?.cob != null ? Math.round(dev.cob) : null;
+  /* Активные углеводы тоже считает цикл, а не помпа: когда он молчит, это
+     «неизвестно», а не «ноль». Прочерк плюс причина — см. domain/loopValue.ts. */
+  const ac = activeCarbs(dev);
+  const cob = ac.known ? Math.round(dev!.cob as number) : null;
 
   // авторитетный флаг паузы (AAPS pump.extended.PumpSuspended), если известен —
   // иначе фолбэк на текстовую эвристику по статусу
@@ -160,9 +164,9 @@ export default function Today() {
             </div>
 
             <div className="carb-center">
-              <div className="carb-big">{cob != null ? toCarbs(cob, cu) : DASH}<span>{carbUnitLabel(cu)}</span></div>
+              <div className={'carb-big' + (ac.known ? '' : ' is-unknown')}>{cob != null ? toCarbs(cob, cu) : DASH}<span>{carbUnitLabel(cu)}</span></div>
               <div className="carb-lbl">активные углеводы</div>
-              <div className="carb-sub">всего за день · {toCarbs(dayCarbs, cu)} {carbUnitLabel(cu)}</div>
+              <div className="carb-sub">{ac.reason ?? 'всего за день · ' + toCarbs(dayCarbs, cu) + ' ' + carbUnitLabel(cu)}</div>
             </div>
 
             <div className="carb-food">

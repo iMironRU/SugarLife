@@ -19,6 +19,10 @@
 .carb-center { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 10px; }
 .carb-big { display: flex; align-items: baseline; gap: 5px; font-size: 40px; font-weight: 600; line-height: 1; letter-spacing: -.02em; color: var(--c-carb); }
 .carb-big span { font-size: 14px; font-weight: 500; color: var(--c-carb-2); }
+/* Неизвестно ≠ ноль: прочерк цветом углеводов читался как настоящее значение,
+   а огромный «—» — как жирная жёлтая черта. Приглушаем (см. domain/loopValue.ts). */
+.carb-big.is-unknown, .carb-big.is-unknown span { color: var(--color-neutral-500); }
+.carb-big.is-unknown { font-size: 30px; }
 .carb-lbl { font-size: 11px; color: var(--color-neutral-400); margin-top: 5px; }
 .carb-sub { font-size: 10px; color: var(--color-neutral-500); margin-top: 3px; }
 

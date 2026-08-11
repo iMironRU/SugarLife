@@ -59,6 +59,9 @@
 .basal-row:last-child { border-bottom: 0; }
 .basal-row span { font-size: 13px; color: var(--color-neutral-400); }
 .basal-row b { font-size: 14px; font-weight: 600; }
+/* «Неизвестно» — прочерк приглушённым цветом, чтобы не путать с нулём (см. domain/loopValue.ts) */
+.val-unknown { color: var(--color-neutral-500); font-weight: 600; }
+.basal-note { font-size: 11px; color: var(--color-neutral-500); padding: 0 0 4px; }
 .stepper { display: flex; align-items: center; gap: 14px; }
 .stepper button {
   width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--color-neutral-700);

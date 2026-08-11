@@ -226,9 +226,14 @@ function slotValue(schedule: any[]): number | null {
 export function normDeviceDoc(d: any): Device | null {
   if (!d) return null;
   const oa = d.openaps || {}, loop = d.loop || {}, pump = d.pump || {}, ext = pump.extended || {};
+  const iob = num(oa.iob?.iob, loop.iob?.iob);
+  const cob = num(oa.suggested?.COB, oa.cob, loop.cob?.cob);
+  const at = d.date || (d.mills) || (d.created_at && Date.parse(d.created_at)) || null;
   return {
-    iob: num(oa.iob?.iob, loop.iob?.iob),
-    cob: num(oa.suggested?.COB, oa.cob, loop.cob?.cob),
+    iob,
+    cob,
+    // время именно РАСЧЁТА, а не документа: короткие документы от помпы его не несут
+    loopAt: (iob != null || cob != null) ? at : null,
     reservoir: num(pump.reservoir),
     pumpBattery: num(pump.battery?.percent),
     status: pump.status?.status || null,
@@ -239,7 +244,7 @@ export function normDeviceDoc(d: any): Device | null {
     uploaderBattery: num(d.uploaderBattery, d.uploader?.battery),
     loop: !!(d.openaps || d.loop),
     pump: !!(pump && (pump.reservoir != null || pump.extended || pump.status)),
-    at: d.date || (d.mills) || (d.created_at && Date.parse(d.created_at)) || null,
+    at,
     mountBattery: (() => { const v = num(ext.OrangeLinkBattery); return v != null ? Math.max(0, Math.min(100, v)) : null; })(),
     suspended: typeof ext.PumpSuspended === 'boolean' ? ext.PumpSuspended : null,
   };
@@ -258,9 +263,13 @@ export function normDeviceDoc(d: any): Device | null {
    будто активного инсулина нет вовсе.
 
    Поэтому каждое поле берём из самого свежего документа, где оно ЕСТЬ. Но не
-   старше окна: если цикл не считал уже двадцать минут, его тогдашний IOB к текущему
-   моменту не относится — инсулин за это время успел отработать. Лучше не показать
-   ничего, чем показать старое как текущее. */
+   старше окна: показатели вроде заряда моста или базовой скорости не датированы
+   отдельно, и вчерашнее значение, выданное за сегодняшнее, — это враньё.
+
+   Время расчёта цикла (loopAt) из окна ВЫВЕДЕНО намеренно: даже когда его значения
+   слишком стары, чтобы их показывать, знать, что цикл молчит сорок минут, важнее
+   всего. На этом и держится разница между «инсулина нет» и «неизвестно, сколько
+   инсулина» — см. domain/loopValue.ts. */
 const ОКНО_СБОРКИ_МС = 20 * 60e3;
 
 export function mergeDevice(старый: Device | null, новый: Device | null): Device | null {
@@ -268,7 +277,8 @@ export function mergeDevice(старый: Device | null, новый: Device | nu
   if (!старый) return новый;
   const tС = старый.at ?? 0, tН = новый.at ?? 0;
   if (tС > tН) return mergeDevice(новый, старый); // порядок аргументов не должен ничего решать
-  if (tН - tС > ОКНО_СБОРКИ_МС) return новый;
+  const loopAt = Math.max(старый.loopAt ?? 0, новый.loopAt ?? 0) || null;
+  if (tН - tС > ОКНО_СБОРКИ_МС) return { ...новый, loopAt };
   const итог: Device = { ...новый };
   for (const k of Object.keys(итог) as (keyof Device)[]) {
     if (итог[k] == null && старый[k] != null) (итог as unknown as Record<string, unknown>)[k] = старый[k];
@@ -276,6 +286,7 @@ export function mergeDevice(старый: Device | null, новый: Device | nu
   // это не показания, а признаки «такой поток вообще есть» — их складываем
   итог.loop = новый.loop || старый.loop;
   итог.pump = новый.pump || старый.pump;
+  итог.loopAt = loopAt;
   return итог;
 }
 
@@ -330,12 +341,27 @@ export async function loadTreatmentsWindow(base: string, token: string | undefin
   return (Array.isArray(raw) ? raw : []).map(normTreatment).filter((x): x is Treatment => x != null).sort((a, b) => a.t - b.t);
 }
 
-/* Берём десяток последних документов, а не один: полные (от цикла) и короткие
-   (только от помпы) идут вперемешку, и в одном самом свежем половины показателей
-   может не быть — см. mergeDevice. */
+/* Два точечных запроса вместо пачки документов.
+
+   Нужны ровно две вещи: самый свежий документ (в нём резервуар, батарея, статус)
+   и самый свежий документ ОТ ЦИКЛА (в нём активный инсулин, углеводы, базал,
+   заряд моста). Первое время я тянул десяток последних и выбирал из них — но
+   документы цикла тяжёлые, в них массивы прогнозов, и на опросе раз в минуту это
+   десятки килобайт мобильного трафика впустую.
+
+   $exists Nightscout понимает (проверено на живом сервере). Если вдруг не поймёт —
+   откатываемся на пачку: лучше лишний трафик, чем пропавший инсулин. */
 async function loadDeviceStatus(base: string, token?: string): Promise<Device | null> {
-  const raw = await getJSON(base, '/api/v1/devicestatus.json?count=10', token);
-  return normDeviceDocs(raw);
+  const [последний, отЦикла] = await Promise.all([
+    getJSON(base, '/api/v1/devicestatus.json?count=1', token),
+    getJSON(base, '/api/v1/devicestatus.json?count=1&find[openaps.iob.iob][$exists]=true', token)
+      .catch(() => null),
+  ]);
+  if (!Array.isArray(отЦикла)) {
+    const пачка = await getJSON(base, '/api/v1/devicestatus.json?count=10', token).catch(() => null);
+    return normDeviceDocs(пачка) ?? normDeviceDocs(последний);
+  }
+  return mergeDevice(normDeviceDocs(отЦикла), normDeviceDocs(последний));
 }
 
 
