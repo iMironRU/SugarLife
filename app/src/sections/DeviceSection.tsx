@@ -10,7 +10,7 @@ import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import { sourceStatusLabel, sourceStatusWarn } from '@/domain/sourceStatus';
-import { agoText } from '@/domain/units';
+import { agoText, toUnits, unitLabel } from '@/domain/units';
 import { useStore } from '@/sources/store';
 import { useChanges, type Consumable } from '@/settings/changes';
 import ChangedButton from '@/ui/ChangedButton';
@@ -25,6 +25,8 @@ const isNative = Capacitor.isNativePlatform();
 import CatalogPicker from '@/sheets/CatalogPicker';
 import { modelItems, bridgeItems, insulinItems } from '@/sheets/modelItems';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
+import SmbgSheet from '@/sheets/SmbgSheet';
+import { useSmbg } from '@/settings/smbg';
 import { useStack } from '@/app/stackCtx';
 import { toSegs, daily } from '@/domain/basal';
 
@@ -47,6 +49,9 @@ export default function DeviceSection({ onClose, cat, title }: {
   const changes = useChanges();
   const [pick, setPick] = useState<null | 'model' | 'bridge' | 'insulin' | 'battery'>(null);
   const [scanOpen, setScanOpen] = useState(false);
+  const [smbgOpen, setSmbgOpen] = useState(false);
+  const smbg = useSmbg();
+  const последнее = smbg.length ? smbg[smbg.length - 1] : null;
 
   const hasModel = cat === 'sensor' || cat === 'pump';
   // Модель не указана (§2b) — мы не знаем, нужен ли мост и вещает ли железка сама,
@@ -244,13 +249,21 @@ export default function DeviceSection({ onClose, cat, title }: {
                     {activeMeth === 'cloud' && <span className="meth-now">сейчас</span>}
                   </div>
 
-                  <div className="list-row meth" style={{ cursor: 'default' }}>
-                    <IonIcon icon={createOutline} className="list-ico muted" />
+                  {/* Ручной ввод не заменяет остальные способы, а дополняет: показание
+                      с пальца отвечает на вопрос «сенсор не врёт?», и данными самого
+                      сенсора на него не ответить. */}
+                  <button className="list-row meth" onClick={() => setSmbgOpen(true)}>
+                    <IonIcon icon={createOutline} className="list-ico" />
                     <span className="pick-main">
-                      <span className="list-title muted">Ручной ввод</span>
-                      <span className="pick-sub">в разработке · не заменяет остальные, а дополняет</span>
+                      <span className="list-title">Ручной ввод</span>
+                      <span className="pick-sub">
+                        {последнее
+                          ? `последнее: ${toUnits(последнее.mmol)} ${unitLabel()} · ${agoText(последнее.t)}`
+                          : 'внести показание глюкометра'}
+                      </span>
                     </span>
-                  </div>
+                    <IonIcon icon={chevronForward} className="list-chev" />
+                  </button>
                 </div>
                 <div className="sheet-note">
                   {needsBridge ? bridgeHint + ' ' : ''}
@@ -288,7 +301,10 @@ export default function DeviceSection({ onClose, cat, title }: {
                 <div className="loop-empty-t">{cat === 'loop' ? 'Петля' : 'Глюкометр'}</div>
                 <div className="loop-empty-s">{cat === 'loop'
                   ? 'Алгоритм замкнутого цикла (AAPS/Loop/встроенный) и статус — в разработке.'
-                  : 'Модель глюкометра и расходники (тест-полоски, ланцеты) — в разработке.'}</div>
+                  : 'Модель глюкометра и расходники (тест-полоски, ланцеты) — в разработке. Показания можно вносить уже сейчас.'}</div>
+                {cat === 'meter' && (
+                  <button className="loop-empty-btn" onClick={() => setSmbgOpen(true)}>Внести показание</button>
+                )}
               </div>
             )}
             {recordedNoModel && (
@@ -396,6 +412,24 @@ export default function DeviceSection({ onClose, cat, title }: {
               </>
             )}
 
+            {cat === 'meter' && smbg.length > 0 && (
+              <>
+                <div className="section-label sec">Последние показания</div>
+                <div className="basal-rows">
+                  {[...smbg].reverse().slice(0, 8).map((x) => (
+                    <div key={x.t} className="basal-row">
+                      <span>{new Date(x.t).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                      <b>{toUnits(x.mmol)} {unitLabel()}</b>
+                    </div>
+                  ))}
+                </div>
+                <div className="sheet-note">
+                  Эти показания не подмешиваются в ленту сенсора: с пальца точнее по крови,
+                  но реже по времени, и в расчётах диапазона вес у них был бы неправильный.
+                </div>
+              </>
+            )}
+
             {hasModel && modelName && (
               <button className="sheet-danger" onClick={onForget}>
                 <IonIcon icon={trashOutline} />
@@ -438,6 +472,7 @@ export default function DeviceSection({ onClose, cat, title }: {
             onSelect={setBridge} currentLabel="только актуальные"
           />
         )}
+        <SmbgSheet isOpen={smbgOpen} onClose={() => setSmbgOpen(false)} />
         {hasModel && hasBleDriver && (cat === 'sensor' || cat === 'pump') && (
           <DeviceScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} kind={cat} title={title} />
         )}
