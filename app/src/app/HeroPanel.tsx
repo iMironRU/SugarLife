@@ -6,6 +6,7 @@ import { useStore } from '@/sources/store';
 import { toUnits, agoText, unitLabel, useUnit, fmt, daysHoursText } from '@/domain/units';
 import { arrowChar, getCfg } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
+import { useChanges } from '@/settings/changes';
 import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
 import { syncToActiveScreen } from '@/app/panel';
 import { activeInsulin } from '@/domain/loopValue';
@@ -43,6 +44,7 @@ export default function HeroPanel() {
   useUnit(); // перерисовка при смене единиц
   const tab = useTab();
   const extras = useDeviceExtras();
+  const changes = useChanges();
   const cfg = getCfg();
 
   // онлайн/офлайн — чтобы честно показать «нет сети»
@@ -71,14 +73,25 @@ export default function HeroPanel() {
   const latest = data?.latest || null;
   const dev = data?.device || null;
 
+  /* Возраст показания — из монитора моста, а не из стора.
+
+     Число в круге мы уже берём у моста, а «сколько минут назад» считали по стору.
+     Пока мост — это шим над тем же Nightscout, разницы нет. Но с нативным ядром
+     источник глюкозы может быть другим (сенсор напрямую), и получилась бы пара
+     «свежая цифра · пятнадцать минут назад» из двух разных источников. Для экрана,
+     по которому решают, колоть ли, это недопустимо.
+     Контракт 1.7 отдаёт latestAtMs ровно для этого; фолбэк на стор — на случай
+     старого моста, который поля ещё не присылает. */
+  const latestAt = m?.latestAtMs ?? latest?.t ?? null;
+
   // Головное значение и тренд — из моста (контракт); фолбэк на стор до первого снимка.
   // m.glucose — «сырая» строка движка (может включать единицу, напр. "6.1 mmol/L" у
   // нативного скелета) — для отображения в круге используем короткое число из glucoseMmol,
   // единицу показывает соседний .hp-unit.
   const glucose = m ? (m.glucoseMmol != null ? toUnits(m.glucoseMmol) : m.glucose) : latest ? toUnits(latest.mmol) : DASH;
   const arrow = m ? (TREND_CHAR[m.trend] ?? '') : latest ? arrowChar(latest.dir) : '';
-  const ago = latest ? agoText(latest.t) : DASH;
-  const minsAgo = latest ? Math.round((Date.now() - latest.t) / 60000) : null;
+  const ago = latestAt != null ? agoText(latestAt) : DASH;
+  const minsAgo = latestAt != null ? Math.round((Date.now() - latestAt) / 60000) : null;
   const fresh = minsAgo == null ? DASH : minsAgo < 1 ? 'сейчас' : minsAgo + ' мин';
 
   const reservoir = dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : DASH;
@@ -102,20 +115,33 @@ export default function HeroPanel() {
   // последнего значения в Nightscout, чтобы видеть задержку. + офлайн.
   // Короткая форма: строка статуса теперь всегда в одну линию рядом с зарядами,
   // и «назад» в ней — лишние ~35px, из-за которых текст обрезался на узких экранах.
-  const readingAge = latest ? agoText(latest.t).replace(' назад', '') : null;
+  const readingAge = latestAt != null ? agoText(latestAt).replace(' назад', '') : null;
+  /* Живость — тоже из монитора, когда он её присылает: у ядра «живой» значит «основной
+     источник отдаёт свежее», а у стора — «сокет подключён». Второе слабее: сокет может
+     висеть подключённым и молчать. */
+  const liveNow = m?.live ?? live;
+  /* Источник ещё не отдаёт свежее: подключается, прогревается («связь есть, показаний
+     ещё нет») или отстаёт. Это состояние появилось в контракте 1.7 — до него
+     подключённый, но молчащий сенсор выглядел как обычный, и человек ждал цифру,
+     которой неоткуда взяться. */
+  const acquiring = m?.status === 'Acquiring' || m?.status === 'Connecting' || m?.status === 'Delayed';
   const syncState = !online ? 'offline'
-    : (status === 'stale' || status === 'error') ? 'stale'
-    : live ? 'live'
+    : (m?.status === 'Delayed' || status === 'stale' || status === 'error') ? 'stale'
+    : liveNow ? 'live'
     : 'poll';
   const syncMain = syncState === 'offline' ? 'нет сети'
     : syncState === 'stale' ? 'нет связи'
-    : syncState === 'live' ? 'реальное время'
+    /* Живой поток — называем ИСТОЧНИК, если мост его знает: с нативным ядром их
+       становится несколько (сенсор напрямую, Nightscout, облако производителя), и
+       «реальное время» перестаёт отвечать на вопрос «откуда это число». Сердечко
+       рядом и так говорит, что поток живой. */
+    : syncState === 'live' ? (m?.source || 'реальное время')
     : data ? 'обновлено ' + agoText(data.updatedAt)
     : 'нет данных';
   const syncWarn = syncState === 'offline' || syncState === 'stale';
 
   // датчик (день N) — слева; запас инсулина (≈N дн) — справа
-  const ages = deviceAges(extras.events);
+  const ages = deviceAges(extras.events, changes);
   /* Без настроенного источника день датчика не показываем: события замены лежат
      в локальной истории и пережили бы отключение, а «день 8» рядом с прочерками
      читается как живое состояние. Дальше см. DataGate в NotConfigured.tsx. */
@@ -189,7 +215,13 @@ export default function HeroPanel() {
           <span className="hp-circle-inner">
             <span className="hp-circle-val">
               <span className="hp-value">{glucose}</span>
-              {arrow && <span className="hp-arrow">{arrow}</span>}
+              {/* Часики вместо стрелки, пока источник не отдаёт свежее. Тренд в этот
+                  момент относится к старому показанию, и рисовать его как текущий —
+                  то же враньё, что и ноль вместо «неизвестно»: стрелка «вверх» на
+                  получасовой давности цифре читается как «растёт прямо сейчас». */}
+              {acquiring
+                ? <IonIcon className="hp-arrow hp-wait" icon={timeOutline} />
+                : arrow && <span className="hp-arrow">{arrow}</span>}
             </span>
             <span className="hp-unit">{unitLabel()}</span>
             <span className={'hp-iob' + (ai.known ? '' : ' is-unknown')} title={ai.reason ?? undefined}>{iobText}</span>

@@ -2,7 +2,7 @@ import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
 import Row from '@/ui/Row';
 import { closeOutline, searchOutline, chevronBack, lockClosedOutline } from 'ionicons/icons';
 import { useState } from 'react';
-import { REQUIREMENTS, supportLabel, categoryLabel, type RequirementEntry } from '@/domain/requirementsCatalog';
+import { REQUIREMENTS, VENDOR_CLOUDS, supportLabel, supportMark, categoryLabel, type RequirementEntry } from '@/domain/requirementsCatalog';
 
 /* Каталог требований (docs/CONNECT-UX.md §7a): для человека, у которого скан ничего не нашёл
    (устройство ещё не в эфире/не активировано) или он просто хочет узнать заранее, что нужно
@@ -44,7 +44,7 @@ export default function RequirementsCatalogSheet({ isOpen, onClose }: {
             <div className="list" style={{ marginTop: 10 }}>
               {filtered.map((r) => (
                 <Row key={r.id} title={r.name} sub={`${r.brand} · ${categoryLabel(r.category)}`}
-                  value={r.support === 'blocked' ? '⛔' : r.support === 'bridge' ? '✓ мост' : '✓'}
+                  value={supportMark(r.support)}
                   onClick={() => setPicked(r)} />
               ))}
               {!filtered.length && <div className="metric-note">Не нашли — но справочник моделей в разделе устройства шире, попробуй там.</div>}
@@ -55,12 +55,23 @@ export default function RequirementsCatalogSheet({ isOpen, onClose }: {
             <div className="list">
               <Row title="Поддержка" value={supportLabel(picked.support)} />
               <Row title="Что нужно" value={picked.requirement} />
+              {picked.vendorCloud && (
+                <Row title="Облако производителя"
+                  value={VENDOR_CLOUDS[picked.vendorCloud].name}
+                  sub={'спросит: ' + VENDOR_CLOUDS[picked.vendorCloud].asks} />
+              )}
             </div>
             {picked.support === 'blocked' ? (
               <div className="sheet-note">
                 <IonIcon icon={lockClosedOutline} style={{ verticalAlign: '-2px', marginRight: 4 }} />
                 Только мониторинг недоступен: активация этого устройства сама по себе — команда на
                 подачу инсулина, а мы читаем только то, что не требует такой команды.
+              </div>
+            ) : picked.support === 'vendorCloud' ? (
+              <div className="sheet-note">
+                Этот сенсор отдаёт данные только через облако производителя, а туда нужен вход.
+                Пароль от чужого облака мы не храним в браузере вовсе — поэтому такой сенсор
+                работает только в приложении, не на сайте.
               </div>
             ) : (
               <div className="sheet-note">

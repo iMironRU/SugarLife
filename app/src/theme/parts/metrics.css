@@ -130,6 +130,18 @@
 }
 .age-pill span { font-size: 10px; color: var(--color-neutral-400); }
 .age-pill b { font-size: 15px; font-weight: 600; }
+/* «Поменял» прямо в плитке расходника: замена случается руками в расходниках, и
+   отдельный экран подтверждения — ровно та причина, по которой человек перестаёт
+   логировать замены вообще. Защита от промаха не спереди (вопрос), а сзади (отмена). */
+.changed-btn {
+  margin-top: 6px; display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 9px; min-height: 30px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
+  color: var(--color-neutral-300); font-size: 11px; font-weight: 600; font-family: inherit;
+}
+.changed-btn ion-icon { font-size: 13px; }
+.changed-btn:active { background: var(--color-neutral-800); }
+.changed-btn.is-undo { color: var(--c-glu); border-color: color-mix(in srgb, var(--c-glu) 40%, transparent); }
 
 /* Готовность данных к разбору — шапка раздела «Аналитика».
    Стоит выше находок, потому что говорит, насколько им вообще верить. */

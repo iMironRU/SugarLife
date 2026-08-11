@@ -7,6 +7,7 @@ import {
   getCfg, loadEventsRange, loadDeviceStatusRange, loadTreatmentsRange,
   type Treatment, type DevPoint,
 } from './nightscout';
+import { putSeries } from './db';
 import { insulinDaily } from '@/domain/treatmentStats';
 
 export interface DeviceExtras {
@@ -77,6 +78,19 @@ export async function loadDeviceExtras(force = false): Promise<void> {
     if (пораСобытия) времяСобытий = now;
     if (пораРасход) { времяРасхода = now; tbКеш = tb; }
     const id = insulinDaily(tb, []);
+    /* Заряд помпы копим в своей базе. Каждую загрузку мы видим последние часы, а
+       вопрос «сколько ещё проработает на 1%» отвечается только историей за недели —
+       в облаке её за один запрос не достать. Пишем переходы значения, дубли
+       отсеиваются на стороне БД. */
+    void putSeries('battery', devHist
+      .filter((p) => p.pumpBattery != null)
+      .map((p) => ({ t: p.t, v: p.pumpBattery as number })));
+    /* Остаток в резервуаре — тем же способом. Заправку видно ТОЛЬКО по истории: это
+       переход «почти пусто → почти полный», и без сохранённого прошлого значения его
+       не отличить от обычного показания (domain/refill.ts). */
+    void putSeries('reservoir', devHist
+      .filter((p) => p.reservoir != null)
+      .map((p) => ({ t: p.t, v: p.reservoir as number })));
     extras = { events, devHist, tdd: id.tddPerDay > 5 ? id.tddPerDay : null, loaded: true, stale: false };
     saveCache();
     subs.forEach((f) => f());

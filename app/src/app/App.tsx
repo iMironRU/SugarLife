@@ -22,6 +22,7 @@ import { useTab, setTab, pressTab, getTab, TAB_PATHS } from '@/app/nav';
 import { useOnboarded } from '@/settings/onboarding';
 import { StackHost } from '@/app/stack';
 import { requestNotifyPermissionOnStart } from '@/platform/notify';
+import { startHistorySync } from '@/sources/historySync';
 
 // Порядок вкладок: 0 Метрики · 1 НМГ · 2 Сегодня · 3 Инсулин · 4 Профиль
 function Pager() {
@@ -56,6 +57,10 @@ function Pager() {
       gestureName: 'tab-pager',
       direction: 'x',
       threshold: 8,
+      /* Внутри открытого раздела горизонтальный жест значит «назад», а не «другая
+         вкладка». Иначе два жеста спорят за одно движение, и побеждает то один, то
+         другой — ровно та рваность, которую мы уже вычищали из панели. */
+      canStart: () => !document.querySelector('.pager-pane.is-active .stack-page'),
       onStart: () => {
         W = vp.clientWidth;
         base = -getTab() * W;
@@ -130,6 +135,12 @@ export default function App() {
   // Спрашиваем разрешение на уведомления сразу при старте (не ждём первого
   // реального события) — так пользователь явно видит и решает.
   useEffect(() => { requestNotifyPermissionOnStart(); }, []);
+
+  /* История НМГ у ядра единая (сенсор + Nightscout + облака), а у нас до сих пор
+     наполнялась только из Nightscout. Подписываемся на мост и тянем недостающее —
+     иначе показания сенсора, прочитанного напрямую, в историю не попадут вовсе
+     (sources/historySync.ts, SugarLifeCore#6). */
+  useEffect(() => startHistorySync(), []);
 
 
   // Если у моста уже есть данные монитора (нативный движок/драйвер) — открываем

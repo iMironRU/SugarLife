@@ -35,6 +35,12 @@
 /* Нижние страницы стека не рисуем, но и не размонтируем: возврат должен застать
    набранный адрес и раскрытую часть суток на месте. */
 .stack-page:not(.is-top) { visibility: hidden; }
+/* Пока тянут верхнюю страницу к краю, нижнюю показываем: из-под уходящей должно
+   появляться то, куда возвращаются, а не пустота (свайп «назад» в app/stack.tsx). */
+.stack-page.is-under { visibility: visible; }
+/* Во время жеста анимация появления мешает: она выставляет свой transform поверх
+   того, что ставит палец. */
+.stack-page.is-top[style*="transition"] { animation: none; }
 /* Скроллер страницы стека.
 
    Инерции у него не было: отпускаешь палец — список встаёт, приходится «подгребать».
@@ -90,3 +96,11 @@
 .sheet-close:active { background: var(--color-neutral-800); }
 .sheet-desc { font-size: 13px; color: var(--color-neutral-400); line-height: 1.5; margin: 8px 0 16px; }
 .sheet-subtitle { font-size: 11px; color: var(--color-neutral-400); margin-top: 3px; }
+
+/* Подсказка от ядра о проблеме со связью — текст пишет движок, он один знает,
+   что именно пошло не так (например, что железку держит другой телефон). */
+.sheet-note.warn {
+  color: var(--c-danger-2);
+  border-left: 2px solid var(--c-danger-2);
+  padding-left: 10px;
+}

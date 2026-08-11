@@ -153,11 +153,24 @@ function age(t: number | null): Age | null {
   return { at: t, days: Math.floor(ms / 86400000), hours: Math.floor(ms / 3600000) };
 }
 export interface DeviceAges { sensor: Age | null; site: Age | null; reservoir: Age | null; battery: Age | null; }
-export function deviceAges(events: Treatment[]): DeviceAges {
+
+/* Отметки замен, сделанные в самом приложении (settings/changes.ts). Передаются сюда,
+   а не читаются отсюда: домен не должен знать про localStorage. */
+export type ChangeMarks = Partial<Record<'sensor' | 'site' | 'reservoir' | 'battery', number>>;
+
+/* Возраст расходника — САМОЕ СВЕЖЕЕ из события Nightscout и отметки в приложении.
+
+   Не «отметка важнее события»: человек мог поменять, отметить у нас, а потом
+   залогировать и в AAPS — тогда событие придёт позже и оно же ближе к правде.
+   И не «событие важнее»: события бывает нет вовсе (проверено на живых данных — замена
+   картриджа 27.07 не оставила ни события, ни скачка значения). */
+export function deviceAges(events: Treatment[], marks: ChangeMarks = {}): DeviceAges {
+  const свежее = (t: number | null, m: number | undefined) =>
+    t == null ? (m ?? null) : m == null ? t : Math.max(t, m);
   return {
-    sensor: age(latest(events, ['Sensor Change', 'Sensor Start'])),
-    site: age(latest(events, ['Site Change'])),
-    reservoir: age(latest(events, ['Insulin Change'])),
-    battery: age(latest(events, ['Pump Battery Change'])),
+    sensor: age(свежее(latest(events, ['Sensor Change', 'Sensor Start']), marks.sensor)),
+    site: age(свежее(latest(events, ['Site Change']), marks.site)),
+    reservoir: age(свежее(latest(events, ['Insulin Change']), marks.reservoir)),
+    battery: age(свежее(latest(events, ['Pump Battery Change']), marks.battery)),
   };
 }

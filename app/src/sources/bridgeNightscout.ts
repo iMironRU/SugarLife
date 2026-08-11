@@ -2,7 +2,8 @@
    Когда появится нативный мост (оболочка/релей) — UI не меняется, просто
    getBridge() вернёт его вместо шима. Пока: живой монитор + alerts из Nightscout.
    Гэпы честно: один IOB (→ conservative), нет истории/транзакций/wiring/insights. */
-import type { SugarLifeBridge, UiSnapshot, Monitor, Trend, Link, DeviceInfo, Alert, Intent, DriverDescriptor } from './bridge';
+import type { SugarLifeBridge, UiSnapshot, Monitor, Trend, Link, DeviceView, Alert, Intent, DriverDescriptor, HistoryQuery, HistoryResult, SourceStatus } from './bridge';
+import { getSince, getTreatmentsSince } from './db';
 import { subscribeStore, getStoreState, refresh } from './store';
 import { getUnit, subscribeUnit, toUnits } from '@/domain/units';
 import { getCfg, setCfg } from './nightscout';
@@ -31,6 +32,19 @@ function linkOf(live: boolean, status: string): Link {
   }
 }
 
+/* Жизненный цикл получения данных — не то же, что состояние связи (Link).
+   Связь может быть, а показаний ещё нет (Acquiring) или они уже отстают (Delayed).
+   Порог отставания — 15 минут: сенсор пишет раз в минуту-пять, и четверть часа
+   молчания это уже не задержка сети. */
+const ОТСТАВАНИЕ_МС = 15 * 60e3;
+function sourceStatusOf(live: boolean, status: string, latestAt: number | null): SourceStatus {
+  if (status === 'off' || status === 'idle') return 'Disconnected';
+  if (status === 'loading') return 'Connecting';
+  if (latestAt == null) return 'Acquiring';
+  if (Date.now() - latestAt > ОТСТАВАНИЕ_МС || status === 'stale' || status === 'error') return 'Delayed';
+  return live ? 'Live' : 'Acquiring';
+}
+
 function buildSnapshot(): UiSnapshot {
   const st = getStoreState();
   const u = getUnit();
@@ -49,9 +63,20 @@ function buildSnapshot(): UiSnapshot {
     battery: d?.pumpBattery != null ? d.pumpBattery + '%' : '—',
     // Nightscout отдаёт один IOB → он же conservative; разложение даст ядро.
     confirmedIOB: iob, assumedIOB: 0, conservativeIOB: iob,
+    /* Время расчёта IOB (1.8). Без него три числа выше врут: цикл молчит, а мост
+       сообщает «подтверждено: инсулина ноль». Ноль в contract — единственное
+       представимое значение, поэтому читатель обязан свериться со временем.
+       У нас оно есть: Device.loopAt — штамп документа, где реально был openaps.iob. */
+    iobAtMs: d?.loopAt ?? null,
+    // rev 1.7: единая картина основного источника — раньше возраст показания
+    // каждый экран считал сам, и «свежо ли» у всех получалось по-своему
+    live: st.live,
+    status: sourceStatusOf(st.live, st.status, latest?.t ?? null),
+    latestAtMs: latest?.t ?? null,
+    source: cfg?.url ? 'Nightscout' : null,
   };
 
-  const devices: DeviceInfo[] = cfg?.url ? [{
+  const devices: DeviceView[] = cfg?.url ? [{
     id: 'nightscout', name: 'Nightscout', kind: 'service',
     roles: ['GlucoseSource', 'PumpStateSource', 'DeliveryHistorySource'],
     connection: link, capabilities: { trust: 'Relayed', read: 'true' },
@@ -82,7 +107,7 @@ function buildSnapshot(): UiSnapshot {
   }];
 
   return {
-    bridgeRevision: '1.5', monitor, devices, insights: null, pendingWrites: [], alerts,
+    bridgeRevision: '1.7', monitor, devices, insights: null, pendingWrites: [], alerts,
     scanning: false, discovered: [], availableDrivers, logging: null,
   };
 }
@@ -124,8 +149,35 @@ async function sendIntent(i: Intent): Promise<{ accepted: boolean; error?: strin
   }
 }
 
+/* История для графиков (rev ≥ 1.1). Шим отдаёт её из локальной IndexedDB — той самой,
+   куда он же складывает всё, что приходит из Nightscout. Ходить за окном истории в сеть
+   не надо: она уже лежит рядом, и это единственный источник правды по истории в
+   приложении (sources/db.ts). */
+async function query(q: HistoryQuery): Promise<HistoryResult> {
+  const внутри = <T extends { t: number }>(xs: T[]) => xs.filter((x) => x.t >= q.fromMs && x.t < q.toMs);
+  const нужнаГлюкоза = q.kind === 'Glucose' || q.kind === 'Both';
+  const нужноЛечение = q.kind === 'Treatments' || q.kind === 'Both';
+
+  const entries = нужнаГлюкоза ? внутри(await getSince(q.fromMs)) : [];
+  const treatments = нужноЛечение ? внутри(await getTreatmentsSince(q.fromMs)) : [];
+
+  /* Прореживание — равномерное по индексу, а не «каждая N-я по времени»: у графика
+     важна форма кривой, а в истории есть пропуски, и по времени они дали бы рваный шаг. */
+  const шаг = q.maxPoints && entries.length > q.maxPoints ? Math.ceil(entries.length / q.maxPoints) : 1;
+  const глюкоза = шаг > 1 ? entries.filter((_, i) => i % шаг === 0) : entries;
+
+  return {
+    glucose: глюкоза.map((e) => ({ atMs: e.t, mmol: e.mmol, source: 'nightscout', trend: e.dir ?? null })),
+    treatments: treatments.map((t) => ({
+      atMs: t.t, kind: t.type, amount: t.insulin ?? t.carbs ?? 0,
+      evidence: 'Reported', source: 'nightscout',
+    })),
+  };
+}
+
 export const nightscoutBridge: SugarLifeBridge = {
-  bridgeRevision: '1.5',
+  bridgeRevision: '1.7',
+  query,
   subscribe(cb) {
     ensureStarted();
     cbs.add(cb);

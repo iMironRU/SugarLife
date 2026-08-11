@@ -74,3 +74,12 @@
 .an-s { font-size: 11.5px; color: var(--color-neutral-400); text-wrap: pretty; }
 .an-go { display: flex; align-items: center; padding-right: 16px; }
 .an-go ion-icon { font-size: 18px; color: var(--color-neutral-500); }
+
+/* Проактивный вопрос внутри подсветки: спросить дешевле, чем заставлять искать,
+   где это исправить (принцип «проактивные вопросы вместо ретроактивных правок»). */
+.alert-ask { display: block; margin-top: 8px; }
+.alert-ask .changed-btn { margin-top: 6px; }
+
+/* Два ответа в строку: «да» и «нет» — равноправные, а не кнопка с отменой. */
+.alert-ask-row { display: flex; gap: 8px; }
+.alert-ask-row .changed-btn { margin-top: 6px; }

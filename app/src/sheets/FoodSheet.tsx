@@ -1,30 +1,77 @@
 import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
-import { closeOutline, restaurantOutline, nutritionOutline, searchOutline, removeOutline, addOutline, lockClosed } from 'ionicons/icons';
-import { useState } from 'react';
-import { useStore, useWritable } from '@/sources/store';
-import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS } from '@/domain/units';
+import { closeOutline, nutritionOutline, removeOutline, addOutline, timeOutline, waterOutline, searchOutline, sparklesOutline } from 'ionicons/icons';
+import { useEffect, useState } from 'react';
+import { useStore } from '@/sources/store';
+import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS, plural } from '@/domain/units';
+import { addMeal, useMeals } from '@/sources/mealStore';
+import { СМЕЩЕНИЯ } from '@/domain/meals';
+import { searchFoods, personalFoods, CAT_LABEL, CAT_ORDER, type Food } from '@/domain/foods';
 
-const DASH = '—';
 const MEALS = ['Завтрак', 'Обед', 'Ужин', 'Перекус'];
 
-/* Шторка «Еда» (запись приёма пищи) — по макету. Пока ввод в Nightscout не
-   настроен (нет токена на запись), сверху честная пометка, а «Сохранить»
-   неактивна. Данные (углеводы) реальные из ввода; Б/Ж/ккал — прочерки. */
+/* Внести приём пищи.
+
+   Кнопка «Сохранить» больше не заблокирована отсутствием токена. Раньше она ждала
+   права записи в Nightscout — то есть ввод еды зависел от чужого сервера, и без него
+   человек не мог записать даже себе. Теперь приём ложится в свою базу сразу и живёт
+   там; куда он поедет дальше — вопрос доставки, а не ввода (domain/meals.ts).
+
+   Время спрашиваем. Активные углеводы считаются от момента ЕДЫ, и «съел полчаса назад»,
+   записанное как «сейчас», сдвигает всю кривую вместе с расчётом дозы. Поэтому рядом
+   быстрые смещения: это один тап, а не выбор даты в календаре.
+
+   Дозу не подставляем в поле. Прикидку болюса показываем — она полезна, — но вписать
+   её за человека значит принять решение о дозе за него. */
 export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { data } = useStore();
-  const writable = useWritable();
   const ic = data?.profile?.ic ?? 8;
 
-  const cu = useCarbUnit(); // граммы/Х.Е. — carbs храним в граммах, показываем в выбранных
+  const cu = useCarbUnit();
   const [carbs, setCarbs] = useState(30);
-  const [mode, setMode] = useState<'carbs' | 'dish'>('carbs');
-  const [meal, setMeal] = useState(1); // Обед по умолчанию
+  const [назад, setНазад] = useState(0); // сколько минут назад ели
+  const [meal, setMeal] = useState(1);
+  const [insulin, setInsulin] = useState('');
+  const [сохранено, setСохранено] = useState(false);
+  const [запрос, setЗапрос] = useState('');
+  const [выбрано, setВыбрано] = useState<string | null>(null);
+
+  const meals = useMeals();
+  const своё = personalFoods(meals);
+  const найдено = searchFoods(запрос);
+
+  // открыли заново — начинаем с чистого листа, а не с прошлых цифр
+  useEffect(() => {
+    if (isOpen) { setCarbs(30); setНазад(0); setInsulin(''); setСохранено(false); setЗапрос(''); setВыбрано(null); }
+  }, [isOpen]);
+
+  /* Выбор пресета не «применяет» его, а подставляет опорную точку: углеводы попадают в
+     тот же степпер, который человек тут же правит. Иначе получилось бы, что справочник
+     решает за него, а справочник у нас — оценка, а не измерение. */
+  const выбрать = (id: string, carbs: number) => {
+    setВыбрано(id);
+    setCarbs(carbs);
+  };
 
   const mealBolus = carbs > 0 ? fmt(carbs / ic) : '0';
-  const step = cu === 'xe' ? XE_GRAMS : 5; // шаг: 1 Х.Е. или 5 г
+  const step = cu === 'xe' ? XE_GRAMS : 5;
   const clabel = carbUnitLabel(cu);
-  // соотношение углеводы↔инсулин в выбранных единицах
   const ratio = cu === 'xe' ? `1 Х.Е. ≈ ${fmt(XE_GRAMS / ic)} ед` : `КУ 1 ед / ${fmt(ic)} г`;
+
+  const дозаЧисло = Number(insulin.replace(',', '.'));
+  const доза = insulin.trim() !== '' && Number.isFinite(дозаЧисло) && дозаЧисло > 0 ? дозаЧисло : undefined;
+  const годно = carbs > 0 || доза != null;
+
+  const сохранить = async () => {
+    if (!годно) return;
+    await addMeal({
+      t: Date.now() - назад * 60e3,
+      carbs,
+      insulin: доза,
+      kind: MEALS[meal],
+    });
+    setСохранено(true);
+    window.setTimeout(onClose, 700); // дать увидеть подтверждение, а не захлопнуть
+  };
 
   return (
     <IonModal isOpen={isOpen} onDidDismiss={onClose} initialBreakpoint={0.9} breakpoints={[0, 0.9]} handle>
@@ -37,39 +84,19 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
           <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
         </div>
 
-        {/* честная пометка: запись пока недоступна */}
-        {!writable && (
-          <div className="food-warn">
-            <IonIcon icon={lockClosed} />
-            <span>Нет токена на запись в Nightscout — приём не сохранится. Пока только просмотр.</span>
-          </div>
-        )}
-
-        {/* сводка приёма */}
         <div className="food-summary">
           <div className="fs-left">
             <div className="fs-cap">Углеводы</div>
             <div className="fs-carbs">{toCarbs(carbs, cu)}<span>{clabel}</span></div>
           </div>
           <div className="fs-macros">
-            <div><span className="fs-mk">Б</span><span className="fs-mv">{DASH}</span></div>
-            <div><span className="fs-mk">Ж</span><span className="fs-mv">{DASH}</span></div>
-            <div><span className="fs-mk">ккал</span><span className="fs-mv">{DASH}</span></div>
+            <div><span className="fs-mk">Б</span><span className="fs-mv">—</span></div>
+            <div><span className="fs-mk">Ж</span><span className="fs-mv">—</span></div>
+            <div><span className="fs-mk">ккал</span><span className="fs-mv">—</span></div>
           </div>
         </div>
         <div className="food-bolus">Болюс на еду: {mealBolus} ед · {ratio}</div>
 
-        {/* режим ввода */}
-        <div className="food-modes">
-          <button className={'food-mode' + (mode === 'carbs' ? ' on' : '')} onClick={() => setMode('carbs')}>
-            <IonIcon icon={nutritionOutline} />Углеводами
-          </button>
-          <button className={'food-mode' + (mode === 'dish' ? ' on' : '')} onClick={() => setMode('dish')}>
-            <IonIcon icon={restaurantOutline} />По блюду
-          </button>
-        </div>
-
-        {/* приём пищи */}
         <div className="food-label">Приём пищи</div>
         <div className="food-meals">
           {MEALS.map((m, i) => (
@@ -77,30 +104,91 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
           ))}
         </div>
 
-        {/* ввод углеводов / поиск блюда */}
-        {mode === 'carbs' ? (
-          <div className="food-stepper">
-            <span>Углеводы</span>
-            <div className="stepper">
-              <button onClick={() => setCarbs((c) => Math.max(0, c - step))}><IonIcon icon={removeOutline} /></button>
-              <b>{toCarbs(carbs, cu)}<i>{clabel}</i></b>
-              <button onClick={() => setCarbs((c) => Math.min(300, c + step))}><IonIcon icon={addOutline} /></button>
-            </div>
-          </div>
-        ) : (
+        {/* Выбор вместо пустого поля. Своё — первым: люди едят одно и то же, и
+            собственные цифры точнее любого справочника. */}
+        {своё.length > 0 && !запрос && (
           <>
-            <div className="food-label">Блюдо</div>
-            <div className="field" aria-disabled="true" style={{ opacity: 0.6 }}>
-              <IonIcon icon={searchOutline} className="field-ico" />
-              <IonInput placeholder="Найти блюдо" disabled />
+            <div className="food-label"><IonIcon icon={sparklesOutline} /> Ваше обычное</div>
+            <div className="food-picks">
+              {своё.slice(0, 6).map((p) => (
+                <button key={p.id} className={'food-pick' + (выбрано === p.id ? ' on' : '')}
+                  onClick={() => выбрать(p.id, p.carbs)}>
+                  <b>{p.kind}</b>
+                  <span>{toCarbs(p.carbs, cu)} {clabel} · {p.count} {plural(p.count, 'раз', 'раза', 'раз')}</span>
+                </button>
+              ))}
             </div>
-            <div className="metric-note">Каталог блюд появится позже.</div>
           </>
         )}
 
-        {/* сохранить — неактивна пока нет записи в Nightscout */}
-        <button className="food-save" disabled>Сохранить приём</button>
-        {!writable && <div className="food-save-note">Кнопка станет активной, когда добавим токен на запись и ввод еды.</div>}
+        <div className="food-label"><IonIcon icon={searchOutline} /> Из справочника</div>
+        <div className="field">
+          <IonIcon icon={searchOutline} className="field-ico" />
+          <IonInput value={запрос} placeholder="Найти приём, блюдо или напиток"
+            onIonInput={(e) => setЗапрос(e.detail.value ?? '')} />
+        </div>
+        <div className="food-cats">
+          {(запрос ? [найдено] : CAT_ORDER.map((c) => найдено.filter((f) => f.cat === c))).map((группа, i) => (
+            группа.length === 0 ? null : (
+              <div key={i} className="food-cat">
+                {!запрос && <div className="food-cat-cap">{CAT_LABEL[CAT_ORDER[i]]}</div>}
+                <div className="food-picks">
+                  {группа.map((f: Food) => (
+                    <button key={f.id} className={'food-pick' + (выбрано === f.id ? ' on' : '')}
+                      onClick={() => выбрать(f.id, f.carbs)}>
+                      <b>{f.name}</b>
+                      <span>
+                        ≈ {toCarbs(f.carbs, cu)} {clabel}{f.portion ? ' · ' + f.portion : ''}
+                      </span>
+                      {f.slow && <i className="food-slow">жирное · усвоится позже</i>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          ))}
+        </div>
+        <div className="food-save-note" style={{ textAlign: 'left', margin: '2px 2px 14px' }}>
+          Значения в справочнике — типовые, не измеренные. Это опорная точка, чтобы не
+          начинать с пустого поля: поправь под свою тарелку прямо ниже.
+        </div>
+
+        <div className="food-stepper">
+          <span><IonIcon icon={nutritionOutline} /> Углеводы</span>
+          <div className="stepper">
+            <button onClick={() => setCarbs((c) => Math.max(0, c - step))} aria-label="Меньше"><IonIcon icon={removeOutline} /></button>
+            <b>{toCarbs(carbs, cu)}<i>{clabel}</i></b>
+            <button onClick={() => setCarbs((c) => Math.min(300, c + step))} aria-label="Больше"><IonIcon icon={addOutline} /></button>
+          </div>
+        </div>
+
+        {/* Когда ели. Спрашиваем всегда: от этого времени считаются активные углеводы,
+            и запись задним числом — обычное дело, а не исключение. */}
+        <div className="food-label"><IonIcon icon={timeOutline} /> Когда ели</div>
+        <div className="food-meals">
+          {СМЕЩЕНИЯ.map((с) => (
+            <button key={с.label} className={'food-meal' + (назад === с.ms / 60e3 ? ' on' : '')}
+              onClick={() => setНазад(с.ms / 60e3)}>
+              {с.ms === 0 ? с.label : с.label + ' назад'}
+            </button>
+          ))}
+        </div>
+
+        {/* Дозу вводит человек. Прикидка выше — подсказка, а не подставленное значение:
+            вписать её за него значит принять решение о дозе за него. */}
+        <div className="food-label"><IonIcon icon={waterOutline} /> Болюс, ед — если уже вводили</div>
+        <div className="field">
+          <IonInput value={insulin} type="text" inputmode="decimal" placeholder="не вводили"
+            onIonInput={(e) => setInsulin(e.detail.value ?? '')} />
+        </div>
+
+        <button className="food-save" disabled={!годно || сохранено} onClick={сохранить}>
+          {сохранено ? 'Записано' : 'Сохранить приём'}
+        </button>
+        <div className="food-save-note">
+          Записывается в приложение и учитывается сразу. В Nightscout пока не уходит —
+          выгрузку сделаем отдельно, запись от этого не потеряется.
+        </div>
       </IonContent>
     </IonModal>
   );

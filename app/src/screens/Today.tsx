@@ -1,13 +1,22 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { AnalyticsSection } from '@/sections/lazy';
-import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, sparklesOutline, chevronForward } from 'ionicons/icons';
+import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, sparklesOutline, chevronForward } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/sources/store';
-import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt } from '@/domain/units';
+import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt, agoText } from '@/domain/units';
 import { reportContentScroll } from '@/app/panel';
 import { activeCarbs } from '@/domain/loopValue';
+import ChangedButton from '@/ui/ChangedButton';
+import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
+import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
 import { reservoirStats } from '@/domain/treatmentStats';
+import { batteryRuntime, BATTERY_KINDS } from '@/domain/battery';
+import { detectRefill } from '@/domain/refill';
+import { onlyLocal } from '@/domain/meals';
+import { useMeals } from '@/sources/mealStore';
+import type { Plateau } from '@/domain/plateau';
+import { getSeries, onDbChange } from '@/sources/db';
 import { useCloseOnLeave } from '@/app/nav';
 import { notify } from '@/platform/notify';
 import FoodSheet from '@/sheets/FoodSheet';
@@ -30,6 +39,9 @@ const isPaused = (s?: string | null) => {
   return l.includes('приостан') || l.includes('пауза') || l.includes('suspend') || l.includes('stop');
 };
 
+const часы = (h: number) => (h < 24 ? Math.round(h) + ' ч' : Math.round(h / 24 * 10) / 10 + ' сут');
+const замен = (n: number) => (n === 1 ? 'замене' : 'заменам');
+
 export default function Today() {
   const { data } = useStore();
   useUnit(); // перерисовка при смене единиц
@@ -42,13 +54,49 @@ export default function Today() {
 
   // общие расширенные данные (грузит панель) — события/резервуар
   const extras = useDeviceExtras();
+  const cfg = useDeviceConfig();
+  const changes = useChanges();
+  const meals = useMeals();
   const rstat = reservoirStats(extras.devHist);
+  /* История заряда копится в своей базе: в облаке за один запрос доступны последние
+     часы, а один цикл разряда занимает недели (sources/db.ts, putBatteryPoints). */
+  const [bhist, setBhist] = useState<Plateau[]>([]);
+  const [rhist, setRhist] = useState<Plateau[]>([]);
+  useEffect(() => {
+    let жив = true;
+    const читать = () => {
+      void getSeries('battery').then((x) => { if (жив) setBhist(x); });
+      void getSeries('reservoir').then((x) => { if (жив) setRhist(x); });
+    };
+    читать();
+    const off = onDbChange(читать);
+    return () => { жив = false; off(); };
+  }, []);
+
+  /* Заправка картриджа: переход «почти пусто → почти полный». Признак чистый (см.
+     domain/refill.ts), но отмечаем не молча, а спрашиваем — молчаливая отметка по
+     эвристике ошибается незаметно, а вопрос ошибается дёшево. */
+  const заправка = detectRefill(rhist);
+  const спроситьЗаправку = заправка != null
+    && заправка.at > askedRefill()
+    && заправка.at > (changes.reservoir ?? 0);
+  const bstat = batteryRuntime(bhist.map((x) => ({ t: x.t, reservoir: null, pumpBattery: x.v, uploaderBattery: null })));
+  /* Тип батарейки объясняет, почему у соседа те же 20% значат другое. Не задан —
+     молчим: догадываться о химии по цифрам мы не умеем. */
+  const kind = BATTERY_KINDS.find((b) => b.id === cfg.pumpBatteryKind) ?? null;
+  const kindNote = kind ? `Батарейка ${kind.name.toLowerCase()}: ${kind.note}.` : null;
 
   // углеводы за сегодня (с локальной полуночи)
   const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
   const todayCarbs = extras.events.filter((e) => (e.carbs ?? 0) > 0 && e.t >= dayStart.getTime());
-  const dayCarbs = Math.round(todayCarbs.reduce((a, b) => a + (b.carbs || 0), 0));
-  const mealCount = todayCarbs.length;
+  /* Свои записи считаем вместе с облачными, но без задвоения: когда выгрузка появится,
+     наш же приём вернётся из Nightscout, и без склейки он посчитался бы дважды —
+     а задвоенные углеводы это задвоенная доза (domain/meals.ts). */
+  const свои = onlyLocal(meals, extras.events).filter((m) => m.t >= dayStart.getTime());
+  const dayCarbs = Math.round(
+    todayCarbs.reduce((a, b) => a + (b.carbs || 0), 0) + свои.reduce((a, b) => a + b.carbs, 0),
+  );
+  const mealCount = todayCarbs.length + свои.length;
   /* Активные углеводы тоже считает цикл, а не помпа: когда он молчит, это
      «неизвестно», а не «ноль». Прочерк плюс причина — см. domain/loopValue.ts. */
   const ac = activeCarbs(dev);
@@ -103,7 +151,13 @@ export default function Today() {
   const nowH = new Date().getHours();
   const daytime = nowH >= 8 && nowH < 23;
   const carbEvents = extras.events.filter((e) => (e.carbs ?? 0) > 0);
-  const lastCarbT = carbEvents.length ? carbEvents[carbEvents.length - 1].t : null;
+  /* «Еды не вносили N ч» и «похоже, поел без записи» должны замолкать от НАШЕЙ записи
+     тоже — иначе человек внесёт приём в приложении, а мы продолжим ему выговаривать,
+     что он ничего не внёс. */
+  const lastCarbT = Math.max(
+    carbEvents.length ? carbEvents[carbEvents.length - 1].t : 0,
+    meals.length ? meals[meals.length - 1].t : 0,
+  ) || null;
   const hoursSinceCarb = lastCarbT != null ? (Date.now() - lastCarbT) / 3600e3 : null;
 
   const es = data?.entries ?? [];
@@ -256,13 +310,57 @@ export default function Today() {
             </div>
           )}
 
-          {/* батарея помпы на дне */}
+          {/* Батарея на дне. Главное здесь — не пугать процентом: помпа не показывает
+              ноль вовсе, и «1%» означает не «выключится сейчас». Сколько именно
+              осталось, знает только собственная история человека, поэтому если циклов
+              мы ещё не видели — так и говорим, а не подставляем чужую цифру. */}
           {batteryLow && (
             <div className="today-alert warn">
               <IonIcon icon={batteryDeadOutline} />
               <div>
                 <b>Батарея помпы {battery}%</b>
-                <span>Помпа не показывает ноль — {battery}% это уже дно шкалы. Поработает ещё, но батарейку стоит поменять при случае и носить запасную.</span>
+                <span>
+                  {bstat.floorPct != null
+                    ? `Помпа не показывает ноль: ниже ${bstat.floorPct}% она не опускается. `
+                    : 'Помпа не показывает ноль, поэтому процент занижает запас. '}
+                  {bstat.medianHours != null
+                    ? `После ${bstat.floorPct}% в прошлые разы протягивала ${часы(bstat.medianHours)} — медиана по ${bstat.cycles} ${замен(bstat.cycles)}.`
+                    : 'Сколько ещё протянет, пока сказать не можем: замен с полной историей не набралось. Носи запасную.'}
+                  {kindNote && ` ${kindNote}`}
+
+                </span>
+                <span className="alert-ask">
+                  Поставил новую?
+                  <ChangedButton what="battery" label="Поменял батарейку" />
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Вопрос о заправке. Идёт выше прочих подсветок: остальные сообщают, а этот
+              просит подтвердить — и пока не подтвердили, возраст резервуара неверен. */}
+          {спроситьЗаправку && заправка && (
+            <div className="today-alert">
+              <IonIcon icon={waterOutline} />
+              <div>
+                <b>Похоже, ты заправил картридж</b>
+                <span>
+                  Остаток поднялся с {Math.round(заправка.from)} до {Math.round(заправка.to)} ед {agoText(заправка.at)}.
+                  В Nightscout события об этом нет, поэтому спрашиваем: отметить замену резервуара?
+                </span>
+                <span className="alert-ask alert-ask-row">
+                  <button className="changed-btn is-undo" onClick={() => { markChanged('reservoir', заправка.at); markRefillAsked(заправка.at); }}>
+                    Да, заправил
+                  </button>
+                  <button className="changed-btn" onClick={() => markRefillAsked(заправка.at)}>Нет</button>
+                </span>
+                {/* Отдельным вопросом: скачок остатка говорит про КАРТРИДЖ. Набор часто
+                    меняют вместе с ним, но не всегда, а признака смены набора в данных
+                    нет вовсе — поэтому только спрашиваем, а не выводим. */}
+                <span className="alert-ask">
+                  Заодно и инфузионный набор поменял?
+                  <ChangedButton what="site" label="Да, и набор" />
+                </span>
               </div>
             </div>
           )}
@@ -274,6 +372,14 @@ export default function Today() {
               <div>
                 <b>Резервуар не меняется {Math.round(rstat.flatHours)} ч</b>
                 <span>А помпа не на паузе — инсулин должен расходоваться. Проверь подачу (окклюзия, катетер, датчик резервуара).</span>
+                {/* Проактивный вопрос вместо ретроактивной правки: у этого залипания
+                    есть вторая, гораздо более частая причина — картридж поменяли, а
+                    помпа этого не показала. Спросить дешевле, чем заставлять человека
+                    искать, где это исправить. */}
+                <span className="alert-ask">
+                  Или ты уже поменял, а помпа не заметила?
+                  <ChangedButton what="reservoir" label="Поменял резервуар" />
+                </span>
               </div>
             </div>
           )}

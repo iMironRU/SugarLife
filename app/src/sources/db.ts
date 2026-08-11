@@ -3,15 +3,29 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import { useEffect, useState } from 'react';
 import type { Entry, Treatment } from './nightscout';
+import { compressPlateaus, type Plateau } from '@/domain/plateau';
+import type { Meal } from '@/domain/meals';
 
 let dbp: Promise<IDBPDatabase> | null = null;
 function db() {
   if (!dbp) {
-    dbp = openDB('sugarlife', 2, {
+    dbp = openDB('sugarlife', 5, {
       upgrade(d) {
         if (!d.objectStoreNames.contains('entries')) d.createObjectStore('entries', { keyPath: 't' });
         // лечение: ключ [t, type] — как дедуп в сторе (temp basal по циклам, болюсы/углеводы)
         if (!d.objectStoreNames.contains('treatments')) d.createObjectStore('treatments', { keyPath: ['t', 'type'] });
+        /* Заряд помпы во времени. Отдельным хранилищем и только ПЕРЕХОДЫ значения,
+           а не каждый замер: смысл несёт момент, когда процент изменился, а замеров
+           приходит по одному в минуту. За девяносто дней это сотни строк вместо
+           сотен тысяч — и только так можно накопить историю, которой в облаке уже
+           не достать: там за один запрос доступны последние часы. */
+        if (!d.objectStoreNames.contains('battery')) d.createObjectStore('battery', { keyPath: 't' });
+        // остаток в резервуаре — тем же способом: заправку видно только по истории
+        if (!d.objectStoreNames.contains('reservoir')) d.createObjectStore('reservoir', { keyPath: 't' });
+        /* Приёмы пищи, внесённые в приложении. В IndexedDB, а не в localStorage:
+           это не настройка, а данные человека — они переживут и объём, и то, что
+           когда-нибудь поедут в облако (domain/meals.ts). */
+        if (!d.objectStoreNames.contains('meals')) d.createObjectStore('meals', { keyPath: 'id' });
       },
     });
   }
@@ -192,4 +206,52 @@ export function useTreatments(windowMs: number, { paused = false, minRefreshMs =
     return () => { cancel = true; off(); };
   }, [windowMs, paused, minRefreshMs]);
   return ts;
+}
+
+
+/* --- Заряд помпы: накопление истории переходов ---
+
+   Зачем вообще хранить. Вопрос «сколько ещё проработает» отвечается только собственной
+   историей человека, а её негде взять: Nightscout за разумный запрос отдаёт последние
+   часы, и одного цикла разряда там не увидеть. Значит копим сами — по крупицам, из тех
+   же данных, которые и так грузим.
+
+   Храним края плато, а не каждый замер: сжатие живёт в домене (compressPlateaus) —
+   там же, где считается смысл, и там же покрыто тестом. */
+export type Series = 'battery' | 'reservoir';
+
+export async function putSeries(store: Series, points: Plateau[]) {
+  if (!points.length) return;
+  const d = await db();
+  const было = await d.getAll(store) as Plateau[];
+  const стало = compressPlateaus([...было, ...points]);
+  if (стало.length === было.length && стало.every((x, i) => было[i]?.t === x.t)) return;
+
+  const tx = d.transaction(store, 'readwrite');
+  await tx.store.clear();
+  for (const p of стало) tx.store.put(p);
+  await tx.done;
+  bump();
+}
+
+export async function getSeries(store: Series): Promise<Plateau[]> {
+  const d = await db();
+  return (await d.getAll(store)) as Plateau[];
+}
+
+
+/* --- Приёмы пищи --- */
+export async function putMeal(m: Meal) {
+  const d = await db();
+  await d.put('meals', m);
+  bump();
+}
+export async function getMeals(): Promise<Meal[]> {
+  const d = await db();
+  return ((await d.getAll('meals')) as Meal[]).sort((a, b) => a.t - b.t);
+}
+export async function removeMeal(id: string) {
+  const d = await db();
+  await d.delete('meals', id);
+  bump();
 }

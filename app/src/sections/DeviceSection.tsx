@@ -1,12 +1,19 @@
-import { IonIcon } from '@ionic/react';
+import { IonIcon, IonToggle } from '@ionic/react';
 import { BasalProfileSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
 import PageHead from '@/ui/PageHead';
-import { chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
+import { chevronForward, batteryHalfOutline, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
-import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
-import { useSnapshot } from '@/sources/bridge';
+import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
+import ParamsForm from '@/ui/ParamsForm';
+import { pumpSpec, missingParams } from '@/domain/driverParams';
+import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
+import { useSnapshot, sendIntent } from '@/sources/bridge';
+import { sourceStatusLabel, sourceStatusWarn } from '@/domain/sourceStatus';
+import { agoText, toUnits, unitLabel } from '@/domain/units';
 import { useStore } from '@/sources/store';
+import { useChanges, type Consumable } from '@/settings/changes';
+import ChangedButton from '@/ui/ChangedButton';
 import { useDeviceExtras } from '@/sources/deviceExtras';
 import { deviceAges, type Age } from '@/domain/treatmentStats';
 import { fmt } from '@/domain/units';
@@ -18,6 +25,8 @@ const isNative = Capacitor.isNativePlatform();
 import CatalogPicker from '@/sheets/CatalogPicker';
 import { modelItems, bridgeItems, insulinItems } from '@/sheets/modelItems';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
+import SmbgSheet from '@/sheets/SmbgSheet';
+import { useSmbg } from '@/settings/smbg';
 import { useStack } from '@/app/stackCtx';
 import { toSegs, daily } from '@/domain/basal';
 
@@ -37,8 +46,12 @@ export default function DeviceSection({ onClose, cat, title }: {
   const cfg = useDeviceConfig();
   const { data } = useStore();
   const extras = useDeviceExtras();
-  const [pick, setPick] = useState<null | 'model' | 'bridge' | 'insulin'>(null);
+  const changes = useChanges();
+  const [pick, setPick] = useState<null | 'model' | 'bridge' | 'insulin' | 'battery'>(null);
   const [scanOpen, setScanOpen] = useState(false);
+  const [smbgOpen, setSmbgOpen] = useState(false);
+  const smbg = useSmbg();
+  const последнее = smbg.length ? smbg[smbg.length - 1] : null;
 
   const hasModel = cat === 'sensor' || cat === 'pump';
   // Модель не указана (§2b) — мы не знаем, нужен ли мост и вещает ли железка сама,
@@ -84,7 +97,7 @@ export default function DeviceSection({ onClose, cat, title }: {
     type Row = { k: string; v: string };
     const rows: Row[] = [];
 
-    const ages = deviceAges(extras.events);
+    const ages = deviceAges(extras.events, changes);
     if (cat === 'sensor' && ages.sensor) {
       rows.push({ k: 'День', v: String(ages.sensor.days + 1) });
       rows.push({ k: 'Носится', v: ageText(ages.sensor) });
@@ -98,12 +111,33 @@ export default function DeviceSection({ onClose, cat, title }: {
       if (dev?.lastBolus != null) rows.push({ k: 'Последний болюс', v: fmt(dev.lastBolus) + ' ед' });
     }
     // расходники со сроками (§9) — пока только у помпы, из событий замен в Nightscout
+    /* Расходники со сроками (§9). Ключ рядом с названием — чтобы отметить замену
+       прямо здесь: событие в Nightscout может не появиться вовсе (проверено на живых
+       данных), и тогда возраст врёт молча. */
     const sup = cat === 'pump'
-      ? ([['Канюля', ages.site], ['Резервуар', ages.reservoir], ['Батарея', ages.battery]] as [string, Age | null][])
-        .filter((x): x is [string, Age] => !!x[1])
+      ? ([['Канюля', ages.site, 'site'], ['Резервуар', ages.reservoir, 'reservoir'], ['Батарея', ages.battery, 'battery']] as [string, Age | null, Consumable][])
+        .filter((x): x is [string, Age, Consumable] => !!x[1])
+      : cat === 'sensor'
+      ? ([['Датчик', ages.sensor, 'sensor']] as [string, Age | null, Consumable][])
+        .filter((x): x is [string, Age, Consumable] => !!x[1])
       : [];
     return { stateRows: rows, supplies: sup };
-  }, [cat, extras.events, dev]);
+  }, [cat, extras.events, dev, changes]);
+
+  /* Параметры драйвера (§7a): у радио-Medtronic это серийник и частота 868/916.
+     Рисуем универсальной формой по спеке — экрана «настройки такой-то помпы» нет и не будет
+     (см. ui/ParamsForm.tsx). Пустая спека = блока просто нет, и это нормальное состояние:
+     у современных помп и у всех мостов настраивать нечего. */
+  const spec = cat === 'pump' ? pumpSpec(pump) : null;
+  const params = cfg.deviceParams[cat] ?? {};
+  const paramsMissing = missingParams(spec, params);
+
+  /* Телеметрия моста — то, что мост рассказывает о себе сам. Это НЕ настройки:
+     у OrangeLink и MiaoMiao пользовательских параметров нет вовсе, а заряд, прошивка и
+     RSSI есть. Пока натива нет, единственный реальный источник — Nightscout: AAPS кладёт
+     заряд OrangeLink в pump.extended.OrangeLinkBattery. Чего не знаем — не рисуем. */
+  const bridgeTelemetry: { k: string; v: string }[] = [];
+  if (bridge && dev?.mountBattery != null) bridgeTelemetry.push({ k: 'Заряд моста', v: dev.mountBattery + '%' });
 
   const modelIcon = cat === 'pump' ? flash : hardwareChipOutline;
   const setModel = (id: string) => setDeviceConfig(cat === 'pump' ? { pumpId: id } : { sensorId: id });
@@ -128,9 +162,16 @@ export default function DeviceSection({ onClose, cat, title }: {
      и при живом сенсоре.
      Выбора активного способа здесь намеренно нет — сначала честная картина того, что
      есть; приоритет и резерв при обрыве решаем отдельно. */
-  const bleLive = (snap?.devices ?? []).some(
-    (d) => d.kind === cat && (d.connection === 'Connected' || d.connection === 'Streaming'),
-  );
+  /* Живое устройство из снимка моста — с ним и работаем дальше: у него есть статус,
+     возраст показания, подсказка и тумблер авто-подключения (контракт 1.7).
+     В браузере его нет вовсе: Nightscout-шим отдаёт только сервис, не железку. */
+  const ble = (snap?.devices ?? []).find((d) => d.kind === cat) ?? null;
+  const bleLive = ble?.connection === 'Connected' || ble?.connection === 'Streaming';
+  /* Что мост рассказывает о себе сам (1.7). Чего не прислал — не рисуем: пустая
+     строка «Последнее показание —» хуже отсутствующей, она выглядит как поломка. */
+  const bleStatus = sourceStatusLabel(ble?.status);
+  const bleAge = ble?.latestAtMs != null ? agoText(ble.latestAtMs) : null;
+
   const activeMeth: 'direct' | 'cloud' | null = bleLive ? 'direct' : nsFeed ? 'cloud' : null;
   const needsBridge = cat === 'pump' ? pumpNeedsBridge(pump) : !!sensor?.needsBridge;
 
@@ -208,13 +249,21 @@ export default function DeviceSection({ onClose, cat, title }: {
                     {activeMeth === 'cloud' && <span className="meth-now">сейчас</span>}
                   </div>
 
-                  <div className="list-row meth" style={{ cursor: 'default' }}>
-                    <IonIcon icon={createOutline} className="list-ico muted" />
+                  {/* Ручной ввод не заменяет остальные способы, а дополняет: показание
+                      с пальца отвечает на вопрос «сенсор не врёт?», и данными самого
+                      сенсора на него не ответить. */}
+                  <button className="list-row meth" onClick={() => setSmbgOpen(true)}>
+                    <IonIcon icon={createOutline} className="list-ico" />
                     <span className="pick-main">
-                      <span className="list-title muted">Ручной ввод</span>
-                      <span className="pick-sub">в разработке · не заменяет остальные, а дополняет</span>
+                      <span className="list-title">Ручной ввод</span>
+                      <span className="pick-sub">
+                        {последнее
+                          ? `последнее: ${toUnits(последнее.mmol)} ${unitLabel()} · ${agoText(последнее.t)}`
+                          : 'внести показание глюкометра'}
+                      </span>
                     </span>
-                  </div>
+                    <IonIcon icon={chevronForward} className="list-chev" />
+                  </button>
                 </div>
                 <div className="sheet-note">
                   {needsBridge ? bridgeHint + ' ' : ''}
@@ -232,6 +281,14 @@ export default function DeviceSection({ onClose, cat, title }: {
                     valueMuted={!insulin} onClick={() => setPick('insulin')} />
                 )}
                 {cat === 'pump' && (
+                  /* Тип батарейки — не украшение: процент заряда без него не отвечает
+                     на вопрос «успею ли до утра» (domain/battery.ts). */
+                  <Row icon={batteryHalfOutline} title="Батарейка"
+                    value={batteryKindName(cfg.pumpBatteryKind) ?? 'выбрать'}
+                    valueMuted={!cfg.pumpBatteryKind}
+                    onClick={() => setPick('battery')} />
+                )}
+                {cat === 'pump' && (
                   <Row icon={pulseOutline} title="Базальный профиль"
                     value={basalTotal != null ? basalTotal.toFixed(2) + ' ЕД/сут' : 'нет данных'}
                     valueMuted={basalTotal == null}
@@ -244,7 +301,10 @@ export default function DeviceSection({ onClose, cat, title }: {
                 <div className="loop-empty-t">{cat === 'loop' ? 'Петля' : 'Глюкометр'}</div>
                 <div className="loop-empty-s">{cat === 'loop'
                   ? 'Алгоритм замкнутого цикла (AAPS/Loop/встроенный) и статус — в разработке.'
-                  : 'Модель глюкометра и расходники (тест-полоски, ланцеты) — в разработке.'}</div>
+                  : 'Модель глюкометра и расходники (тест-полоски, ланцеты) — в разработке. Показания можно вносить уже сейчас.'}</div>
+                {cat === 'meter' && (
+                  <button className="loop-empty-btn" onClick={() => setSmbgOpen(true)}>Внести показание</button>
+                )}
               </div>
             )}
             {recordedNoModel && (
@@ -257,6 +317,67 @@ export default function DeviceSection({ onClose, cat, title }: {
               <div className="sheet-note">
                 В помпе один быстрый инсулин — он идёт и на базал, и на болюс.
               </div>
+            )}
+
+            {spec && modelKnown && (
+              <>
+                <ParamsForm title="Параметры помпы" spec={spec} values={params}
+                  onChange={(k, v) => setParam(cat, k, v)} />
+                <div className="sheet-note">
+                  {paramsMissing.length
+                    ? 'Без этого прямое чтение по радио не заработает: ' + paramsMissing.map((p) => p.title.toLowerCase()).join(', ') + '.'
+                    : 'Понадобится приложению для чтения помпы по радио. Через Nightscout данные идут и без этого.'}
+                </div>
+              </>
+            )}
+
+            {ble && (bleStatus || bleAge || ble.note || ble.autoConnect != null) && (
+              <>
+                <div className="section-label sec">Связь</div>
+                {(bleStatus || bleAge) && (
+                  <div className="basal-rows">
+                    {bleStatus && (
+                      <div className="basal-row">
+                        <span>Состояние</span>
+                        <b className={sourceStatusWarn(ble.status) ? 'val-warn' : undefined}>{bleStatus}</b>
+                      </div>
+                    )}
+                    {bleAge && <div className="basal-row"><span>Последнее показание</span><b>{bleAge}</b></div>}
+                  </div>
+                )}
+                {/* Подсказка от ядра — например, что железку держит другой телефон.
+                    Текст пишет движок: он один знает, что именно пошло не так. */}
+                {ble.note && <div className="sheet-note warn">{ble.note}</div>}
+                {ble.autoConnect != null && (
+                  <div className="list">
+                    <div className="list-row">
+                      <IonIcon icon={bluetoothOutline} className="list-ico" />
+                      <span className="pick-main">
+                        <span className="list-title">Подключаться автоматически</span>
+                        <span className="pick-sub">при запуске приложения</span>
+                      </span>
+                      <IonToggle checked={ble.autoConnect}
+                        onIonChange={(e) => sendIntent({ type: 'setAutoConnect', deviceId: ble.id, autoConnect: e.detail.checked })} />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {bridgeTelemetry.length > 0 && (
+              <>
+                <div className="section-label sec">Мост</div>
+                <div className="basal-rows">
+                  {bridgeTelemetry.map((r) => (
+                    <div key={r.k} className="basal-row"><span>{r.k}</span><b>{r.v}</b></div>
+                  ))}
+                </div>
+                <div className="sheet-note">
+                  Настраивать в мосте нечего — это транспорт. Серийник и частота относятся
+                  к помпе за ним. Прошивку, уровень сигнала и проверку связи покажем, когда
+                  приложение начнёт читать мост напрямую.
+                </div>
+              </>
             )}
 
             {/* Состояние — только то, что реально знаем; пустых строк не рисуем.
@@ -275,9 +396,36 @@ export default function DeviceSection({ onClose, cat, title }: {
               <>
                 <div className="section-label sec">Расходники</div>
                 <div className="sensor-ages sensor-ages-solo">
-                  {supplies.map(([name, a]) => (
-                    <div key={name} className="age-pill"><span>{name}</span><b>{ageText(a!)}</b></div>
+                  {supplies.map(([name, a, key]) => (
+                    <div key={name} className="age-pill">
+                      <span>{name}</span>
+                      <b>{ageText(a)}</b>
+                      <ChangedButton what={key} />
+                    </div>
                   ))}
+                </div>
+                <div className="sheet-note">
+                  Возраст считается по событиям из Nightscout, а их может не быть: замена,
+                  не залогированная в AAPS, не оставляет следа вовсе. Поменял — отметь здесь,
+                  это никуда не отправляется и живёт только на этом устройстве.
+                </div>
+              </>
+            )}
+
+            {cat === 'meter' && smbg.length > 0 && (
+              <>
+                <div className="section-label sec">Последние показания</div>
+                <div className="basal-rows">
+                  {[...smbg].reverse().slice(0, 8).map((x) => (
+                    <div key={x.t} className="basal-row">
+                      <span>{new Date(x.t).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                      <b>{toUnits(x.mmol)} {unitLabel()}</b>
+                    </div>
+                  ))}
+                </div>
+                <div className="sheet-note">
+                  Эти показания не подмешиваются в ленту сенсора: с пальца точнее по крови,
+                  но реже по времени, и в расчётах диапазона вес у них был бы неправильный.
                 </div>
               </>
             )}
@@ -307,6 +455,15 @@ export default function DeviceSection({ onClose, cat, title }: {
             currentLabel="только актуальные быстрые"
           />
         )}
+        {cat === 'pump' && (
+          <CatalogPicker
+            isOpen={pick === 'battery'} onClose={() => setPick(null)}
+            title="Батарейка помпы" subtitle="От химии зависит, что значит процент заряда"
+            items={BATTERY_KINDS.map((b) => ({ id: b.id, title: b.name, subtitle: b.note, current: true }))}
+            selectedId={cfg.pumpBatteryKind}
+            onSelect={(id) => setDeviceConfig({ pumpBatteryKind: id as BatteryKind })}
+          />
+        )}
         {hasBridge && (
           <CatalogPicker
             isOpen={pick === 'bridge'} onClose={() => setPick(null)}
@@ -315,6 +472,7 @@ export default function DeviceSection({ onClose, cat, title }: {
             onSelect={setBridge} currentLabel="только актуальные"
           />
         )}
+        <SmbgSheet isOpen={smbgOpen} onClose={() => setSmbgOpen(false)} />
         {hasModel && hasBleDriver && (cat === 'sensor' || cat === 'pump') && (
           <DeviceScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} kind={cat} title={title} />
         )}
