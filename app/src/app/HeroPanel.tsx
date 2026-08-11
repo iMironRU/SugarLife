@@ -8,7 +8,6 @@ import { arrowChar, getCfg } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
 import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
 import { usePanelLevel, setPanelLevel, useOverlayOpen } from '@/app/panel';
-import { resetPanelGesture } from '@/app/panelGesture';
 import { useSnapshot } from '@/sources/bridge';
 import CircleSparkline from '@/charts/CircleSparkline';
 
@@ -66,7 +65,7 @@ export default function HeroPanel() {
     : (level >= 1 ? 'is-line' : 'is-compact');
 
   // при переходе на другой экран панель разворачивается заново (сброс прокрутки и жеста)
-  useEffect(() => { resetPanelGesture(); setPanelLevel(0); }, [tab]);
+  useEffect(() => { setPanelLevel(0); }, [tab]); // новая вкладка — панель разворачивается заново
 
   // панель — владелец загрузки расширенных данных (датчик/резервуар/расход)
   useEffect(() => {
@@ -143,8 +142,25 @@ export default function HeroPanel() {
     const el = ref.current;
     if (!el) return;
     const корень = document.documentElement;
+    /* Измеряем ЦЕЛЕВУЮ высоту, а не ту, что видна сейчас.
+
+       Высоту панели меняют сразу несколько переходов (padding, высота ряда,
+       max-height внутренностей). В момент смены состояния разметка ещё показывает
+       прежнюю высоту, и замер давал старое число: переменная застревала на 184,
+       пока панель уже была 124. Липкая полоса на «Метриках» из-за этого залипала
+       ниже панели, и между ними просвечивало содержимое.
+
+       Поэтому на один кадр гасим переходы, читаем конечную высоту и возвращаем их.
+       Читать getBoundingClientRect всё равно приходится синхронно, так что лишней
+       раскладки это не стоит. */
     const текущая = () => {
+      /* Гасим переходы у ВСЕГО поддерева, а не только у самой панели: высоту задаёт
+         внутренний ряд, и у него собственный переход по height. Первая версия
+         отключала только padding самой панели — и продолжала мерить кадр анимации:
+         переменная застревала на 182, пока панель уже была 124. */
+      el.classList.add('is-measuring');
       const h = Math.round(el.getBoundingClientRect().height);
+      el.classList.remove('is-measuring');
       корень.style.setProperty('--sl-panel-h', h + 'px');
       return h;
     };

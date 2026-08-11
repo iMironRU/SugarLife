@@ -43,6 +43,10 @@ ion-content { --background: var(--color-bg); }
 .tab span { font-size: 10px; }
 .tab.on { color: var(--color-accent); }
 
+/* На один кадр гасим все переходы внутри панели, чтобы измерить её КОНЕЧНУЮ высоту:
+   иначе замер попадает на середину анимации (см. HeroPanel). */
+.hero-panel.is-measuring, .hero-panel.is-measuring * { transition: none !important; }
+
 .hero-panel {
   position: absolute; top: 0; left: 0; right: 0; z-index: 10;
   /* один тайминг на все части панели — иначе они разъезжаются во времени и

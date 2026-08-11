@@ -43,12 +43,16 @@
    главном потоке, без переноса импульса. Три свойства ниже — ровно то, чем
    отличается ionic-скроллер, а не украшение. */
 .stack-body {
-  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: none;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
   padding: calc(var(--sl-panel-rest, var(--sl-panel-h, 0px)) + 6px) 18px 26px;
   -webkit-overflow-scrolling: touch;
   will-change: scroll-position;
   transform: translateZ(0);
 }
+/* Один лишний пиксель содержимого: без него короткая страница не прокручивается
+   вовсе, а значит и не пружинит — iOS включает резинку только у прокручиваемого.
+   Тем же приёмом пользуется сам Ionic (forceOverscroll). */
+.stack-body::after { content: ''; display: block; height: 1px; }
 .stack-page > .page-foot { flex: 0 0 auto; }
 
 .sheet::part(scroll) { padding: 6px 18px 26px; }

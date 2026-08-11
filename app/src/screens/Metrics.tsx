@@ -85,7 +85,7 @@ export default function Metrics() {
 
   return (
     <IonPage>
-      <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
+      <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
           <DataGate>
           {/* Переключатели периода и метрики липнут под панелью: на длинных экранах

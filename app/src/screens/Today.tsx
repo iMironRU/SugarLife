@@ -147,7 +147,7 @@ export default function Today() {
 
   return (
     <IonPage>
-      <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
+      <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen">
           <DataGate>
           {/* панель углеводов (по макету): Б/Ж/У · активные · Еда.

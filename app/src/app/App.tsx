@@ -1,5 +1,5 @@
 import { IonApp, IonIcon, createGesture } from '@ionic/react';
-import { Suspense, lazy, useCallback, useEffect, useRef } from 'react';
+import { Suspense, lazy, useEffect, useRef } from 'react';
 import { barChart, pulse, home, water, personCircle, medkit } from 'ionicons/icons';
 
 import Today from '@/screens/Today';
@@ -20,7 +20,6 @@ import { useSnapshot } from '@/sources/bridge';
 import { detectTherapy } from '@/domain/therapy';
 import { useTab, setTab, getTab, TAB_PATHS } from '@/app/nav';
 import { useOnboarded } from '@/settings/onboarding';
-import { attachPanelGesture } from '@/app/panelGesture';
 import { StackHost } from '@/app/stack';
 import { requestNotifyPermissionOnStart } from '@/platform/notify';
 
@@ -123,7 +122,6 @@ function TabBar({ insIcon }: { insIcon: string }) {
 }
 
 export default function App() {
-  const detachPanel = useRef<null | (() => void)>(null);
   const { data, status } = useStore();
   const snap = useSnapshot();
   const onboarded = useOnboarded();
@@ -133,16 +131,6 @@ export default function App() {
   // реального события) — так пользователь явно видит и решает.
   useEffect(() => { requestNotifyPermissionOnStart(); }, []);
 
-  /* Вертикальный жест сворачивания панели — на ВСЕЙ оболочке, а не только на области
-     контента: тянуть за саму панель естественнее, а на «Сегодня» контента мало и
-     тянуть внутри него часто не за что.
-     Именно ref-КОЛБЭК, а не useEffect: на первом рендере вместо оболочки может быть
-     лоадер или онбординг, и эффект с пустыми зависимостями привязался бы к пустоте
-     и больше никогда не повторился. */
-  const shellRef = useCallback((el: HTMLDivElement | null) => {
-    detachPanel.current?.();
-    detachPanel.current = el ? attachPanelGesture(el) : null;
-  }, []);
 
   // Если у моста уже есть данные монитора (нативный движок/драйвер) — открываем
   // основной UI, даже без Nightscout. В браузере без нативного моста мост = Nightscout-
@@ -158,7 +146,7 @@ export default function App() {
 
   return (
     <IonApp>
-      <div className="app-shell" ref={shellRef}>
+      <div className="app-shell">
         <HeroPanel />
         <Pager />
         <TabBar insIcon={insIcon} />

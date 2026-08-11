@@ -40,7 +40,7 @@ export default function Ins() {
 
   return (
     <IonPage>
-      <IonContent fullscreen forceOverscroll={false} scrollEvents onIonScroll={reportContentScroll}>
+      <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
           <DataGate>
           {isPen ? (
