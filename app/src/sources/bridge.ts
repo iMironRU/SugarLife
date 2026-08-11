@@ -172,7 +172,7 @@ export interface SugarLifeBridge {
 }
 
 // Запрос истории через активный мост (undefined, если мост не поддерживает).
-export function queryHistory(q: HistoryQuery): Promise<HistoryResult> | undefined {
+export function queryHistory(q: HistoryQuery): Promise<HistoryResult> {
   return getBridge().query(q);
 }
 

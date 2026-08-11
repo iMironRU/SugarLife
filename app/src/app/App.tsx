@@ -22,6 +22,7 @@ import { useTab, setTab, pressTab, getTab, TAB_PATHS } from '@/app/nav';
 import { useOnboarded } from '@/settings/onboarding';
 import { StackHost } from '@/app/stack';
 import { requestNotifyPermissionOnStart } from '@/platform/notify';
+import { startHistorySync } from '@/sources/historySync';
 
 // Порядок вкладок: 0 Метрики · 1 НМГ · 2 Сегодня · 3 Инсулин · 4 Профиль
 function Pager() {
@@ -130,6 +131,12 @@ export default function App() {
   // Спрашиваем разрешение на уведомления сразу при старте (не ждём первого
   // реального события) — так пользователь явно видит и решает.
   useEffect(() => { requestNotifyPermissionOnStart(); }, []);
+
+  /* История НМГ у ядра единая (сенсор + Nightscout + облака), а у нас до сих пор
+     наполнялась только из Nightscout. Подписываемся на мост и тянем недостающее —
+     иначе показания сенсора, прочитанного напрямую, в историю не попадут вовсе
+     (sources/historySync.ts, SugarLifeCore#6). */
+  useEffect(() => startHistorySync(), []);
 
 
   // Если у моста уже есть данные монитора (нативный движок/драйвер) — открываем
