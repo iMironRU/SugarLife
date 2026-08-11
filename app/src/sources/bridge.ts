@@ -1,7 +1,17 @@
-/* Контракт интеграции PWA ↔ система (см. документ). PWA — представление: читает
-   UiSnapshot через мост и шлёт Intent. Мост — либо нативный (window.SugarLifeBridge,
-   ставит оболочка/релей), либо наш Nightscout-шим (bridgeNightscout) в браузере.
-   ВАЖНО: sendIntent подтверждает только ПРИЁМ действия, не выполнение. */
+/* Контракт интеграции PWA ↔ система. PWA — представление: читает UiSnapshot через мост
+   и шлёт Intent. Мост — либо нативный (window.SugarLifeBridge, ставит оболочка/релей),
+   либо наш Nightscout-шим (bridgeNightscout) в браузере.
+   ВАЖНО: sendIntent подтверждает только ПРИЁМ действия, не выполнение.
+
+   Ревизия 1.7. Это не наш черновик, а слепок канонического контракта ядра
+   (SugarLifeCore, docs/bridge-contract-1.7.d.ts) — источник правды там, здесь копия.
+   Расхождение обходится дорого, поэтому правило: сначала согласовать в
+   docs/CONTRACT-REQUESTS.md, потом менять здесь. Наши три запроса (время расчёта IOB,
+   реестр записей, вендор-аккаунты) приняты и войдут в 1.8 аддитивно.
+
+   Имена: каноническое имя проекции устройства — DeviceView; DeviceInfo оставлен
+   алиасом, потому что так её звал веб и так она названа в половине наших экранов.
+   На проводе имени типа нет, важна структура. */
 import { useEffect, useState } from 'react';
 import { nightscoutBridge } from './bridgeNightscout';
 import { getCfg } from './nightscout';
@@ -11,11 +21,26 @@ export interface Monitor {
   glucose: string; glucoseMmol: number | null; trend: Trend; link: Link;
   reservoir: string; battery: string;
   confirmedIOB: number; assumedIOB: number; conservativeIOB: number;
+  /* rev ≥ 1.7. Единая картина основного источника глюкозы: отдаёт ли он свежее,
+     на какой стадии жизненного цикла находится, когда пришло новейшее показание и
+     кто он вообще. До этого возраст показания каждый экран считал сам. */
+  live?: boolean;
+  status?: SourceStatus;
+  latestAtMs?: number | null;
+  source?: string | null;
+  /* rev ≥ 1.8 (принято, SugarLifeCore#1). Когда цикл в последний раз считал IOB.
+     Без него три числа выше не умеют сказать «неизвестно», и ноль читается как
+     «инсулина нет» — см. domain/loopValue.ts. */
+  iobAtMs?: number | null;
 }
 export type Trend =
   | 'RisingRapidly' | 'Rising' | 'RisingSlowly' | 'Stable'
   | 'FallingSlowly' | 'Falling' | 'FallingRapidly' | 'Unknown' | '—';
 export type Link = 'Disconnected' | 'Connecting' | 'Connected' | 'Streaming' | 'Error';
+/* rev ≥ 1.7: единый статус ЛЮБОГО источника глюкозы — это жизненный цикл получения
+   данных, а не состояние BLE-линка (Link). Сенсор может быть Connected и при этом
+   Acquiring: связь есть, показаний ещё нет. */
+export type SourceStatus = 'Disconnected' | 'Connecting' | 'Acquiring' | 'Live' | 'Delayed';
 
 export type ParamType = 'Text' | 'Secret' | 'Number' | 'Bool' | 'Enum';
 export interface Param {
@@ -26,18 +51,36 @@ export interface SettingsSpec { parameters: Param[]; }
 
 export type SessionState = 'WarmingUp' | 'Active' | 'Expiring' | 'Expired' | 'Stopped' | 'Failed' | 'Unknown';
 
-export interface DeviceInfo {
+/* Проекция устройства — read-only. Каноническое имя DeviceView (так зовётся в движке),
+   DeviceInfo — исторический алиас веба, та же сущность. */
+export interface DeviceView {
   id: string; name: string; kind: 'sensor' | 'pump' | 'service';
-  roles: string[]; connection: Link | string;
+  roles: string[];
+  /* ТОЛЬКО живой линк. Жизненный цикл записи в реестре (записано / настроено / забыто)
+     сюда не помещается и придёт в 1.8 как registryState + driverId (SugarLifeCore#2);
+     до тех пор он живёт у нас в settings/deviceConfig.ts. */
+  connection: Link | string;
   capabilities: Record<string, string>;
+  /* Самоописание параметров драйвера. У мостов (OrangeLink, MiaoMiao) он ПУСТОЙ, и это
+     нормальное состояние: транспорту нечего настраивать, серийник и частота помпы
+     принадлежат драйверу помпы за мостом (SugarLifeCore#4). Рисуется ui/ParamsForm. */
   settings: SettingsSpec;
   admittedInput: boolean; admittedOutput: boolean; testable: boolean;
   // rev ≥ 1.3: мультисенсор — сессия, тайминги, «основной» источник монитора
   sessionState?: SessionState | null;
   warmupEndsAtMs?: number | null;
-  expiresAtMs?: number | null;
+  expiresAtMs?: number | null;   // реальный конец (у части сенсоров дольше официального)
+  officialEndMs?: number | null; // официальный срок — для «день N из 14»
   primary?: boolean;
+  // rev ≥ 1.7
+  live?: boolean;
+  status?: SourceStatus;
+  latestAtMs?: number | null;
+  autoConnect?: boolean;
+  note?: string | null;          // подсказка, напр. «возможно, занят другим телефоном»
 }
+/** Историческое имя той же сущности — оставлено, чтобы не переписывать экраны. */
+export type DeviceInfo = DeviceView;
 export interface Insights { mode: 'Observe' | 'Advisory' | 'ClosedLoop'; messages: string[]; }
 export interface PendingWrite { id: string; description: string; state: string; needsAttention: boolean; }
 
@@ -65,8 +108,9 @@ export interface DriverDescriptor {
 
 export interface UiSnapshot {
   bridgeRevision: string;
+  coreCommit?: string; // штамп коммита ядра — сверка идентичности сборок Android/iOS
   monitor: Monitor;
-  devices: DeviceInfo[];
+  devices: DeviceView[];
   insights: Insights | null;
   pendingWrites: PendingWrite[];
   alerts: Alert[];
@@ -88,6 +132,7 @@ export type Intent =
   | { type: 'addDevice'; driverType: string; params: Record<string, string>; mode?: 'attach' | 'activate' }
   | { type: 'connect'; deviceId: string }
   | { type: 'disconnect'; deviceId: string }
+  | { type: 'setAutoConnect'; deviceId: string; autoConnect: boolean }   // rev ≥ 1.7
   | { type: 'testDevice'; deviceId: string }
   | { type: 'setParams'; deviceId: string; params: Record<string, string> }
   | { type: 'setWiring'; deviceId: string; asInput: boolean; asOutput: boolean }
@@ -105,20 +150,30 @@ export type Intent =
   | { type: 'setLogLevel'; level: 'Trace' | 'Debug' | 'Info' | 'Warn' | 'Error' }
   | { type: 'setLogCapture'; file: boolean | null; raw: boolean | null }
   | { type: 'exportLog' }
-  | { type: 'sendReport'; errorId: string };
+  | { type: 'sendReport'; errorId: string }
+  /* rev ≥ 1.6: облачный хаб САМОГО пользователя (Nightscout) — читаем и пишем.
+     Это НЕ вендор-аккаунт: у чужого облака производителя своя сущность Account
+     (1.8, SugarLifeCore#3), и мешать их в один список нельзя. */
+  | { type: 'addCloudSource'; url: string; token?: string | null; streams?: Array<'glucose' | 'pump' | 'treatments'> }
+  // rev ≥ 1.7: бэкап конфига и истории в облако пользователя (пережить переустановку)
+  | { type: 'configureBackup'; provider: 's3' | 'webdav'; params: Record<string, string> }
+  | { type: 'backup' }
+  | { type: 'restore' }
+  | { type: 'releaseBle' };                                              // rev ≥ 1.7
 
 export interface SugarLifeBridge {
   bridgeRevision: string;
   subscribe(cb: (s: UiSnapshot) => void): () => void;
   requestSnapshot(): Promise<UiSnapshot>;
   sendIntent(i: Intent): Promise<{ accepted: boolean; error?: string }>;
-  // rev ≥ 1.1: окно истории для графиков (опционально — Nightscout-шим может не иметь)
-  query?(q: HistoryQuery): Promise<HistoryResult>;
+  // rev ≥ 1.1: окно истории для графиков. В 1.7 обязателен — Nightscout-шим отдаёт
+  // историю из локальной IndexedDB, так что необязательным его держать больше незачем.
+  query(q: HistoryQuery): Promise<HistoryResult>;
 }
 
 // Запрос истории через активный мост (undefined, если мост не поддерживает).
 export function queryHistory(q: HistoryQuery): Promise<HistoryResult> | undefined {
-  return getBridge().query?.(q);
+  return getBridge().query(q);
 }
 
 declare global {
