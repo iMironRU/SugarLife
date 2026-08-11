@@ -120,6 +120,11 @@ export default function HeroPanel() {
      источник отдаёт свежее», а у стора — «сокет подключён». Второе слабее: сокет может
      висеть подключённым и молчать. */
   const liveNow = m?.live ?? live;
+  /* Источник ещё не отдаёт свежее: подключается, прогревается («связь есть, показаний
+     ещё нет») или отстаёт. Это состояние появилось в контракте 1.7 — до него
+     подключённый, но молчащий сенсор выглядел как обычный, и человек ждал цифру,
+     которой неоткуда взяться. */
+  const acquiring = m?.status === 'Acquiring' || m?.status === 'Connecting' || m?.status === 'Delayed';
   const syncState = !online ? 'offline'
     : (m?.status === 'Delayed' || status === 'stale' || status === 'error') ? 'stale'
     : liveNow ? 'live'
@@ -210,7 +215,13 @@ export default function HeroPanel() {
           <span className="hp-circle-inner">
             <span className="hp-circle-val">
               <span className="hp-value">{glucose}</span>
-              {arrow && <span className="hp-arrow">{arrow}</span>}
+              {/* Часики вместо стрелки, пока источник не отдаёт свежее. Тренд в этот
+                  момент относится к старому показанию, и рисовать его как текущий —
+                  то же враньё, что и ноль вместо «неизвестно»: стрелка «вверх» на
+                  получасовой давности цифре читается как «растёт прямо сейчас». */}
+              {acquiring
+                ? <IonIcon className="hp-arrow hp-wait" icon={timeOutline} />
+                : arrow && <span className="hp-arrow">{arrow}</span>}
             </span>
             <span className="hp-unit">{unitLabel()}</span>
             <span className={'hp-iob' + (ai.known ? '' : ' is-unknown')} title={ai.reason ?? undefined}>{iobText}</span>
