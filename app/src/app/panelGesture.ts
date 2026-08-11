@@ -16,15 +16,13 @@
    жест мог не доходить до вебвью, и панель не тянулась ни на iOS, ни на Android,
    хотя синтетические события в отладке проходили. Pointer покрывает палец, мышь и
    стилус одинаково. */
-import { setCollapse } from './panel';
 
 const MAX_PULL = 110;     // предел упругого сдвига, дальше палец «упирается»
 const SLOP = 4;           // до этого движение ещё не жест, а дрожание пальца
 const BACK_MS = 320;      // возврат после отпускания
 
-let collapse = 0;         // «насколько ушли от верха» — то же, что scrollTop у прокрутки
 
-export function resetPanelGesture(): void { collapse = 0; }
+export function resetPanelGesture(): void { /* состояние сворачивания живёт в panel.ts */ }
 
 const activePane = (): HTMLElement | null => document.querySelector('.pager-pane.is-active');
 
@@ -77,7 +75,6 @@ export function attachPanelGesture(el: HTMLElement): () => void {
   let startY = 0;
   let startTop = 0;
   let room = 0;
-  let base = 0;
   let onPanel = false;
   let screen: HTMLElement | null = null;
   let mode: null | 'pull' | 'scroll' = null;
@@ -91,7 +88,6 @@ export function attachPanelGesture(el: HTMLElement): () => void {
     startY = e.clientY;
     startTop = scroller?.scrollTop ?? 0;
     room = scroller ? scroller.scrollHeight - scroller.clientHeight : 0;
-    base = collapse;
     onPanel = !!(e.target as Element | null)?.closest?.('.hero-panel');
     mode = null;
     setPull(screen, 0, false); // снять анимацию возврата, если ещё идёт
@@ -114,18 +110,18 @@ export function attachPanelGesture(el: HTMLElement): () => void {
     if (mode === 'scroll') return;
 
     setPull(screen, elastic(dy), false);
-    // тянут вверх — сворачиваем; тянут вниз от самого верха — разворачиваем обратно
-    if (dy < 0) setCollapse(base - dy);
-    else if (startTop <= 0) { collapse = 0; setCollapse(0); }
+    /* Сворачивать панель пальцем больше не даём — только настоящей прокруткой.
+
+       Панель теперь висит над содержимым, и отступ у скроллера равен её высоте
+       в покое. Когда прокручивать нечего (а на «Сегодня» почти нечего), сворачивание
+       по жесту оставляло на месте панели пустую дыру: панель ушла, а содержимое
+       осталось стоять. Прокрутка такого не создаёт — там место освобождается ровно
+       потому, что содержимое уехало вверх. */
   };
 
   const onUp = (e: PointerEvent) => {
     if (id !== e.pointerId) return;
-    if (mode === 'pull') {
-      const dy = e.clientY - startY;
-      if (dy < 0) collapse = Math.max(0, base - dy);
-      setPull(screen, 0, true); // контент всегда возвращается на место
-    }
+    if (mode === 'pull') setPull(screen, 0, true); // контент всегда возвращается на место
     mode = null; id = null; screen = null;
   };
 
