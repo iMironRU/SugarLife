@@ -74,3 +74,22 @@
 - «Забыто» — переход, а не состояние: в `registryState` не держим. Но просили, чтобы `removeDevice`
   был идемпотентен и чтобы запись не воскресала сама из потока данных, иначе кнопка «Забыть» не работает.
 - Пустой `SettingsSpec` — корректное состояние: карточка просто без блока настроек.
+
+## Синхронность на 11.08.2026
+
+**Совпадает:** типы 1.7 целиком (`app/src/sources/bridge.ts` = слепок ядра), имя `DeviceView`
+с алиасом, обязательный `query()`, `region`/`serial` у драйвера помпы, пустая спека у мостов,
+`Secret` только на запись, Nightscout как отдельный механизм.
+
+**Ждём от ядра (1.8):** `Monitor.iobAtMs`, `DeviceView.registryState`/`driverId`, интент
+`recordDevice`, `UiSnapshot.accounts[]` + `availableCloudProviders`, интенты
+`linkAccount`/`unlinkAccount`, tombstone у `removeDevice`, телеметрия моста
+(`batteryPct`/`firmware`/`rssi`) вместе с их задачей #18 «мост — первоклассное устройство».
+
+**Держим локально, помечено ссылками на issue:** состояние реестра (`settings/deviceConfig.ts`
+→ core#2), спека radio-Medtronic (`domain/driverParams.ts` → core#4), вид `vendorCloud` в
+каталоге требований (→ core#3), время расчёта IOB (`Device.loopAt` → core#1). Всё это
+заменяется источником, а не переписывается.
+
+**Забегаем вперёд намеренно:** `Monitor.iobAtMs` уже объявлен и заполняется шимом — поле
+принято, необязательное, старых читателей не ломает, а без него монитор врёт нулём.
