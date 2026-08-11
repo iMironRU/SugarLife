@@ -4,6 +4,7 @@
    ВАЖНО: sendIntent подтверждает лишь приём действия, не выполнение (см. bridge.ts). */
 import { registerPlugin, Capacitor } from '@capacitor/core';
 import type { SugarLifeBridge, UiSnapshot, Intent, HistoryQuery, HistoryResult } from '@/sources/bridge';
+import { getCfg } from '@/sources/nightscout';
 
 interface NativePlugin {
   requestSnapshot(): Promise<{ json: string }>;
@@ -50,4 +51,16 @@ if (Capacitor.isNativePlatform()) {
     },
   };
   window.SugarLifeBridge = bridge;
+
+  // Миграция NS-конфига из localStorage в движок: движок сам поднимет облачный источник (glucose/pump/
+  // treatments) и его снимок понесёт реальные данные — тогда getBridge отдаёт нативный движок, а не NS-шим.
+  // Идемпотентно по флагу. (Дальше движок владеет NS сам, персистит в свою БД.)
+  const cfg = getCfg();
+  if (cfg?.enabled && cfg.url && !localStorage.getItem('sl-ns-migrated')) {
+    void bridge.sendIntent({
+      type: 'addCloudSource', url: cfg.url, token: cfg.token || null,
+      streams: ['glucose', 'pump', 'treatments'],
+    });
+    localStorage.setItem('sl-ns-migrated', '1');
+  }
 }
