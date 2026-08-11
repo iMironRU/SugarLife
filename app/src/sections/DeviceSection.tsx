@@ -11,6 +11,8 @@ import { useSnapshot, sendIntent } from '@/sources/bridge';
 import { sourceStatusLabel, sourceStatusWarn } from '@/domain/sourceStatus';
 import { agoText } from '@/domain/units';
 import { useStore } from '@/sources/store';
+import { useChanges, type Consumable } from '@/settings/changes';
+import ChangedButton from '@/ui/ChangedButton';
 import { useDeviceExtras } from '@/sources/deviceExtras';
 import { deviceAges, type Age } from '@/domain/treatmentStats';
 import { fmt } from '@/domain/units';
@@ -41,6 +43,7 @@ export default function DeviceSection({ onClose, cat, title }: {
   const cfg = useDeviceConfig();
   const { data } = useStore();
   const extras = useDeviceExtras();
+  const changes = useChanges();
   const [pick, setPick] = useState<null | 'model' | 'bridge' | 'insulin'>(null);
   const [scanOpen, setScanOpen] = useState(false);
 
@@ -88,7 +91,7 @@ export default function DeviceSection({ onClose, cat, title }: {
     type Row = { k: string; v: string };
     const rows: Row[] = [];
 
-    const ages = deviceAges(extras.events);
+    const ages = deviceAges(extras.events, changes);
     if (cat === 'sensor' && ages.sensor) {
       rows.push({ k: 'День', v: String(ages.sensor.days + 1) });
       rows.push({ k: 'Носится', v: ageText(ages.sensor) });
@@ -102,12 +105,18 @@ export default function DeviceSection({ onClose, cat, title }: {
       if (dev?.lastBolus != null) rows.push({ k: 'Последний болюс', v: fmt(dev.lastBolus) + ' ед' });
     }
     // расходники со сроками (§9) — пока только у помпы, из событий замен в Nightscout
+    /* Расходники со сроками (§9). Ключ рядом с названием — чтобы отметить замену
+       прямо здесь: событие в Nightscout может не появиться вовсе (проверено на живых
+       данных), и тогда возраст врёт молча. */
     const sup = cat === 'pump'
-      ? ([['Канюля', ages.site], ['Резервуар', ages.reservoir], ['Батарея', ages.battery]] as [string, Age | null][])
-        .filter((x): x is [string, Age] => !!x[1])
+      ? ([['Канюля', ages.site, 'site'], ['Резервуар', ages.reservoir, 'reservoir'], ['Батарея', ages.battery, 'battery']] as [string, Age | null, Consumable][])
+        .filter((x): x is [string, Age, Consumable] => !!x[1])
+      : cat === 'sensor'
+      ? ([['Датчик', ages.sensor, 'sensor']] as [string, Age | null, Consumable][])
+        .filter((x): x is [string, Age, Consumable] => !!x[1])
       : [];
     return { stateRows: rows, supplies: sup };
-  }, [cat, extras.events, dev]);
+  }, [cat, extras.events, dev, changes]);
 
   /* Параметры драйвера (§7a): у радио-Medtronic это серийник и частота 868/916.
      Рисуем универсальной формой по спеке — экрана «настройки такой-то помпы» нет и не будет
@@ -362,9 +371,18 @@ export default function DeviceSection({ onClose, cat, title }: {
               <>
                 <div className="section-label sec">Расходники</div>
                 <div className="sensor-ages sensor-ages-solo">
-                  {supplies.map(([name, a]) => (
-                    <div key={name} className="age-pill"><span>{name}</span><b>{ageText(a!)}</b></div>
+                  {supplies.map(([name, a, key]) => (
+                    <div key={name} className="age-pill">
+                      <span>{name}</span>
+                      <b>{ageText(a)}</b>
+                      <ChangedButton what={key} />
+                    </div>
                   ))}
+                </div>
+                <div className="sheet-note">
+                  Возраст считается по событиям из Nightscout, а их может не быть: замена,
+                  не залогированная в AAPS, не оставляет следа вовсе. Поменял — отметь здесь,
+                  это никуда не отправляется и живёт только на этом устройстве.
                 </div>
               </>
             )}

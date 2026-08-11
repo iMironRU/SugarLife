@@ -6,6 +6,7 @@ import { useStore } from '@/sources/store';
 import { toUnits, agoText, unitLabel, useUnit, fmt, daysHoursText } from '@/domain/units';
 import { arrowChar, getCfg } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
+import { useChanges } from '@/settings/changes';
 import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
 import { syncToActiveScreen } from '@/app/panel';
 import { activeInsulin } from '@/domain/loopValue';
@@ -43,6 +44,7 @@ export default function HeroPanel() {
   useUnit(); // перерисовка при смене единиц
   const tab = useTab();
   const extras = useDeviceExtras();
+  const changes = useChanges();
   const cfg = getCfg();
 
   // онлайн/офлайн — чтобы честно показать «нет сети»
@@ -134,7 +136,7 @@ export default function HeroPanel() {
   const syncWarn = syncState === 'offline' || syncState === 'stale';
 
   // датчик (день N) — слева; запас инсулина (≈N дн) — справа
-  const ages = deviceAges(extras.events);
+  const ages = deviceAges(extras.events, changes);
   /* Без настроенного источника день датчика не показываем: события замены лежат
      в локальной истории и пережили бы отключение, а «день 8» рядом с прочерками
      читается как живое состояние. Дальше см. DataGate в NotConfigured.tsx. */

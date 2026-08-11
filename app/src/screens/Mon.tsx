@@ -2,6 +2,7 @@ import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { useTab } from '@/app/nav';
 import { DeviceSection } from '@/sections/lazy';
 import { reportContentScroll } from '@/app/panel';
+import { useChanges } from '@/settings/changes';
 import { hardwareChipOutline, chevronForward } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useEntries } from '@/sources/db';
@@ -38,7 +39,8 @@ export default function Mon() {
     }
     return () => { cancel = true; };
   }, [cfg?.url, cfg?.token, cfg?.enabled]);
-  const ages = deviceAges(events);
+  const changes = useChanges();
+  const ages = deviceAges(events, changes);
 
   const readings = entries.slice(-8).reverse();
 

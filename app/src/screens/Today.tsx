@@ -6,6 +6,7 @@ import { useStore } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt } from '@/domain/units';
 import { reportContentScroll } from '@/app/panel';
 import { activeCarbs } from '@/domain/loopValue';
+import ChangedButton from '@/ui/ChangedButton';
 import { useDeviceExtras } from '@/sources/deviceExtras';
 import { reservoirStats } from '@/domain/treatmentStats';
 import { useCloseOnLeave } from '@/app/nav';
@@ -274,6 +275,14 @@ export default function Today() {
               <div>
                 <b>Резервуар не меняется {Math.round(rstat.flatHours)} ч</b>
                 <span>А помпа не на паузе — инсулин должен расходоваться. Проверь подачу (окклюзия, катетер, датчик резервуара).</span>
+                {/* Проактивный вопрос вместо ретроактивной правки: у этого залипания
+                    есть вторая, гораздо более частая причина — картридж поменяли, а
+                    помпа этого не показала. Спросить дешевле, чем заставлять человека
+                    искать, где это исправить. */}
+                <span className="alert-ask">
+                  Или ты уже поменял, а помпа не заметила?
+                  <ChangedButton what="reservoir" label="Поменял резервуар" />
+                </span>
               </div>
             </div>
           )}

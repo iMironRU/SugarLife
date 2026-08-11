@@ -33,7 +33,11 @@ export function analyzeCached(
   ctx: AnalyzeCtx = {},
 ): Analysis {
   const час = Math.floor((entries[entries.length - 1]?.t ?? 0) / 3600e3);
-  const ключ = `${days}|${час}|${ctx.uploaderBattery ?? ''}`;
+  /* Отметки замен входят в ключ обязательно. Возраст расходников считается по ним,
+     и без этого нажатие «Поменял» не отразилось бы в разборе до следующего часа —
+     человек нажал, а «канюля 11 дней» осталась висеть. */
+  const отметки = Object.entries(ctx.changes ?? {}).sort().map(([k, v]) => k + v).join();
+  const ключ = `${days}|${час}|${ctx.uploaderBattery ?? ''}|${отметки}`;
 
   const готовое = кэш.get(ключ);
   if (готовое) {

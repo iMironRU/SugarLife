@@ -5,6 +5,7 @@ import PageHead from '@/ui/PageHead';
 import PageLoading from '@/ui/PageLoading';
 import Insights from '@/ui/Insights';
 import { type InsightKind } from '@/domain/analysis';
+import { useChanges } from '@/settings/changes';
 import { analyzeCached } from '@/domain/analysisCache';
 import { insulinDaily } from '@/domain/treatmentStats';
 import { useStore } from '@/sources/store';
@@ -43,6 +44,7 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
   const лечение = useTreatments(days * 86400e3, { minRefreshMs: 3600e3 });
   const [kind, setKind] = useState<InsightKind | 'all'>('all');
   const батарея = data?.device?.uploaderBattery ?? null;
+  const changes = useChanges();
 
   /* Результат разбора берём из общей памяти (domain/analysisCache): она переживает
      закрытие экрана, поэтому возврат и переключение периода туда-обратно уже не
@@ -59,9 +61,10 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
     return analyzeCached(entries, events, days, {
       basalCoverage: { covered: ins.coveredDays, total: ins.totalDays },
       uploaderBattery: батарея,
+      changes,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [тик, days, батарея]);
+  }, [тик, days, батарея, changes]);
 
   const отфильтровано = useMemo(
     () => (kind === 'all' ? analysis : { ...analysis, insights: analysis.insights.filter((i) => i.kind === kind) }),

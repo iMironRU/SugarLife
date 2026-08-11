@@ -3,7 +3,7 @@
    возрасты устройств. Никаких выдумок: чего нет в данных — то и подсвечиваем.
    Значения глюкозы форматируются в текущих единицах (ммоль/л ⇄ мг/дл). */
 import type { Entry, Treatment } from '@/domain/types';
-import { deviceAges } from './treatmentStats';
+import { deviceAges , type ChangeMarks } from './treatmentStats';
 import { stats, agp, LOW, HIGH, VLOW, VHIGH } from './agp';
 import { toUnits, unitLabel } from './units';
 
@@ -36,6 +36,10 @@ export interface Analysis {
 export interface AnalyzeCtx {
   basalCoverage?: { covered: number; total: number };
   uploaderBattery?: number | null;
+  /* Отметки замен, сделанные в приложении. Без них разбор считает возраст расходников
+     только по событиям Nightscout, а они бывают пропущены целиком — и «канюля 11 дней»
+     оказывается неправдой (settings/changes.ts). */
+  changes?: ChangeMarks;
 }
 
 const SEV_ORDER: Record<Severity, number> = { bad: 0, warn: 1, info: 2, good: 3 };
@@ -90,7 +94,7 @@ export function analyze(
   const carbsPerDay = carbs.length / windowDays;
   const bolusPerDay = boluses.length / windowDays;
 
-  const ages = deviceAges(events);
+  const ages = deviceAges(events, ctx.changes);
   const s = stats(es);
   const hourly = agp(es, 24);
   const p50 = new Map<number, number>();
