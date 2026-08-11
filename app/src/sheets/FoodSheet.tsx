@@ -1,5 +1,5 @@
 import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
-import { closeOutline, timeOutline, waterOutline, searchOutline, sparklesOutline, warningOutline } from 'ionicons/icons';
+import { closeOutline, timeOutline, searchOutline, sparklesOutline, warningOutline } from 'ionicons/icons';
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS, plural } from '@/domain/units';
@@ -44,7 +44,6 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
      десять вечера вытеснял ужин. Умный список, поверх которого стоит глупое умолчание,
      умным быть перестаёт. */
 
-  const [insulin, setInsulin] = useState('');
   const [сохранено, setСохранено] = useState(false);
   /* Пока человек печатает, показываем ровно то, что он набрал: иначе «2,» превратится
      в «2» под пальцем и запятую негде будет поставить. Ушёл из поля — снова считаем. */
@@ -98,7 +97,7 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
 
   // открыли заново — начинаем с чистого листа, а не с прошлых цифр
   useEffect(() => {
-    if (isOpen) { setCarbs(30); setCarbsТекст(null); setКогда(0); setПоказатьСмещения(false); setInsulin(''); setСохранено(false); setЗапрос(''); setВыбрано(null); setСправочник('нет'); setРазвёрнуто({}); }
+    if (isOpen) { setCarbs(30); setCarbsТекст(null); setКогда(0); setПоказатьСмещения(false); setСохранено(false); setЗапрос(''); setВыбрано(null); setСправочник('нет'); setРазвёрнуто({}); }
   }, [isOpen]);
 
   /* Выбор пресета не «применяет» его, а подставляет опорную точку: углеводы попадают в
@@ -120,16 +119,17 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
   };
   const ratio = cu === 'xe' ? `1 Х.Е. ≈ ${fmt(XE_GRAMS / ic)} ед` : `КУ 1 ед / ${fmt(ic)} г`;
 
-  const дозаЧисло = Number(insulin.replace(',', '.'));
-  const доза = insulin.trim() !== '' && Number.isFinite(дозаЧисло) && дозаЧисло > 0 ? дозаЧисло : undefined;
-  const годно = carbs > 0 || доза != null;
+  /* Болюса здесь нет намеренно. Шторка отвечает на один вопрос — сколько углеводов и
+     когда, — и ровно этим полезна. Доза вводится в помпе, а не у нас; спрашивать её
+     «если уже вводили» значило просить человека переписать к нам то, что и так есть в
+     потоке лечения. Одно поле убрали — шторка стала короче на экран. */
+  const годно = carbs > 0;
 
   const сохранить = async () => {
     if (!годно) return;
     await addMeal({
       t: времяЕды(когда),
       carbs,
-      insulin: доза,
       kind: приёмПоЧасу(new Date(времяЕды(когда)).getHours()),
     });
     setСохранено(true);
@@ -275,27 +275,14 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
             <button className="food-meal food-meal-more" onClick={() => setПоказатьСмещения(true)}>другое время</button>
           )}
         </div>
+        {/* Отступ обычный, а не отрицательный: под рядом фишек он затягивал подпись
+            под кнопку «другое время», и строки налезали друг на друга. */}
         {моменты.length > 0 && !показатьСмещения && (
-          <div className="food-save-note" style={{ textAlign: 'left', margin: '-6px 2px 14px' }}>
+          <div className="food-save-note" style={{ textAlign: 'left', margin: '8px 2px 14px' }}>
             Время — когда сахар пошёл вверх, а рядом на сколько. Похоже на момент, когда
             ты поел, но записи об этом нет.
           </div>
         )}
-
-        <div className="food-label"><IonIcon icon={waterOutline} /> Болюс, ед — если уже вводили</div>
-        <div className="field">
-          {/* Подтягиваем поле к центру, когда открывается клавиатура. Ionic это умеет
-              сам, но не всегда доводит внутри шторки — а цена промаха тут высокая:
-              человек печатает вслепую, не видя, что набирает. Задержка — чтобы
-              клавиатура успела выехать и высота вьюпорта уже была настоящей. */}
-          <IonInput value={insulin} type="text" inputmode="decimal" placeholder="не вводили"
-            onIonFocus={(e) => подтянуть(e.target as unknown as HTMLElement)}
-            onIonInput={(e) => setInsulin(e.detail.value ?? '')} />
-        </div>
-        <div className="food-save-note" style={{ textAlign: 'left', margin: '-6px 2px 14px' }}>
-          Записывается в приложение и учитывается сразу. В Nightscout пока не уходит —
-          выгрузку сделаем отдельно, запись от этого не потеряется.
-        </div>
 
         {/* Справочник. Свёрнут, когда у человека уже есть своя история: тогда он
             подсказка на редкий случай, а не главный путь. Пока истории нет — раскрыт
@@ -351,6 +338,13 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
             </div>
           </>
         )}
+
+        {/* Что произойдёт при сохранении — последней строкой, рядом с кнопкой:
+            это примечание к действию, а не к полю. */}
+        <div className="food-save-note" style={{ textAlign: 'left', margin: '4px 2px 0' }}>
+          Записывается в приложение и учитывается сразу. В Nightscout пока не уходит —
+          выгрузку сделаем отдельно, запись от этого не потеряется.
+        </div>
 
       </IonContent>
 
