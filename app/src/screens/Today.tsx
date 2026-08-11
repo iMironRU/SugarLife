@@ -1,5 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { AnalyticsSection } from '@/sections/lazy';
+import { AnalyticsSection, MealsSection } from '@/sections/lazy';
 import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, sparklesOutline, chevronForward } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/sources/store';
@@ -98,7 +98,17 @@ export default function Today() {
   const dayCarbs = Math.round(
     todayCarbs.reduce((a, b) => a + (b.carbs || 0), 0) + свои.reduce((a, b) => a + b.carbs, 0),
   );
-  const mealCount = todayCarbs.length + свои.length;
+  /* Счётчик приёмов — за СУТКИ, а не с полуночи. В час ночи «0 приёмов» формально
+     верно и совершенно бесполезно: человек ужинал четыре часа назад. А рядом эта же
+     колонка ведёт в журнал, где эти приёмы видны, — и «0» рядом с четырьмя записями
+     читается как поломка.
+
+     Сумма в граммах остаётся дневной: она подписана «всего за день», и по дням же
+     считается весь разбор. Разные окна тут не противоречие, а разные вопросы:
+     «сколько я съел сегодня» и «когда я ел в последний раз». */
+  const сутки = Date.now() - 24 * 3600e3;
+  const mealCount = extras.events.filter((e) => (e.carbs ?? 0) > 0 && e.t >= сутки).length
+    + onlyLocal(meals, extras.events).filter((m) => m.t >= сутки).length;
   /* Активные углеводы тоже считает цикл, а не помпа: когда он молчит, это
      «неизвестно», а не «ноль». Прочерк плюс причина — см. domain/loopValue.ts. */
   const ac = activeCarbs(dev);
@@ -225,10 +235,16 @@ export default function Today() {
               <div className="carb-sub">{ac.reason ?? 'всего за день · ' + toCarbs(dayCarbs, cu) + ' ' + carbUnitLabel(cu)}</div>
             </div>
 
-            <div className="carb-food">
+            {/* Правая колонка — вход в журнал, а не украшение. Плитка целиком значит
+                «внести», и это правильно; но проверить, что записалось и с каким
+                временем, до сих пор было негде. Просить точное время и не показывать
+                результат — нечестно. Новых блоков на экране при этом не появилось. */}
+            <div className="carb-food" role="button"
+              onClick={(e) => { e.stopPropagation(); push(<MealsSection onClose={pop} />); }}>
               <IonIcon icon={restaurantOutline} />
               <div className="carb-food-t">Еда</div>
               <div className="carb-food-s">{mealCount} {mealsWord(mealCount)}</div>
+              <IonIcon icon={chevronForward} className="carb-food-chev" />
             </div>
           </button>
 

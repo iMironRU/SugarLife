@@ -124,3 +124,27 @@
 .nearby-quiet ion-icon { font-size: 15px; flex-shrink: 0; }
 .nearby-quiet span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nearby-chev { font-size: 14px; opacity: .6; }
+
+/* Правая колонка плитки — вход в журнал. Стрелка мелкая: это не главное действие
+   плитки (главное — внести), но и не скрытый жест. */
+.carb-food { position: relative; cursor: pointer; }
+.carb-food-chev { position: absolute; top: -2px; right: -4px; font-size: 13px; color: var(--color-neutral-500); }
+.carb-food:active { opacity: .7; }
+
+/* Журнал приёмов */
+.meal-log { margin-top: 12px; border-radius: 18px; overflow: hidden; background: var(--color-neutral-900); }
+.meal-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--color-neutral-800); }
+.meal-row:last-child { border-bottom: 0; }
+.meal-when { flex: 0 0 58px; }
+.meal-when b { display: block; font-size: 15px; font-weight: 600; }
+.meal-when span { display: block; font-size: 10px; color: var(--color-neutral-500); margin-top: 2px; }
+.meal-what { flex: 1; min-width: 0; }
+.meal-what b { display: block; font-size: 15px; font-weight: 600; color: var(--c-carb); }
+.meal-what span { display: block; font-size: 11px; color: var(--color-neutral-400); margin-top: 2px; }
+.meal-what span ion-icon { font-size: 11px; vertical-align: -1px; }
+.meal-del {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 12px; cursor: pointer;
+  border: 0; background: transparent; color: var(--color-neutral-500);
+}
+.meal-del ion-icon { font-size: 17px; }
+.meal-del:active { background: var(--color-neutral-800); color: var(--c-danger-2); }

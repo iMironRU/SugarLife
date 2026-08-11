@@ -47,3 +47,6 @@ export const AnalyticsSection = ленивый<{ onClose: () => void }>(
 
 export const DiscoverySection = ленивый<{ onClose: () => void }>(
   () => import('./DiscoverySection'), 'Устройства рядом');
+
+export const MealsSection = ленивый<{ onClose: () => void }>(
+  () => import('./MealsSection'), 'Приёмы пищи');
