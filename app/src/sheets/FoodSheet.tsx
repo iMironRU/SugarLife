@@ -1,10 +1,11 @@
 import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
-import { closeOutline, nutritionOutline, removeOutline, addOutline, timeOutline, waterOutline } from 'ionicons/icons';
+import { closeOutline, nutritionOutline, removeOutline, addOutline, timeOutline, waterOutline, searchOutline, sparklesOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useStore } from '@/sources/store';
-import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS } from '@/domain/units';
-import { addMeal } from '@/sources/mealStore';
+import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS, plural } from '@/domain/units';
+import { addMeal, useMeals } from '@/sources/mealStore';
 import { СМЕЩЕНИЯ } from '@/domain/meals';
+import { searchFoods, personalFoods, CAT_LABEL, CAT_ORDER, type Food } from '@/domain/foods';
 
 const MEALS = ['Завтрак', 'Обед', 'Ужин', 'Перекус'];
 
@@ -31,9 +32,25 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
   const [meal, setMeal] = useState(1);
   const [insulin, setInsulin] = useState('');
   const [сохранено, setСохранено] = useState(false);
+  const [запрос, setЗапрос] = useState('');
+  const [выбрано, setВыбрано] = useState<string | null>(null);
+
+  const meals = useMeals();
+  const своё = personalFoods(meals);
+  const найдено = searchFoods(запрос);
 
   // открыли заново — начинаем с чистого листа, а не с прошлых цифр
-  useEffect(() => { if (isOpen) { setCarbs(30); setНазад(0); setInsulin(''); setСохранено(false); } }, [isOpen]);
+  useEffect(() => {
+    if (isOpen) { setCarbs(30); setНазад(0); setInsulin(''); setСохранено(false); setЗапрос(''); setВыбрано(null); }
+  }, [isOpen]);
+
+  /* Выбор пресета не «применяет» его, а подставляет опорную точку: углеводы попадают в
+     тот же степпер, который человек тут же правит. Иначе получилось бы, что справочник
+     решает за него, а справочник у нас — оценка, а не измерение. */
+  const выбрать = (id: string, carbs: number) => {
+    setВыбрано(id);
+    setCarbs(carbs);
+  };
 
   const mealBolus = carbs > 0 ? fmt(carbs / ic) : '0';
   const step = cu === 'xe' ? XE_GRAMS : 5;
@@ -85,6 +102,55 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
           {MEALS.map((m, i) => (
             <button key={m} className={'food-meal' + (meal === i ? ' on' : '')} onClick={() => setMeal(i)}>{m}</button>
           ))}
+        </div>
+
+        {/* Выбор вместо пустого поля. Своё — первым: люди едят одно и то же, и
+            собственные цифры точнее любого справочника. */}
+        {своё.length > 0 && !запрос && (
+          <>
+            <div className="food-label"><IonIcon icon={sparklesOutline} /> Ваше обычное</div>
+            <div className="food-picks">
+              {своё.slice(0, 6).map((p) => (
+                <button key={p.id} className={'food-pick' + (выбрано === p.id ? ' on' : '')}
+                  onClick={() => выбрать(p.id, p.carbs)}>
+                  <b>{p.kind}</b>
+                  <span>{toCarbs(p.carbs, cu)} {clabel} · {p.count} {plural(p.count, 'раз', 'раза', 'раз')}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="food-label"><IonIcon icon={searchOutline} /> Из справочника</div>
+        <div className="field">
+          <IonIcon icon={searchOutline} className="field-ico" />
+          <IonInput value={запрос} placeholder="Найти приём, блюдо или напиток"
+            onIonInput={(e) => setЗапрос(e.detail.value ?? '')} />
+        </div>
+        <div className="food-cats">
+          {(запрос ? [найдено] : CAT_ORDER.map((c) => найдено.filter((f) => f.cat === c))).map((группа, i) => (
+            группа.length === 0 ? null : (
+              <div key={i} className="food-cat">
+                {!запрос && <div className="food-cat-cap">{CAT_LABEL[CAT_ORDER[i]]}</div>}
+                <div className="food-picks">
+                  {группа.map((f: Food) => (
+                    <button key={f.id} className={'food-pick' + (выбрано === f.id ? ' on' : '')}
+                      onClick={() => выбрать(f.id, f.carbs)}>
+                      <b>{f.name}</b>
+                      <span>
+                        ≈ {toCarbs(f.carbs, cu)} {clabel}{f.portion ? ' · ' + f.portion : ''}
+                      </span>
+                      {f.slow && <i className="food-slow">жирное · усвоится позже</i>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          ))}
+        </div>
+        <div className="food-save-note" style={{ textAlign: 'left', margin: '2px 2px 14px' }}>
+          Значения в справочнике — типовые, не измеренные. Это опорная точка, чтобы не
+          начинать с пустого поля: поправь под свою тарелку прямо ниже.
         </div>
 
         <div className="food-stepper">

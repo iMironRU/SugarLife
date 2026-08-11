@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   gluValue, toUnits, fmt, unitLabel, toCarbs, carbUnitLabel, XE_GRAMS,
-  agoText, daysHoursText,
+  agoText, daysHoursText, plural,
 } from './units';
 import { MGDL_PER_MMOL } from './types';
 
@@ -82,5 +82,25 @@ describe('время', () => {
   it('меньше суток — только часы', () => {
     expect(daysHoursText(0.5)).not.toMatch(/д/);
     expect(daysHoursText(0.5)).toMatch(/12\s*ч/);
+  });
+});
+
+describe('русские окончания по числу', () => {
+  const раз = (n: number) => `${n} ${plural(n, 'раз', 'раза', 'раз')}`;
+  it('один — раз, два-четыре — раза, пять и дальше — раз', () => {
+    expect(раз(1)).toBe('1 раз');
+    expect(раз(2)).toBe('2 раза');
+    expect(раз(5)).toBe('5 раз');
+  });
+  it('подростковые числа — исключение: 11–14 всегда «раз»', () => {
+    expect(раз(11)).toBe('11 раз');
+    expect(раз(12)).toBe('12 раз');
+    expect(раз(14)).toBe('14 раз');
+  });
+  it('десятки считаются по последней цифре', () => {
+    expect(раз(21)).toBe('21 раз');
+    expect(раз(22)).toBe('22 раза');
+    expect(раз(25)).toBe('25 раз');
+    expect(раз(101)).toBe('101 раз');
   });
 });

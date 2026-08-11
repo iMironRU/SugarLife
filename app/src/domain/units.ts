@@ -82,3 +82,14 @@ export function daysHoursText(days: number): string {
   if (h === 0) return d + ' д';
   return d + ' д ' + h + ' ч';
 }
+
+
+/* Русские окончания по числу. Заводится один раз и на всё: «2 раз» вместо «2 раза»
+   читается как недоделка, а таких мест в приложении уже несколько. */
+export function plural(n: number, one: string, few: string, many: string): string {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+}

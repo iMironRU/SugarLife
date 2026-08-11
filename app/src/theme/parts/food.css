@@ -222,3 +222,23 @@ ion-toggle {
    между параметрами, чтобы форма из четырёх полей не слипалась в один блок. */
 .param { margin-bottom: 12px; }
 .param-req { text-transform: none; letter-spacing: 0; color: var(--color-neutral-600); }
+
+/* Выбор вместо пустого поля (sheets/FoodSheet.tsx).
+
+   Плитками, а не списком строк: у приёма два числа — название и «сколько углеводов», —
+   и в строке второе всегда прижимается к краю, далеко от первого. В плитке они рядом,
+   и глаз читает их как одно. */
+.food-picks { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.food-pick {
+  flex: 1 1 calc(50% - 8px); min-width: 0; text-align: left; cursor: pointer;
+  padding: 10px 12px; border-radius: 14px; font-family: var(--font-body);
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+}
+.food-pick b { display: block; font-size: 13px; font-weight: 600; color: var(--color-text); }
+.food-pick span { display: block; margin-top: 3px; font-size: 11px; color: var(--color-neutral-400); }
+/* «жирное — усвоится позже» это наблюдение, а не указание по болюсу: назначений мы
+   не даём, поэтому и подаётся приглушённой строкой, а не предупреждением. */
+.food-pick .food-slow { display: block; margin-top: 4px; font-size: 10px; font-style: normal; color: var(--c-carb-2); }
+.food-pick.on { border-color: var(--c-carb); background: color-mix(in srgb, var(--c-carb) 14%, var(--color-neutral-900)); }
+.food-pick:active { background: color-mix(in srgb, var(--c-carb) 20%, var(--color-neutral-900)); }
+.food-cat-cap { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-500); margin: 4px 2px 8px; }
