@@ -47,5 +47,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Подключение к сенсору глюкозы и помпе по Bluetooth</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Подключение к сенсору глюкозы и помпе по Bluetooth</string>
 </dict>
 </plist>

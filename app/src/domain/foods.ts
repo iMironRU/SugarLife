@@ -71,9 +71,15 @@ export interface Personal {
   carbs: number;
   count: number;
   lastAt: number;
+  /** Имя, если человек его дал. Необязательное — см. settings/mealNames.ts. */
+  name?: string;
 }
 
-export function personalFoods(meals: Meal[], now = Date.now()): Personal[] {
+export function personalFoods(
+  meals: Meal[],
+  names: Record<string, string> = {},
+  now = Date.now(),
+): Personal[] {
   const карта = new Map<string, Personal>();
   for (const m of meals) {
     if (m.carbs <= 0) continue;
@@ -82,7 +88,7 @@ export function personalFoods(meals: Meal[], now = Date.now()): Personal[] {
     const id = `${kind}|${carbs}`;
     const было = карта.get(id);
     if (было) { было.count++; было.lastAt = Math.max(было.lastAt, m.t); }
-    else карта.set(id, { id, kind, carbs, count: 1, lastAt: m.t });
+    else карта.set(id, { id, kind, carbs, count: 1, lastAt: m.t, name: names[id] });
   }
   /* Сортировка: частое выше редкого, при равной частоте — свежее выше давнего.
      Не «просто последние»: съеденное однажды месяц назад не должно оттеснять то,
