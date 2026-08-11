@@ -8,7 +8,16 @@
 ion-app { background: var(--color-bg); }
 ion-content { --background: var(--color-bg); }
 
-.app-shell { display: flex; flex-direction: column; height: 100%; background: var(--color-bg); overflow: hidden; }
+/* Панель ВНЕ потока: она висит над содержимым, а не толкает его.
+
+   Раньше она была обычным флекс-элементом, и верх контента равнялся её высоте:
+   сворачиваясь, панель сдвигала всё под собой на ~60px за 0.28 с, пока палец тянул
+   со своей скоростью. Две скорости в одном движении — это и была рваность.
+
+   Теперь размер панели не двигает ничего. Скроллеры отступают сверху на её высоту
+   В ПОКОЕ (--sl-panel-rest): контент стоит на месте, а сворачивающаяся панель
+   открывает его больше. Так же устроены заголовки в iOS. */
+.app-shell { display: flex; flex-direction: column; height: 100%; background: var(--color-bg); overflow: hidden; position: relative; }
 
 /* ===== Карусель вкладок (свайп между экранами) ===== */
 .pager-viewport { flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; }
@@ -35,11 +44,12 @@ ion-content { --background: var(--color-bg); }
 .tab.on { color: var(--color-accent); }
 
 .hero-panel {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 10;
   /* один тайминг на все части панели — иначе они разъезжаются во времени и
      переход читается как несколько отдельных рывков вместо одного движения */
   --hp-dur: .28s;
   --hp-ease: cubic-bezier(.3,.9,.3,1);
-  flex-shrink: 0; background: transparent;
+  flex-shrink: 0; background: var(--color-bg);
   padding: calc(env(safe-area-inset-top, 0px) + 10px) 20px 0;
   transition: padding-top var(--hp-dur) var(--hp-ease);
 }
@@ -204,3 +214,8 @@ ion-content { --background: var(--color-bg); }
   margin-top: 22px; font-size: 13px; color: var(--color-neutral-400);
 }
 .pl-spin ion-spinner { width: 18px; height: 18px; color: var(--color-accent); }
+
+/* Отступ сверху у всего, что прокручивается: панель висит над контентом, и без
+   отступа первый экран начинался бы под ней. Величина — высота в ПОКОЕ, а не
+   текущая: иначе сворачивание снова двигало бы содержимое. */
+ion-content { --padding-top: var(--sl-panel-rest, var(--sl-panel-h, 0px)); }

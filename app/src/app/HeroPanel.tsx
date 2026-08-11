@@ -1,5 +1,5 @@
 import { IonIcon } from '@ionic/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline } from 'ionicons/icons';
 import { useTab, setTab } from '@/app/nav';
 import { useStore } from '@/sources/store';
@@ -131,8 +131,51 @@ export default function HeroPanel() {
   const staleSensor = extras.stale && sensorDay != null;
   const staleDays = extras.stale && daysLeft != null;
 
+  /* Панель сообщает свою высоту в CSS: скроллеры отступают на неё сверху.
+
+     Нужны ДВЕ величины, и это существенно. Текущая высота меняется при сворачивании —
+     если отступ следовал бы за ней, содержимое снова ездило бы. Отступ равен высоте
+     в ПОКОЕ (уровень 0): тогда контент стоит на месте, а сворачивающаяся панель
+     просто открывает его больше. Меряем покой после того, как переход доиграл, —
+     иначе в переменную попадёт промежуточный кадр. */
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const корень = document.documentElement;
+    const текущая = () => {
+      const h = Math.round(el.getBoundingClientRect().height);
+      корень.style.setProperty('--sl-panel-h', h + 'px');
+      return h;
+    };
+    /* Покой записываем ТОЛЬКО когда панель уже стоит в развёрнутом виде.
+
+       Первая версия писала его сразу при смене уровня — и ловила момент, когда
+       переход ещё доигрывал предыдущую высоту. В переменную попадала высота
+       свёрнутой панели, отступ становился на 40px меньше, и, вернувшись наверх,
+       человек находил содержимое сдвинутым. Поймал это замером: заголовок уезжал
+       с 190 на 90 после прокрутки туда-обратно. */
+    const покой = () => {
+      if (level !== 0) return;
+      if (el.classList.contains('is-line')) return; // ещё не перерисовалась
+      корень.style.setProperty('--sl-panel-rest', текущая() + 'px');
+    };
+    текущая();
+    /* Меряем сразу, если переход не идёт, и по его окончании — если идёт. Полагаться
+       на кадр нельзя: пока вкладка в фоне, кадров нет вовсе, и переменная осталась бы
+       пустой — а с ней обнулился бы отступ, и содержимое ушло под панель. */
+    if (!el.getAnimations().length) покой();
+    const ro = new ResizeObserver(() => текущая());
+    ro.observe(el, { box: 'border-box' }); // именно border-box: высоту меняет padding
+    el.addEventListener('transitionend', покой);
+    return () => {
+      ro.disconnect();
+      el.removeEventListener('transitionend', покой);
+    };
+  }, [level, mode]);
+
   return (
-    <div className={'hero-panel ' + mode}>
+    <div ref={ref} className={'hero-panel ' + mode}>
       {/* Статус связи + заряды — одним блоком. Он НЕ прячется при сворачивании панели:
           это то, что нужно видеть всегда. Разворот только меняет раскладку — две строки
           сходятся в одну (см. .hp-status). */}

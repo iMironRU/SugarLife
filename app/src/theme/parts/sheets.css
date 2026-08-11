@@ -44,7 +44,7 @@
    отличается ionic-скроллер, а не украшение. */
 .stack-body {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: none;
-  padding: 6px 18px 26px;
+  padding: calc(var(--sl-panel-rest, var(--sl-panel-h, 0px)) + 6px) 18px 26px;
   -webkit-overflow-scrolling: touch;
   will-change: scroll-position;
   transform: translateZ(0);
