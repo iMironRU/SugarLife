@@ -1,8 +1,51 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
+  "plugins": [
+    "react",
+    "typescript",
+    "oxc"
+  ],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+    "react/only-export-components": [
+      "warn",
+      {
+        "allowConstantExport": true
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": [
+              "@/screens/*",
+              "@/sections/*",
+              "@/sheets/*",
+              "@/ui/*",
+              "@/charts/*",
+              "@/app/*"
+            ],
+            "message": "Слой данных и домен не должны знать про интерфейс: зависимость идёт только в сторону UI."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/screens/**",
+        "src/sections/**",
+        "src/sheets/**",
+        "src/ui/**",
+        "src/charts/**",
+        "src/app/**",
+        "src/main.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
 }

@@ -1,0 +1,234 @@
+/* Оболочка: верхняя панель, карусель вкладок, таб-бар, стек страниц */
+
+/* ===== Общая верхняя панель: НМГ | круг | Помпа — живёт на ВСЕХ экранах =====
+   Состояний у неё нет: одна форма, все размеры которой выражены через --p — степень
+   сворачивания 0…1 (см. ниже «Геометрия панели» и app/panel.ts). */
+/* Один фон на всё приложение (панель + все экраны) — Ionic-палитра тянет свой
+   чёрный --ion-background-color, поэтому единый цвет задаём явно из --color-bg. */
+ion-app { background: var(--color-bg); }
+ion-content { --background: var(--color-bg); }
+
+/* Панель ВНЕ потока: она висит над содержимым, а не толкает его.
+
+   Раньше она была обычным флекс-элементом, и верх контента равнялся её высоте:
+   сворачиваясь, панель сдвигала всё под собой на ~60px за 0.28 с, пока палец тянул
+   со своей скоростью. Две скорости в одном движении — это и была рваность.
+
+   Теперь размер панели не двигает ничего. Скроллеры отступают сверху на её высоту
+   В ПОКОЕ (--sl-panel-rest): контент стоит на месте, а сворачивающаяся панель
+   открывает его больше. Так же устроены заголовки в iOS. */
+.app-shell { display: flex; flex-direction: column; height: 100%; background: var(--color-bg); overflow: hidden; position: relative; }
+
+/* ===== Карусель вкладок (свайп между экранами) ===== */
+.pager-viewport { flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; }
+.pager-track { display: flex; height: 100%; will-change: transform; }
+.pager-pane { flex: 0 0 100%; width: 100%; height: 100%; position: relative; overflow: hidden; }
+/* каждая .pager-pane содержит экран (IonPage absolute inset:0) */
+.pager-pane > .ion-page { position: absolute; inset: 0; }
+.pager-pane .ion-page-invisible { opacity: 1; }
+
+/* ===== Свой таб-бар (заменяет IonTabBar) ===== */
+.tabbar {
+  flex-shrink: 0; display: flex; align-items: stretch;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: color-mix(in srgb, var(--color-neutral-900) 70%, var(--color-bg));
+  border-top: 1px solid var(--color-neutral-800);
+}
+.tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 8px 0 7px; background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
+  color: var(--color-neutral-500);
+}
+.tab ion-icon { font-size: 22px; }
+.tab span { font-size: 10px; }
+.tab.on { color: var(--color-accent); }
+
+/* ===== Геометрия панели: одна формула вместо трёх состояний =====
+
+   --p — степень сворачивания, 0 (развёрнута) … 1 (тонкая строка). Её пишет
+   прокрутка прямо в стиль корня (app/panel.ts), без React и без анимации: панель
+   меняется ровно за пальцем.
+
+   Отсюда же считаются обе величины, которыми пользуется всё остальное:
+   • --sl-panel-rest — высота панели В ПОКОЕ. На неё отступают сверху скроллеры,
+     поэтому она не должна зависеть от --p: контент стоит на месте, а сворачивающаяся
+     панель просто открывает его больше (так же устроены заголовки в iOS).
+   • --sl-panel-h — текущая высота. Нужна липкой полосе на «Метриках», чтобы она
+     вставала впритык под панель.
+
+   Обе выражены явно, а не измеряются в JS: покой = безопасная зона + 10 (верхний
+   отступ) + 30 (строка статуса, высота фиксирована) + 150 (ряд), а сворачивание
+   отнимает ровно 100px = 96 у ряда и 4 у отступа. Пока эти числа совпадают с
+   правилами ниже, промахнуться нечем — а измерять было чем: замер попадал на
+   середину анимации и переменная застревала на прошлом значении. */
+:root {
+  --p: 0;
+  --sl-panel-rest: calc(env(safe-area-inset-top, 0px) + 190px);
+  --sl-panel-h: calc(var(--sl-panel-rest) - 100px * var(--p));
+}
+
+.hero-panel {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+  /* производные степени: не всё уместно гасить линейно вместе с размером.
+     --k-sub — мелкие подписи: их незачем тащить до конца, они нечитаемы уже на
+     середине; --k-late — единица и активный инсулин в круге: наоборот, держатся
+     до последней трети, пока круг ещё достаточно велик. */
+  --k-sub: min(1, calc(var(--p) / .45));
+  --k-late: max(0, calc((var(--p) - .5) / .5));
+  flex-shrink: 0; background: var(--color-bg);
+  padding: calc(env(safe-area-inset-top, 0px) + 10px - 4px * var(--p)) 20px 0;
+}
+
+/* Статус связи + заряды — ВСЕГДА одной строкой, в любом положении панели, и всегда
+   одного размера. Высота задана явно (30px по внешнему краю, из них 10 — отступ вниз):
+   она входит в формулу --sl-panel-rest, и «примерно столько» тут не годится. */
+.hp-status {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; height: 30px; padding: 0 0 10px; min-width: 0;
+}
+.hp-status .hp-synctext { min-width: 0; font-size: 11px; gap: 5px; }
+.hp-status .hp-batteries { gap: 9px; }
+/* связь ужимается первой — заряды короткие и должны остаться целыми */
+.hp-status .hp-synctext > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hp-status .hp-batteries { flex-shrink: 0; }
+.hp-synctext { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-400); min-width: 0; }
+.hp-synctext .sync-ico { font-size: 13px; flex-shrink: 0; }
+.hp-synctext .sync-reading { color: var(--color-neutral-500); white-space: nowrap; }
+.hp-synctext.warn { color: var(--c-danger-2); }
+.hp-synctext.warn .sync-ico { color: var(--c-danger-2); }
+.hp-synctext.warn .sync-reading { color: color-mix(in srgb, var(--c-danger-2) 60%, var(--color-neutral-500)); }
+
+/* полоса зарядов устройств — расширяемо (помпа/телефон/мост/…), рисуем только то,
+   что реально известно. Компактно намеренно: связь и три заряда должны уместиться
+   даже на 320px. */
+.hp-batteries { display: flex; justify-content: center; gap: 14px; }
+.hp-batt-item { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; }
+.hp-batt-item ion-icon { font-size: 13px; color: currentColor; }
+
+.hp-row { position: relative; height: calc(150px - 96px * var(--p)); }
+
+.hp-rect {
+  position: absolute; left: 0; right: 0;
+  top: calc(10px - 6px * var(--p)); height: calc(130px - 84px * var(--p));
+  display: flex; border-radius: calc(20px - 6px * var(--p)); overflow: hidden;
+  border: 1.5px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 14%, transparent), color-mix(in srgb, var(--color-accent) 4%, transparent));
+}
+
+/* Раскладка крыла ОДНА на все размеры — столбиком.
+
+   В прежней «строке» крыло разворачивалось в ряд, и это был единственный по-настоящему
+   разрывный шаг: перестроение флекса нельзя проинтерполировать, картинка просто
+   подменялась. Столбик помещается и в 46px (иконка 14 + название 12 + значение 11),
+   поэтому разрыва больше нет — есть одна форма, которая уменьшается. */
+.hp-wing {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
+  gap: calc(3px - 2px * var(--p));
+  background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
+  color: var(--color-text); transition: background .16s; overflow: hidden;
+}
+.hp-wing-l {
+  align-items: flex-start; text-align: left;
+  padding: 0 calc(10px - 2px * var(--p)) 0 calc(16px - 4px * var(--p));
+}
+.hp-wing-r {
+  align-items: flex-end; text-align: right;
+  padding: 0 calc(16px - 4px * var(--p)) 0 calc(10px - 2px * var(--p));
+}
+.hp-wing:active { background: color-mix(in srgb, var(--color-accent) 20%, transparent); }
+
+.hp-head, .hp-name, .hp-sub, .hp-val { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hp-head { display: flex; align-items: center; gap: 5px; }
+.hp-ico { display: flex; line-height: 1; color: var(--color-accent); }
+.hp-ico, .hp-ico ion-icon { font-size: calc(24px - 10px * var(--p)); }
+.hp-ico { margin-bottom: calc(5px * (1 - var(--p))); }
+.hp-ico ion-icon { color: var(--color-accent); }
+.hp-name { font-size: calc(14px - 2px * var(--p)); line-height: 1.2; font-weight: 600; color: var(--color-text); flex-shrink: 0; }
+.hp-val { font-size: calc(15px - 4px * var(--p)); font-weight: 600; color: var(--color-text); line-height: 1; margin-top: calc(3px * (1 - var(--p))); }
+/* подписи-детали (обновлено / резервуар / статус) — уходят первыми и по ширине тоже:
+   max-height их только сплющивает, место в ряду они продолжают занимать (в отличие от
+   display:none) — иначе «НМГ день 6» ужималось бы до «Н… де…». */
+.hp-sub {
+  display: block; font-size: 10px; color: var(--color-neutral-400); line-height: 1.4;
+  overflow: hidden;
+  max-height: calc(16px * (1 - var(--k-sub)));
+  max-width: calc(100% * (1 - var(--k-sub)));
+  opacity: calc(1 - var(--k-sub));
+}
+/* часики: значение из кеша, идёт обновление */
+.hp-stale { font-size: 10px; vertical-align: -1px; margin-left: 3px; opacity: 0.55; color: currentColor; }
+
+.hp-gap { flex-shrink: 0; width: calc(146px - 88px * var(--p)); }
+
+.hp-circle {
+  position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+  width: calc(150px - 96px * var(--p)); height: calc(150px - 96px * var(--p));
+  border-radius: 50%; padding: 0; cursor: pointer; z-index: 2;
+  border: 2px solid var(--color-accent); font-family: var(--font-body); overflow: hidden;
+  box-shadow: 0 0 0 8px var(--color-bg), 0 0 22px color-mix(in srgb, var(--color-accent) 22%, transparent), inset 0 0 30px color-mix(in srgb, var(--color-accent) 16%, transparent);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--color-accent) 14%, var(--color-bg)), var(--color-bg) 74%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: box-shadow .16s;
+}
+.hp-circle .circle-spark { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.hp-circle-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+.hp-circle-val { display: flex; align-items: center; gap: calc(6px - 3px * var(--p)); }
+.hp-value { font-size: calc(44px - 27px * var(--p)); font-weight: 600; letter-spacing: -.02em; line-height: 1; color: var(--color-text); }
+.hp-arrow { font-size: calc(22px - 11px * var(--p)); color: var(--c-glu); font-weight: 700; }
+.hp-unit {
+  font-size: calc(12px - 3px * var(--p)); color: var(--color-neutral-300); overflow: hidden;
+  max-height: calc(18px * (1 - var(--k-late)));
+  margin-top: calc(4px * (1 - var(--k-late)));
+  opacity: calc(1 - var(--k-late));
+}
+.hp-ago {
+  font-size: 10px; color: var(--color-neutral-400); overflow: hidden;
+  max-height: calc(16px * (1 - var(--k-sub)));
+  margin-top: calc(5px * (1 - var(--k-sub)));
+  opacity: calc(1 - var(--k-sub));
+}
+/* Активный инсулин в круге — цветом инсулина. Когда цикл молчит, строка остаётся
+   на месте, но становится прочерком приглушённого цвета: пустота на её месте
+   читалась как «инсулина нет», а это разные вещи (domain/loopValue.ts). */
+.hp-iob {
+  font-size: calc(11px - 1px * var(--p)); font-weight: 600; color: var(--c-ins); overflow: hidden;
+  max-height: calc(15px * (1 - var(--k-late)));
+  margin-top: calc(4px * (1 - var(--k-late)));
+  opacity: calc(1 - var(--k-late));
+}
+.hp-iob.is-unknown { color: var(--color-neutral-500); }
+.sync { font-size: 12px; color: var(--color-neutral-400); }
+.heart { color: var(--c-danger); }
+/* зелёная точка «реальное время» — уходит вместе с мелочью, когда панель уже узкая */
+.live-dot {
+  width: calc(6px * (1 - var(--k-late))); height: 6px; border-radius: 50%; flex-shrink: 0;
+  background: var(--c-glu); box-shadow: 0 0 6px var(--c-glu); opacity: calc(1 - var(--k-late));
+}
+.circle-spark { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+/* Каркас страницы, пока едет её код (ui/PageLoading.tsx).
+   Появляется с задержкой: на быстром соединении чанк приходит за десятки
+   миллисекунд, и мелькнувший спиннер раздражает сильнее, чем его отсутствие. */
+@keyframes pl-in { from { opacity: 0 } to { opacity: 1 } }
+.pl-body, .pl-spin, .pl-bar, .pl-back { animation: pl-in .2s ease-out .25s both; }
+@keyframes pl-pulse { 0%, 100% { opacity: .5 } 50% { opacity: .85 } }
+.pl-bar, .pl-card, .pl-back {
+  background: var(--color-neutral-900); border-radius: 10px;
+  animation: pl-pulse 1.4s ease-in-out infinite;
+}
+.pl-back { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; }
+.pl-bar-title { width: 62%; height: 19px; }
+.pl-bar-sub { width: 38%; height: 11px; margin-top: 6px; }
+.pl-body { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.pl-card { height: 108px; border-radius: 16px; }
+.pl-card-sm { height: 62px; }
+.pl-spin {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 22px; font-size: 13px; color: var(--color-neutral-400);
+}
+.pl-spin ion-spinner { width: 18px; height: 18px; color: var(--color-accent); }
+
+/* Отступ сверху у всего, что прокручивается: панель висит над контентом, и без
+   отступа первый экран начинался бы под ней. Величина — высота в ПОКОЕ, а не
+   текущая: иначе сворачивание снова двигало бы содержимое. */
+ion-content { --padding-top: var(--sl-panel-rest); }

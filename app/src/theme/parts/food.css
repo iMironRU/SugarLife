@@ -1,0 +1,218 @@
+/* Шторка «Еда» */
+
+/* ===== Шторка «Еда» ===== */
+.food-warn {
+  display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 4px; padding: 10px 12px; border-radius: 12px;
+  background: color-mix(in srgb, var(--c-carb) 12%, transparent); border: 1px solid color-mix(in srgb, var(--c-carb) 40%, transparent);
+  font-size: 11px; line-height: 1.4; color: var(--c-carb-2);
+}
+.food-warn ion-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+.food-summary {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 16px;
+  border-radius: 20px; border: 1px solid color-mix(in srgb, var(--c-carb) 45%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 16%, var(--color-neutral-900)), color-mix(in srgb, var(--c-carb) 6%, var(--color-neutral-900)));
+}
+.fs-cap { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-400); }
+.fs-carbs { display: flex; align-items: baseline; gap: 5px; margin-top: 8px; font-size: 36px; font-weight: 600; line-height: 1; color: var(--c-carb); }
+.fs-carbs span { font-size: 14px; font-weight: 500; color: var(--c-carb-2); }
+.fs-macros { display: flex; gap: 14px; }
+.fs-macros > div { text-align: right; }
+.fs-mk { display: block; font-size: 10px; color: var(--color-neutral-500); }
+.fs-mv { display: block; font-size: 17px; font-weight: 600; margin-top: 3px; }
+.food-bolus { font-size: 11px; color: var(--color-neutral-400); margin: 10px 2px 0; }
+
+.food-modes { display: flex; gap: 6px; background: var(--color-neutral-900); border-radius: 16px; padding: 5px; margin-top: 14px; }
+.food-mode {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; height: 40px; border-radius: 12px; cursor: pointer;
+  background: transparent; border: 1px solid transparent; color: var(--color-neutral-400); font-size: 13px; font-weight: 500; font-family: var(--font-body);
+}
+.food-mode ion-icon { font-size: 16px; }
+.food-mode.on { background: color-mix(in srgb, var(--c-carb) 20%, var(--color-neutral-900)); border-color: color-mix(in srgb, var(--c-carb) 55%, transparent); color: var(--color-text); }
+
+.food-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-500); margin: 18px 2px 8px; }
+.food-meals { display: flex; flex-wrap: wrap; gap: 8px; }
+.food-meal {
+  padding: 10px 14px; border-radius: 14px; cursor: pointer; font-size: 13px; font-weight: 500; font-family: var(--font-body);
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800); color: var(--color-neutral-300);
+}
+.food-meal.on { background: color-mix(in srgb, var(--c-carb) 18%, transparent); border-color: color-mix(in srgb, var(--c-carb) 55%, transparent); color: var(--color-text); }
+
+.food-stepper { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding: 12px 16px; border-radius: 16px; background: var(--color-neutral-900); }
+.food-stepper > span { font-size: 14px; color: var(--color-neutral-300); }
+
+.food-save {
+  width: 100%; margin-top: 20px; padding: 15px; border-radius: 16px; border: 0; cursor: pointer;
+  background: var(--c-carb); color: #1a1200; font-size: 15px; font-weight: 600; font-family: var(--font-body);
+}
+.food-save:disabled { background: var(--color-neutral-800); color: var(--color-neutral-500); cursor: default; }
+.food-save-note { font-size: 11px; color: var(--color-neutral-500); text-align: center; margin: 8px 0 4px; }
+.field-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-500); margin: 0 2px 6px; }
+.field {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+  border: 1px solid var(--color-neutral-800); border-radius: 14px; padding: 4px 14px;
+  background: var(--color-neutral-900);
+}
+.field-ico { font-size: 17px; color: var(--color-neutral-500); flex-shrink: 0; }
+.field-hint { font-size: 11px; color: var(--color-neutral-500); margin: -8px 0 12px; }
+.field ion-input { --padding-start: 0; --padding-end: 0; font-size: 14px; }
+.field-copy {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 9px; border: none; cursor: pointer;
+  background: var(--color-neutral-800); color: var(--color-neutral-300);
+  transition: background .15s, color .15s;
+}
+.field-copy ion-icon { font-size: 17px; }
+/* Видимый кружок остаётся 30×30 — он и так на своём месте, — а палец получает 44×44
+   через невидимую подложку. Так же было бы правильно сделать сразу: 30px по краю
+   поля промахиваешь. Правило общее, поэтому чинится заодно и кнопка QR в форме
+   устройства, где та же кнопка. */
+.field-copy { position: relative; }
+.field-copy::after { content: ''; position: absolute; inset: -7px; }
+.field-copy.ok { color: var(--c-glu); }
+.connect-btn { --border-radius: 16px; margin-top: 4px; font-weight: 600; }
+.sheet-msg { min-height: 18px; font-size: 13px; color: var(--color-neutral-300); text-align: center; margin: 12px 0; }
+.sheet-subtitle { font-size: 11px; color: var(--color-neutral-400); margin-top: 3px; }
+.sheet-note { font-size: 11px; color: var(--color-neutral-500); margin-top: 14px; text-wrap: pretty; }
+.sheet-danger {
+  width: 100%; margin-top: 18px; padding: 12px; border-radius: 14px; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--c-danger) 45%, transparent); background: transparent;
+  color: var(--c-danger-2); font-size: 13px; font-weight: 500; font-family: var(--font-body);
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.sheet-danger:active { background: color-mix(in srgb, var(--c-danger) 14%, transparent); }
+.sheet-danger ion-icon { font-size: 15px; }
+
+/* Карточки выбора единиц — как в макете */
+.unit-opts { display: flex; flex-direction: column; gap: 10px; }
+.unit-opt {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  border-radius: 20px; padding: 16px;
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+  transition: border-color .16s, background .16s;
+}
+.unit-opt.on {
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-neutral-900));
+  border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
+.unit-opt-head { display: flex; align-items: center; gap: 10px; }
+.unit-opt-head > div { flex: 1; min-width: 0; }
+.unit-opt-title { font-size: 15px; font-weight: 600; color: var(--color-text); }
+.unit-opt-sub { font-size: 11px; color: var(--color-neutral-400); margin-top: 3px; }
+.unit-opt-check { font-size: 22px; flex-shrink: 0; }
+.unit-opt-ex {
+  display: flex; align-items: flex-end; gap: 16px;
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--color-neutral-800);
+}
+.unit-ex { display: flex; flex-direction: column; }
+.unit-ex-lbl { font-size: 10px; color: var(--color-neutral-500); margin-bottom: 4px; }
+.unit-ex-val { font-size: 24px; font-weight: 600; line-height: 1; display: flex; align-items: baseline; gap: 3px; }
+.unit-ex-val i { font-size: 10px; font-style: normal; color: var(--color-neutral-400); }
+.unit-opt-scale { font-size: 11px; color: var(--color-neutral-500); margin-top: 10px; text-wrap: pretty; }
+.sync-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 16px; border-radius: 16px; background: var(--color-neutral-900);
+}
+/* Способы получения данных в карточке устройства (§2b) */
+/* Подписи здесь объясняют, почему способ недоступен — обрезать их многоточием
+   («браузер н…») бессмысленно, пусть переносятся. */
+.meth .pick-sub { white-space: normal; overflow: visible; text-overflow: clip; }
+.meth .list-ico.muted { opacity: .45; }
+.meth .list-title.muted { color: var(--color-neutral-400); }
+/* мост — вложен в «прямое чтение»: сдвиг и отсутствие верхней границы показывают
+   подчинённость, а не соседство */
+.meth-in { padding-left: 40px; border-top: 0; }
+.meth-in .list-ico { font-size: 16px; }
+/* откуда данные идут прямо сейчас */
+.meth-on { background: color-mix(in srgb, var(--color-accent) 7%, transparent); }
+.meth-now {
+  flex-shrink: 0; font-size: 10px; letter-spacing: .04em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px; color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+}
+
+/* Строка «Забираем отсюда»: слева переход в карточку устройства, справа переключатель
+   источника. Кнопка внутри строки, а не строка-кнопка — вложенные интерактивные
+   элементы иначе перехватывали бы нажатие друг у друга. */
+.src-row { cursor: default; }
+.src-main {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
+  margin: -14px 0; padding: 14px 0; /* зона нажатия во всю высоту строки */
+  background: none; border: 0; cursor: pointer;
+  font-family: var(--font-body); color: var(--color-text); text-align: left;
+}
+.src-main:active { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+
+/* Вместо пустого поля токена на открытом сайте — строка о том, что он не нужен,
+   и выход для тех, кому он всё же понадобился (запись). */
+.token-hint {
+  display: block; width: 100%; text-align: left; margin: 12px 0 12px; padding: 0;
+  background: none; border: 0; cursor: pointer;
+  font-size: 12px; color: var(--color-neutral-400); text-wrap: pretty;
+}
+.token-hint u { color: var(--color-accent); text-underline-offset: 2px; }
+
+/* Кнопка и переключатель — два сплошных блока подряд; вплотную (было 4px) они
+   читаются как один элемент. Через соседний селектор, чтобы не разогнать
+   переключатели в списке DeviceSettingsForm, где они идут стопкой намеренно. */
+.connect-btn + .sync-toggle,
+.sheet-msg + .sync-toggle { margin-top: 14px; }
+.sync-toggle-title { font-size: 14px; }
+.sync-toggle-sub { font-size: 11px; color: var(--color-neutral-400); margin-top: 2px; }
+
+/* режим доступа Nightscout (чтение / чтение+запись) */
+
+.insights { display: flex; flex-direction: column; gap: 10px; }
+.insight {
+  border-radius: 16px;
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+  border-left: 3px solid var(--color-neutral-700); overflow: hidden;
+}
+.insight-top {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 13px 14px; background: none; border: none; cursor: pointer;
+  font-family: var(--font-body); text-align: left; color: var(--color-text);
+}
+.insight-sev { font-size: 18px; flex-shrink: 0; }
+.insight-title { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; }
+.insight-chev { font-size: 16px; color: var(--color-neutral-500); flex-shrink: 0; transition: transform .2s; }
+.insight-chev.open { transform: rotate(90deg); }
+.insight-body { padding: 0 14px 13px; }
+.insight-msg { font-size: 12px; color: var(--color-neutral-400); line-height: 1.45; text-wrap: pretty; }
+.insight-q {
+  display: flex; align-items: center; gap: 7px; margin-top: 10px;
+  padding: 9px 11px; border-radius: 12px;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  font-size: 12.5px; font-weight: 500; color: var(--color-accent-300);
+}
+.insight-q ion-icon { font-size: 16px; flex-shrink: 0; }
+
+/* индикатор «считаю аналитику» */
+.ins-loading {
+  display: flex; align-items: center; gap: 12px; margin-top: 8px;
+  padding: 16px 16px; border-radius: 16px;
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+}
+.ins-spin {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  border: 3px solid var(--color-neutral-800); border-top-color: var(--color-accent);
+  animation: bspin .8s linear infinite;
+}
+.ins-loading b { display: block; font-size: 14px; font-weight: 600; }
+.ins-loading span { display: block; font-size: 12px; color: var(--color-neutral-400); margin-top: 2px; }
+
+.ins-tabs { display: flex; gap: 6px; margin: 4px 0 12px; }
+.ins-tab {
+  flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 6px; border-radius: 13px; cursor: pointer; font-family: var(--font-body);
+  font-size: 12.5px; font-weight: 500; color: var(--color-neutral-300);
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+}
+.ins-tab.on { color: var(--color-text); font-weight: 600; }
+.ins-tab-count { font-size: 12px; font-weight: 700; color: var(--color-neutral-500); }
+ion-toggle {
+  --track-background: var(--color-neutral-800);
+  --track-background-checked: var(--color-accent);
+  --handle-background: var(--color-neutral-100);
+  --handle-background-checked: #ffffff;
+}

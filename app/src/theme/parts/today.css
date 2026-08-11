@@ -1,0 +1,76 @@
+/* Экран «Сегодня» */
+
+/* ===== Панель углеводов (по макету): Б/Ж/У · активные · Еда ===== */
+.carb-panel {
+  width: 100%; margin-top: 6px; display: flex; align-items: stretch; overflow: hidden;
+  border-radius: 20px; cursor: pointer; font-family: var(--font-body); color: var(--color-text);
+  border: 1.5px solid color-mix(in srgb, var(--c-carb) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 14%, transparent), color-mix(in srgb, var(--c-carb) 4%, transparent));
+  transition: background .16s;
+}
+.carb-panel:active { background: linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 20%, transparent), color-mix(in srgb, var(--c-carb) 7%, transparent)); }
+
+.carb-macros { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 14px 0 14px 18px; }
+.carb-macro { display: flex; align-items: baseline; gap: 5px; }
+.cm-k { font-size: 11px; color: var(--color-neutral-400); width: 12px; }
+.cm-v { font-size: 13px; font-weight: 600; }
+.cm-u { font-size: 10px; color: var(--color-neutral-400); }
+
+.carb-center { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 10px; }
+.carb-big { display: flex; align-items: baseline; gap: 5px; font-size: 40px; font-weight: 600; line-height: 1; letter-spacing: -.02em; color: var(--c-carb); }
+.carb-big span { font-size: 14px; font-weight: 500; color: var(--c-carb-2); }
+/* Неизвестно ≠ ноль: прочерк цветом углеводов читался как настоящее значение,
+   а огромный «—» — как жирная жёлтая черта. Приглушаем (см. domain/loopValue.ts). */
+.carb-big.is-unknown, .carb-big.is-unknown span { color: var(--color-neutral-500); }
+.carb-big.is-unknown { font-size: 30px; }
+.carb-lbl { font-size: 11px; color: var(--color-neutral-400); margin-top: 5px; }
+.carb-sub { font-size: 10px; color: var(--color-neutral-500); margin-top: 3px; }
+
+.carb-food { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 4px; padding: 14px 18px 14px 0; text-align: right; }
+.carb-food ion-icon { font-size: 24px; color: var(--c-carb); }
+.carb-food-t { font-size: 14px; font-weight: 600; color: var(--color-text); }
+.carb-food-s { font-size: 10px; color: var(--color-neutral-400); line-height: 1.2; }
+
+/* подсветки резервуара */
+.today-alert {
+  display: flex; align-items: flex-start; gap: 11px; margin-top: 12px;
+  padding: 13px 14px; border-radius: 16px;
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+  border-left: 3px solid var(--color-neutral-700);
+}
+.today-alert.warn { border-left-color: var(--c-carb); background: color-mix(in srgb, var(--c-carb) 8%, var(--color-neutral-900)); }
+.today-alert.info { border-left-color: var(--color-accent); }
+.today-alert > ion-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.today-alert.warn > ion-icon { color: var(--c-carb); }
+.today-alert.info > ion-icon { color: var(--color-accent-300); }
+.today-alert b { display: block; font-size: 14px; font-weight: 600; }
+.today-alert span { display: block; font-size: 12px; color: var(--color-neutral-400); line-height: 1.4; margin-top: 3px; text-wrap: pretty; }
+.macros { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 14px 0 14px 18px; }
+.macros > div { font-size: 13px; font-weight: 600; }
+.macros span { color: var(--color-neutral-400); font-size: 11px; font-weight: 400; display: inline-block; width: 12px; }
+.macros b { font-weight: 600; }
+.carbs { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 10px; }
+
+/* Плитка «Аналитика» — рядом с панелью углеводов и в её же логике: рамка цветом
+   темы, мягкая заливка, крупная область нажатия. Разный вид у двух соседних входов
+   читался бы как разная важность. */
+.an-panel {
+  width: 100%; margin-top: 10px; display: flex; align-items: stretch; overflow: hidden;
+  border-radius: 20px; cursor: pointer; font-family: var(--font-body); color: var(--color-text);
+  border: 1.5px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 14%, transparent), color-mix(in srgb, var(--color-accent) 4%, transparent));
+  transition: background .16s;
+}
+.an-panel:active { background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 20%, transparent), color-mix(in srgb, var(--color-accent) 7%, transparent)); }
+.an-panel.is-off {
+  cursor: default; opacity: .5;
+  border-color: var(--color-neutral-800); background: var(--color-neutral-900);
+}
+.an-ico { display: flex; align-items: center; padding: 16px 0 16px 18px; }
+.an-ico ion-icon { font-size: 26px; color: var(--color-accent); }
+.an-panel.is-off .an-ico ion-icon { color: var(--color-neutral-500); }
+.an-center { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 16px 14px; }
+.an-t { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.an-s { font-size: 11.5px; color: var(--color-neutral-400); text-wrap: pretty; }
+.an-go { display: flex; align-items: center; padding-right: 16px; }
+.an-go ion-icon { font-size: 18px; color: var(--color-neutral-500); }

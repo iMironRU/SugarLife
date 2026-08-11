@@ -1,0 +1,92 @@
+/* Шторки и карточки: заголовки, поля, кнопки */
+
+/* ===== Шторка Nightscout ===== */
+.sheet { --background: var(--color-bg); }
+/* Полноэкранный «раздел» Профиля (не шторка-пик снизу, а страница) — Устройства,
+   Способы/Сервисы и т.п. (docs/CONNECT-UX.md §10 «Карта интерфейса»). Без breakpoints/handle:
+   те давали нестабильное поведение (самопроизвольное закрытие) без явной пользы для страницы,
+   которую и так закрывают только кнопкой «назад». */
+/* Шторка снизу — для одноразовой подзадачи: выбрать значение, подтвердить перенос.
+   Это как раз то, для чего модалка и предназначена, в отличие от разделов-страниц.
+   Без breakpoints намеренно: с ними вертикальный жест уходит в перетаскивание вместо
+   прокрутки, и нижние кнопки становятся недостижимы — мы это уже проходили. */
+.sheet-modal {
+  --width: 100%; --height: auto; --max-height: 88%;
+  --border-radius: 20px 20px 0 0;
+  align-items: flex-end;
+}
+
+/* Страница стека внутри вкладки (data/stack.tsx).
+
+   Никаких вычислений: .pager-pane — это уже область между панелью и таббаром, и
+   страница просто занимает её целиком. Раньше на месте этого блока жили измерение
+   высот панели и таббара в JS, ужатая подложка, гашение событий на хосте модалки и
+   класс для нижнего слоя — всё это было попыткой воспроизвести навигацию модалкой.
+
+   Прокрутка своя (.stack-body), потому что IonContent здесь больше нет. */
+.stack-page {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; flex-direction: column;
+  background: var(--color-bg);
+  animation: stack-in .24s cubic-bezier(.3,.9,.3,1);
+}
+@keyframes stack-in { from { transform: translate3d(28%,0,0) } to { transform: none } }
+@media (prefers-reduced-motion: reduce) { .stack-page { animation: none } }
+/* Нижние страницы стека не рисуем, но и не размонтируем: возврат должен застать
+   набранный адрес и раскрытую часть суток на месте. */
+.stack-page:not(.is-top) { visibility: hidden; }
+/* Скроллер страницы стека.
+
+   Инерции у него не было: отпускаешь палец — список встаёт, приходится «подгребать».
+   У IonContent такого нет, потому что Ionic поднимает свой скроллер в отдельный слой.
+   Плоский div внутри трансформированного трека карусели браузер прокручивает на
+   главном потоке, без переноса импульса. Три свойства ниже — ровно то, чем
+   отличается ionic-скроллер, а не украшение. */
+.stack-body {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: calc(var(--sl-panel-rest) + 6px) 18px 26px;
+  -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
+  transform: translateZ(0);
+}
+/* Один лишний пиксель содержимого: без него короткая страница не прокручивается
+   вовсе, а значит и не пружинит — iOS включает резинку только у прокручиваемого.
+   Тем же приёмом пользуется сам Ionic (forceOverscroll). */
+.stack-body::after { content: ''; display: block; height: 1px; }
+.stack-page > .page-foot { flex: 0 0 auto; }
+
+.sheet::part(scroll) { padding: 6px 18px 26px; }
+/* gap — чтобы круглая кнопка не липла к заголовку (на телефоне читалось как одно пятно) */
+.sheet-head { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 8px 0 4px; }
+
+/* Полноэкранные разделы: на высоком телефоне кнопка «назад» вверху недостижима большим
+   пальцем, поэтому дублируем её внизу — в зоне досягаемости. Верхняя остаётся: она
+   привычна и нужна на широком экране. */
+/* подвал теперь ВНЕ прокрутки (IonFooter), запас под него не нужен */
+.stack-body .sheet-note, .stack-body .section-label { padding-left: 2px; }
+.page-foot {
+  padding: 8px 18px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-neutral-800);
+}
+.page-foot::part(native) { background: var(--color-bg); }
+.page-back {
+  width: 100%; min-height: 48px; border-radius: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
+  color: var(--color-text); font-size: 15px; font-weight: 600; font-family: inherit;
+}
+.page-back:active { background: var(--color-neutral-800); }
+.page-back ion-icon { font-size: 18px; }
+.sheet-title { font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
+/* 44px — минимальный удобный размер касания (рекомендация iOS/Android). Сама иконка
+   крупнее пропорционально: раньше в круге 36px сидел значок ~16px и терялся. */
+.sheet-close {
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+  border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
+  color: var(--color-neutral-200); cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.sheet-close ion-icon { font-size: 24px; }
+.sheet-close:active { background: var(--color-neutral-800); }
+.sheet-desc { font-size: 13px; color: var(--color-neutral-400); line-height: 1.5; margin: 8px 0 16px; }
+.sheet-subtitle { font-size: 11px; color: var(--color-neutral-400); margin-top: 3px; }

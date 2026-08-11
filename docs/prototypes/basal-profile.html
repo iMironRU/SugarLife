@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Базальный профиль</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--stage:#20262E;--bg:#0E141C;--surf:#182130;--surf2:#212C3D;--line:#2C3A4E;
+ --tx:#EEF3F8;--tx2:#93A3B8;--ok:#4FC79A;--warn:#F0A83C;--bad:#F26B62;--info:#79A9FF;
+ --f:'Rubik',system-ui,-apple-system,sans-serif;--m:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;padding:16px 12px 30px;font-family:var(--f);background:var(--stage);color:var(--tx);
+ min-height:100vh;display:flex;flex-direction:column;align-items:center;line-height:1.45}
+button{font-family:inherit;color:inherit;border:none;background:none;cursor:pointer;font-size:inherit;text-align:left}
+.phone{width:100%;max-width:420px;background:var(--bg);border-radius:34px;border:1px solid #2A3543;
+ overflow:hidden;display:flex;flex-direction:column;height:min(780px,94vh)}
+.top{padding:14px 16px 10px;flex:none;border-bottom:1px solid var(--line)}
+.ttl{font-size:19px;font-weight:600}
+.sub{font-size:12px;color:var(--tx2);font-family:var(--m);margin-top:2px}
+.segs{display:flex;gap:5px;background:#151C26;border-radius:12px;padding:4px;margin-top:12px}
+.seg{flex:1;padding:9px 4px;border-radius:9px;font-size:13px;font-weight:500;color:#9AA8BA;text-align:center}
+.seg[aria-pressed="true"]{background:#2E3A4C;color:#fff}
+.body{flex:1;overflow-y:auto;padding:14px 12px 18px}
+.card{background:var(--surf);border-radius:16px;padding:14px 15px;margin-bottom:10px}
+.chart{width:100%;height:152px;display:block}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--tx2);margin-top:8px}
+.legend i{display:inline-block;width:16px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.tot{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;padding-top:11px;border-top:1px solid #24314A}
+.tot .k{font-size:12.5px;color:var(--tx2)}
+.tot .v{font-family:var(--m);font-size:17px;font-weight:700}
+.find{background:#1B2230;border-left:3px solid var(--warn);border-radius:0 16px 16px 0;padding:14px 15px;margin-bottom:10px;width:100%;display:block}
+.find .h{font-size:14.5px;font-weight:600;color:#F0C88A}
+.find .d{font-size:13px;color:#C4D0DE;margin-top:5px}
+.find .q{font-size:12px;color:var(--info);margin-top:8px;font-family:var(--m)}
+.rowh{font-size:11px;font-family:var(--m);color:#6F8095;letter-spacing:.1em;text-transform:uppercase;margin:16px 4px 8px;display:flex;justify-content:space-between}
+.part{background:var(--surf);border-radius:16px;margin-bottom:8px;overflow:hidden}
+.phead{display:flex;align-items:center;gap:10px;padding:13px 15px;width:100%}
+.phead:active{background:var(--surf2)}
+.phead .nm{font-size:15px;font-weight:600;flex:1}
+.phead .hr{font-family:var(--m);font-size:11px;color:#6F8095;display:block;font-weight:400;margin-top:2px}
+.phead .av{font-family:var(--m);font-size:16px;font-weight:700}
+.phead .du{font-family:var(--m);font-size:11px;color:var(--tx2);display:block;text-align:right;font-weight:400}
+.phead .cx{font-size:13px;color:#6F8095;flex:0 0 12px}
+.ivs{padding:0 10px 10px}
+.iv{display:flex;align-items:center;gap:10px;background:#141C27;border-radius:11px;padding:11px 13px;margin-top:6px;width:100%}
+.iv:active{background:#1B2636}
+.iv .t{font-family:var(--m);font-size:12.5px;color:var(--tx2);flex:0 0 92px}
+.iv .v{font-family:var(--m);font-size:15px;font-weight:700;flex:1}
+.iv .f{font-family:var(--m);font-size:11px;color:#6F8095}
+.iv.chg{outline:1px solid #2F7A5F}
+.iv.chg .v{color:var(--ok)}
+.prop{background:#15302A;border-left:3px solid var(--ok);border-radius:0 16px 16px 0;padding:13px 15px;margin-bottom:10px}
+.prop .h{font-size:14px;font-weight:600;color:#7FE0BC}
+.prop .d{font-size:13px;color:#C4D0DE;margin:5px 0 10px}
+.prop .b{display:flex;gap:8px}
+.pb{flex:1;padding:11px;border-radius:12px;text-align:center;font-size:13.5px;font-weight:500;background:#1E3B33;color:#9BE8C9}
+.pb.main{background:var(--ok);color:#06231A;font-weight:600}
+.tools{display:flex;gap:8px;margin:12px 0 4px}
+.tool{flex:1;background:var(--surf);border-radius:13px;padding:12px 8px;text-align:center;font-size:12.5px;color:#B7C4D4}
+.tool:active{background:var(--surf2)}
+.tool b{display:block;font-size:17px;margin-bottom:3px;color:var(--tx)}
+.act{padding:11px 14px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line);flex:none;display:flex;gap:9px}
+.btn{flex:1;padding:16px;border-radius:15px;background:var(--surf2);text-align:center;font-weight:500}
+.btn.go{background:var(--ok);color:#06231A;font-weight:600}
+.btn.off{background:#232B36;color:#5E6C7D}
+.btn.slim{flex:0 0 96px}
+.hold{position:relative;overflow:hidden}
+.hf{position:absolute;inset:0;background:rgba(255,255,255,.3);width:0}
+.hl{position:relative}
+.scrim{position:fixed;inset:0;background:rgba(6,10,16,.62);opacity:0;pointer-events:none;transition:opacity .22s;z-index:40}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;width:100%;max-width:420px;transform:translate(-50%,102%);
+ background:#141C27;border-radius:26px 26px 0 0;z-index:50;transition:transform .28s cubic-bezier(.22,.9,.3,1);
+ max-height:88vh;display:flex;flex-direction:column;border:1px solid #2A3543;border-bottom:none}
+.sheet.on{transform:translate(-50%,0)}
+.grab{width:38px;height:4px;border-radius:99px;background:#3A4759;margin:10px auto 4px;flex:none}
+.shead{padding:8px 20px 2px;flex:none}
+.stitle{font-size:20px;font-weight:600}
+.ssub{font-size:12px;color:var(--tx2);font-family:var(--m);margin-top:3px}
+.scont{padding:12px 20px 18px;overflow-y:auto;font-size:15px}
+.scont p{margin:0 0 12px}
+.kid{background:#1D2836;border-radius:14px;padding:12px 14px;margin:0 0 12px;font-size:14.5px}
+.kid b{color:var(--info)}
+.kid.warn{border-left:3px solid var(--warn);border-radius:0 14px 14px 0}
+.kid.warn b{color:var(--warn)}
+.sfoot{padding:10px 20px calc(16px + env(safe-area-inset-bottom));border-top:1px solid #223046;flex:none;display:flex;flex-direction:column;gap:8px}
+.stepper{display:flex;align-items:center;gap:12px;margin:14px 0 4px}
+.pm{width:60px;height:60px;border-radius:18px;background:#2A374C;font-size:28px;display:flex;
+ align-items:center;justify-content:center;flex:none;line-height:1}
+.pm:active{background:#35455E}.pm.off{background:#1E2530;color:#495768}
+.stepval{flex:1;text-align:center;font-family:var(--m);font-size:32px;font-weight:700}
+.stepval small{display:block;font-size:11px;color:var(--tx2);font-weight:400;margin-top:3px}
+.mini{display:flex;gap:8px;margin-top:12px}
+.mb{flex:1;background:#22304A;border-radius:12px;padding:11px;text-align:center;font-size:13px}
+.mb:active{background:#2C3D5C}
+.cov{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-top:10px}
+.cov i{height:26px;border-radius:4px;background:#243043;display:flex;align-items:center;justify-content:center;
+ font-family:var(--m);font-size:9px;color:#6F8095}
+.cov i.g{background:#1E4437;color:#7FE0BC}
+.cov i.y{background:#3A2E18;color:#F0C88A}
+.chk{display:flex;gap:12px;align-items:flex-start;background:#1D2836;border-radius:14px;padding:13px;margin-bottom:8px;width:100%}
+.box{width:22px;height:22px;border-radius:7px;border:2px solid #4A5A70;flex:none;display:flex;align-items:center;justify-content:center;font-size:14px;color:#06231A}
+.chk[aria-pressed="true"] .box{background:var(--ok);border-color:var(--ok)}
+.chk .n{font-family:var(--m);font-size:12px;color:var(--tx2);flex:0 0 78px}
+.chk .t{font-size:14px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="top">
+    <div class="ttl">Базальный профиль</div>
+    <div class="sub">будни · в помпе с 12 марта</div>
+    <div class="segs" role="group">
+      <button class="seg" data-v="now" aria-pressed="true">Как есть</button>
+      <button class="seg" data-v="edit" aria-pressed="false">Правка</button>
+    </div>
+  </div>
+  <div class="body" id="body"></div>
+  <div class="act" id="act"></div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true">
+  <div class="grab"></div>
+  <div class="shead"><div class="stitle" id="stitle"></div><div class="ssub" id="ssub"></div></div>
+  <div class="scont" id="scont"></div>
+  <div class="sfoot" id="sfoot"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+let view='now', undoStack=[], propApplied=false, openPart=1;
+
+// профиль в помпе: интервалы по 30 мин допускаются, шаг значения 0.05
+const PUMP=[{a:0,b:3,v:0.60},{a:3,b:6,v:0.55},{a:6,b:10,v:0.75},
+            {a:10,b:14,v:0.65},{a:14,b:19,v:0.60},{a:19,b:24,v:0.65}];
+// фактическая потребность, усреднённая по наблюдениям
+const NEED=[{a:0,b:3,v:0.62},{a:3,b:6,v:0.71},{a:6,b:10,v:0.92},
+            {a:10,b:14,v:0.66},{a:14,b:19,v:0.58},{a:19,b:24,v:0.67}];
+// предложение системы
+const PROP=[{a:3,b:6,v:0.70},{a:6,b:10,v:0.90}];
+
+let WORK=JSON.parse(JSON.stringify(PUMP));
+
+const PARTS=[
+ {nm:'Ночь',a:0,b:4},
+ {nm:'Раннее утро',a:4,b:9},
+ {nm:'День',a:9,b:17},
+ {nm:'Вечер',a:17,b:24}
+];
+
+const fmtH=h=>String(Math.floor(h)).padStart(2,'0')+':'+(h%1?'30':'00');
+const at=(arr,h)=>{const s=arr.find(x=>h>=x.a&&h<x.b);return s?s.v:0};
+const daily=arr=>arr.reduce((t,s)=>t+(s.b-s.a)*s.v,0);
+function partDose(arr,p){let t=0;for(let h=p.a;h<p.b;h+=0.5)t+=at(arr,h)*0.5;return t}
+const partAvg=(arr,p)=>partDose(arr,p)/(p.b-p.a);
+const ivsIn=p=>WORK.map((s,i)=>({s,i})).filter(x=>x.s.b>p.a&&x.s.a<p.b);
+const changed=i=>Math.abs(WORK[i].v-at(PUMP,WORK[i].a))>0.001;
+const anyChanged=()=>WORK.some((s,i)=>changed(i))||WORK.length!==PUMP.length;
+
+function snap(){undoStack.push(JSON.stringify(WORK));if(undoStack.length>20)undoStack.shift()}
+function undo(){if(!undoStack.length)return;WORK=JSON.parse(undoStack.pop());render()}
+
+function path(arr,max,W=300,H=110){
+  let d='';
+  arr.forEach(s=>{
+    const x1=s.a/24*W,x2=s.b/24*W,y=H-(s.v/max)*H;
+    d+=(d?` L${x1.toFixed(1)},${y.toFixed(1)}`:`M${x1.toFixed(1)},${y.toFixed(1)}`)+` L${x2.toFixed(1)},${y.toFixed(1)}`;
+  });
+  return d;
+}
+
+function chart(){
+  const max=1.05, edit=view==='edit';
+  return `<div class="card">
+    <svg class="chart" viewBox="0 0 300 132" preserveAspectRatio="none" aria-hidden="true">
+      ${PARTS.map(p=>`<rect x="${p.a/24*300}" y="0" width="${(p.b-p.a)/24*300}" height="110" fill="${PARTS.indexOf(p)%2?'#131C27':'#0F1721'}"/>`).join('')}
+      <line x1="0" y1="110" x2="300" y2="110" stroke="#2C3A4E" stroke-width="1"/>
+      <path d="${path(NEED,max)}" fill="none" stroke="#F0A83C" stroke-width="2" opacity=".85"/>
+      <path d="${path(PUMP,max)}" fill="none" stroke="#79A9FF" stroke-width="2.5" opacity="${edit?'.45':'1'}"/>
+      ${edit?`<path d="${path(WORK,max)}" fill="none" stroke="#4FC79A" stroke-width="2.5"/>`:''}
+      ${PARTS.map(p=>`<text x="${p.a/24*300+3}" y="126" fill="#6F8095" font-size="8.5" font-family="monospace">${p.nm.toLowerCase()}</text>`).join('')}
+    </svg>
+    <div class="legend">
+      <span><i style="background:#79A9FF"></i>в помпе</span>
+      <span><i style="background:#F0A83C"></i>фактическая потребность</span>
+      ${edit?'<span><i style="background:#4FC79A"></i>правка</span>':''}
+    </div>
+    <div class="tot"><span class="k">суточный базал</span>
+      <span class="v">${daily(PUMP).toFixed(2)}${edit&&anyChanged()?` <span style="color:var(--ok)">→ ${daily(WORK).toFixed(2)}</span>`:''} <span style="font-size:11px;color:var(--tx2)">ЕД</span></span>
+    </div></div>`;
+}
+
+function render(){
+  const b=$('#body'), edit=view==='edit';
+  b.innerHTML = chart() + (edit?editBody():nowBody());
+  bind();
+  $('#act').innerHTML = edit
+    ? `<button class="btn slim ${undoStack.length?'':'off'}" id="undo">↩︎</button>
+       <button class="btn ${anyChanged()?'go':'off'}" id="apply">Перенести в помпу</button>`
+    : `<button class="btn" id="toedit">Править профиль</button>`;
+  if($('#toedit'))$('#toedit').onclick=()=>setView('edit');
+  if($('#undo'))$('#undo').onclick=undo;
+  if($('#apply')&&anyChanged())$('#apply').onclick=transfer;
+}
+
+function nowBody(){
+  return `<button class="find" id="find">
+      <div class="h">С 03:00 до 06:00 профиля не хватает</div>
+      <div class="d">Петля добавляла сверх профиля в среднем на 29 % — 19 ночей из 21 за три недели. Днём расхождений нет.</div>
+      <div class="q">на чём основано →</div>
+    </button>
+    <div class="rowh"><span>по частям суток</span><span>среднее · за период</span></div>
+    ${PARTS.map((p,k)=>`
+      <div class="part"><div class="phead">
+        <span class="nm">${p.nm}<span class="hr">${fmtH(p.a)}–${fmtH(p.b)}</span></span>
+        <span class="av">${partAvg(PUMP,p).toFixed(2)}<span class="du">${partDose(PUMP,p).toFixed(2)} ЕД</span></span>
+      </div></div>`).join('')}
+    <div style="font-family:var(--m);font-size:11px;color:#6F8095;padding:6px 6px 0">значения в ЕД/ч</div>`;
+}
+
+function editBody(){
+  return `${!propApplied?`<div class="prop">
+      <div class="h">Есть предложение по двум интервалам</div>
+      <div class="d">Ночной и утренний подняты до наблюдаемой потребности: 0.55 → 0.70 и 0.75 → 0.90.</div>
+      <div class="b"><button class="pb main" id="useprop">Применить</button><button class="pb" id="whyprop">Почему</button></div>
+    </div>`:''}
+    <div class="tools">
+      <button class="tool" id="scaleAll"><b>%</b>весь профиль</button>
+      <button class="tool" id="flat"><b>≡</b>выровнять</button>
+      <button class="tool" id="reset"><b>↺</b>как в помпе</button>
+    </div>
+    <div class="rowh"><span>части суток</span><span>нажми, чтобы раскрыть</span></div>
+    ${PARTS.map((p,k)=>{
+      const op=openPart===k;
+      return `<div class="part">
+        <button class="phead" data-p="${k}">
+          <span class="cx">${op?'▾':'▸'}</span>
+          <span class="nm">${p.nm}<span class="hr">${fmtH(p.a)}–${fmtH(p.b)}</span></span>
+          <span class="av">${partAvg(WORK,p).toFixed(2)}<span class="du">${partDose(WORK,p).toFixed(2)} ЕД</span></span>
+        </button>
+        ${op?`<div class="ivs">
+          <div class="mini" style="margin:2px 0 4px">
+            <button class="mb" data-pm="${k}" data-d="-5">−5 %</button>
+            <button class="mb" data-pm="${k}" data-d="5">+5 %</button>
+            <button class="mb" data-pm="${k}" data-d="10">+10 %</button>
+          </div>
+          ${ivsIn(p).map(x=>`
+            <button class="iv ${changed(x.i)?'chg':''}" data-i="${x.i}">
+              <span class="t">${fmtH(x.s.a)}–${fmtH(x.s.b)}</span>
+              <span class="v">${x.s.v.toFixed(2)}</span>
+              <span class="f">факт ${at(NEED,x.s.a).toFixed(2)}</span>
+            </button>`).join('')}
+        </div>`:''}
+      </div>`;
+    }).join('')}
+    <div style="font-family:var(--m);font-size:11px;color:#6F8095;padding:6px 6px 0">значения в ЕД/ч · шаг 0.05 · интервалы кратны 30 мин</div>`;
+}
+
+function bind(){
+  const b=$('#body');
+  if($('#find'))$('#find').onclick=basis;
+  if($('#whyprop'))$('#whyprop').onclick=basis;
+  if($('#useprop'))$('#useprop').onclick=()=>{
+    snap();
+    PROP.forEach(p=>{const s=WORK.find(x=>x.a===p.a&&x.b===p.b);if(s)s.v=p.v});
+    propApplied=true;render();
+  };
+  if($('#reset'))$('#reset').onclick=()=>{snap();WORK=JSON.parse(JSON.stringify(PUMP));propApplied=false;render()};
+  if($('#scaleAll'))$('#scaleAll').onclick=scaleAll;
+  if($('#flat'))$('#flat').onclick=flatten;
+  b.querySelectorAll('[data-p]').forEach(x=>x.onclick=()=>{openPart=openPart===+x.dataset.p?-1:+x.dataset.p;render()});
+  b.querySelectorAll('[data-pm]').forEach(x=>x.onclick=e=>{
+    e.stopPropagation();snap();
+    const p=PARTS[+x.dataset.pm], f=1+(+x.dataset.d)/100;
+    ivsIn(p).forEach(y=>{WORK[y.i].v=Math.max(0.05,Math.round(WORK[y.i].v*f*20)/20)});
+    render();
+  });
+  b.querySelectorAll('.iv').forEach(x=>x.onclick=()=>editIv(+x.dataset.i));
+}
+
+function setView(v){view=v;document.querySelectorAll('.seg').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===v));render()}
+document.querySelectorAll('.seg').forEach(x=>x.onclick=()=>setView(x.dataset.v));
+
+function open(t,s,h,f){$('#stitle').textContent=t;$('#ssub').textContent=s||'';
+ $('#scont').innerHTML=h;$('#sfoot').innerHTML=f||'';
+ $('#sheet').classList.add('on');$('#scrim').classList.add('on')}
+window.closeSheet=()=>{$('#sheet').classList.remove('on');$('#scrim').classList.remove('on')};
+$('#scrim').onclick=closeSheet;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
+
+function basis(){
+ open('На чём основано','21 ночь · три недели',
+  `<div class="kid">Сравнивается не гликемия, а <b>работа петли</b>. Если она регулярно добавляет сверх профиля в одни и те же часы — профиль ниже потребности.</div>
+   <p style="font-size:14px">С 03:00 до 06:00 петля повышала подачу в 19 ночах из 21, в среднем на 29 %. В остальные часы систематических отклонений нет.</p>
+   <p style="font-size:13.5px;color:var(--tx2)">Ночи с углеводами после 23:00, тренировкой или заменой набора исключены — они не годятся для вывода.</p>
+   <div style="font-size:12px;color:var(--tx2);margin-top:14px">покрытие наблюдениями по частям суток</div>
+   <div class="cov">${['00','03','06','09','12','15','18','21'].map((h,k)=>`<i class="${[0,1,2,7].includes(k)?'g':(k===4||k===5?'y':'')}">${h}</i>`).join('')}</div>
+   <p style="font-size:12.5px;color:var(--tx2);margin-top:8px">Днём наблюдений меньше: приёмы пищи мешают отделить базал от болюса.</p>`,
+  `<button class="btn" onclick="closeSheet()">Понятно</button>`);
+}
+
+function editIv(i){
+ const s=WORK[i], pumpV=at(PUMP,s.a), needV=at(NEED,s.a);
+ const draw=()=>{
+  const v=WORK[i].v, prev=i>0?WORK[i-1].v:null, next=i<WORK.length-1?WORK[i+1].v:null;
+  const jump=[prev,next].filter(x=>x!==null).some(x=>Math.abs(v-x)/Math.max(x,0.05)>0.5);
+  const canSplit=(s.b-s.a)>=1, canMerge=i<WORK.length-1;
+  $('#scont').innerHTML=
+   `<div class="kid">В помпе <b>${pumpV.toFixed(2)} ЕД/ч</b>, наблюдаемая потребность <b>${needV.toFixed(2)}</b>.</div>
+    <div class="stepper">
+      <button class="pm ${v<=0.05?'off':''}" id="mi">−</button>
+      <div class="stepval">${v.toFixed(2)}<small>ЕД/ч · шаг 0.05</small></div>
+      <button class="pm ${v>=2?'off':''}" id="pl">+</button>
+    </div>
+    <div style="text-align:center;font-family:var(--m);font-size:11px;color:#6F8095">
+      за интервал ${((s.b-s.a)*v).toFixed(2)} ЕД · суточный станет ${daily(WORK).toFixed(2)} ЕД</div>
+    ${jump?`<div class="kid warn" style="margin-top:12px"><b>Резкий перепад с соседним интервалом.</b> Больше чем в полтора раза. Так бывает, но чаще это опечатка.</div>`:''}
+    ${Math.abs(v-needV)/needV>0.15?`<div class="kid warn" style="margin-top:12px"><b>Расходится с наблюдаемой потребностью</b> ${needV.toFixed(2)} ЕД/ч.</div>`:''}
+    <div class="mini">
+      <button class="mb ${canSplit?'':'off'}" id="split" ${canSplit?'':'disabled'}>Разделить пополам</button>
+      <button class="mb ${canMerge?'':'off'}" id="merge" ${canMerge?'':'disabled'}>Слить со следующим</button>
+    </div>`;
+  $('#sfoot').innerHTML = Math.abs(v-pumpV)>0.001
+    ? `<button class="btn go" id="rst">↺ Вернуть как в помпе ${pumpV.toFixed(2)}</button>
+       <button class="btn" style="background:transparent;border:1.5px solid #3E4E66" onclick="closeSheet()">Всё же оставить ${v.toFixed(2)}</button>`
+    : `<button class="btn" onclick="closeSheet()">Готово</button>`;
+  $('#mi').onclick=()=>{snap();WORK[i].v=Math.max(0.05,+(WORK[i].v-0.05).toFixed(2));draw();render()};
+  $('#pl').onclick=()=>{snap();WORK[i].v=Math.min(2,+(WORK[i].v+0.05).toFixed(2));draw();render()};
+  if($('#rst'))$('#rst').onclick=()=>{snap();WORK[i].v=pumpV;draw();render()};
+  if(canSplit)$('#split').onclick=()=>{
+    snap();const m=s.a+Math.floor((s.b-s.a)/2*2)/2;
+    WORK.splice(i,1,{a:s.a,b:m,v:s.v},{a:m,b:s.b,v:s.v});closeSheet();render();
+  };
+  if(canMerge)$('#merge').onclick=()=>{
+    snap();const n=WORK[i+1];
+    WORK.splice(i,2,{a:s.a,b:n.b,v:s.v});closeSheet();render();
+  };
+ };
+ open(fmtH(s.a)+'–'+fmtH(s.b),'интервал профиля','','');
+ draw();
+}
+
+function scaleAll(){
+ let f=0;
+ const draw=()=>{
+  $('#scont').innerHTML=
+   `<div class="kid">Меняет <b>весь профиль пропорционально</b>. Форма сохраняется, сдвигается уровень целиком — так поступают при болезни, смене сезона или после заметного изменения веса.</div>
+    <div class="stepper">
+      <button class="pm" id="mi">−</button>
+      <div class="stepval">${f>0?'+':''}${f} %<small>шаг 5 %</small></div>
+      <button class="pm" id="pl">+</button>
+    </div>
+    <div style="text-align:center;font-family:var(--m);font-size:12px;color:var(--tx2)">
+      суточный ${daily(WORK).toFixed(2)} → <span style="color:var(--ok)">${(daily(WORK)*(1+f/100)).toFixed(2)}</span> ЕД</div>
+    ${Math.abs(f)>20?`<div class="kid warn" style="margin-top:12px"><b>Изменение больше 20 %.</b> Такие сдвиги обычно делят на несколько шагов и проверяют по несколько дней.</div>`:''}`;
+  $('#sfoot').innerHTML=`<button class="btn ${f?'go':'off'}" id="ok">Применить</button>
+    <button class="btn" style="background:transparent;border:1.5px solid #3E4E66" onclick="closeSheet()">Отмена</button>`;
+  $('#mi').onclick=()=>{f-=5;draw()};
+  $('#pl').onclick=()=>{f+=5;draw()};
+  if(f)$('#ok').onclick=()=>{snap();WORK.forEach(s=>s.v=Math.max(0.05,Math.round(s.v*(1+f/100)*20)/20));closeSheet();render()};
+ };
+ open('Весь профиль','пропорционально','','');
+ draw();
+}
+
+function flatten(){
+ const avg=Math.round(daily(WORK)/24*20)/20;
+ open('Выровнять','один уровень на сутки',
+  `<div class="kid">Все интервалы станут равными <b>${avg.toFixed(2)} ЕД/ч</b> — суточная доза не изменится, исчезнет только форма.</div>
+   <p style="font-size:13.5px;color:var(--tx2)">Годится как исходная точка, когда профиль строится с нуля и данных о потребности по часам ещё нет.</p>`,
+  `<button class="btn go" id="ok">Выровнять</button>
+   <button class="btn" style="background:transparent;border:1.5px solid #3E4E66" onclick="closeSheet()">Отмена</button>`);
+ $('#ok').onclick=()=>{snap();WORK=[{a:0,b:24,v:avg}];closeSheet();render()};
+}
+
+function transfer(){
+ const list=WORK.map((s,i)=>({s,i})).filter(x=>changed(x.i));
+ let done=new Set();
+ const draw=()=>{
+  $('#scont').innerHTML=
+   `<div class="kid">Приложение не подключается к помпе. Введите значения на самой помпе, затем отметьте здесь — <b>это попадёт в историю профиля</b> и будет учтено при следующем разборе.</div>
+    ${list.map(x=>`
+      <button class="chk" data-k="${x.i}" aria-pressed="${done.has(x.i)}">
+        <span class="box">✓</span>
+        <span class="n">${fmtH(x.s.a)}–${fmtH(x.s.b)}</span>
+        <span class="t">${at(PUMP,x.s.a).toFixed(2)} → <b>${x.s.v.toFixed(2)}</b> ЕД/ч</span>
+      </button>`).join('')}
+    <p style="font-size:13px;color:var(--tx2);margin-top:4px">Остальные интервалы не трогайте.</p>`;
+  const all=done.size===list.length;
+  $('#sfoot').innerHTML=
+   `<button class="btn hold ${all?'go':'off'}" id="fin"><i class="hf"></i><span class="hl">${all?'Удерживайте — записать в историю':'Отметьте все интервалы'}</span></button>
+    <button class="btn" style="background:transparent;border:1.5px solid #3E4E66" onclick="closeSheet()">Позже</button>`;
+  $('#scont').querySelectorAll('.chk').forEach(c=>c.onclick=()=>{
+    const k=+c.dataset.k;done.has(k)?done.delete(k):done.add(k);draw()});
+  if(all)hold($('#fin'),()=>open('Записано в историю','',
+    `<div class="kid">Изменение профиля сохранено с датой и временем. При следующем разборе дрейфа сравнение пойдёт <b>от этой точки</b>, а не от старого профиля.</div>
+     <p style="font-size:13.5px;color:var(--tx2)">Через две-три недели станет видно, помогло ли.</p>`,
+    `<button class="btn" onclick="closeSheet()">Понятно</button>`));
+ };
+ open('Перенос в помпу','вручную, по интервалам','','');
+ draw();
+}
+function hold(el,done){
+ let t=null,s=0;const H=1100;
+ el.addEventListener('pointerdown',e=>{e.preventDefault();s=Date.now();
+  t=setInterval(()=>{const p=Math.min(1,(Date.now()-s)/H);
+   const f=el.querySelector('.hf');if(f)f.style.width=(p*100)+'%';
+   if(p>=1){stop();done()}},16)});
+ ['pointerup','pointerleave','pointercancel'].forEach(ev=>el.addEventListener(ev,stop));
+ function stop(){if(t){clearInterval(t);t=null}const f=el.querySelector('.hf');if(f)f.style.width='0'}
+}
+render();
+</script></body></html>

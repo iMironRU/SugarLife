@@ -1,0 +1,49 @@
+/* Экран подключения и лоадер */
+
+/* ===== Гейт подключения / лоадер ===== */
+.connect {
+  height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 32px 26px; text-align: center; background: var(--color-bg); color: var(--color-text);
+}
+.b-drop { flex-shrink: 0; filter: drop-shadow(0 0 16px color-mix(in srgb, var(--color-accent) 45%, transparent)); }
+.b-drop.pulse { animation: bpulse 1.8s ease-in-out infinite; }
+@keyframes bpulse {
+  0%, 100% { filter: drop-shadow(0 0 12px color-mix(in srgb, var(--color-accent) 32%, transparent)); transform: scale(1); }
+  50% { filter: drop-shadow(0 0 26px color-mix(in srgb, var(--color-accent) 62%, transparent)); transform: scale(1.045); }
+}
+.b-spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--color-neutral-800); border-top-color: var(--color-accent); animation: bspin .8s linear infinite; }
+@keyframes bspin { to { transform: rotate(360deg); } }
+.connect-title { font-size: 26px; font-weight: 600; letter-spacing: -.02em; margin: 6px 0 0; }
+.connect-desc { font-size: 13px; color: var(--color-neutral-400); line-height: 1.5; max-width: 320px; }
+.connect-form { width: 100%; max-width: 360px; margin-top: 8px; }
+.connect-msg { min-height: 18px; font-size: 13px; color: var(--color-neutral-300); margin-top: 12px; }
+
+/* Онбординг: шаги мастера — не по центру, а сверху (списки способов длиннее приветствия) */
+.connect.ob-page {
+  justify-content: flex-start; text-align: left; gap: 12px;
+  padding: max(28px, env(safe-area-inset-top)) 20px 28px; overflow-y: auto;
+}
+.ob-page .list, .ob-page .connect-form, .ob-page .sheet-note { width: 100%; max-width: 420px; }
+.ob-page .connect-desc { max-width: 420px; }
+.ob-head { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 420px; }
+.ob-skip {
+  background: none; border: 0; color: var(--color-neutral-400); font-size: 13px;
+  padding: 12px; margin-top: 4px; cursor: pointer; text-decoration: underline;
+}
+/* ссылка-строка в списке способов ведёт себя как кнопка-строка */
+.ob-page a.list-row { text-decoration: none; color: inherit; }
+/* в мастере подпись объясняет выбор — она должна дочитываться, а не обрезаться */
+.ob-page .pick-sub { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
+.ob-page .list-row { align-items: flex-start; padding-top: 12px; padding-bottom: 12px; }
+.ob-page .list-row .list-ico, .ob-page .list-row .list-chev { margin-top: 2px; }
+
+/* Экраны */
+/* верхний safe-area: контент не под статус-баром/островом (iOS standalone/нативка) */
+/* верхний safe-area держит общая панель (HeroPanel), поэтому экраны его НЕ добавляют */
+/* Без искусственного запаса прокрутки. Панель живёт НАД областью прокрутки, поэтому
+   каждый прокрученный пиксель уводит контент вверх, под панель. Добавлять запас там,
+   где контент и так помещается, значит прятать этот контент ни за чем — панель
+   сворачивается только когда прокручивать действительно есть что.
+   Чтобы сворачивать и на коротких экранах, панель должна поглощать жест сама
+   (липкая внутри прокрутки) — см. docs/, это отдельная переделка. */
+.screen { padding: 8px 20px 24px; }

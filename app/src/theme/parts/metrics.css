@@ -1,0 +1,153 @@
+/* Экран «Метрики» и графики */
+
+/* ===== Метрики ===== */
+/* Переключатели периода и метрики на «Метриках» — липнут под панелью.
+
+   Сама панель контент не накрывает (position: static, обычный флекс-элемент над
+   скроллером), поэтому top: 0 — это и есть «сразу под панелью», подгонять под её
+   меняющуюся высоту нечего: панель сжимается, и скроллпорт уезжает вверх вместе с ней.
+
+   Поля вытянуты в минус на 20px (padding у .screen) и возвращены своим padding'ом:
+   без этого фон полосы обрывался бы по краям и контент проезжал бы в щели по бокам.
+   Фон непрозрачный по той же причине — иначе график виден сквозь чипы. */
+.metrics-sticky {
+  /* Липнет ровно под панелью.
+
+     Отсчёт у sticky идёт от КОНТЕНТНОГО края скроллера, а он уже опущен на высоту
+     панели в покое (--padding-top). Прибавлять высоту ещё раз — значит опустить
+     полосу вдвое: так и вышло, 248 вместо 124.
+
+     Поэтому здесь разница: в покое ноль (полоса у нижней кромки панели), а когда
+     панель сжимается — отрицательная, и полоса поднимается вместе с ней. */
+  position: sticky; z-index: 5;
+  top: calc(var(--sl-panel-h) - var(--sl-panel-rest));
+  margin: 0 -20px; padding: 6px 20px 10px;
+  background: var(--color-bg);
+}
+.period { display: flex; background: var(--color-neutral-900); border-radius: 12px; padding: 4px; gap: 2px; }
+.period-seg {
+  flex: 1; text-align: center; padding: 9px 0; border-radius: 9px; border: 0; cursor: pointer;
+  background: transparent; color: var(--color-neutral-400); font-size: 13px; font-family: var(--font-body);
+}
+.period-seg.on { background: var(--color-neutral-100); color: var(--color-neutral-900); font-weight: 600; }
+
+.metric-chips { display: flex; gap: 6px; margin-top: 18px; }
+.metric-chip {
+  flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 8px; border-radius: 15px;
+  cursor: pointer; font-family: var(--font-body); background: transparent;
+  border: 1px solid var(--color-neutral-800); color: var(--color-neutral-400);
+}
+.metric-chip ion-icon { font-size: 15px; }
+.metric-chip span { font-size: 13px; font-weight: 500; white-space: nowrap; }
+.metric-chip.on span { color: var(--color-text); }
+
+.metric-title { display: flex; align-items: center; gap: 10px; margin-top: 22px; }
+.metric-title span { font-size: 24px; font-weight: 600; }
+
+.hero-tile {
+  position: relative; overflow: hidden; height: 170px; border-radius: 20px; margin-top: 14px;
+  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900)); padding: 16px; box-sizing: border-box;
+}
+.hero-tile-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.hero-tile-label { font-size: 14px; color: var(--color-neutral-300); }
+.hero-tile-top ion-icon { font-size: 18px; color: var(--color-neutral-300); }
+.hero-tile-val { margin-top: 4px; display: flex; align-items: baseline; gap: 4px; }
+.hero-tile-val b { font-size: 42px; font-weight: 700; line-height: 1; }
+.hero-tile-val span { font-size: 16px; font-weight: 500; color: var(--color-neutral-300); }
+.hero-svg { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 96px; }
+
+.metric-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.metric-card, .metric-stat {
+  position: relative; overflow: hidden; border-radius: 20px; padding: 14px; box-sizing: border-box;
+  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900));
+}
+.metric-card { height: 150px; }
+.metric-card-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.metric-card-top span { font-size: 13px; color: var(--color-neutral-300); }
+.metric-card-top ion-icon { font-size: 16px; color: var(--color-neutral-300); }
+.metric-card-val { margin-top: 6px; display: flex; align-items: baseline; gap: 4px; }
+.metric-card-val b { font-size: 32px; font-weight: 700; line-height: 1; }
+.metric-card-val span { font-size: 13px; color: var(--color-neutral-300); }
+
+.metric-note { font-size: 11px; color: var(--color-neutral-500); margin: 16px 2px 0; line-height: 1.5; }
+/* индикатор фоновой докачки: честно, что данные ещё пополняются */
+.gather-note {
+  display: flex; align-items: center; gap: 9px; margin: 14px 0 2px; padding: 10px 14px;
+  border-radius: 14px; font-size: 12px; line-height: 1.4;
+  color: color-mix(in srgb, var(--c-carb) 70%, var(--color-neutral-200));
+  background: color-mix(in srgb, var(--c-carb) 8%, var(--color-neutral-900));
+  border: 1px solid color-mix(in srgb, var(--c-carb) 30%, transparent);
+}
+.gather-note ion-spinner { width: 16px; height: 16px; min-width: 16px; --color: var(--c-carb); }
+
+/* AGP / TIR */
+.agp-card { border-radius: 20px; padding: 12px; margin-top: 12px; background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900)); }
+.agp-empty { padding: 30px; text-align: center; color: var(--color-neutral-500); font-size: 13px; }
+.tir { display: flex; gap: 16px; align-items: stretch; padding: 6px 4px; }
+.tir-bar { width: 38px; height: 180px; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; background: var(--color-neutral-800); flex-shrink: 0; }
+.tir-seg { width: 100%; min-height: 0; }
+.tir-legend { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 11px; }
+.tir-row { display: flex; align-items: center; gap: 8px; }
+.tir-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.tir-name { font-size: 13px; flex: 1; min-width: 0; }
+.tir-range { font-size: 11px; color: var(--color-neutral-500); margin-right: 6px; }
+.tir-pct { font-size: 15px; font-weight: 600; min-width: 40px; text-align: right; }
+.stat-grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.sensor-ages { display: flex; gap: 8px; margin-top: 14px; }
+.sensor-ages-solo { margin-top: 10px; }
+
+/* Баннер установки PWA — над таб-баром */
+.install-banner {
+  position: fixed; left: 12px; right: 12px; max-width: 378px; margin: 0 auto;
+  bottom: calc(60px + env(safe-area-inset-bottom, 0px)); z-index: 9999;
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 12px 12px 14px; border-radius: 18px;
+  background: color-mix(in srgb, var(--color-accent) 16%, var(--color-neutral-900));
+  border: 1px solid color-mix(in srgb, var(--color-accent) 42%, transparent);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, .5);
+  animation: installIn .35s cubic-bezier(.2, .8, .2, 1);
+}
+@keyframes installIn { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.install-ico {
+  flex: none; width: 40px; height: 40px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+.install-ico ion-icon { font-size: 22px; color: var(--color-accent-300); }
+.install-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.install-text b { font-size: 14px; font-weight: 600; }
+.install-text span { font-size: 11.5px; color: var(--color-neutral-400); line-height: 1.35; }
+.install-text span ion-icon { vertical-align: -2px; font-size: 14px; color: var(--color-accent-300); }
+.install-btn {
+  flex: none; padding: 9px 16px; border-radius: 12px; border: none;
+  background: var(--color-accent); color: #fff; font-weight: 600; font-size: 13px; cursor: pointer;
+}
+.install-close { flex: none; background: none; border: none; color: var(--color-neutral-400); padding: 4px; cursor: pointer; display: flex; }
+.install-close ion-icon { font-size: 18px; }
+.age-pill {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 10px 6px; border-radius: 14px; background: var(--color-neutral-900);
+}
+.age-pill span { font-size: 10px; color: var(--color-neutral-400); }
+.age-pill b { font-size: 15px; font-weight: 600; }
+
+/* Готовность данных к разбору — шапка раздела «Аналитика».
+   Стоит выше находок, потому что говорит, насколько им вообще верить. */
+.rd {
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-neutral-900);
+  border-radius: 0 14px 14px 0; padding: 12px 14px; margin: 12px 0 4px;
+}
+.rd-top { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 600; }
+.rd-top ion-icon { font-size: 18px; flex-shrink: 0; }
+.rd-why { font-size: 12px; color: var(--color-neutral-400); margin-top: 6px; text-wrap: pretty; }
+/* счётчик находок в чипе-фильтре */
+.chip-n {
+  margin-left: 6px; font-size: 11px; color: var(--color-neutral-400);
+  background: color-mix(in srgb, var(--color-neutral-500) 22%, transparent);
+  border-radius: 999px; padding: 1px 6px;
+}
+/* Пять фильтров в строку не помещаются: подписи сжимались до нечитаемого, а счётчики
+   отрывались от своих чипов. Прокрутка вбок честнее сжатия — видно, что есть ещё. */
+.chips-scroll { overflow-x: auto; padding-bottom: 2px; } /* полоса прокрутки — в base.css */
+.chips-scroll .metric-chip { flex: 0 0 auto; white-space: nowrap; }

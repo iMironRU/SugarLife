@@ -1,0 +1,10 @@
+# В корне репозитория своего .gitignore не было, и сюда успел попасть кэш vitest
+# из node_modules/.vite. У app/ свой .gitignore, но запуск инструментов из корня
+# создаёт node_modules и здесь.
+node_modules/
+dist/
+.DS_Store
+*.log
+
+# Рабочие копии Claude Code (git worktree) — они и так отдельные ветки
+.claude/worktrees/

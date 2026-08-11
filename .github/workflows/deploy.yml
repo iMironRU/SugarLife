@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/connect-ux-preview]
   workflow_dispatch:
 
 permissions:
@@ -21,43 +21,72 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      # Продовая ветка — всегда main, независимо от того, что вызвало запуск. Так превью-ветка
+      # никогда не подменяет собой прод в /v2/.
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: stable
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: app/package-lock.json
+          cache-dependency-path: stable/app/package-lock.json
 
-      - name: Build Ionic app (v2)
-        working-directory: app
+      - name: Build Ionic app (v2, from main)
+        working-directory: stable/app
         run: |
           npm ci
           npm run build
 
       - name: Place v2 into site
         run: |
-          rm -rf prototypes/v2
-          cp -r app/dist prototypes/v2
+          rm -rf site
+          cp -r stable/prototypes site
+          rm -rf site/v2
+          cp -r stable/app/dist site/v2
 
       # OTA-бандл для нативки (Capgo): отдельная сборка с ОТНОСИТЕЛЬНЫМ base (CAP=1),
       # т.к. в webview нет пути /SugarLife/v2/. Пакуем в zip + манифест на тех же Pages.
       - name: Build OTA bundle (relative base)
-        working-directory: app
+        working-directory: stable/app
         env:
           CAP: '1'
         run: npm run build
 
       - name: Package OTA bundle + manifest
         run: |
-          SHA=$(git rev-parse --short HEAD)
-          VER=$(node -p "require('./app/package.json').version")
-          mkdir -p prototypes/v2/ota
-          (cd app/dist && zip -qr "../../prototypes/v2/ota/bundle-$SHA.zip" .)
-          cat > prototypes/v2/ota/manifest.json <<EOF
+          SHA=$(cd stable && git rev-parse --short HEAD)
+          VER=$(node -p "require('./stable/app/package.json').version")
+          mkdir -p site/v2/ota
+          (cd stable/app/dist && zip -qr "../../../site/v2/ota/bundle-$SHA.zip" .)
+          cat > site/v2/ota/manifest.json <<EOF
           { "build": "$SHA", "version": "$VER-$SHA", "url": "https://imiron.ru/SugarLife/v2/ota/bundle-$SHA.zip" }
           EOF
-          echo "OTA manifest:"; cat prototypes/v2/ota/manifest.json
+          echo "OTA manifest:"; cat site/v2/ota/manifest.json
+
+      # Превью рабочей ветки (адаптация CONNECT-UX) — отдельный путь /v2-preview/, отдельный
+      # base, чтобы не трогать прод. continue-on-error — если в превью-ветке что-то временно
+      # не собирается, прод (/v2/) всё равно должен задеплоиться.
+      - uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          ref: claude/connect-ux-preview
+          path: preview
+
+      - name: Build preview app (v2-preview)
+        working-directory: preview/app
+        continue-on-error: true
+        run: |
+          npm ci
+          npm run build -- --base=/SugarLife/v2-preview/
+
+      - name: Place v2-preview into site
+        continue-on-error: true
+        run: |
+          rm -rf site/v2-preview
+          cp -r preview/app/dist site/v2-preview
 
       - uses: actions/configure-pages@v5
         with:
@@ -65,7 +94,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: prototypes
+          path: site
 
       - id: deployment
         uses: actions/deploy-pages@v4
