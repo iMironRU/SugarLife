@@ -227,6 +227,16 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
           )}
         </div>
 
+        <div className="food-label"><IonIcon icon={waterOutline} /> Болюс, ед — если уже вводили</div>
+        <div className="field">
+          <IonInput value={insulin} type="text" inputmode="decimal" placeholder="не вводили"
+            onIonInput={(e) => setInsulin(e.detail.value ?? '')} />
+        </div>
+        <div className="food-save-note" style={{ textAlign: 'left', margin: '-6px 2px 14px' }}>
+          Записывается в приложение и учитывается сразу. В Nightscout пока не уходит —
+          выгрузку сделаем отдельно, запись от этого не потеряется.
+        </div>
+
         {/* Справочник. Свёрнут, когда у человека уже есть своя история: тогда он
             подсказка на редкий случай, а не главный путь. Пока истории нет — раскрыт
             коротким видом (приёмы и купирование гипо), потому что новому человеку он
@@ -282,20 +292,17 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
           </>
         )}
 
-        <div className="food-label"><IonIcon icon={waterOutline} /> Болюс, ед — если уже вводили</div>
-        <div className="field">
-          <IonInput value={insulin} type="text" inputmode="decimal" placeholder="не вводили"
-            onIonInput={(e) => setInsulin(e.detail.value ?? '')} />
-        </div>
+      </IonContent>
 
+      {/* Кнопка вне прокрутки. Раньше она лежала последней в содержимом, под
+          справочником: чтобы сохранить приём, надо было пролистать каталог. А при
+          открытой клавиатуре её не было видно вовсе — вместе с полем болюса, которое
+          человек в этот момент и заполнял. */}
+      <div className="sheet-foot">
         <button className="food-save" disabled={!годно || сохранено} onClick={сохранить}>
           {сохранено ? 'Записано' : 'Сохранить приём'}
         </button>
-        <div className="food-save-note">
-          Записывается в приложение и учитывается сразу. В Nightscout пока не уходит —
-          выгрузку сделаем отдельно, запись от этого не потеряется.
-        </div>
-      </IonContent>
+      </div>
     </IonModal>
   );
 }
