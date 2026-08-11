@@ -242,3 +242,14 @@ ion-toggle {
 .food-pick.on { border-color: var(--c-carb); background: color-mix(in srgb, var(--c-carb) 14%, var(--color-neutral-900)); }
 .food-pick:active { background: color-mix(in srgb, var(--c-carb) 20%, var(--color-neutral-900)); }
 .food-cat-cap { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-500); margin: 4px 2px 8px; }
+
+/* Раскрыть/свернуть справочник. Кнопка-строка, а не заметный блок: справочник — путь
+   на редкий случай, когда своего ещё нет или ешь непривычное. */
+.food-toggle {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 10px 0 2px; padding: 11px; border-radius: 14px; cursor: pointer;
+  border: 1px dashed var(--color-neutral-800); background: transparent;
+  color: var(--color-neutral-300); font-size: 13px; font-family: var(--font-body);
+}
+.food-toggle ion-icon { font-size: 15px; }
+.food-toggle:active { background: var(--color-neutral-900); }
