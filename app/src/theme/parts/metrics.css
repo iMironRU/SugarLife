@@ -20,7 +20,7 @@
      Поэтому здесь разница: в покое ноль (полоса у нижней кромки панели), а когда
      панель сжимается — отрицательная, и полоса поднимается вместе с ней. */
   position: sticky; z-index: 5;
-  top: calc(var(--sl-panel-h, 0px) - var(--sl-panel-rest, 0px));
+  top: calc(var(--sl-panel-h) - var(--sl-panel-rest));
   margin: 0 -20px; padding: 6px 20px 10px;
   background: var(--color-bg);
 }

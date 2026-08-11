@@ -18,7 +18,7 @@ import HeroPanel from '@/app/HeroPanel';
 import { useStore } from '@/sources/store';
 import { useSnapshot } from '@/sources/bridge';
 import { detectTherapy } from '@/domain/therapy';
-import { useTab, setTab, getTab, TAB_PATHS } from '@/app/nav';
+import { useTab, setTab, pressTab, getTab, TAB_PATHS } from '@/app/nav';
 import { useOnboarded } from '@/settings/onboarding';
 import { StackHost } from '@/app/stack';
 import { requestNotifyPermissionOnStart } from '@/platform/notify';
@@ -90,11 +90,11 @@ function Pager() {
   return (
     <div className="pager-viewport" ref={viewportRef}>
       <div className="pager-track" ref={trackRef} style={{ transform: `translate3d(${-idx * 100}%,0,0)` }}>
-        <div className={'pager-pane' + (idx === 0 ? ' is-active' : '')}><StackHost><Metrics /></StackHost></div>
-        <div className={'pager-pane' + (idx === 1 ? ' is-active' : '')}><StackHost><Mon /></StackHost></div>
-        <div className={'pager-pane' + (idx === 2 ? ' is-active' : '')}><StackHost><Today /></StackHost></div>
-        <div className={'pager-pane' + (idx === 3 ? ' is-active' : '')}><StackHost><Ins /></StackHost></div>
-        <div className={'pager-pane' + (idx === 4 ? ' is-active' : '')}><StackHost><Profile /></StackHost></div>
+        <div className={'pager-pane' + (idx === 0 ? ' is-active' : '')}><StackHost tab={0}><Metrics /></StackHost></div>
+        <div className={'pager-pane' + (idx === 1 ? ' is-active' : '')}><StackHost tab={1}><Mon /></StackHost></div>
+        <div className={'pager-pane' + (idx === 2 ? ' is-active' : '')}><StackHost tab={2}><Today /></StackHost></div>
+        <div className={'pager-pane' + (idx === 3 ? ' is-active' : '')}><StackHost tab={3}><Ins /></StackHost></div>
+        <div className={'pager-pane' + (idx === 4 ? ' is-active' : '')}><StackHost tab={4}><Profile /></StackHost></div>
       </div>
     </div>
   );
@@ -112,7 +112,7 @@ function TabBar({ insIcon }: { insIcon: string }) {
   return (
     <div className="tabbar">
       {tabs.map((t) => (
-        <button key={t.i} className={'tab' + (idx === t.i ? ' on' : '')} onClick={() => setTab(t.i)}>
+        <button key={t.i} className={'tab' + (idx === t.i ? ' on' : '')} onClick={() => pressTab(t.i)}>
           <IonIcon icon={t.icon} />
           <span>{t.label}</span>
         </button>

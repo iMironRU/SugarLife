@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { StackCtx, type StackApi } from './stackCtx';
-import { setCollapse, setOverlayOpen } from './panel';
+import { setCollapse, syncToActiveScreen } from './panel';
+import { useGoHome } from './nav';
 
 /* Стек страниц внутри вкладки.
 
@@ -19,7 +20,7 @@ import { setCollapse, setOverlayOpen } from './panel';
    Стек свой у каждой вкладки: уходя на другую и возвращаясь, человек ожидает застать
    то же место, где был. */
 
-export function StackHost({ children }: { children: ReactNode }) {
+export function StackHost({ tab, children }: { tab: number; children: ReactNode }) {
   const [pages, setPages] = useState<{ key: number; node: ReactNode }[]>([]);
 
   const push = useCallback((node: ReactNode) => {
@@ -38,10 +39,15 @@ export function StackHost({ children }: { children: ReactNode }) {
 
      События scroll не всплывают, поэтому ловим их на перехвате. */
   useEffect(() => {
-    setOverlayOpen(pages.length > 0);
-    if (!pages.length) setCollapse(0); // вернулись на вкладку — панель разворачивается
-    return () => setOverlayOpen(false);
+    // открылась/закрылась страница — панель встаёт по прокрутке того, что теперь видно
+    syncToActiveScreen();
   }, [pages.length]);
+
+  // нажали свою вкладку в таб-баре — выходим в корень раздела (см. nav.pressTab)
+  const домой = useGoHome(tab);
+  useEffect(() => {
+    if (домой) setPages((p) => (p.length ? [] : p));
+  }, [домой]);
 
   const наПрокрутку = (e: React.UIEvent<HTMLDivElement>) => {
     const t = e.target as HTMLElement;

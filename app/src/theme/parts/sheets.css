@@ -30,7 +30,7 @@
   background: var(--color-bg);
   animation: stack-in .24s cubic-bezier(.3,.9,.3,1);
 }
-@keyframes stack-in { from { transform: translate3d(28%,0,0); opacity: .4 } to { transform: none; opacity: 1 } }
+@keyframes stack-in { from { transform: translate3d(28%,0,0) } to { transform: none } }
 @media (prefers-reduced-motion: reduce) { .stack-page { animation: none } }
 /* Нижние страницы стека не рисуем, но и не размонтируем: возврат должен застать
    набранный адрес и раскрытую часть суток на месте. */
@@ -44,7 +44,7 @@
    отличается ionic-скроллер, а не украшение. */
 .stack-body {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-  padding: calc(var(--sl-panel-rest, var(--sl-panel-h, 0px)) + 6px) 18px 26px;
+  padding: calc(var(--sl-panel-rest) + 6px) 18px 26px;
   -webkit-overflow-scrolling: touch;
   will-change: scroll-position;
   transform: translateZ(0);

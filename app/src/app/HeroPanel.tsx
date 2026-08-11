@@ -1,5 +1,5 @@
 import { IonIcon } from '@ionic/react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline } from 'ionicons/icons';
 import { useTab, setTab } from '@/app/nav';
 import { useStore } from '@/sources/store';
@@ -7,7 +7,7 @@ import { toUnits, agoText, unitLabel, useUnit, fmt, daysHoursText } from '@/doma
 import { arrowChar, getCfg } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
 import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
-import { usePanelLevel, setPanelLevel, useOverlayOpen } from '@/app/panel';
+import { syncToActiveScreen } from '@/app/panel';
 import { useSnapshot } from '@/sources/bridge';
 import CircleSparkline from '@/charts/CircleSparkline';
 
@@ -31,17 +31,16 @@ function shortStatus(s?: string | null): string {
 const battColor = (p: number) => (p <= 20 ? 'var(--c-danger)' : p <= 50 ? 'var(--c-carb)' : 'var(--c-glu)');
 
 /* Верхняя панель — единый постоянный элемент над контентом на ВСЕХ экранах.
-   Три состояния плавно перетекают друг в друга (переход 0.22s):
-   • full    — на «Сегодня»: большой круг, подписи-детали, строка синхронизации;
-   • compact — на прочих экранах: панель сжата;
-   • line    — прочие экраны при прокрутке: тонкая строка. */
+
+   Состояний у неё нет: разметка одна и та же всегда, а размеры выражены в CSS
+   через --p — степень сворачивания 0…1, которую пишет прокрутка (app/panel.ts).
+   Поэтому здесь нет ни классов режима, ни замеров высоты: панель не участвует в
+   прокрутке ни одним React-рендером. */
 export default function HeroPanel() {
   const { data, live, status } = useStore();
   const m = useSnapshot()?.monitor ?? null; // монитор из моста (контракт)
   useUnit(); // перерисовка при смене единиц
   const tab = useTab();
-  const level = usePanelLevel();
-  const overlayOpen = useOverlayOpen();
   const extras = useDeviceExtras();
   const cfg = getCfg();
 
@@ -55,17 +54,11 @@ export default function HeroPanel() {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
 
-  /* «Сегодня» разворачивается на весь рост и сворачивается ступенями: full → compact → line.
-     Прочие экраны стартуют уже сжатыми, им остаётся одна ступень: compact → line.
-     Сворачивание доступно везде — даже когда контент помещается целиком (см. .screen:
-     запас прокрутки задан явно, иначе сворачивать было бы нечем). */
-  const home = tab === 2 && !overlayOpen;
-  const mode = home
-    ? (level >= 2 ? 'is-line' : level === 1 ? 'is-compact' : 'is-full')
-    : (level >= 1 ? 'is-line' : 'is-compact');
-
-  // при переходе на другой экран панель разворачивается заново (сброс прокрутки и жеста)
-  useEffect(() => { setPanelLevel(0); }, [tab]); // новая вкладка — панель разворачивается заново
+  /* Все экраны равны: панель везде начинается развёрнутой и сворачивается за
+     прокруткой. Переключились на вкладку, прокрутанную вниз, — панель встаёт в то
+     же положение, в каком её там оставили (иначе она разворачивалась бы поверх
+     содержимого, которое стоит на месте). */
+  useEffect(() => { syncToActiveScreen(); }, [tab]);
 
   // панель — владелец загрузки расширенных данных (датчик/резервуар/расход)
   useEffect(() => {
@@ -130,68 +123,17 @@ export default function HeroPanel() {
   const staleSensor = extras.stale && sensorDay != null;
   const staleDays = extras.stale && daysLeft != null;
 
-  /* Панель сообщает свою высоту в CSS: скроллеры отступают на неё сверху.
+  /* Высоту панели больше не меряют.
 
-     Нужны ДВЕ величины, и это существенно. Текущая высота меняется при сворачивании —
-     если отступ следовал бы за ней, содержимое снова ездило бы. Отступ равен высоте
-     в ПОКОЕ (уровень 0): тогда контент стоит на месте, а сворачивающаяся панель
-     просто открывает его больше. Меряем покой после того, как переход доиграл, —
-     иначе в переменную попадёт промежуточный кадр. */
-  const ref = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const корень = document.documentElement;
-    /* Измеряем ЦЕЛЕВУЮ высоту, а не ту, что видна сейчас.
-
-       Высоту панели меняют сразу несколько переходов (padding, высота ряда,
-       max-height внутренностей). В момент смены состояния разметка ещё показывает
-       прежнюю высоту, и замер давал старое число: переменная застревала на 184,
-       пока панель уже была 124. Липкая полоса на «Метриках» из-за этого залипала
-       ниже панели, и между ними просвечивало содержимое.
-
-       Поэтому на один кадр гасим переходы, читаем конечную высоту и возвращаем их.
-       Читать getBoundingClientRect всё равно приходится синхронно, так что лишней
-       раскладки это не стоит. */
-    const текущая = () => {
-      /* Гасим переходы у ВСЕГО поддерева, а не только у самой панели: высоту задаёт
-         внутренний ряд, и у него собственный переход по height. Первая версия
-         отключала только padding самой панели — и продолжала мерить кадр анимации:
-         переменная застревала на 182, пока панель уже была 124. */
-      el.classList.add('is-measuring');
-      const h = Math.round(el.getBoundingClientRect().height);
-      el.classList.remove('is-measuring');
-      корень.style.setProperty('--sl-panel-h', h + 'px');
-      return h;
-    };
-    /* Покой записываем ТОЛЬКО когда панель уже стоит в развёрнутом виде.
-
-       Первая версия писала его сразу при смене уровня — и ловила момент, когда
-       переход ещё доигрывал предыдущую высоту. В переменную попадала высота
-       свёрнутой панели, отступ становился на 40px меньше, и, вернувшись наверх,
-       человек находил содержимое сдвинутым. Поймал это замером: заголовок уезжал
-       с 190 на 90 после прокрутки туда-обратно. */
-    const покой = () => {
-      if (level !== 0) return;
-      if (el.classList.contains('is-line')) return; // ещё не перерисовалась
-      корень.style.setProperty('--sl-panel-rest', текущая() + 'px');
-    };
-    текущая();
-    /* Меряем сразу, если переход не идёт, и по его окончании — если идёт. Полагаться
-       на кадр нельзя: пока вкладка в фоне, кадров нет вовсе, и переменная осталась бы
-       пустой — а с ней обнулился бы отступ, и содержимое ушло под панель. */
-    if (!el.getAnimations().length) покой();
-    const ro = new ResizeObserver(() => текущая());
-    ro.observe(el, { box: 'border-box' }); // именно border-box: высоту меняет padding
-    el.addEventListener('transitionend', покой);
-    return () => {
-      ro.disconnect();
-      el.removeEventListener('transitionend', покой);
-    };
-  }, [level, mode]);
+     Раньше здесь жили ResizeObserver, гашение переходов на кадр замера и запись
+     двух переменных — --sl-panel-h и --sl-panel-rest. Всё это было следствием того,
+     что высота получалась «сама собой» из трёх состояний и её приходилось узнавать
+     задним числом. Теперь она задана формулой: покой = безопасная зона + 10 + строка
+     статуса (20+10) + ряд 150, а сворачивание отнимает ровно 100px. Обе переменные
+     считает CSS из --p (theme/parts/shell.css), и промахнуться там нечем. */
 
   return (
-    <div ref={ref} className={'hero-panel ' + mode}>
+    <div className="hero-panel">
       {/* Статус связи + заряды — одним блоком. Он НЕ прячется при сворачивании панели:
           это то, что нужно видеть всегда. Разворот только меняет раскладку — две строки
           сходятся в одну (см. .hp-status). */}

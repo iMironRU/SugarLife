@@ -26,6 +26,40 @@ export function setTab(i: number): void {
 
 export function getTab(): number { return index; }
 
+/* Нажатие на кнопку таб-бара — не то же самое, что смена вкладки.
+
+   Внутри вкладки живёт стек страниц (Профиль → Устройства → карточка помпы), и
+   вкладку можно покинуть свайпом, а потом вернуться — стек при этом сохраняется
+   намеренно: человек ожидает застать то место, где был.
+
+   Но если он тычет в ту же вкладку, на которой уже стоит, единственное осмысленное
+   значение этого нажатия — «домой»: вернуться в корень раздела. Так устроен любой
+   таб-бар, и без этого из «Аналитики» некуда было выйти, кроме кнопки «назад». */
+let домойСчёт = 0;
+let домойВкладка = -1;
+const домойПодписки = new Set<() => void>();
+
+export function pressTab(i: number): void {
+  const n = Math.max(0, Math.min(TAB_PATHS.length - 1, i));
+  if (n === index) {
+    домойВкладка = n;
+    домойСчёт++;
+    домойПодписки.forEach((f) => f());
+    return;
+  }
+  setTab(n);
+}
+
+/** Счётчик запросов «вернуться в корень». Меняется — значит нажали свою вкладку. */
+export function useGoHome(myTab: number): number {
+  const seq = useSyncExternalStore(
+    (cb) => { домойПодписки.add(cb); return () => { домойПодписки.delete(cb); }; },
+    () => домойСчёт,
+    () => домойСчёт,
+  );
+  return домойВкладка === myTab ? seq : 0;
+}
+
 export function useTab(): number {
   return useSyncExternalStore(
     (cb) => { subs.add(cb); return () => { subs.delete(cb); }; },
