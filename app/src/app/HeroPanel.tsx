@@ -7,7 +7,7 @@ import { toUnits, agoText, unitLabel, useUnit, fmt, daysHoursText } from '@/doma
 import { arrowChar, getCfg } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
 import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
-import { usePanelLevel, setPanelLevel } from '@/app/panel';
+import { usePanelLevel, setPanelLevel, useOverlayOpen } from '@/app/panel';
 import { resetPanelGesture } from '@/app/panelGesture';
 import { useSnapshot } from '@/sources/bridge';
 import CircleSparkline from '@/charts/CircleSparkline';
@@ -42,6 +42,7 @@ export default function HeroPanel() {
   useUnit(); // перерисовка при смене единиц
   const tab = useTab();
   const level = usePanelLevel();
+  const overlayOpen = useOverlayOpen();
   const extras = useDeviceExtras();
   const cfg = getCfg();
 
@@ -59,7 +60,7 @@ export default function HeroPanel() {
      Прочие экраны стартуют уже сжатыми, им остаётся одна ступень: compact → line.
      Сворачивание доступно везде — даже когда контент помещается целиком (см. .screen:
      запас прокрутки задан явно, иначе сворачивать было бы нечем). */
-  const home = tab === 2;
+  const home = tab === 2 && !overlayOpen;
   const mode = home
     ? (level >= 2 ? 'is-line' : level === 1 ? 'is-compact' : 'is-full')
     : (level >= 1 ? 'is-line' : 'is-compact');

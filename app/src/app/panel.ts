@@ -62,3 +62,24 @@ export function reportContentScroll(e: { target: EventTarget | null; detail: { s
   if (pane && !pane.classList.contains('is-active')) return;
   setCollapse(e.detail.scrollTop);
 }
+
+
+/* Открыта ли страница поверх вкладки.
+
+   Нужно панели: в большом виде круг выступает ниже её рамки и накрывает верх
+   содержимого. На «Сегодня» под ним пусто и это незаметно, а страница раздела
+   начинается сразу под панелью — и первая карточка уезжала под круг. Да и по
+   смыслу: в разделе крупный круг не нужен, там смотрят не на сахар. */
+let overlay = false;
+const oSubs = new Set<() => void>();
+export function setOverlayOpen(v: boolean): void {
+  if (v === overlay) return;
+  overlay = v;
+  oSubs.forEach((f) => f());
+}
+export function useOverlayOpen(): boolean {
+  return useSyncExternalStore(
+    (cb) => { oSubs.add(cb); return () => { oSubs.delete(cb); }; },
+    () => overlay, () => overlay,
+  );
+}

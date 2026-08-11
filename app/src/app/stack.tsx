@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { StackCtx, type StackApi } from './stackCtx';
+import { setCollapse, setOverlayOpen } from './panel';
 
 /* Стек страниц внутри вкладки.
 
@@ -28,6 +29,25 @@ export function StackHost({ children }: { children: ReactNode }) {
 
   const api = useMemo<StackApi>(() => ({ push, pop, depth: pages.length }), [push, pop, pages.length]);
 
+  /* Панель должна знать про открытую страницу и слышать её прокрутку.
+
+     Сигнал сворачивания шёл только от ion-content вкладок, а у страницы стека
+     скроллер свой — панель о нём не знала и не сворачивалась. Иногда всё же
+     сворачивалась: когда жест перехватывал управление. Отсюда и «ведёт себя
+     странно» — срабатывало через раз.
+
+     События scroll не всплывают, поэтому ловим их на перехвате. */
+  useEffect(() => {
+    setOverlayOpen(pages.length > 0);
+    if (!pages.length) setCollapse(0); // вернулись на вкладку — панель разворачивается
+    return () => setOverlayOpen(false);
+  }, [pages.length]);
+
+  const наПрокрутку = (e: React.UIEvent<HTMLDivElement>) => {
+    const t = e.target as HTMLElement;
+    if (t?.classList?.contains('stack-body')) setCollapse(t.scrollTop);
+  };
+
   return (
     <StackCtx.Provider value={api}>
       {children}
@@ -35,7 +55,8 @@ export function StackHost({ children }: { children: ReactNode }) {
         /* Ниже верхней страницы всё скрыто: рисовать нижние незачем, а вот держать
            их смонтированными нужно — иначе возврат терял бы состояние (набранный
            адрес, раскрытую часть суток, правку профиля). */
-        <div key={p.key} className={'stack-page' + (i === pages.length - 1 ? ' is-top' : '')} aria-hidden={i !== pages.length - 1}>
+        <div key={p.key} className={'stack-page' + (i === pages.length - 1 ? ' is-top' : '')}
+          aria-hidden={i !== pages.length - 1} onScrollCapture={наПрокрутку}>
           {p.node}
         </div>
       ))}
