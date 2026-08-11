@@ -49,6 +49,7 @@ export interface DeviceInfo {
   status?: string;  // единый статус источника: Disconnected/Connecting/Acquiring/Live/Delayed
   latestAtMs?: number | null;   // время новейшего показания (возраст в карточке)
   autoConnect?: boolean;        // подключать на старте автоматически (тумблер «авто»)
+  note?: string | null;         // подсказка (напр. «возможно, занят другим телефоном»)
 }
 export interface Insights { mode: 'Observe' | 'Advisory' | 'ClosedLoop'; messages: string[]; }
 export interface PendingWrite { id: string; description: string; state: string; needsAttention: boolean; }

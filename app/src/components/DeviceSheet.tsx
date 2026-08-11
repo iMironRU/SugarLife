@@ -190,6 +190,11 @@ export default function DeviceSheet({ isOpen, onClose, cat, title }: {
                             </button>
                           )}
                         </div>
+                        {/* Подсказка занятости: BLE-устройство обслуживает один центральный — если долго не встаёт,
+                            возможно, его держит другой телефон. */}
+                        {ble && d.note && (
+                          <div className="sheet-note" style={{ marginTop: 0, color: 'var(--c-warn, #e0a800)' }}>⚠ {d.note}</div>
+                        )}
                         {/* Авто-подключение на старте — настройка только для BLE (реконнект без ручного ввода). */}
                         {ble && (
                           <div className="list-row" style={{ cursor: 'default', paddingTop: 0, opacity: 0.9 }}>
