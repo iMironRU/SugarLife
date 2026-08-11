@@ -4,7 +4,9 @@ import Row from '@/ui/Row';
 import PageHead from '@/ui/PageHead';
 import { chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
-import { useDeviceConfig, setDeviceConfig, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
+import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
+import ParamsForm from '@/ui/ParamsForm';
+import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { useSnapshot } from '@/sources/bridge';
 import { useStore } from '@/sources/store';
 import { useDeviceExtras } from '@/sources/deviceExtras';
@@ -104,6 +106,21 @@ export default function DeviceSection({ onClose, cat, title }: {
       : [];
     return { stateRows: rows, supplies: sup };
   }, [cat, extras.events, dev]);
+
+  /* Параметры драйвера (§7a): у радио-Medtronic это серийник и частота 868/916.
+     Рисуем универсальной формой по спеке — экрана «настройки такой-то помпы» нет и не будет
+     (см. ui/ParamsForm.tsx). Пустая спека = блока просто нет, и это нормальное состояние:
+     у современных помп и у всех мостов настраивать нечего. */
+  const spec = cat === 'pump' ? pumpSpec(pump) : null;
+  const params = cfg.deviceParams[cat] ?? {};
+  const paramsMissing = missingParams(spec, params);
+
+  /* Телеметрия моста — то, что мост рассказывает о себе сам. Это НЕ настройки:
+     у OrangeLink и MiaoMiao пользовательских параметров нет вовсе, а заряд, прошивка и
+     RSSI есть. Пока натива нет, единственный реальный источник — Nightscout: AAPS кладёт
+     заряд OrangeLink в pump.extended.OrangeLinkBattery. Чего не знаем — не рисуем. */
+  const bridgeTelemetry: { k: string; v: string }[] = [];
+  if (bridge && dev?.mountBattery != null) bridgeTelemetry.push({ k: 'Заряд моста', v: dev.mountBattery + '%' });
 
   const modelIcon = cat === 'pump' ? flash : hardwareChipOutline;
   const setModel = (id: string) => setDeviceConfig(cat === 'pump' ? { pumpId: id } : { sensorId: id });
@@ -257,6 +274,34 @@ export default function DeviceSection({ onClose, cat, title }: {
               <div className="sheet-note">
                 В помпе один быстрый инсулин — он идёт и на базал, и на болюс.
               </div>
+            )}
+
+            {spec && modelKnown && (
+              <>
+                <ParamsForm title="Параметры помпы" spec={spec} values={params}
+                  onChange={(k, v) => setParam(cat, k, v)} />
+                <div className="sheet-note">
+                  {paramsMissing.length
+                    ? 'Без этого прямое чтение по радио не заработает: ' + paramsMissing.map((p) => p.title.toLowerCase()).join(', ') + '.'
+                    : 'Понадобится приложению для чтения помпы по радио. Через Nightscout данные идут и без этого.'}
+                </div>
+              </>
+            )}
+
+            {bridgeTelemetry.length > 0 && (
+              <>
+                <div className="section-label sec">Мост</div>
+                <div className="basal-rows">
+                  {bridgeTelemetry.map((r) => (
+                    <div key={r.k} className="basal-row"><span>{r.k}</span><b>{r.v}</b></div>
+                  ))}
+                </div>
+                <div className="sheet-note">
+                  Настраивать в мосте нечего — это транспорт. Серийник и частота относятся
+                  к помпе за ним. Прошивку, уровень сигнала и проверку связи покажем, когда
+                  приложение начнёт читать мост напрямую.
+                </div>
+              </>
             )}
 
             {/* Состояние — только то, что реально знаем; пустых строк не рисуем.

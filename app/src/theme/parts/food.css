@@ -216,3 +216,9 @@ ion-toggle {
   --handle-background: var(--color-neutral-100);
   --handle-background-checked: #ffffff;
 }
+
+/* Параметр драйвера в форме по спеке (ui/ParamsForm.tsx). Заголовок и поле —
+   те же .field-label/.field, что и везде; отдельный класс нужен только ради отступа
+   между параметрами, чтобы форма из четырёх полей не слипалась в один блок. */
+.param { margin-bottom: 12px; }
+.param-req { text-transform: none; letter-spacing: 0; color: var(--color-neutral-600); }

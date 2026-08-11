@@ -13,10 +13,15 @@ export interface DeviceConfig {
   meterModel: string | null;      // глюкометр: пока свободный текст (справочника нет)
   bridgeSensorId: string | null;  // трансмиттер/мост сенсора
   bridgePumpId: string | null;    // радио-мост помпы (RileyLink и т.п.)
+  /* Параметры драйвера по категориям: {'pump': {serial, region}}.
+     По контракту это `setParams` в ядро, но нативного моста в браузере нет — до его
+     появления держим у себя (спеки — domain/driverParams.ts). Секретов здесь быть НЕ
+     ДОЛЖНО: пароли от чужих облаков в браузер не кладём вовсе (SugarLifeCore#3). */
+  deviceParams: Record<string, Record<string, string>>;
 }
 const DEFAULT: DeviceConfig = {
   pumpId: null, fastInsulinId: null, sensorId: null, meterModel: null,
-  bridgeSensorId: null, bridgePumpId: null,
+  bridgeSensorId: null, bridgePumpId: null, deviceParams: {},
 };
 
 function load(): DeviceConfig {
@@ -79,8 +84,21 @@ export function deviceStatusLabel(status: DeviceStatus): string {
   }
 }
 
-// «Забыть устройство» (§2a, путь 10) — снять модель и её мост для категории.
+// «Забыть устройство» (§2a, путь 10) — снять модель, её мост и параметры драйвера.
+// Параметры чистим обязательно: серийник помпы относится к конкретной железке, и
+// оставить его от забытой — значит подсунуть чужой номер следующей.
 export function forgetDevice(cat: 'sensor' | 'pump'): void {
-  if (cat === 'pump') setDeviceConfig({ pumpId: null, bridgePumpId: null });
-  else setDeviceConfig({ sensorId: null, bridgeSensorId: null });
+  const params = { ...state.deviceParams };
+  delete params[cat];
+  if (cat === 'pump') setDeviceConfig({ pumpId: null, bridgePumpId: null, deviceParams: params });
+  else setDeviceConfig({ sensorId: null, bridgeSensorId: null, deviceParams: params });
+}
+
+/** Параметры драйвера категории (пустой объект, если ничего не задано). */
+export function getParams(cat: string): Record<string, string> {
+  return state.deviceParams[cat] ?? {};
+}
+export function setParam(cat: string, key: string, value: string): void {
+  const cur = state.deviceParams[cat] ?? {};
+  setDeviceConfig({ deviceParams: { ...state.deviceParams, [cat]: { ...cur, [key]: value } } });
 }
