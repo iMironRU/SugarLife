@@ -195,14 +195,14 @@ declare global {
 
 const BRIDGE_MAJOR = '1';
 
-// ВРЕМЕННО (2026-08-05): у нативного движка ещё нет реальных драйверов (Nightscout/BLE) —
-// он отдаёт данные встроенного симулятора-скелета. Пока это так, при настроенном Nightscout
-// приоритет отдаём шиму (реальные данные), а не нативному мосту (фейковые). Убрать этот гейт,
-// когда ядро подключит реальные источники — тогда снова native первым при совместимой ревизии.
+// Нативный движок ПРИОРИТЕТНЕЕ NS-шима: он источник правды — реальные драйверы/BLE + сам тянет Nightscout
+// внутри (addCloudSource). NS-шим остаётся только браузерным фолбэком, когда нативного моста нет.
+// (Снят временный гейт «при настроенном NS всегда шим»: он был заглушкой на время, пока в движке не было
+//  реальных источников; теперь они есть — реинтеграция #5.)
 export function getBridge(): SugarLifeBridge {
-  if (typeof window !== 'undefined' && getCfg()?.url) return nightscoutBridge;
   const native = typeof window !== 'undefined' ? window.SugarLifeBridge : undefined;
   if (native && String(native.bridgeRevision).split('.')[0] === BRIDGE_MAJOR) return native;
+  if (typeof window !== 'undefined' && getCfg()?.url) return nightscoutBridge;
   return nightscoutBridge;
 }
 
