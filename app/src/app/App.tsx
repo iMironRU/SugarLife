@@ -57,6 +57,10 @@ function Pager() {
       gestureName: 'tab-pager',
       direction: 'x',
       threshold: 8,
+      /* Внутри открытого раздела горизонтальный жест значит «назад», а не «другая
+         вкладка». Иначе два жеста спорят за одно движение, и побеждает то один, то
+         другой — ровно та рваность, которую мы уже вычищали из панели. */
+      canStart: () => !document.querySelector('.pager-pane.is-active .stack-page'),
       onStart: () => {
         W = vp.clientWidth;
         base = -getTab() * W;
