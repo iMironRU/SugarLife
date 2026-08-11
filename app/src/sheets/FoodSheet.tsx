@@ -1,5 +1,5 @@
 import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
-import { closeOutline, removeOutline, addOutline, timeOutline, waterOutline, searchOutline, sparklesOutline, warningOutline } from 'ionicons/icons';
+import { closeOutline, timeOutline, waterOutline, searchOutline, sparklesOutline, warningOutline } from 'ionicons/icons';
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS, plural } from '@/domain/units';
@@ -9,6 +9,9 @@ import { searchFoods, personalFoods, CAT_LABEL, CAT_ORDER, type Food } from '@/d
 import { подсказка, приёмПоЧасу } from '@/domain/foodNow';
 
 const ПОКАЗЫВАЕМ = 6; // сколько плиток в группе до «ещё N»
+const подтянуть = (el: HTMLElement) =>
+  window.setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 350);
+
 /** 0 — сейчас, >0 — момент, <0 — смещение назад. */
 const времяЕды = (когда: number) => (когда > 0 ? когда : Date.now() + когда);
 
@@ -43,6 +46,9 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
 
   const [insulin, setInsulin] = useState('');
   const [сохранено, setСохранено] = useState(false);
+  /* Пока человек печатает, показываем ровно то, что он набрал: иначе «2,» превратится
+     в «2» под пальцем и запятую негде будет поставить. Ушёл из поля — снова считаем. */
+  const [carbsТекст, setCarbsТекст] = useState<string | null>(null);
   const [запрос, setЗапрос] = useState('');
   const [выбрано, setВыбрано] = useState<string | null>(null);
   const [справочник, setСправочник] = useState<'нет' | 'коротко' | 'всё'>('нет');
@@ -81,7 +87,7 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
 
   // открыли заново — начинаем с чистого листа, а не с прошлых цифр
   useEffect(() => {
-    if (isOpen) { setCarbs(30); setКогда(0); setПоказатьСмещения(false); setInsulin(''); setСохранено(false); setЗапрос(''); setВыбрано(null); setСправочник('нет'); setРазвёрнуто({}); }
+    if (isOpen) { setCarbs(30); setCarbsТекст(null); setКогда(0); setПоказатьСмещения(false); setInsulin(''); setСохранено(false); setЗапрос(''); setВыбрано(null); setСправочник('нет'); setРазвёрнуто({}); }
   }, [isOpen]);
 
   /* Выбор пресета не «применяет» его, а подставляет опорную точку: углеводы попадают в
@@ -93,8 +99,14 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
   };
 
   const mealBolus = carbs > 0 ? fmt(carbs / ic) : '0';
-  const step = cu === 'xe' ? XE_GRAMS : 5;
   const clabel = carbUnitLabel(cu);
+  const ШАГИ = cu === 'xe' ? [2, 1, 0.5] : [10, 5, 1];
+  const вГраммах = (ш: number) => (cu === 'xe' ? ш * XE_GRAMS : ш);
+  const ввестиУглеводы = (v: string) => {
+    setCarbsТекст(v);
+    const n = Number(v.replace(',', '.'));
+    if (Number.isFinite(n) && n >= 0) setCarbs(Math.min(300, cu === 'xe' ? n * XE_GRAMS : n));
+  };
   const ratio = cu === 'xe' ? `1 Х.Е. ≈ ${fmt(XE_GRAMS / ic)} ед` : `КУ 1 ед / ${fmt(ic)} г`;
 
   const дозаЧисло = Number(insulin.replace(',', '.'));
@@ -128,24 +140,45 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
           <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
         </div>
 
-        {/* Правка прямо на плитке. Раньше −/+ жили отдельным блоком ниже, а на самом
-            заметном месте экрана стояли три прочерка Б/Ж/ккал — и это были не «пока не
-            заполнили», а «мы это и не собираемся показывать»: цель шторки — быстро
-            внести углеводы, а не вести дневник питания. */}
+        {/* Правка прямо на плитке, значение по центру, шаги по краям.
+
+            Значение — поле ввода, а не текст с кнопками рядом: «двадцать восемь»
+            степпером набирается шестью нажатиями, а руками одним. Кнопки остаются для
+            подгонки, ввод — для попадания сразу.
+
+            Шаги зависят от единиц. В граммах 1 / 5 / 10, в хлебных единицах 0,5 / 1 / 2:
+            шаг «10 Х.Е.» это полтораста граммов углеводов, такого приёма не бывает. */}
         <div className="food-summary">
-          <div className="fs-left">
-            <div className="fs-cap">Углеводы</div>
-            <div className="fs-carbs">{toCarbs(carbs, cu)}<span>{clabel}</span></div>
+          <div className="fs-steps">
+            {ШАГИ.map((ш) => (
+              <button key={'m' + ш} onClick={() => setCarbs((c) => Math.max(0, c - вГраммах(ш)))}>
+                −{ш}
+              </button>
+            ))}
           </div>
-          <div className="fs-step">
-            <button onClick={() => setCarbs((c) => Math.max(0, c - step))} aria-label="Меньше">
-              <IonIcon icon={removeOutline} />
-            </button>
-            <button onClick={() => setCarbs((c) => Math.min(300, c + step))} aria-label="Больше">
-              <IonIcon icon={addOutline} />
-            </button>
+          <div className="fs-value">
+            <div className="fs-cap">Углеводы</div>
+            <div className="fs-input">
+              <IonInput value={carbsТекст ?? toCarbs(carbs, cu)} type="text" inputmode="decimal"
+                onIonFocus={(e) => подтянуть(e.target as unknown as HTMLElement)}
+                onIonInput={(e) => ввестиУглеводы(e.detail.value ?? '')}
+                onIonBlur={() => setCarbsТекст(null)} />
+              <span>{clabel}</span>
+            </div>
+          </div>
+          <div className="fs-steps">
+            {/* Наружу по возрастанию — зеркально минусам: мелкий шаг всегда ближе
+                к значению, крупный дальше. Иначе рука тянется не туда. */}
+            {[...ШАГИ].reverse().map((ш) => (
+              <button key={'p' + ш} onClick={() => setCarbs((c) => Math.min(300, c + вГраммах(ш)))}>
+                +{ш}
+              </button>
+            ))}
           </div>
         </div>
+
+        {/* Прикидка, а не подставленное значение: вписать дозу за человека значит
+            принять решение о дозе за него. */}
         <div className="food-bolus">Болюс на еду: {mealBolus} ед · {ratio}</div>
 
         {/* «Сейчас» — подъём наверх, а не отсечение: люди едят кашу вечером, и остальное
@@ -229,7 +262,12 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
 
         <div className="food-label"><IonIcon icon={waterOutline} /> Болюс, ед — если уже вводили</div>
         <div className="field">
+          {/* Подтягиваем поле к центру, когда открывается клавиатура. Ionic это умеет
+              сам, но не всегда доводит внутри шторки — а цена промаха тут высокая:
+              человек печатает вслепую, не видя, что набирает. Задержка — чтобы
+              клавиатура успела выехать и высота вьюпорта уже была настоящей. */}
           <IonInput value={insulin} type="text" inputmode="decimal" placeholder="не вводили"
+            onIonFocus={(e) => подтянуть(e.target as unknown as HTMLElement)}
             onIonInput={(e) => setInsulin(e.detail.value ?? '')} />
         </div>
         <div className="food-save-note" style={{ textAlign: 'left', margin: '-6px 2px 14px' }}>

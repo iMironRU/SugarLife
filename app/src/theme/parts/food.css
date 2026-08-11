@@ -279,3 +279,40 @@ ion-toggle {
 /* Момент из данных длиннее обычной кнопки — пусть занимает строку целиком. */
 .food-meal-wide { flex: 1 1 100%; }
 .food-meal-more { border-style: dashed; color: var(--color-neutral-400); }
+
+/* Значение по центру, шаги по краям.
+
+   Семь элементов в строку на телефоне помещаются впритык, поэтому кнопки маленькие,
+   а зона нажатия расширена невидимо (::after). Так палец попадает по 44px, как
+   положено, а глазами читается компактный ряд.
+
+   На узких экранах строка распадается на две: лучше перенос, чем кнопки, в которые
+   не попасть. */
+.food-summary { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.fs-steps { display: flex; gap: 4px; flex-shrink: 0; }
+/* Размеры подобраны по замеру, а не на глаз: при кнопках 36px и числе в 34px ряд не
+   помещался (415px против 339 доступных) и переносился. Уменьшены обе части. */
+.fs-steps button {
+  position: relative; min-width: 32px; height: 36px; padding: 0 5px; border-radius: 11px;
+  cursor: pointer; font-family: var(--font-body); font-size: 11px; font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--c-carb) 40%, transparent);
+  background: color-mix(in srgb, var(--c-carb) 10%, transparent); color: var(--c-carb);
+}
+.fs-steps button::after { content: ''; position: absolute; inset: -6px; }
+.fs-steps button:active { background: color-mix(in srgb, var(--c-carb) 26%, transparent); }
+
+.fs-value { flex: 1 1 auto; min-width: 0; text-align: center; }
+.fs-input { display: flex; align-items: baseline; justify-content: center; gap: 4px; }
+/* Поле ввода, а не текст: «двадцать восемь» степпером набирается шестью нажатиями,
+   а руками одним. */
+.fs-input ion-input {
+  --padding-start: 0; --padding-end: 0; --padding-top: 0; --padding-bottom: 0;
+  max-width: 3.6ch; font-size: 30px; font-weight: 600; letter-spacing: -.02em;
+  color: var(--c-carb); text-align: center;
+}
+.fs-input span { font-size: 14px; font-weight: 500; color: var(--c-carb-2); }
+
+@media (max-width: 359px) {
+  .fs-value { flex: 1 1 100%; order: -1; }
+  .fs-steps { flex: 1 1 calc(50% - 4px); justify-content: center; }
+}
