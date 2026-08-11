@@ -44,3 +44,6 @@ export const LoopSetupSection = ленивый<{ onClose: () => void }>(
 
 export const AnalyticsSection = ленивый<{ onClose: () => void }>(
   () => import('./AnalyticsSection'), 'Аналитика');
+
+export const DiscoverySection = ленивый<{ onClose: () => void }>(
+  () => import('./DiscoverySection'), 'Устройства рядом');

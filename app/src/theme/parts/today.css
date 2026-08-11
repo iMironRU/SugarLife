@@ -99,3 +99,28 @@
 .release-ble:active { background: var(--color-neutral-800); }
 .release-ble.is-done { border-color: color-mix(in srgb, var(--c-glu) 45%, transparent); }
 .release-ble.is-done ion-icon { color: var(--c-glu); }
+
+/* Вход в поиск по эфиру. Два вида намеренно: карточка кричит, только когда есть о чём
+   кричать, — иначе человек привыкает к постоянному блоку и перестаёт его замечать
+   ровно тогда, когда замечать надо (ui/NearbyTile.tsx). */
+.nearby-tile {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  margin-top: 12px; padding: 14px 15px; border-radius: 18px; cursor: pointer;
+  font-family: var(--font-body); color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-neutral-900));
+  border: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
+}
+.nearby-tile > ion-icon:first-child { font-size: 22px; color: var(--color-accent); flex-shrink: 0; }
+.nearby-tile div { flex: 1; min-width: 0; }
+.nearby-tile b { display: block; font-size: 14px; font-weight: 600; }
+.nearby-tile span { display: block; margin-top: 3px; font-size: 12px; color: var(--color-neutral-400); line-height: 1.4; }
+.nearby-tile:active { background: color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900)); }
+
+.nearby-quiet {
+  width: 100%; display: flex; align-items: center; gap: 8px; text-align: left;
+  margin-top: 10px; padding: 9px 4px; cursor: pointer; background: none; border: 0;
+  font-family: var(--font-body); font-size: 12px; color: var(--color-neutral-500);
+}
+.nearby-quiet ion-icon { font-size: 15px; flex-shrink: 0; }
+.nearby-quiet span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nearby-chev { font-size: 14px; opacity: .6; }

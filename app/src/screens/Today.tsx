@@ -8,6 +8,7 @@ import { reportContentScroll } from '@/app/panel';
 import { activeCarbs } from '@/domain/loopValue';
 import ChangedButton from '@/ui/ChangedButton';
 import ReleaseBle from '@/ui/ReleaseBle';
+import NearbyTile from '@/ui/NearbyTile';
 import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
@@ -365,6 +366,10 @@ export default function Today() {
               </div>
             </div>
           )}
+
+          {/* Вход в поиск по эфиру. Заметен, только когда подключать нечего или связь
+              отвалилась; когда всё работает — тихая строка (ui/NearbyTile.tsx). */}
+          <NearbyTile />
 
           {/* Отдать устройства. Рядом с подсветками, а не в настройках: это действие
               нужно в моменте — «дай отсканировать сенсор родным приложением», — и
