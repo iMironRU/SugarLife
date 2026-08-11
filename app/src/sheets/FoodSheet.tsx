@@ -1,16 +1,16 @@
 import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
-import { closeOutline, nutritionOutline, removeOutline, addOutline, timeOutline, waterOutline, searchOutline, sparklesOutline, warningOutline } from 'ionicons/icons';
+import { closeOutline, removeOutline, addOutline, timeOutline, waterOutline, searchOutline, sparklesOutline, warningOutline } from 'ionicons/icons';
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS, plural } from '@/domain/units';
 import { addMeal, useMeals } from '@/sources/mealStore';
-import { СМЕЩЕНИЯ } from '@/domain/meals';
+import { необъяснённыеПодъёмы, СМЕЩЕНИЯ } from '@/domain/mealMoment';
 import { searchFoods, personalFoods, CAT_LABEL, CAT_ORDER, type Food } from '@/domain/foods';
 import { подсказка, приёмПоЧасу } from '@/domain/foodNow';
 
-const MEALS = ['Завтрак', 'Обед', 'Ужин', 'Перекус'];
 const ПОКАЗЫВАЕМ = 6; // сколько плиток в группе до «ещё N»
-const приёмПоУмолчанию = () => Math.max(0, MEALS.indexOf(приёмПоЧасу(new Date().getHours())));
+/** 0 — сейчас, >0 — момент, <0 — смещение назад. */
+const времяЕды = (когда: number) => (когда > 0 ? когда : Date.now() + когда);
 
 /* Внести приём пищи.
 
@@ -31,12 +31,16 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
 
   const cu = useCarbUnit();
   const [carbs, setCarbs] = useState(30);
-  const [назад, setНазад] = useState(0); // сколько минут назад ели
+  /* Одно поле вместо двух: 0 — сейчас, положительное — конкретный момент из данных,
+     отрицательное — смещение назад. Так не приходится держать «режим» отдельно от
+     значения и гадать, какое из двух сейчас главное. */
+  const [когда, setКогда] = useState(0);
+  const [показатьСмещения, setПоказатьСмещения] = useState(false);
   /* Тип приёма по часу, а не «Обед» всегда. Мелочь на вид, но она перебивала весь
      разбор: подставленный по умолчанию «Обед» выглядел как явный выбор человека и в
      десять вечера вытеснял ужин. Умный список, поверх которого стоит глупое умолчание,
      умным быть перестаёт. */
-  const [meal, setMeal] = useState(() => приёмПоУмолчанию());
+
   const [insulin, setInsulin] = useState('');
   const [сохранено, setСохранено] = useState(false);
   const [запрос, setЗапрос] = useState('');
@@ -55,22 +59,29 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
   /* Что показать первым — по сахару, намерению, своей истории в этот час и времени
      суток (domain/foodNow.ts). Считаем при открытии, а не на каждый рендер: список,
      который переставляется под пальцем, хуже неудобного. */
+  /* Моменты, когда человек мог поесть: подъёмы сахара, не объяснённые внесённой едой. */
+  const моменты = useMemo(
+    () => (isOpen ? необъяснённыеПодъёмы(data?.entries ?? [], meals.map((m) => m.t)) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isOpen, meals.length],
+  );
+
   const сейчас = useMemo(
     () => (isOpen ? подсказка({
       hour: new Date().getHours(),
       mmol: data?.latest?.mmol ?? null,
       dir: data?.latest?.dir,
-      выбранныйПриём: MEALS[meal],
+
       своё,
       историяЧасов: meals,
     }) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isOpen, meal, meals.length],
+    [isOpen, когда, meals.length],
   );
 
   // открыли заново — начинаем с чистого листа, а не с прошлых цифр
   useEffect(() => {
-    if (isOpen) { setCarbs(30); setMeal(приёмПоУмолчанию()); setНазад(0); setInsulin(''); setСохранено(false); setЗапрос(''); setВыбрано(null); setСправочник(своё.length ? 'нет' : 'коротко'); setРазвёрнуто({}); }
+    if (isOpen) { setCarbs(30); setКогда(0); setПоказатьСмещения(false); setInsulin(''); setСохранено(false); setЗапрос(''); setВыбрано(null); setСправочник('нет'); setРазвёрнуто({}); }
   }, [isOpen]);
 
   /* Выбор пресета не «применяет» его, а подставляет опорную точку: углеводы попадают в
@@ -93,17 +104,21 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
   const сохранить = async () => {
     if (!годно) return;
     await addMeal({
-      t: Date.now() - назад * 60e3,
+      t: времяЕды(когда),
       carbs,
       insulin: доза,
-      kind: MEALS[meal],
+      kind: приёмПоЧасу(new Date(времяЕды(когда)).getHours()),
     });
     setСохранено(true);
     window.setTimeout(onClose, 700); // дать увидеть подтверждение, а не захлопнуть
   };
 
+  /* Шторка без breakpoints и handle намеренно. С ними вертикальный жест уходит в
+     перетаскивание вместо прокрутки содержимого: тянешь список — закрывается вся
+     шторка, и нижние кнопки недостижимы. В других шторках от них уже отказались;
+     здесь они дожили только потому, что содержимого было мало. */
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose} initialBreakpoint={0.9} breakpoints={[0, 0.9]} handle>
+    <IonModal isOpen={isOpen} onDidDismiss={onClose} className="sheet-modal sheet-tall">
       <IonContent className="sheet">
         <div className="sheet-head">
           <div>
@@ -113,15 +128,22 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
           <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
         </div>
 
+        {/* Правка прямо на плитке. Раньше −/+ жили отдельным блоком ниже, а на самом
+            заметном месте экрана стояли три прочерка Б/Ж/ккал — и это были не «пока не
+            заполнили», а «мы это и не собираемся показывать»: цель шторки — быстро
+            внести углеводы, а не вести дневник питания. */}
         <div className="food-summary">
           <div className="fs-left">
             <div className="fs-cap">Углеводы</div>
             <div className="fs-carbs">{toCarbs(carbs, cu)}<span>{clabel}</span></div>
           </div>
-          <div className="fs-macros">
-            <div><span className="fs-mk">Б</span><span className="fs-mv">—</span></div>
-            <div><span className="fs-mk">Ж</span><span className="fs-mv">—</span></div>
-            <div><span className="fs-mk">ккал</span><span className="fs-mv">—</span></div>
+          <div className="fs-step">
+            <button onClick={() => setCarbs((c) => Math.max(0, c - step))} aria-label="Меньше">
+              <IonIcon icon={removeOutline} />
+            </button>
+            <button onClick={() => setCarbs((c) => Math.min(300, c + step))} aria-label="Больше">
+              <IonIcon icon={addOutline} />
+            </button>
           </div>
         </div>
         <div className="food-bolus">Болюс на еду: {mealBolus} ед · {ratio}</div>
@@ -161,8 +183,9 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
             Справочник ниже и по умолчанию свёрнут: 68 плиток над степпером означали,
             что до ручной правки надо пролистать весь каталог.
 
-            Если истории ещё нет, справочник наоборот раскрыт: новому человеку он
-            единственный ориентир, и прятать его за кнопкой значит вернуть пустое поле. */}
+            Справочник свёрнут всегда. Раньше он раскрывался, когда своей истории нет —
+            новому человеку нужен был ориентир. С появлением группы «Сейчас» ориентир
+            есть, и он лучше: подобран под время и сахар. */}
         {своё.length > 0 && (
           <>
             <div className="food-label"><IonIcon icon={sparklesOutline} /> Ваше обычное</div>
@@ -178,36 +201,32 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
           </>
         )}
 
-        <div className="food-stepper">
-          <span><IonIcon icon={nutritionOutline} /> Углеводы</span>
-          <div className="stepper">
-            <button onClick={() => setCarbs((c) => Math.max(0, c - step))} aria-label="Меньше"><IonIcon icon={removeOutline} /></button>
-            <b>{toCarbs(carbs, cu)}<i>{clabel}</i></b>
-            <button onClick={() => setCarbs((c) => Math.min(300, c + step))} aria-label="Больше"><IonIcon icon={addOutline} /></button>
-          </div>
-        </div>
+        {/* Когда ели.
 
-        <div className="food-label">Приём пищи</div>
-        <div className="food-meals">
-          {MEALS.map((m, i) => (
-            <button key={m} className={'food-meal' + (meal === i ? ' on' : '')} onClick={() => setMeal(i)}>{m}</button>
-          ))}
-        </div>
+            Не «15 / 30 мин назад» — это счёт в уме: сейчас 22:33, поел в девять, это
+            сколько? Человек либо считает, либо жмёт наугад, и время еды уезжает вместе
+            со всей кривой активных углеводов.
 
-        {/* Когда ели. Спрашиваем всегда: от этого времени считаются активные углеводы,
-            и запись задним числом — обычное дело, а не исключение. */}
+            Вместо этого называем моменты. Открыл ввод — скорее всего про сейчас. Вносит
+            задним числом — значит есть повод, и повод виден в данных: сахар пошёл вверх,
+            а еды в этот момент не внесено (domain/mealMoment.ts). Смещения остаются
+            запасным вариантом: поел ровно столько, сколько уколол, — и сахар не дрогнул. */}
         <div className="food-label"><IonIcon icon={timeOutline} /> Когда ели</div>
         <div className="food-meals">
-          {СМЕЩЕНИЯ.map((с) => (
-            <button key={с.label} className={'food-meal' + (назад === с.ms / 60e3 ? ' on' : '')}
-              onClick={() => setНазад(с.ms / 60e3)}>
-              {с.ms === 0 ? с.label : с.label + ' назад'}
-            </button>
+          <button className={'food-meal' + (когда === 0 ? ' on' : '')} onClick={() => setКогда(0)}>сейчас</button>
+          {моменты.map((м) => (
+            <button key={м.at} className={'food-meal food-meal-wide' + (когда === м.at ? ' on' : '')}
+              onClick={() => setКогда(м.at)}>{м.label}</button>
           ))}
+          {(показатьСмещения || !моменты.length) && СМЕЩЕНИЯ.map((с) => (
+            <button key={с.label} className={'food-meal' + (когда === -с.ms ? ' on' : '')}
+              onClick={() => setКогда(-с.ms)}>{с.label}</button>
+          ))}
+          {!показатьСмещения && моменты.length > 0 && (
+            <button className="food-meal food-meal-more" onClick={() => setПоказатьСмещения(true)}>другое время</button>
+          )}
         </div>
 
-        {/* Дозу вводит человек. Прикидка выше — подсказка, а не подставленное значение:
-            вписать её за него значит принять решение о дозе за него. */}
         {/* Справочник. Свёрнут, когда у человека уже есть своя история: тогда он
             подсказка на редкий случай, а не главный путь. Пока истории нет — раскрыт
             коротким видом (приёмы и купирование гипо), потому что новому человеку он
