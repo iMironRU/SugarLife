@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS, plural } from '@/domain/units';
 import { addMeal, useMeals } from '@/sources/mealStore';
-import { необъяснённыеПодъёмы, СМЕЩЕНИЯ } from '@/domain/mealMoment';
+import { необъяснённыеПодъёмы, времяМомента, СМЕЩЕНИЯ } from '@/domain/mealMoment';
 import { searchFoods, personalFoods, CAT_LABEL, CAT_ORDER, type Food } from '@/domain/foods';
 import { подсказка, приёмПоЧасу } from '@/domain/foodNow';
 
@@ -247,9 +247,14 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
         <div className="food-label"><IonIcon icon={timeOutline} /> Когда ели</div>
         <div className="food-meals">
           <button className={'food-meal' + (когда === 0 ? ' on' : '')} onClick={() => setКогда(0)}>сейчас</button>
+          {/* Коротко: время — это то, что выбирают, а «+5,2» говорит, насколько
+              поднялось, то есть какого размера был приём. Стрелка, а не капля: капля
+              у нас уже значит инсулин (иконка вкладки), и путать их нельзя. */}
           {моменты.map((м) => (
-            <button key={м.at} className={'food-meal food-meal-wide' + (когда === м.at ? ' on' : '')}
-              onClick={() => setКогда(м.at)}>{м.label}</button>
+            <button key={м.at} className={'food-meal' + (когда === м.at ? ' on' : '')}
+              onClick={() => setКогда(м.at)}>
+              {времяМомента(м.at)} <i className="fm-rise">↑{fmt(м.rise)}</i>
+            </button>
           ))}
           {(показатьСмещения || !моменты.length) && СМЕЩЕНИЯ.map((с) => (
             <button key={с.label} className={'food-meal' + (когда === -с.ms ? ' on' : '')}
@@ -259,6 +264,12 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
             <button className="food-meal food-meal-more" onClick={() => setПоказатьСмещения(true)}>другое время</button>
           )}
         </div>
+        {моменты.length > 0 && !показатьСмещения && (
+          <div className="food-save-note" style={{ textAlign: 'left', margin: '-6px 2px 14px' }}>
+            Время — когда сахар пошёл вверх, а рядом на сколько. Похоже на момент, когда
+            ты поел, но записи об этом нет.
+          </div>
+        )}
 
         <div className="food-label"><IonIcon icon={waterOutline} /> Болюс, ед — если уже вводили</div>
         <div className="field">
@@ -336,7 +347,12 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
           справочником: чтобы сохранить приём, надо было пролистать каталог. А при
           открытой клавиатуре её не было видно вовсе — вместе с полем болюса, которое
           человек в этот момент и заполнял. */}
+      {/* Закрыть — тоже в подвале. Крестик вверху справа на высоком телефоне
+          недостижим большим пальцем, а отказаться от ввода человек решает чаще всего
+          именно тогда, когда уже долистал донизу. Тот же приём, что и с кнопкой
+          «назад» на страницах разделов. */}
       <div className="sheet-foot">
+        <button className="sheet-cancel" onClick={onClose}>Закрыть</button>
         <button className="food-save" disabled={!годно || сохранено} onClick={сохранить}>
           {сохранено ? 'Записано' : 'Сохранить приём'}
         </button>

@@ -129,7 +129,14 @@
 .sheet-modal::part(content) { display: flex; flex-direction: column; }
 .sheet-modal ion-content { flex: 1 1 auto; min-height: 0; }
 .sheet-foot {
-  flex: 0 0 auto; padding: 10px 18px calc(12px + env(safe-area-inset-bottom, 0px));
+  flex: 0 0 auto; display: flex; align-items: stretch; gap: 10px;
+  padding: 10px 18px calc(12px + env(safe-area-inset-bottom, 0px));
   background: var(--color-bg); border-top: 1px solid var(--color-neutral-800);
 }
-.sheet-foot .food-save { margin-top: 0; }
+.sheet-foot .food-save { margin-top: 0; flex: 1 1 auto; }
+.sheet-cancel {
+  flex: 0 0 auto; padding: 0 18px; min-height: 48px; border-radius: 16px; cursor: pointer;
+  border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
+  color: var(--color-neutral-300); font-size: 15px; font-family: var(--font-body);
+}
+.sheet-cancel:active { background: var(--color-neutral-800); }
