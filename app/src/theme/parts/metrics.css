@@ -149,6 +149,5 @@
 }
 /* Пять фильтров в строку не помещаются: подписи сжимались до нечитаемого, а счётчики
    отрывались от своих чипов. Прокрутка вбок честнее сжатия — видно, что есть ещё. */
-.chips-scroll { overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
-.chips-scroll::-webkit-scrollbar { height: 0; }
+.chips-scroll { overflow-x: auto; padding-bottom: 2px; } /* полоса прокрутки — в base.css */
 .chips-scroll .metric-chip { flex: 0 0 auto; white-space: nowrap; }
