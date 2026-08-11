@@ -61,6 +61,8 @@
 .basal-row b { font-size: 14px; font-weight: 600; }
 /* «Неизвестно» — прочерк приглушённым цветом, чтобы не путать с нулём (см. domain/loopValue.ts) */
 .val-unknown { color: var(--color-neutral-500); font-weight: 600; }
+/* Значение, требующее внимания: связь отстаёт или пропала */
+.val-warn { color: var(--c-danger-2); font-weight: 600; }
 .basal-note { font-size: 11px; color: var(--color-neutral-500); padding: 0 0 4px; }
 .stepper { display: flex; align-items: center; gap: 14px; }
 .stepper button {

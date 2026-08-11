@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import { IonIcon, IonToggle } from '@ionic/react';
 import { BasalProfileSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
 import PageHead from '@/ui/PageHead';
@@ -7,7 +7,9 @@ import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
-import { useSnapshot } from '@/sources/bridge';
+import { useSnapshot, sendIntent } from '@/sources/bridge';
+import { sourceStatusLabel, sourceStatusWarn } from '@/domain/sourceStatus';
+import { agoText } from '@/domain/units';
 import { useStore } from '@/sources/store';
 import { useDeviceExtras } from '@/sources/deviceExtras';
 import { deviceAges, type Age } from '@/domain/treatmentStats';
@@ -145,9 +147,16 @@ export default function DeviceSection({ onClose, cat, title }: {
      и при живом сенсоре.
      Выбора активного способа здесь намеренно нет — сначала честная картина того, что
      есть; приоритет и резерв при обрыве решаем отдельно. */
-  const bleLive = (snap?.devices ?? []).some(
-    (d) => d.kind === cat && (d.connection === 'Connected' || d.connection === 'Streaming'),
-  );
+  /* Живое устройство из снимка моста — с ним и работаем дальше: у него есть статус,
+     возраст показания, подсказка и тумблер авто-подключения (контракт 1.7).
+     В браузере его нет вовсе: Nightscout-шим отдаёт только сервис, не железку. */
+  const ble = (snap?.devices ?? []).find((d) => d.kind === cat) ?? null;
+  const bleLive = ble?.connection === 'Connected' || ble?.connection === 'Streaming';
+  /* Что мост рассказывает о себе сам (1.7). Чего не прислал — не рисуем: пустая
+     строка «Последнее показание —» хуже отсутствующей, она выглядит как поломка. */
+  const bleStatus = sourceStatusLabel(ble?.status);
+  const bleAge = ble?.latestAtMs != null ? agoText(ble.latestAtMs) : null;
+
   const activeMeth: 'direct' | 'cloud' | null = bleLive ? 'direct' : nsFeed ? 'cloud' : null;
   const needsBridge = cat === 'pump' ? pumpNeedsBridge(pump) : !!sensor?.needsBridge;
 
@@ -285,6 +294,39 @@ export default function DeviceSection({ onClose, cat, title }: {
                     ? 'Без этого прямое чтение по радио не заработает: ' + paramsMissing.map((p) => p.title.toLowerCase()).join(', ') + '.'
                     : 'Понадобится приложению для чтения помпы по радио. Через Nightscout данные идут и без этого.'}
                 </div>
+              </>
+            )}
+
+            {ble && (bleStatus || bleAge || ble.note || ble.autoConnect != null) && (
+              <>
+                <div className="section-label sec">Связь</div>
+                {(bleStatus || bleAge) && (
+                  <div className="basal-rows">
+                    {bleStatus && (
+                      <div className="basal-row">
+                        <span>Состояние</span>
+                        <b className={sourceStatusWarn(ble.status) ? 'val-warn' : undefined}>{bleStatus}</b>
+                      </div>
+                    )}
+                    {bleAge && <div className="basal-row"><span>Последнее показание</span><b>{bleAge}</b></div>}
+                  </div>
+                )}
+                {/* Подсказка от ядра — например, что железку держит другой телефон.
+                    Текст пишет движок: он один знает, что именно пошло не так. */}
+                {ble.note && <div className="sheet-note warn">{ble.note}</div>}
+                {ble.autoConnect != null && (
+                  <div className="list">
+                    <div className="list-row">
+                      <IonIcon icon={bluetoothOutline} className="list-ico" />
+                      <span className="pick-main">
+                        <span className="list-title">Подключаться автоматически</span>
+                        <span className="pick-sub">при запуске приложения</span>
+                      </span>
+                      <IonToggle checked={ble.autoConnect}
+                        onIonChange={(e) => sendIntent({ type: 'setAutoConnect', deviceId: ble.id, autoConnect: e.detail.checked })} />
+                    </div>
+                  </div>
+                )}
               </>
             )}
 

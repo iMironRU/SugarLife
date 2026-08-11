@@ -71,14 +71,25 @@ export default function HeroPanel() {
   const latest = data?.latest || null;
   const dev = data?.device || null;
 
+  /* Возраст показания — из монитора моста, а не из стора.
+
+     Число в круге мы уже берём у моста, а «сколько минут назад» считали по стору.
+     Пока мост — это шим над тем же Nightscout, разницы нет. Но с нативным ядром
+     источник глюкозы может быть другим (сенсор напрямую), и получилась бы пара
+     «свежая цифра · пятнадцать минут назад» из двух разных источников. Для экрана,
+     по которому решают, колоть ли, это недопустимо.
+     Контракт 1.7 отдаёт latestAtMs ровно для этого; фолбэк на стор — на случай
+     старого моста, который поля ещё не присылает. */
+  const latestAt = m?.latestAtMs ?? latest?.t ?? null;
+
   // Головное значение и тренд — из моста (контракт); фолбэк на стор до первого снимка.
   // m.glucose — «сырая» строка движка (может включать единицу, напр. "6.1 mmol/L" у
   // нативного скелета) — для отображения в круге используем короткое число из glucoseMmol,
   // единицу показывает соседний .hp-unit.
   const glucose = m ? (m.glucoseMmol != null ? toUnits(m.glucoseMmol) : m.glucose) : latest ? toUnits(latest.mmol) : DASH;
   const arrow = m ? (TREND_CHAR[m.trend] ?? '') : latest ? arrowChar(latest.dir) : '';
-  const ago = latest ? agoText(latest.t) : DASH;
-  const minsAgo = latest ? Math.round((Date.now() - latest.t) / 60000) : null;
+  const ago = latestAt != null ? agoText(latestAt) : DASH;
+  const minsAgo = latestAt != null ? Math.round((Date.now() - latestAt) / 60000) : null;
   const fresh = minsAgo == null ? DASH : minsAgo < 1 ? 'сейчас' : minsAgo + ' мин';
 
   const reservoir = dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : DASH;
@@ -102,10 +113,14 @@ export default function HeroPanel() {
   // последнего значения в Nightscout, чтобы видеть задержку. + офлайн.
   // Короткая форма: строка статуса теперь всегда в одну линию рядом с зарядами,
   // и «назад» в ней — лишние ~35px, из-за которых текст обрезался на узких экранах.
-  const readingAge = latest ? agoText(latest.t).replace(' назад', '') : null;
+  const readingAge = latestAt != null ? agoText(latestAt).replace(' назад', '') : null;
+  /* Живость — тоже из монитора, когда он её присылает: у ядра «живой» значит «основной
+     источник отдаёт свежее», а у стора — «сокет подключён». Второе слабее: сокет может
+     висеть подключённым и молчать. */
+  const liveNow = m?.live ?? live;
   const syncState = !online ? 'offline'
-    : (status === 'stale' || status === 'error') ? 'stale'
-    : live ? 'live'
+    : (m?.status === 'Delayed' || status === 'stale' || status === 'error') ? 'stale'
+    : liveNow ? 'live'
     : 'poll';
   const syncMain = syncState === 'offline' ? 'нет сети'
     : syncState === 'stale' ? 'нет связи'
