@@ -124,7 +124,11 @@ export default function HeroPanel() {
     : 'poll';
   const syncMain = syncState === 'offline' ? 'нет сети'
     : syncState === 'stale' ? 'нет связи'
-    : syncState === 'live' ? 'реальное время'
+    /* Живой поток — называем ИСТОЧНИК, если мост его знает: с нативным ядром их
+       становится несколько (сенсор напрямую, Nightscout, облако производителя), и
+       «реальное время» перестаёт отвечать на вопрос «откуда это число». Сердечко
+       рядом и так говорит, что поток живой. */
+    : syncState === 'live' ? (m?.source || 'реальное время')
     : data ? 'обновлено ' + agoText(data.updatedAt)
     : 'нет данных';
   const syncWarn = syncState === 'offline' || syncState === 'stale';
