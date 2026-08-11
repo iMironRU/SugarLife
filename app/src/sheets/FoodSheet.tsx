@@ -1,13 +1,16 @@
 import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
-import { closeOutline, nutritionOutline, removeOutline, addOutline, timeOutline, waterOutline, searchOutline, sparklesOutline } from 'ionicons/icons';
-import { useEffect, useState } from 'react';
+import { closeOutline, nutritionOutline, removeOutline, addOutline, timeOutline, waterOutline, searchOutline, sparklesOutline, warningOutline } from 'ionicons/icons';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS, plural } from '@/domain/units';
 import { addMeal, useMeals } from '@/sources/mealStore';
 import { СМЕЩЕНИЯ } from '@/domain/meals';
 import { searchFoods, personalFoods, CAT_LABEL, CAT_ORDER, type Food } from '@/domain/foods';
+import { подсказка, приёмПоЧасу } from '@/domain/foodNow';
 
 const MEALS = ['Завтрак', 'Обед', 'Ужин', 'Перекус'];
+const ПОКАЗЫВАЕМ = 6; // сколько плиток в группе до «ещё N»
+const приёмПоУмолчанию = () => Math.max(0, MEALS.indexOf(приёмПоЧасу(new Date().getHours())));
 
 /* Внести приём пищи.
 
@@ -29,12 +32,17 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
   const cu = useCarbUnit();
   const [carbs, setCarbs] = useState(30);
   const [назад, setНазад] = useState(0); // сколько минут назад ели
-  const [meal, setMeal] = useState(1);
+  /* Тип приёма по часу, а не «Обед» всегда. Мелочь на вид, но она перебивала весь
+     разбор: подставленный по умолчанию «Обед» выглядел как явный выбор человека и в
+     десять вечера вытеснял ужин. Умный список, поверх которого стоит глупое умолчание,
+     умным быть перестаёт. */
+  const [meal, setMeal] = useState(() => приёмПоУмолчанию());
   const [insulin, setInsulin] = useState('');
   const [сохранено, setСохранено] = useState(false);
   const [запрос, setЗапрос] = useState('');
   const [выбрано, setВыбрано] = useState<string | null>(null);
   const [справочник, setСправочник] = useState<'нет' | 'коротко' | 'всё'>('нет');
+  const [развёрнуто, setРазвёрнуто] = useState<Record<string, boolean>>({});
 
   const meals = useMeals();
   const своё = personalFoods(meals);
@@ -44,9 +52,25 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
   const видимые = справочник === 'всё' ? CAT_ORDER : CAT_ORDER.filter((c) => c === 'meal' || c === 'hypo');
   const группы = видимые.map((c) => найдено.filter((f) => f.cat === c));
 
+  /* Что показать первым — по сахару, намерению, своей истории в этот час и времени
+     суток (domain/foodNow.ts). Считаем при открытии, а не на каждый рендер: список,
+     который переставляется под пальцем, хуже неудобного. */
+  const сейчас = useMemo(
+    () => (isOpen ? подсказка({
+      hour: new Date().getHours(),
+      mmol: data?.latest?.mmol ?? null,
+      dir: data?.latest?.dir,
+      выбранныйПриём: MEALS[meal],
+      своё,
+      историяЧасов: meals,
+    }) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isOpen, meal, meals.length],
+  );
+
   // открыли заново — начинаем с чистого листа, а не с прошлых цифр
   useEffect(() => {
-    if (isOpen) { setCarbs(30); setНазад(0); setInsulin(''); setСохранено(false); setЗапрос(''); setВыбрано(null); setСправочник(своё.length ? 'нет' : 'коротко'); }
+    if (isOpen) { setCarbs(30); setMeal(приёмПоУмолчанию()); setНазад(0); setInsulin(''); setСохранено(false); setЗапрос(''); setВыбрано(null); setСправочник(своё.length ? 'нет' : 'коротко'); setРазвёрнуто({}); }
   }, [isOpen]);
 
   /* Выбор пресета не «применяет» его, а подставляет опорную точку: углеводы попадают в
@@ -101,6 +125,34 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
           </div>
         </div>
         <div className="food-bolus">Болюс на еду: {mealBolus} ед · {ratio}</div>
+
+        {/* «Сейчас» — подъём наверх, а не отсечение: люди едят кашу вечером, и остальное
+            никуда не девается. Группа подписана, чтобы было видно, почему именно эти:
+            молча переставленный список — это когда приложение решает за тебя и не
+            объясняет. */}
+        {сейчас && (
+          <>
+            <div className={'food-label' + (сейчас.гипо ? ' is-hypo' : '')}>
+              <IonIcon icon={сейчас.гипо ? warningOutline : timeOutline} /> {сейчас.причина}
+            </div>
+            <div className="food-picks">
+              {сейчас.свои.map((p) => (
+                <button key={'n' + p.id} className={'food-pick' + (выбрано === p.id ? ' on' : '')}
+                  onClick={() => выбрать(p.id, p.carbs)}>
+                  <b>{p.name ?? p.kind}</b>
+                  <span>{toCarbs(p.carbs, cu)} {clabel} · {p.count} {plural(p.count, 'раз', 'раза', 'раз')}</span>
+                </button>
+              ))}
+              {сейчас.из_справочника.map((f) => (
+                <button key={'n' + f.id} className={'food-pick' + (сейчас.гипо ? ' is-hypo' : '') + (выбрано === f.id ? ' on' : '')}
+                  onClick={() => выбрать(f.id, f.carbs)}>
+                  <b>{f.name}</b>
+                  <span>≈ {toCarbs(f.carbs, cu)} {clabel}{f.portion ? ' · ' + f.portion : ''}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Порядок здесь важнее содержимого.
 
@@ -177,8 +229,10 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
                 группа.length === 0 ? null : (
                   <div key={i} className="food-cat">
                     {!запрос && <div className="food-cat-cap">{CAT_LABEL[видимые[i]]}</div>}
+                    {/* Группу подрезаем: 27 блюд подряд — это лента, в которой ничего
+                        не найти глазами. Развернуть можно, но по своему решению. */}
                     <div className="food-picks">
-                      {группа.map((f: Food) => (
+                      {(развёрнуто[видимые[i]] ? группа : группа.slice(0, ПОКАЗЫВАЕМ)).map((f: Food) => (
                         <button key={f.id} className={'food-pick' + (выбрано === f.id ? ' on' : '')}
                           onClick={() => выбрать(f.id, f.carbs)}>
                           <b>{f.name}</b>
@@ -187,6 +241,12 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
                         </button>
                       ))}
                     </div>
+                    {!запрос && группа.length > ПОКАЗЫВАЕМ && !развёрнуто[видимые[i]] && (
+                      <button className="food-more"
+                        onClick={() => setРазвёрнуто((r) => ({ ...r, [видимые[i]]: true }))}>
+                        ещё {группа.length - ПОКАЗЫВАЕМ}
+                      </button>
+                    )}
                   </div>
                 )
               ))}
