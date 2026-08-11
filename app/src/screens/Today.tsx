@@ -1,17 +1,20 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { AnalyticsSection } from '@/sections/lazy';
-import { restaurantOutline, warningOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, sparklesOutline, chevronForward } from 'ionicons/icons';
+import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, sparklesOutline, chevronForward } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/sources/store';
-import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt } from '@/domain/units';
+import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt, agoText } from '@/domain/units';
 import { reportContentScroll } from '@/app/panel';
 import { activeCarbs } from '@/domain/loopValue';
 import ChangedButton from '@/ui/ChangedButton';
+import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
 import { reservoirStats } from '@/domain/treatmentStats';
 import { batteryRuntime, BATTERY_KINDS } from '@/domain/battery';
-import { getBatteryPoints, onDbChange } from '@/sources/db';
+import { detectRefill } from '@/domain/refill';
+import type { Plateau } from '@/domain/plateau';
+import { getSeries, onDbChange } from '@/sources/db';
 import { useCloseOnLeave } from '@/app/nav';
 import { notify } from '@/platform/notify';
 import FoodSheet from '@/sheets/FoodSheet';
@@ -50,18 +53,31 @@ export default function Today() {
   // общие расширенные данные (грузит панель) — события/резервуар
   const extras = useDeviceExtras();
   const cfg = useDeviceConfig();
+  const changes = useChanges();
   const rstat = reservoirStats(extras.devHist);
   /* История заряда копится в своей базе: в облаке за один запрос доступны последние
      часы, а один цикл разряда занимает недели (sources/db.ts, putBatteryPoints). */
-  const [bhist, setBhist] = useState<{ t: number; pct: number }[]>([]);
+  const [bhist, setBhist] = useState<Plateau[]>([]);
+  const [rhist, setRhist] = useState<Plateau[]>([]);
   useEffect(() => {
     let жив = true;
-    const читать = () => { void getBatteryPoints().then((x) => { if (жив) setBhist(x); }); };
+    const читать = () => {
+      void getSeries('battery').then((x) => { if (жив) setBhist(x); });
+      void getSeries('reservoir').then((x) => { if (жив) setRhist(x); });
+    };
     читать();
     const off = onDbChange(читать);
     return () => { жив = false; off(); };
   }, []);
-  const bstat = batteryRuntime(bhist.map((x) => ({ t: x.t, reservoir: null, pumpBattery: x.pct, uploaderBattery: null })));
+
+  /* Заправка картриджа: переход «почти пусто → почти полный». Признак чистый (см.
+     domain/refill.ts), но отмечаем не молча, а спрашиваем — молчаливая отметка по
+     эвристике ошибается незаметно, а вопрос ошибается дёшево. */
+  const заправка = detectRefill(rhist);
+  const спроситьЗаправку = заправка != null
+    && заправка.at > askedRefill()
+    && заправка.at > (changes.reservoir ?? 0);
+  const bstat = batteryRuntime(bhist.map((x) => ({ t: x.t, reservoir: null, pumpBattery: x.v, uploaderBattery: null })));
   /* Тип батарейки объясняет, почему у соседа те же 20% значат другое. Не задан —
      молчим: догадываться о химии по цифрам мы не умеем. */
   const kind = BATTERY_KINDS.find((b) => b.id === cfg.pumpBatteryKind) ?? null;
@@ -301,6 +317,34 @@ export default function Today() {
                 <span className="alert-ask">
                   Поставил новую?
                   <ChangedButton what="battery" label="Поменял батарейку" />
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Вопрос о заправке. Идёт выше прочих подсветок: остальные сообщают, а этот
+              просит подтвердить — и пока не подтвердили, возраст резервуара неверен. */}
+          {спроситьЗаправку && заправка && (
+            <div className="today-alert">
+              <IonIcon icon={waterOutline} />
+              <div>
+                <b>Похоже, ты заправил картридж</b>
+                <span>
+                  Остаток поднялся с {Math.round(заправка.from)} до {Math.round(заправка.to)} ед {agoText(заправка.at)}.
+                  В Nightscout события об этом нет, поэтому спрашиваем: отметить замену резервуара?
+                </span>
+                <span className="alert-ask alert-ask-row">
+                  <button className="changed-btn is-undo" onClick={() => { markChanged('reservoir', заправка.at); markRefillAsked(заправка.at); }}>
+                    Да, заправил
+                  </button>
+                  <button className="changed-btn" onClick={() => markRefillAsked(заправка.at)}>Нет</button>
+                </span>
+                {/* Отдельным вопросом: скачок остатка говорит про КАРТРИДЖ. Набор часто
+                    меняют вместе с ним, но не всегда, а признака смены набора в данных
+                    нет вовсе — поэтому только спрашиваем, а не выводим. */}
+                <span className="alert-ask">
+                  Заодно и инфузионный набор поменял?
+                  <ChangedButton what="site" label="Да, и набор" />
                 </span>
               </div>
             </div>

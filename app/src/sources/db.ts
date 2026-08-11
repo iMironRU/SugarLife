@@ -3,12 +3,12 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import { useEffect, useState } from 'react';
 import type { Entry, Treatment } from './nightscout';
-import { compressPlateaus } from '@/domain/battery';
+import { compressPlateaus, type Plateau } from '@/domain/plateau';
 
 let dbp: Promise<IDBPDatabase> | null = null;
 function db() {
   if (!dbp) {
-    dbp = openDB('sugarlife', 3, {
+    dbp = openDB('sugarlife', 4, {
       upgrade(d) {
         if (!d.objectStoreNames.contains('entries')) d.createObjectStore('entries', { keyPath: 't' });
         // лечение: ключ [t, type] — как дедуп в сторе (temp basal по циклам, болюсы/углеводы)
@@ -19,6 +19,8 @@ function db() {
            сотен тысяч — и только так можно накопить историю, которой в облаке уже
            не достать: там за один запрос доступны последние часы. */
         if (!d.objectStoreNames.contains('battery')) d.createObjectStore('battery', { keyPath: 't' });
+        // остаток в резервуаре — тем же способом: заправку видно только по истории
+        if (!d.objectStoreNames.contains('reservoir')) d.createObjectStore('reservoir', { keyPath: 't' });
       },
     });
   }
@@ -211,21 +213,23 @@ export function useTreatments(windowMs: number, { paused = false, minRefreshMs =
 
    Храним края плато, а не каждый замер: сжатие живёт в домене (compressPlateaus) —
    там же, где считается смысл, и там же покрыто тестом. */
-export async function putBatteryPoints(points: { t: number; pct: number }[]) {
+export type Series = 'battery' | 'reservoir';
+
+export async function putSeries(store: Series, points: Plateau[]) {
   if (!points.length) return;
   const d = await db();
-  const было = await d.getAll('battery') as { t: number; pct: number }[];
+  const было = await d.getAll(store) as Plateau[];
   const стало = compressPlateaus([...было, ...points]);
   if (стало.length === было.length && стало.every((x, i) => было[i]?.t === x.t)) return;
 
-  const tx = d.transaction('battery', 'readwrite');
+  const tx = d.transaction(store, 'readwrite');
   await tx.store.clear();
   for (const p of стало) tx.store.put(p);
   await tx.done;
   bump();
 }
 
-export async function getBatteryPoints(): Promise<{ t: number; pct: number }[]> {
+export async function getSeries(store: Series): Promise<Plateau[]> {
   const d = await db();
-  return (await d.getAll('battery')) as { t: number; pct: number }[];
+  return (await d.getAll(store)) as Plateau[];
 }

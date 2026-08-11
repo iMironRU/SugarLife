@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { batteryRuntime, compressPlateaus } from './battery';
+import { batteryRuntime } from './battery';
+import { compressPlateaus } from './plateau';
 import type { DevPoint } from './types';
 
 const ЧАС = 3600e3;
@@ -60,7 +61,7 @@ describe('сколько помпа работает на дне шкалы', ()
 });
 
 describe('сжатие истории заряда', () => {
-  const b = (t: number, pct: number) => ({ t, pct });
+  const b = (t: number, v: number) => ({ t, v });
 
   it('от плато остаются ОБА края — иначе теряется его длина', () => {
     // это и был баг: хранили только вход на плато, и «сколько продержалась» = 0
@@ -74,13 +75,13 @@ describe('сжатие истории заряда', () => {
 
   it('длина плато сохраняется — на этом держится весь расчёт', () => {
     const хранимое = compressPlateaus([b(0, 60), b(1, 1), b(2, 1), b(3, 1), b(10, 1), b(11, 80)]);
-    const r = batteryRuntime(хранимое.map((x) => ({ t: x.t * 3600e3, reservoir: null, pumpBattery: x.pct, uploaderBattery: null })));
+    const r = batteryRuntime(хранимое.map((x) => ({ t: x.t * 3600e3, reservoir: null, pumpBattery: x.v, uploaderBattery: null })));
     expect(r.samples[0]).toBe(9); // с 1-го часа по 10-й
   });
 
   it('сортирует и чистит мусор', () => {
     const r = compressPlateaus([b(5, 20), b(1, 50), b(NaN, 3), b(3, 20)]);
-    expect(r.map((x) => x.pct)).toEqual([50, 20, 20]);
+    expect(r.map((x) => x.v)).toEqual([50, 20, 20]);
   });
 
   it('повторное сжатие ничего не меняет — данные копятся дозагрузками', () => {

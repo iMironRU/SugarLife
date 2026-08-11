@@ -54,6 +54,20 @@ export function unmarkChanged(what: Consumable): void {
   save();
 }
 
+/* О какой заправке мы уже спрашивали. Без этого вопрос всплывал бы снова и снова:
+   заправка остаётся в истории навсегда, а закрыть вопрос человек может один раз.
+   Хранится время самой заправки, а не факт «спрашивали»: следующая заправка — это
+   новое время, и вопрос появится честно. */
+const KEY_ASKED = 'sl.asked.refill.v1';
+
+export function askedRefill(): number {
+  try { return Number(localStorage.getItem(KEY_ASKED)) || 0; } catch { return 0; }
+}
+export function markRefillAsked(at: number): void {
+  try { localStorage.setItem(KEY_ASKED, String(at)); } catch { /* ignore */ }
+  subs.forEach((f) => f());
+}
+
 export function useChanges(): Changes {
   return useSyncExternalStore(
     (cb) => { subs.add(cb); return () => { subs.delete(cb); }; },

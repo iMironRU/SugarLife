@@ -75,32 +75,6 @@ function медиана(xs: number[]): number | null {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
-/* Сжатие истории заряда до плато.
-
-   Замеров приходит по одному в минуту, и подряд идущие одинаковые проценты не несут
-   ничего, кроме объёма. Но и оставлять по одной точке на плато нельзя: тогда теряется
-   его КОНЕЦ, а именно он и нужен — «сколько помпа продержалась на 1%» это расстояние
-   от входа на плато до выхода с него. Первая версия хранила только вход, и все замеры
-   получались нулевыми: вход и выход оказывались одной и той же точкой.
-
-   Поэтому от каждого плато оставляем края: первую точку и последнюю. За девяносто
-   дней это по-прежнему сотни строк, а не сотни тысяч. */
-export interface BatteryPoint { t: number; pct: number }
-
-export function compressPlateaus(points: BatteryPoint[]): BatteryPoint[] {
-  const s = points
-    .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.pct))
-    .sort((a, b) => a.t - b.t);
-  const out: BatteryPoint[] = [];
-  for (let i = 0; i < s.length; i++) {
-    const край = i === 0 || i === s.length - 1
-      || s[i].pct !== s[i - 1].pct
-      || s[i].pct !== s[i + 1].pct;
-    if (край && out[out.length - 1]?.t !== s[i].t) out.push(s[i]);
-  }
-  return out;
-}
-
 export type BatteryKind = 'alkaline' | 'lithium' | 'nimh';
 
 export const BATTERY_KINDS: { id: BatteryKind; name: string; note: string }[] = [
