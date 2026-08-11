@@ -7,6 +7,7 @@ import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt, 
 import { reportContentScroll } from '@/app/panel';
 import { activeCarbs } from '@/domain/loopValue';
 import ChangedButton from '@/ui/ChangedButton';
+import ReleaseBle from '@/ui/ReleaseBle';
 import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
@@ -364,6 +365,12 @@ export default function Today() {
               </div>
             </div>
           )}
+
+          {/* Отдать устройства. Рядом с подсветками, а не в настройках: это действие
+              нужно в моменте — «дай отсканировать сенсор родным приложением», — и
+              искать его по разделам человек не будет. Само появляется, только когда
+              есть что отпускать. */}
+          <ReleaseBle />
 
           {/* подсветки резервуара */}
           {stuck && (
