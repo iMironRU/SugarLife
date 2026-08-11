@@ -3,15 +3,22 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import { useEffect, useState } from 'react';
 import type { Entry, Treatment } from './nightscout';
+import { compressPlateaus } from '@/domain/battery';
 
 let dbp: Promise<IDBPDatabase> | null = null;
 function db() {
   if (!dbp) {
-    dbp = openDB('sugarlife', 2, {
+    dbp = openDB('sugarlife', 3, {
       upgrade(d) {
         if (!d.objectStoreNames.contains('entries')) d.createObjectStore('entries', { keyPath: 't' });
         // лечение: ключ [t, type] — как дедуп в сторе (temp basal по циклам, болюсы/углеводы)
         if (!d.objectStoreNames.contains('treatments')) d.createObjectStore('treatments', { keyPath: ['t', 'type'] });
+        /* Заряд помпы во времени. Отдельным хранилищем и только ПЕРЕХОДЫ значения,
+           а не каждый замер: смысл несёт момент, когда процент изменился, а замеров
+           приходит по одному в минуту. За девяносто дней это сотни строк вместо
+           сотен тысяч — и только так можно накопить историю, которой в облаке уже
+           не достать: там за один запрос доступны последние часы. */
+        if (!d.objectStoreNames.contains('battery')) d.createObjectStore('battery', { keyPath: 't' });
       },
     });
   }
@@ -192,4 +199,33 @@ export function useTreatments(windowMs: number, { paused = false, minRefreshMs =
     return () => { cancel = true; off(); };
   }, [windowMs, paused, minRefreshMs]);
   return ts;
+}
+
+
+/* --- Заряд помпы: накопление истории переходов ---
+
+   Зачем вообще хранить. Вопрос «сколько ещё проработает» отвечается только собственной
+   историей человека, а её негде взять: Nightscout за разумный запрос отдаёт последние
+   часы, и одного цикла разряда там не увидеть. Значит копим сами — по крупицам, из тех
+   же данных, которые и так грузим.
+
+   Храним края плато, а не каждый замер: сжатие живёт в домене (compressPlateaus) —
+   там же, где считается смысл, и там же покрыто тестом. */
+export async function putBatteryPoints(points: { t: number; pct: number }[]) {
+  if (!points.length) return;
+  const d = await db();
+  const было = await d.getAll('battery') as { t: number; pct: number }[];
+  const стало = compressPlateaus([...было, ...points]);
+  if (стало.length === было.length && стало.every((x, i) => было[i]?.t === x.t)) return;
+
+  const tx = d.transaction('battery', 'readwrite');
+  await tx.store.clear();
+  for (const p of стало) tx.store.put(p);
+  await tx.done;
+  bump();
+}
+
+export async function getBatteryPoints(): Promise<{ t: number; pct: number }[]> {
+  const d = await db();
+  return (await d.getAll('battery')) as { t: number; pct: number }[];
 }

@@ -3,6 +3,7 @@
    На будущее сюда добавятся режим (помпа/МДИ), базальный инсулин, мульти-профиль. */
 import { useSyncExternalStore } from 'react';
 import { pumpById, sensorById, pumpNeedsBridge } from '@/domain/catalog';
+import type { BatteryKind } from '@/domain/battery';
 
 const KEY = 'sl.device.v1';
 
@@ -18,10 +19,16 @@ export interface DeviceConfig {
      появления держим у себя (спеки — domain/driverParams.ts). Секретов здесь быть НЕ
      ДОЛЖНО: пароли от чужих облаков в браузер не кладём вовсе (SugarLifeCore#3). */
   deviceParams: Record<string, Record<string, string>>;
+  /* Химия батарейки помпы. Нужна не для красоты: процент заряда сам по себе не
+     говорит, сколько осталось, — у литиевой кривая разряда почти плоская до конца,
+     у алкалиновой падает раньше, у аккумулятора помпа занижает процент с начала.
+     Прогноз строим по собственной истории человека (domain/battery.ts), а тип
+     объясняет, почему у соседа те же 20% значат другое. */
+  pumpBatteryKind: BatteryKind | null;
 }
 const DEFAULT: DeviceConfig = {
   pumpId: null, fastInsulinId: null, sensorId: null, meterModel: null,
-  bridgeSensorId: null, bridgePumpId: null, deviceParams: {},
+  bridgeSensorId: null, bridgePumpId: null, deviceParams: {}, pumpBatteryKind: null,
 };
 
 function load(): DeviceConfig {

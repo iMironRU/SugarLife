@@ -2,11 +2,12 @@ import { IonIcon, IonToggle } from '@ionic/react';
 import { BasalProfileSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
 import PageHead from '@/ui/PageHead';
-import { chevronForward, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
+import { chevronForward, batteryHalfOutline, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
+import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import { sourceStatusLabel, sourceStatusWarn } from '@/domain/sourceStatus';
 import { agoText } from '@/domain/units';
@@ -44,7 +45,7 @@ export default function DeviceSection({ onClose, cat, title }: {
   const { data } = useStore();
   const extras = useDeviceExtras();
   const changes = useChanges();
-  const [pick, setPick] = useState<null | 'model' | 'bridge' | 'insulin'>(null);
+  const [pick, setPick] = useState<null | 'model' | 'bridge' | 'insulin' | 'battery'>(null);
   const [scanOpen, setScanOpen] = useState(false);
 
   const hasModel = cat === 'sensor' || cat === 'pump';
@@ -267,6 +268,14 @@ export default function DeviceSection({ onClose, cat, title }: {
                     valueMuted={!insulin} onClick={() => setPick('insulin')} />
                 )}
                 {cat === 'pump' && (
+                  /* Тип батарейки — не украшение: процент заряда без него не отвечает
+                     на вопрос «успею ли до утра» (domain/battery.ts). */
+                  <Row icon={batteryHalfOutline} title="Батарейка"
+                    value={batteryKindName(cfg.pumpBatteryKind) ?? 'выбрать'}
+                    valueMuted={!cfg.pumpBatteryKind}
+                    onClick={() => setPick('battery')} />
+                )}
+                {cat === 'pump' && (
                   <Row icon={pulseOutline} title="Базальный профиль"
                     value={basalTotal != null ? basalTotal.toFixed(2) + ' ЕД/сут' : 'нет данных'}
                     valueMuted={basalTotal == null}
@@ -410,6 +419,15 @@ export default function DeviceSection({ onClose, cat, title }: {
             items={insulinItems} selectedId={cfg.fastInsulinId}
             onSelect={(id) => setDeviceConfig({ fastInsulinId: id })}
             currentLabel="только актуальные быстрые"
+          />
+        )}
+        {cat === 'pump' && (
+          <CatalogPicker
+            isOpen={pick === 'battery'} onClose={() => setPick(null)}
+            title="Батарейка помпы" subtitle="От химии зависит, что значит процент заряда"
+            items={BATTERY_KINDS.map((b) => ({ id: b.id, title: b.name, subtitle: b.note, current: true }))}
+            selectedId={cfg.pumpBatteryKind}
+            onSelect={(id) => setDeviceConfig({ pumpBatteryKind: id as BatteryKind })}
           />
         )}
         {hasBridge && (

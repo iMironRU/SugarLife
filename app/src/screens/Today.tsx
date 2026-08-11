@@ -7,8 +7,11 @@ import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt }
 import { reportContentScroll } from '@/app/panel';
 import { activeCarbs } from '@/domain/loopValue';
 import ChangedButton from '@/ui/ChangedButton';
+import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
 import { reservoirStats } from '@/domain/treatmentStats';
+import { batteryRuntime, BATTERY_KINDS } from '@/domain/battery';
+import { getBatteryPoints, onDbChange } from '@/sources/db';
 import { useCloseOnLeave } from '@/app/nav';
 import { notify } from '@/platform/notify';
 import FoodSheet from '@/sheets/FoodSheet';
@@ -31,6 +34,9 @@ const isPaused = (s?: string | null) => {
   return l.includes('приостан') || l.includes('пауза') || l.includes('suspend') || l.includes('stop');
 };
 
+const часы = (h: number) => (h < 24 ? Math.round(h) + ' ч' : Math.round(h / 24 * 10) / 10 + ' сут');
+const замен = (n: number) => (n === 1 ? 'замене' : 'заменам');
+
 export default function Today() {
   const { data } = useStore();
   useUnit(); // перерисовка при смене единиц
@@ -43,7 +49,23 @@ export default function Today() {
 
   // общие расширенные данные (грузит панель) — события/резервуар
   const extras = useDeviceExtras();
+  const cfg = useDeviceConfig();
   const rstat = reservoirStats(extras.devHist);
+  /* История заряда копится в своей базе: в облаке за один запрос доступны последние
+     часы, а один цикл разряда занимает недели (sources/db.ts, putBatteryPoints). */
+  const [bhist, setBhist] = useState<{ t: number; pct: number }[]>([]);
+  useEffect(() => {
+    let жив = true;
+    const читать = () => { void getBatteryPoints().then((x) => { if (жив) setBhist(x); }); };
+    читать();
+    const off = onDbChange(читать);
+    return () => { жив = false; off(); };
+  }, []);
+  const bstat = batteryRuntime(bhist.map((x) => ({ t: x.t, reservoir: null, pumpBattery: x.pct, uploaderBattery: null })));
+  /* Тип батарейки объясняет, почему у соседа те же 20% значат другое. Не задан —
+     молчим: догадываться о химии по цифрам мы не умеем. */
+  const kind = BATTERY_KINDS.find((b) => b.id === cfg.pumpBatteryKind) ?? null;
+  const kindNote = kind ? `Батарейка ${kind.name.toLowerCase()}: ${kind.note}.` : null;
 
   // углеводы за сегодня (с локальной полуночи)
   const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
@@ -257,13 +279,29 @@ export default function Today() {
             </div>
           )}
 
-          {/* батарея помпы на дне */}
+          {/* Батарея на дне. Главное здесь — не пугать процентом: помпа не показывает
+              ноль вовсе, и «1%» означает не «выключится сейчас». Сколько именно
+              осталось, знает только собственная история человека, поэтому если циклов
+              мы ещё не видели — так и говорим, а не подставляем чужую цифру. */}
           {batteryLow && (
             <div className="today-alert warn">
               <IonIcon icon={batteryDeadOutline} />
               <div>
                 <b>Батарея помпы {battery}%</b>
-                <span>Помпа не показывает ноль — {battery}% это уже дно шкалы. Поработает ещё, но батарейку стоит поменять при случае и носить запасную.</span>
+                <span>
+                  {bstat.floorPct != null
+                    ? `Помпа не показывает ноль: ниже ${bstat.floorPct}% она не опускается. `
+                    : 'Помпа не показывает ноль, поэтому процент занижает запас. '}
+                  {bstat.medianHours != null
+                    ? `После ${bstat.floorPct}% в прошлые разы протягивала ${часы(bstat.medianHours)} — медиана по ${bstat.cycles} ${замен(bstat.cycles)}.`
+                    : 'Сколько ещё протянет, пока сказать не можем: замен с полной историей не набралось. Носи запасную.'}
+                  {kindNote && ` ${kindNote}`}
+
+                </span>
+                <span className="alert-ask">
+                  Поставил новую?
+                  <ChangedButton what="battery" label="Поменял батарейку" />
+                </span>
               </div>
             </div>
           )}
