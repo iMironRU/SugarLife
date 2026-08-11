@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Контракт моста (запросы к ядру)
+    url: https://github.com/iMironRU/SugarLifeCore/issues
+    about: Всё, что требует изменения контракта или движка, заводится в SugarLifeCore. Реестр наших запросов — docs/CONTRACT-REQUESTS.md.
