@@ -13,6 +13,8 @@ import { useDeviceExtras } from '@/sources/deviceExtras';
 import { reservoirStats } from '@/domain/treatmentStats';
 import { batteryRuntime, BATTERY_KINDS } from '@/domain/battery';
 import { detectRefill } from '@/domain/refill';
+import { onlyLocal } from '@/domain/meals';
+import { useMeals } from '@/sources/mealStore';
 import type { Plateau } from '@/domain/plateau';
 import { getSeries, onDbChange } from '@/sources/db';
 import { useCloseOnLeave } from '@/app/nav';
@@ -54,6 +56,7 @@ export default function Today() {
   const extras = useDeviceExtras();
   const cfg = useDeviceConfig();
   const changes = useChanges();
+  const meals = useMeals();
   const rstat = reservoirStats(extras.devHist);
   /* История заряда копится в своей базе: в облаке за один запрос доступны последние
      часы, а один цикл разряда занимает недели (sources/db.ts, putBatteryPoints). */
@@ -86,8 +89,14 @@ export default function Today() {
   // углеводы за сегодня (с локальной полуночи)
   const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
   const todayCarbs = extras.events.filter((e) => (e.carbs ?? 0) > 0 && e.t >= dayStart.getTime());
-  const dayCarbs = Math.round(todayCarbs.reduce((a, b) => a + (b.carbs || 0), 0));
-  const mealCount = todayCarbs.length;
+  /* Свои записи считаем вместе с облачными, но без задвоения: когда выгрузка появится,
+     наш же приём вернётся из Nightscout, и без склейки он посчитался бы дважды —
+     а задвоенные углеводы это задвоенная доза (domain/meals.ts). */
+  const свои = onlyLocal(meals, extras.events).filter((m) => m.t >= dayStart.getTime());
+  const dayCarbs = Math.round(
+    todayCarbs.reduce((a, b) => a + (b.carbs || 0), 0) + свои.reduce((a, b) => a + b.carbs, 0),
+  );
+  const mealCount = todayCarbs.length + свои.length;
   /* Активные углеводы тоже считает цикл, а не помпа: когда он молчит, это
      «неизвестно», а не «ноль». Прочерк плюс причина — см. domain/loopValue.ts. */
   const ac = activeCarbs(dev);
@@ -142,7 +151,13 @@ export default function Today() {
   const nowH = new Date().getHours();
   const daytime = nowH >= 8 && nowH < 23;
   const carbEvents = extras.events.filter((e) => (e.carbs ?? 0) > 0);
-  const lastCarbT = carbEvents.length ? carbEvents[carbEvents.length - 1].t : null;
+  /* «Еды не вносили N ч» и «похоже, поел без записи» должны замолкать от НАШЕЙ записи
+     тоже — иначе человек внесёт приём в приложении, а мы продолжим ему выговаривать,
+     что он ничего не внёс. */
+  const lastCarbT = Math.max(
+    carbEvents.length ? carbEvents[carbEvents.length - 1].t : 0,
+    meals.length ? meals[meals.length - 1].t : 0,
+  ) || null;
   const hoursSinceCarb = lastCarbT != null ? (Date.now() - lastCarbT) / 3600e3 : null;
 
   const es = data?.entries ?? [];

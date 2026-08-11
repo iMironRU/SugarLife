@@ -4,11 +4,12 @@ import { openDB, type IDBPDatabase } from 'idb';
 import { useEffect, useState } from 'react';
 import type { Entry, Treatment } from './nightscout';
 import { compressPlateaus, type Plateau } from '@/domain/plateau';
+import type { Meal } from '@/domain/meals';
 
 let dbp: Promise<IDBPDatabase> | null = null;
 function db() {
   if (!dbp) {
-    dbp = openDB('sugarlife', 4, {
+    dbp = openDB('sugarlife', 5, {
       upgrade(d) {
         if (!d.objectStoreNames.contains('entries')) d.createObjectStore('entries', { keyPath: 't' });
         // лечение: ключ [t, type] — как дедуп в сторе (temp basal по циклам, болюсы/углеводы)
@@ -21,6 +22,10 @@ function db() {
         if (!d.objectStoreNames.contains('battery')) d.createObjectStore('battery', { keyPath: 't' });
         // остаток в резервуаре — тем же способом: заправку видно только по истории
         if (!d.objectStoreNames.contains('reservoir')) d.createObjectStore('reservoir', { keyPath: 't' });
+        /* Приёмы пищи, внесённые в приложении. В IndexedDB, а не в localStorage:
+           это не настройка, а данные человека — они переживут и объём, и то, что
+           когда-нибудь поедут в облако (domain/meals.ts). */
+        if (!d.objectStoreNames.contains('meals')) d.createObjectStore('meals', { keyPath: 'id' });
       },
     });
   }
@@ -232,4 +237,21 @@ export async function putSeries(store: Series, points: Plateau[]) {
 export async function getSeries(store: Series): Promise<Plateau[]> {
   const d = await db();
   return (await d.getAll(store)) as Plateau[];
+}
+
+
+/* --- Приёмы пищи --- */
+export async function putMeal(m: Meal) {
+  const d = await db();
+  await d.put('meals', m);
+  bump();
+}
+export async function getMeals(): Promise<Meal[]> {
+  const d = await db();
+  return ((await d.getAll('meals')) as Meal[]).sort((a, b) => a.t - b.t);
+}
+export async function removeMeal(id: string) {
+  const d = await db();
+  await d.delete('meals', id);
+  bump();
 }
