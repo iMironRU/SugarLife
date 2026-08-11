@@ -14,17 +14,33 @@ interface NativePlugin {
 
 const Native = registerPlugin<NativePlugin>('SugarLifeBridge');
 
+/* Ревизию НЕ прописываем числом. Этот файл — прозрачная передача JSON туда-обратно,
+   собственной версии у него нет: настоящую ревизию знает движок и сообщает её в каждом
+   снимке. Раньше здесь стояло '1.1' намертво, и это было прямое враньё — движок к тому
+   моменту ушёл на 1.7. Хуже того, по этому числу getBridge решает, совместим ли мост:
+   застрявшая цифра однажды пропустила бы несовместимый мост или отвергла бы годный.
+
+   До первого снимка отвечаем той ревизией, которую выражают наши типы, — иначе мост
+   был бы отвергнут ровно в тот момент, когда его впервые спрашивают. */
+const ОЖИДАЕМАЯ = '1.7';
+let ревизия = ОЖИДАЕМАЯ;
+const принять = (json: string): UiSnapshot => {
+  const s = JSON.parse(json) as UiSnapshot;
+  if (s.bridgeRevision) ревизия = s.bridgeRevision;
+  return s;
+};
+
 if (Capacitor.isNativePlatform()) {
   const bridge: SugarLifeBridge = {
-    bridgeRevision: '1.1',
+    get bridgeRevision() { return ревизия; },
     subscribe(cb: (s: UiSnapshot) => void): () => void {
       let handle: { remove: () => void } | null = null;
-      Native.addListener('snapshot', (e) => cb(JSON.parse(e.json) as UiSnapshot)).then((h) => { handle = h; });
-      Native.requestSnapshot().then((r) => cb(JSON.parse(r.json) as UiSnapshot));
+      Native.addListener('snapshot', (e) => cb(принять(e.json))).then((h) => { handle = h; });
+      Native.requestSnapshot().then((r) => cb(принять(r.json)));
       return () => handle?.remove();
     },
     requestSnapshot(): Promise<UiSnapshot> {
-      return Native.requestSnapshot().then((r) => JSON.parse(r.json) as UiSnapshot);
+      return Native.requestSnapshot().then((r) => принять(r.json));
     },
     sendIntent(i: Intent) {
       return Native.sendIntent({ json: JSON.stringify(i) }).then((r) => JSON.parse(r.json));
