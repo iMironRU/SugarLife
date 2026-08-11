@@ -17,6 +17,8 @@ export interface Monitor {
   status?: string;
   /** Время новейшего показания (мс) — единый возраст «N мин назад» для любого источника. */
   latestAtMs?: number | null;
+  /** Имя основного источника глюкозы (сенсор/Nightscout) — UI показывает, откуда текущее показание. */
+  source?: string | null;
 }
 export type Trend =
   | 'RisingRapidly' | 'Rising' | 'RisingSlowly' | 'Stable'

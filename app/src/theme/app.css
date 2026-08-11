@@ -190,6 +190,13 @@ ion-content { --background: var(--color-bg); }
 .is-line .hp-unit { display: none; }
 .hp-ago { font-size: 10px; color: var(--color-neutral-400); margin-top: 5px; }
 .is-compact .hp-ago, .is-line .hp-ago { display: none; }
+/* Загрузчик в круге (пока источник не «на связи со свежим») — вместо прыгающего числа */
+.hp-loading { width: 34px; height: 34px; --color: var(--c-glu); }
+.is-compact .hp-loading { width: 22px; height: 22px; }
+.is-line .hp-loading { width: 14px; height: 14px; }
+/* Откуда показание (сенсор/Nightscout) */
+.hp-src { font-size: 10px; color: var(--color-neutral-400); margin-top: 3px; text-transform: none; }
+.is-line .hp-src { display: none; }
 /* активный инсулин в круге — цветом инсулина; в compact мельче, в line скрыт */
 .hp-iob { font-size: 11px; font-weight: 600; color: var(--c-ins); margin-top: 4px; }
 .is-compact .hp-iob { font-size: 10px; margin-top: 2px; }

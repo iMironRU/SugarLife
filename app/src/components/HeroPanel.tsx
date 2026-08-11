@@ -83,6 +83,8 @@ export default function HeroPanel() {
   const srcStatus = m?.status;
   const syncing = srcStatus === 'Connecting' || srcStatus === 'Acquiring';
   const delayed = srcStatus === 'Delayed';
+  // Откуда текущее показание (сенсор/Nightscout) — короткой меткой под значением.
+  const srcLabel = m?.source ? (m.source.includes('Nightscout') ? 'Nightscout' : m.source) : null;
   const minsAgo = latest ? Math.round((Date.now() - latest.t) / 60000) : null;
   const fresh = minsAgo == null ? DASH : minsAgo < 1 ? 'сейчас' : minsAgo + ' мин';
 
@@ -178,11 +180,14 @@ export default function HeroPanel() {
           <span className="hp-circle-inner">
             <span className="hp-circle-val">
               <span className="hp-value">
-                {syncing && glucose === DASH ? <IonSpinner name="dots" /> : glucose}
+                {/* Пока источник не «на связи со свежим» (Connecting/Acquiring) — часики, а НЕ прыгающее
+                    недостоверное число: прогон истории прячем за загрузчиком, число даём только когда актуально. */}
+                {syncing ? <IonSpinner name="crescent" className="hp-loading" /> : glucose}
               </span>
               {arrow && !syncing && <span className="hp-arrow">{arrow}</span>}
             </span>
             <span className="hp-unit">{unitLabel()}</span>
+            {srcLabel && !syncing && <span className="hp-src">{srcLabel}</span>}
             {iob != null && <span className="hp-iob">инс. {iob} ед</span>}
             <span className={'hp-ago' + (delayed ? ' warn' : '')}>
               {srcStatus === 'Connecting' ? 'подключение…'
