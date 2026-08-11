@@ -2,7 +2,7 @@
    нормализованные дельты. Профиль по сокету не приходит — берётся из REST.
    Несколько облаков — несколько сокетов одновременно, ключ id — это CloudConfig.id. */
 import { io, type Socket } from 'socket.io-client';
-import { normSgv, normDeviceDoc, normTreatment, type Entry, type Device, type Treatment } from './nightscout';
+import { normSgv, normDeviceDocs, normTreatment, type Entry, type Device, type Treatment } from './nightscout';
 
 export interface SocketData {
   entries?: Entry[];
@@ -43,9 +43,12 @@ export function connectSocket(
     const treatments = Array.isArray(data.treatments)
       ? (data.treatments.map(normTreatment).filter(Boolean) as Treatment[]) : undefined;
     let device: Device | null | undefined;
+    /* Не «самый свежий документ», а сборка по всем пришедшим: короткий документ от
+       помпы не должен стирать активный инсулин, посчитанный циклом (см. mergeDevice).
+       Дельта обычно содержит один документ — остальное дособирает стор, подмешивая
+       это в уже известное состояние. */
     if (Array.isArray(data.devicestatus) && data.devicestatus.length) {
-      const latest = data.devicestatus.reduce((a: any, b: any) => ((b.mills || 0) > (a.mills || 0) ? b : a));
-      device = normDeviceDoc(latest);
+      device = normDeviceDocs([...data.devicestatus].sort((a: any, b: any) => (b.mills || 0) - (a.mills || 0)));
     }
     onData({ entries, treatments, device, delta: !!data.delta });
   });

@@ -7,7 +7,7 @@
    объединение всех источников (аддитивно, дедуп по времени+типу). Без конфига —
    данных нет, экраны показывают демо. */
 import { useSyncExternalStore } from 'react';
-import { loadAll, checkWrite, type NsData, type Entry, type Treatment, type Device } from './nightscout';
+import { loadAll, checkWrite, mergeDevice, type NsData, type Entry, type Treatment, type Device } from './nightscout';
 import { getClouds, type CloudConfig } from './clouds';
 import { connectSocket, disconnectSocket, type SocketData } from './nsSocket';
 import { putEntries, putTreatments } from './db';
@@ -77,7 +77,13 @@ function mergeSocket(cloud: CloudConfig, d: SocketData) {
     for (const x of d.treatments) map.set(key(x), x);
     treatments = [...map.values()].sort((a, b) => a.t - b.t).slice(-200);
   }
-  const device: Device | null = (cloud.sourcePumpStatus && d.device !== undefined) ? d.device : cur.device;
+  /* Подмешиваем, а не подменяем. Дельта сокета обычно несёт один документ
+     devicestatus, и если он короткий (только помпа), то активного инсулина в нём
+     нет — прежняя замена целиком стирала его из круга до следующего цикла.
+     mergeDevice сам отбросит устаревшее: слишком старые показатели не всплывут. */
+  const device: Device | null = (cloud.sourcePumpStatus && d.device !== undefined)
+    ? mergeDevice(cur.device, d.device)
+    : cur.device;
   const latest = entries.length ? entries[entries.length - 1] : cur.latest;
   set({ data: { ...cur, entries, treatments, device, latest, updatedAt: Date.now() }, status: 'ok', error: null });
   saveCache();

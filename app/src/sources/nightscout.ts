@@ -245,6 +245,48 @@ export function normDeviceDoc(d: any): Device | null {
   };
 }
 
+/* ===== Состояние помпы собирается из НЕСКОЛЬКИХ документов devicestatus =====
+
+   AAPS пишет в Nightscout документы двух сортов. Полный — от цикла: в нём активный
+   инсулин, базал, последний болюс, заряд моста. И короткий — только от помпы:
+   резервуар, батарея, статус, `openaps: {}`. Короткие идут всегда, когда цикл
+   почему-то не считал: помпа на паузе, меняется резервуар, нет связи с помпой.
+
+   Мы брали один самый свежий документ — и «инсулин на борту» пропадал из круга,
+   стоило прийти короткому; возвращался через цикл. То же с базалом и зарядом моста.
+   Для медицинского экрана это худший вид пропажи: не «неизвестно», а молча пусто,
+   будто активного инсулина нет вовсе.
+
+   Поэтому каждое поле берём из самого свежего документа, где оно ЕСТЬ. Но не
+   старше окна: если цикл не считал уже двадцать минут, его тогдашний IOB к текущему
+   моменту не относится — инсулин за это время успел отработать. Лучше не показать
+   ничего, чем показать старое как текущее. */
+const ОКНО_СБОРКИ_МС = 20 * 60e3;
+
+export function mergeDevice(старый: Device | null, новый: Device | null): Device | null {
+  if (!новый) return старый;
+  if (!старый) return новый;
+  const tС = старый.at ?? 0, tН = новый.at ?? 0;
+  if (tС > tН) return mergeDevice(новый, старый); // порядок аргументов не должен ничего решать
+  if (tН - tС > ОКНО_СБОРКИ_МС) return новый;
+  const итог: Device = { ...новый };
+  for (const k of Object.keys(итог) as (keyof Device)[]) {
+    if (итог[k] == null && старый[k] != null) (итог as unknown as Record<string, unknown>)[k] = старый[k];
+  }
+  // это не показания, а признаки «такой поток вообще есть» — их складываем
+  итог.loop = новый.loop || старый.loop;
+  итог.pump = новый.pump || старый.pump;
+  return итог;
+}
+
+/** Список документов devicestatus (Nightscout отдаёт свежие первыми) → одно состояние. */
+export function normDeviceDocs(raw: unknown): Device | null {
+  if (!Array.isArray(raw)) return null;
+  let итог: Device | null = null;
+  for (const d of raw) итог = mergeDevice(normDeviceDoc(d), итог);
+  return итог;
+}
+
 // Нормализация SGV из сокета ({mills, mgdl, direction}) или REST ({date/dateString, sgv})
 export function normSgv(s: any): Entry | null {
   const mgdl = num(s.mgdl, s.sgv);
@@ -288,9 +330,12 @@ export async function loadTreatmentsWindow(base: string, token: string | undefin
   return (Array.isArray(raw) ? raw : []).map(normTreatment).filter((x): x is Treatment => x != null).sort((a, b) => a.t - b.t);
 }
 
+/* Берём десяток последних документов, а не один: полные (от цикла) и короткие
+   (только от помпы) идут вперемешку, и в одном самом свежем половины показателей
+   может не быть — см. mergeDevice. */
 async function loadDeviceStatus(base: string, token?: string): Promise<Device | null> {
-  const raw = await getJSON(base, '/api/v1/devicestatus.json?count=1', token);
-  return normDeviceDoc(Array.isArray(raw) ? raw[0] : null);
+  const raw = await getJSON(base, '/api/v1/devicestatus.json?count=10', token);
+  return normDeviceDocs(raw);
 }
 
 
