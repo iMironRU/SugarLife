@@ -4,7 +4,7 @@ import { DeviceSection, LoopSetupSection } from '@/sections/lazy';
 import { reportContentScroll } from '@/app/panel';
 import { flash, repeat, chevronForward } from 'ionicons/icons';
 import { useState } from 'react';
-import { useStore } from '@/sources/store';
+import { useStorePart } from '@/sources/store';
 import { useTreatments } from '@/sources/db';
 import { detectTherapy } from '@/domain/therapy';
 import { fmt } from '@/domain/units';
@@ -18,10 +18,12 @@ export default function Ins() {
   /* Вкладка видна? Все пять смонтированы разом ради свайпа, но читать базу
      невидимому экрану незачем — это и были рывки на соседних вкладках. */
   const активна = useTab() === 3;
-  const { data } = useStore();
-  const dev = data?.device || null;
-  const profile = data?.profile || null;
-  const therapy = detectTherapy(data);
+  /* Берём только то, что рисуем: статус помпы, профиль и тип терапии. Раньше экран
+     подписывался на весь стор и перерисовывался от каждого нового измерения, хотя
+     измерения здесь не показываются вовсе. */
+  const dev = useStorePart((s) => s.data?.device ?? null);
+  const profile = useStorePart((s) => s.data?.profile ?? null);
+  const therapy = useStorePart((s) => detectTherapy(s.data));
   const isPen = therapy === 'pen';
 
   const [win, setWin] = useState(3);

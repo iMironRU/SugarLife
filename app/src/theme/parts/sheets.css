@@ -35,9 +35,19 @@
 /* Нижние страницы стека не рисуем, но и не размонтируем: возврат должен застать
    набранный адрес и раскрытую часть суток на месте. */
 .stack-page:not(.is-top) { visibility: hidden; }
+/* Скроллер страницы стека.
+
+   Инерции у него не было: отпускаешь палец — список встаёт, приходится «подгребать».
+   У IonContent такого нет, потому что Ionic поднимает свой скроллер в отдельный слой.
+   Плоский div внутри трансформированного трека карусели браузер прокручивает на
+   главном потоке, без переноса импульса. Три свойства ниже — ровно то, чем
+   отличается ionic-скроллер, а не украшение. */
 .stack-body {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: none;
   padding: 6px 18px 26px;
+  -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
+  transform: translateZ(0);
 }
 .stack-page > .page-foot { flex: 0 0 auto; }
 

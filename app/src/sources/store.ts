@@ -195,6 +195,21 @@ export function useStore(): StoreState {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
+/* Подписка на КУСОК состояния, а не на всё сразу.
+
+   useStore перерисовывает подписчика при любом изменении. Сообщение сокета приходит
+   раз в минуту и меняет только измерения — но перерисовывались все смонтированные
+   экраны разом (а смонтированы все пять, ради свайпа). Это и есть оставшиеся
+   50–90 мс каждые ~18 секунд.
+
+   Здесь компонент говорит, что ему нужно, и просыпается только от этого. Ключевое
+   условие — селектор должен возвращать стабильную ссылку: слияние сокета не пересоздаёт
+   массив лечения, если лечение не приходило, поэтому «дай мне только device» реально
+   не дёргается от новых измерений. */
+export function useStorePart<T>(select: (s: StoreState) => T): T {
+  return useSyncExternalStore(subscribe, () => select(state), () => select(state));
+}
+
 // Не-React подписка (для моста SugarLifeBridge): вызывает cb при каждом изменении.
 export const subscribeStore = subscribe;
 export const getStoreState = getSnapshot;

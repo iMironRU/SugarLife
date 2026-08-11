@@ -28,10 +28,35 @@ export function resetPanelGesture(): void { collapse = 0; }
 
 const activePane = (): HTMLElement | null => document.querySelector('.pager-pane.is-active');
 
-// Активный скроллер живёт в теневом DOM ion-content
-function scrollerOf(pane: HTMLElement | null): HTMLElement | null {
-  const c = pane?.querySelector('ion-content');
-  return (c?.shadowRoot?.querySelector('.inner-scroll') as HTMLElement | null) ?? null;
+/* Что сейчас под пальцем — экран вкладки или страница стека поверх него.
+
+   Раньше жест знал только про ion-content вкладки. Открыв «Устройства» или
+   «Аналитику», человек тянул страницу стека, а решение «прокручивать нечего»
+   принималось по экрану ПОД ней: у того прокрутка своя, и она почти всегда в нуле.
+   Отсюда и ощущение, что список не листается, а упирается — жест уходил в
+   оттягивание невидимого экрана вместо прокрутки видимого.
+
+   Возвращаем пару: чем прокручивать и что двигать при оттягивании. Верхняя страница
+   стека главнее — она и видна. */
+interface Цель { scroller: HTMLElement | null; move: HTMLElement | null }
+
+function активнаяЦель(): Цель {
+  const pane = activePane();
+  if (!pane) return { scroller: null, move: null };
+
+  const страницы = pane.querySelectorAll<HTMLElement>('.stack-page');
+  const верх = страницы[страницы.length - 1];
+  if (верх) {
+    // у страницы стека прокручивается её собственное тело, оно же и сдвигается
+    const тело = верх.querySelector<HTMLElement>('.stack-body');
+    return { scroller: тело, move: тело };
+  }
+
+  const c = pane.querySelector('ion-content');
+  return {
+    scroller: (c?.shadowRoot?.querySelector('.inner-scroll') as HTMLElement | null) ?? null,
+    move: pane.querySelector<HTMLElement>('.screen'),
+  };
 }
 
 /* Затухание: первые пиксели идут почти один к одному, дальше всё туже и упирается
@@ -59,9 +84,9 @@ export function attachPanelGesture(el: HTMLElement): () => void {
   let id: number | null = null;
 
   const onDown = (e: PointerEvent) => {
-    const pane = activePane();
-    const scroller = scrollerOf(pane);
-    screen = pane?.querySelector('.screen') ?? null;
+    const цель = активнаяЦель();
+    const scroller = цель.scroller;
+    screen = цель.move;
     id = e.pointerId;
     startY = e.clientY;
     startTop = scroller?.scrollTop ?? 0;
