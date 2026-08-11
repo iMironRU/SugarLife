@@ -78,6 +78,14 @@ export interface DeviceView {
   latestAtMs?: number | null;
   autoConnect?: boolean;
   note?: string | null;          // подсказка, напр. «возможно, занят другим телефоном»
+  /* rev ≥ 1.8 (в движке уже есть, SugarLifeCore#2). Жизненный цикл записи в инвентаре —
+     ортогонален connection: «записано, но ни разу не подключалось» и «настроено, но мост
+     не выбран» в живой линк не помещаются. driverId = null означает «запись есть, модель
+     неизвестна» — законное состояние, а не дырка в данных: пока модель не названа,
+     единственный честный способ до железки — облако.
+     Пока поле не приедет в снимок, это же состояние живёт у нас в settings/deviceConfig.ts. */
+  registryState?: 'Recorded' | 'Configured' | 'Linked' | 'Paused';
+  driverId?: string | null;
 }
 /** Историческое имя той же сущности — оставлено, чтобы не переписывать экраны. */
 export type DeviceInfo = DeviceView;
@@ -133,6 +141,11 @@ export type Intent =
   | { type: 'connect'; deviceId: string }
   | { type: 'disconnect'; deviceId: string }
   | { type: 'setAutoConnect'; deviceId: string; autoConnect: boolean }   // rev ≥ 1.7
+  /* Забыть устройство. Идемпотентен: повторный вызов на уже забытой записи — accepted,
+     а не ошибка (двойной тап безопасен). Движок ставит tombstone, поэтому запись не
+     воскресает из входящего потока — иначе кнопка «Забыть» не работала бы вовсе.
+     recordDevice (запись без драйвера) ядро ещё не выпустило — добавим, когда выйдет. */
+  | { type: 'removeDevice'; deviceId: string }                          // rev ≥ 1.8
   | { type: 'testDevice'; deviceId: string }
   | { type: 'setParams'; deviceId: string; params: Record<string, string> }
   | { type: 'setWiring'; deviceId: string; asInput: boolean; asOutput: boolean }
