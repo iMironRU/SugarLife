@@ -23,12 +23,43 @@
 
 | # | Чего не хватает | Предложение | Документ | Issue |
 |---|---|---|---|---|
-| 1 | `confirmedIOB` не умеет «неизвестно»: ноль означает «инсулина нет», а не «нет данных» | `Monitor.iobAtMs?: number \| null` | [bridge-iob-proposal](bridge-iob-proposal.md) | [core#1](https://github.com/iMironRU/SugarLifeCore/issues/1) |
-| 2 | Жизненный цикл записи в реестре и «модель неизвестна» | `DeviceInfo.registryState`, `driverId`, интент `recordDevice` | [bridge-registry-proposal](bridge-registry-proposal.md) | [core#2](https://github.com/iMironRU/SugarLifeCore/issues/2) |
-| 3 | Аккаунт производителя (Ottai) как предусловие работы сенсора; секреты только на запись | `UiSnapshot.accounts[]`, `linkAccount`/`unlinkAccount`, `Secret` write-only | [bridge-accounts-proposal](bridge-accounts-proposal.md) | [core#3](https://github.com/iMironRU/SugarLifeCore/issues/3) |
+| 1 | `confirmedIOB` не умеет «неизвестно»: ноль означает «инсулина нет», а не «нет данных» | `Monitor.iobAtMs?: number \| null` | [bridge-iob-proposal](bridge-iob-proposal.md) | [core#1](https://github.com/iMironRU/SugarLifeCore/issues/1) — принято, rev 1.8 |
+| 2 | Жизненный цикл записи в реестре и «модель неизвестна» | `DeviceInfo.registryState`, `driverId`, интент `recordDevice` | [bridge-registry-proposal](bridge-registry-proposal.md) | [core#2](https://github.com/iMironRU/SugarLifeCore/issues/2) — принято, rev 1.8 |
+| 3 | Аккаунт производителя (Ottai) как предусловие работы сенсора; секреты только на запись | `UiSnapshot.accounts[]`, `linkAccount`/`unlinkAccount`, `Secret` write-only | [bridge-accounts-proposal](bridge-accounts-proposal.md) | [core#3](https://github.com/iMironRU/SugarLifeCore/issues/3) — принято, rev 1.8 |
 
 ## Вопросы к ядру без изменения контракта
 
 | # | Вопрос | Зачем нам | Issue |
 |---|---|---|---|
-| 4 | Точный список параметров мостов OrangeLink и RileyLink | Рисуем универсальную карточку настроек по `SettingsSpec`; выдумывать частоты и режимы радиомоста нельзя | [core#4](https://github.com/iMironRU/SugarLifeCore/issues/4) |
+| 4 | Точный список параметров мостов OrangeLink и RileyLink | Рисуем универсальную карточку настроек по `SettingsSpec`; выдумывать частоты и режимы радиомоста нельзя | [core#4](https://github.com/iMironRU/SugarLifeCore/issues/4) — отвечено, спеки получены |
+
+## Что выяснилось из ответов ядра (11.08.2026)
+
+**Ревизии.** Наш `bridge.ts` описывает контракт по состоянию на 1.5. Движок уже на **1.7**:
+добавлены `Monitor.source`, `DeviceInfo.{status, latestAtMs, autoConnect, note}`,
+`Intent.setAutoConnect`, releaseBle/backup — этого у нас нет вовсе. Синхронизируемся на 1.7
+как базу, наши три запроса входят пакетом в **1.8**.
+
+**Мостам настройки не нужны.** Мы просили спеки OrangeLink/RileyLink — оказалось, у них нет
+пользовательских параметров вообще, это транспорт. Нужна не форма настроек, а телеметрия:
+заряд (BLE `0x180F`), прошивка, RSSI, проверка связи. Настраивается помпа за мостом:
+`medtronic-722` → `serial` (Text, обязателен) и `region` (Enum 868/916, по умолчанию 868).
+
+**Порог разрядки и вибро — наша сторона.** Это настройка приложения, а не параметр железа;
+локальные уведомления у нас уже есть, контракт для этого не нужен.
+
+**Мост — первоклассное устройство,** а не свойство помпы: своя связь, свой заряд, своя карточка;
+помпа/сенсор ссылается на него через wiring. У ядра это задача #18.
+
+## Нестыковки, которые надо снять до кода
+
+1. **Где живёт `region` 868/916.** Комментарий к core#4: параметр драйвера помпы, у моста
+   `SettingsSpec` пустой. Их же `BRIDGE-AND-ACCOUNTS-UX.md` §1.2: «настройки в карточке [моста]:
+   регион, порог разрядки…». Либо параметр помпы показывается в карточке моста, либо документ
+   устарел — от ответа зависит, что рисует рендерер.
+2. **Аккаунты: две модели.** В core#3 приняли нашу — `Account` + `linkAccount`/`unlinkAccount`.
+   Их §2.3 предлагает другое — обобщить `Intent.addCloudSource` до `{provider, params}` плюс
+   каталог провайдеров в снимке. Нужно зафиксировать канон, иначе разойдёмся ровно там, где
+   договаривались не расходиться.
+3. **`DeviceView` или `DeviceInfo`.** В документе проекция называется `DeviceView`, в контракте
+   у нас `DeviceInfo`. Одно и то же под разными именами или разные сущности.
