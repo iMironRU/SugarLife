@@ -18,6 +18,7 @@ import HeroPanel from '@/app/HeroPanel';
 import { useStore } from '@/sources/store';
 import { useSnapshot } from '@/sources/bridge';
 import { diffBleActivity } from '@/sources/bleActivity';
+import { checkBridgeBattery } from '@/settings/bridgeAlerts';
 import { detectTherapy } from '@/domain/therapy';
 import { useTab, setTab, pressTab, getTab, TAB_PATHS } from '@/app/nav';
 import { useOnboarded } from '@/settings/onboarding';
@@ -147,6 +148,12 @@ export default function App() {
      ленты: вибро должно случиться, даже когда «Сегодня» не открыт — телефон в кармане,
      сенсор поймался, и человек узнаёт об этом пальцем, а не глазами. */
   useEffect(() => { if (snap) diffBleActivity(snap.devices); }, [snap]);
+
+  /* Разряд моста: предупреждаем один раз и заранее. Когда его батарейка сядет, помпа
+     просто перестанет отвечать — снаружи это выглядит как поломка помпы, и человек
+     будет искать неисправность там, где её нет (SugarLifeCore#8). */
+  const mountBattery = data?.device?.mountBattery ?? null;
+  useEffect(() => { checkBridgeBattery(mountBattery); }, [mountBattery]);
 
 
   // Если у моста уже есть данные монитора (нативный движок/драйвер) — открываем

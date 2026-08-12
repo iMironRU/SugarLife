@@ -9,6 +9,7 @@ import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
+import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
 import { sourceStatusLabel, sourceStatusWarn } from '@/domain/sourceStatus';
 import { agoText, toUnits, unitLabel } from '@/domain/units';
 import { useStore } from '@/sources/store';
@@ -138,6 +139,11 @@ export default function DeviceSection({ onClose, cat, title }: {
      заряд OrangeLink в pump.extended.OrangeLinkBattery. Чего не знаем — не рисуем. */
   const bridgeTelemetry: { k: string; v: string }[] = [];
   if (bridge && dev?.mountBattery != null) bridgeTelemetry.push({ k: 'Заряд моста', v: dev.mountBattery + '%' });
+  /* Мост как устройство в снимке движка (SugarLifeCore#8). Пока его там нет, работаем
+     с тем, что даёт Nightscout, — заряд. Появится в снимке: прошивка, сигнал, проверка. */
+  const bleМост = (snap?.devices ?? []).find((d) => d.roles?.includes('Transport') || d.roles?.includes('Bridge')) ?? null;
+  const [проверка, setПроверка] = useState<'нет' | 'идёт' | 'принято' | 'ошибка'>('нет');
+  const alert = useBridgeAlert();
 
   const modelIcon = cat === 'pump' ? flash : hardwareChipOutline;
   const setModel = (id: string) => setDeviceConfig(cat === 'pump' ? { pumpId: id } : { sensorId: id });
@@ -372,10 +378,35 @@ export default function DeviceSection({ onClose, cat, title }: {
                     <div key={r.k} className="basal-row"><span>{r.k}</span><b>{r.v}</b></div>
                   ))}
                 </div>
+                {/* «Проверить связь» — единственное действие, которое у моста есть:
+                    настраивать в нём нечего, а вот убедиться, что он отвечает, нужно
+                    ровно тогда, когда помпа молчит и непонятно, кто виноват. */}
+                {bleМост?.testable && (
+                  <button className="changed-btn" style={{ marginTop: 10 }}
+                    onClick={() => { setПроверка('идёт'); void sendIntent({ type: 'testDevice', deviceId: bleМост.id })
+                      .then((r) => setПроверка(r.accepted ? 'принято' : 'ошибка')); }}>
+                    {проверка === 'идёт' ? 'Проверяю…' : проверка === 'принято' ? 'Запрос отправлен' : 'Проверить связь'}
+                  </button>
+                )}
+
+                {/* Порог разрядки — настройка приложения, а не железа: в мосте нет
+                    понятия «когда меня беспокоить». Когда его батарейка сядет, помпа
+                    просто перестанет отвечать, и человек будет искать поломку там, где
+                    её нет (settings/bridgeAlerts.ts). */}
+                <div className="list" style={{ marginTop: 10 }}>
+                  <div className="list-row">
+                    <span className="pick-main">
+                      <span className="list-title">Предупредить о разряде</span>
+                      <span className="pick-sub">один раз, когда заряд упадёт ниже {alert.threshold}%</span>
+                    </span>
+                    <IonToggle checked={alert.on} onIonChange={(e) => setBridgeAlert({ on: e.detail.checked })} />
+                  </div>
+                </div>
+
                 <div className="sheet-note">
                   Настраивать в мосте нечего — это транспорт. Серийник и частота относятся
-                  к помпе за ним. Прошивку, уровень сигнала и проверку связи покажем, когда
-                  приложение начнёт читать мост напрямую.
+                  к помпе за ним. Прошивку и уровень сигнала покажем, когда приложение
+                  начнёт читать мост напрямую.
                 </div>
               </>
             )}
