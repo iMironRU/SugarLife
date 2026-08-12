@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createGesture } from '@ionic/react';
 import { StackCtx, type StackApi } from './stackCtx';
-import { setCollapse, syncToActiveScreen } from './panel';
+import { syncToActiveScreen, плавно, поПрокрутке } from './panel';
 import { useGoHome } from './nav';
 import { canStartBack, shouldGoBack } from './backGesture';
 
@@ -39,10 +39,14 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
      сворачивалась: когда жест перехватывал управление. Отсюда и «ведёт себя
      странно» — срабатывало через раз.
 
-     События scroll не всплывают, поэтому ловим их на перехвате. */
-  useEffect(() => {
+     События scroll не всплывают, поэтому ловим их на перехвате.
+
+     До отрисовки, а не после: обычный эффект отрабатывает уже показанным кадром, и
+     новая страница успевала появиться с панелью от прежнего экрана — свёрнутой, если
+     тот был прокручен. Кадр не тот, потом рывок. */
+  useLayoutEffect(() => {
     // открылась/закрылась страница — панель встаёт по прокрутке того, что теперь видно
-    syncToActiveScreen();
+    плавно(syncToActiveScreen);
   }, [pages.length]);
 
   // нажали свою вкладку в таб-баре — выходим в корень раздела (см. nav.pressTab)
@@ -101,7 +105,7 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
 
   const наПрокрутку = (e: React.UIEvent<HTMLDivElement>) => {
     const t = e.target as HTMLElement;
-    if (t?.classList?.contains('stack-body')) setCollapse(t.scrollTop);
+    if (t?.classList?.contains('stack-body')) поПрокрутке(t.scrollTop);
   };
 
   return (

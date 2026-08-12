@@ -1,5 +1,5 @@
 import { IonIcon } from '@ionic/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline } from 'ionicons/icons';
 import { useTab, setTab } from '@/app/nav';
 import { useStore } from '@/sources/store';
@@ -8,7 +8,7 @@ import { arrowChar, getCfg } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
 import { useChanges } from '@/settings/changes';
 import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
-import { syncToActiveScreen } from '@/app/panel';
+import { syncToActiveScreen, плавно } from '@/app/panel';
 import { activeInsulin } from '@/domain/loopValue';
 import { useSnapshot } from '@/sources/bridge';
 import CircleSparkline from '@/charts/CircleSparkline';
@@ -61,7 +61,7 @@ export default function HeroPanel() {
      прокруткой. Переключились на вкладку, прокрутанную вниз, — панель встаёт в то
      же положение, в каком её там оставили (иначе она разворачивалась бы поверх
      содержимого, которое стоит на месте). */
-  useEffect(() => { syncToActiveScreen(); }, [tab]);
+  useLayoutEffect(() => { плавно(syncToActiveScreen); }, [tab]);
 
   // панель — владелец загрузки расширенных данных (датчик/резервуар/расход)
   useEffect(() => {

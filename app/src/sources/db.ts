@@ -94,15 +94,33 @@ export async function pruneBefore(before: number) {
    закончилось». Экран разбора на этом и спотыкался: пока читались две недели
    истории, он успевал показать вердикт «данных пока мало» — то есть неверный вывод
    вместо ожидания. */
+/* Последний прочитанный срез — на время жизни вкладки, ровно один.
+
+   Открыли разбор, вернулись, открыли снова — база читалась заново, и все семьдесят
+   миллисекунд экран честно показывал «Загружаю…». Это и видно как моргание внутри
+   только что выехавшей страницы: сначала пусто, потом содержимое.
+
+   Причём эти семьдесят миллисекунд ничего не давали: вызов с minRefreshMs=1 ч сам
+   заявляет, что часовой давности данные его устраивают. Читать заново, чтобы
+   получить те же строки, — работа ради работы.
+
+   Одна ячейка, а не карта по окнам: за 30 дней это уже под десять тысяч записей, и
+   держать четыре периода разом только затем, чтобы переключение туда-обратно было
+   мгновенным, — не та цена. Сменили период — старый срез уступает место. */
+let срез: { windowMs: number; entries: Entry[]; at: number } | null = null;
+
 export function useHistory(
   windowMs: number,
   { paused = false, minRefreshMs = 0 }: ReadOpts = {},
 ): { entries: Entry[]; loading: boolean } {
-  const [state, setState] = useState<{ entries: Entry[]; loading: boolean }>({ entries: [], loading: true });
+  const [state, setState] = useState<{ entries: Entry[]; loading: boolean }>(
+    () => (срез?.windowMs === windowMs ? { entries: срез.entries, loading: false } : { entries: [], loading: true }),
+  );
   useEffect(() => {
     let cancel = false;
-    let последний = 0;
-    setState((s) => ({ ...s, loading: true }));
+    const свой = срез?.windowMs === windowMs ? срез : null;
+    let последний = свой?.at ?? 0;
+    setState(свой ? { entries: свой.entries, loading: false } : { entries: [], loading: true });
     const load = (принудительно = false) => {
       /* Перечитывать две недели на каждую новую точку — дорого и незачем. Сенсор
          пишет раз в минуту, а чтение 19 740 записей стоит около 70 мс: на открытом
@@ -111,10 +129,14 @@ export function useHistory(
       if (!принудительно && minRefreshMs && Date.now() - последний < minRefreshMs) return;
       последний = Date.now();
       getSince(Date.now() - windowMs)
-        .then((e) => { if (!cancel) setState({ entries: e, loading: false }); })
+        .then((e) => {
+          срез = { windowMs, entries: e, at: Date.now() };
+          if (!cancel) setState({ entries: e, loading: false });
+        })
         .catch(() => { if (!cancel) setState((s) => ({ ...s, loading: false })); });
     };
-    if (!paused) load(true);
+    // принудительно — только когда показывать нечего; иначе решает minRefreshMs
+    if (!paused) load(!свой);
     const off = onDbChange(() => { if (!paused) load(); });
     return () => { cancel = true; off(); };
   }, [windowMs, minRefreshMs, paused]);
