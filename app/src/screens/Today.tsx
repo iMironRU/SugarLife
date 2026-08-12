@@ -16,6 +16,7 @@ import { reservoirStats } from '@/domain/treatmentStats';
 import { batteryRuntime, BATTERY_KINDS } from '@/domain/battery';
 import { detectRefill } from '@/domain/refill';
 import { onlyLocal } from '@/domain/meals';
+import { часыБодрствования } from '@/domain/awake';
 import { useMeals } from '@/sources/mealStore';
 import type { Plateau } from '@/domain/plateau';
 import { getSeries, onDbChange } from '@/sources/db';
@@ -184,7 +185,12 @@ export default function Today() {
   const unloggedMeal = daytime && rise != null && rise >= 4 && (nowG as number) > 10
     && (hoursSinceCarb == null || hoursSinceCarb >= 2);
   // «давно не ел»: спокойный случай, без роста — просто напоминание
-  const longNoFood = daytime && !unloggedMeal && hoursSinceCarb != null && hoursSinceCarb >= 7;
+  /* Считаем часы, когда человек МОГ поесть, а не календарные. Иначе в восемь утра
+     подсветка объявляет восемь часов молчания — а человек спал, и это норма. Приложение,
+     которое регулярно говорит очевидную ерунду, перестают читать вообще, и настоящее
+     предупреждение проходит мимо вместе с ней (domain/awake.ts). */
+  const бодрыхЧасов = lastCarbT != null ? часыБодрствования(lastCarbT, Date.now()) : null;
+  const longNoFood = daytime && !unloggedMeal && бодрыхЧасов != null && бодрыхЧасов >= 7;
 
 
   // Локальные уведомления — только на переходе false→true (не спамим на каждый опрос).
@@ -322,7 +328,7 @@ export default function Today() {
             <div className="today-alert info">
               <IonIcon icon={restaurantOutline} />
               <div>
-                <b>Еды не вносили {Math.round(hoursSinceCarb as number)} ч</b>
+                <b>Еды не вносили {Math.round(бодрыхЧасов as number)} ч</b>
                 <span>Либо давно не ели, либо забыли записать. Внесённая еда нужна для расчёта активных углеводов.</span>
               </div>
             </div>
