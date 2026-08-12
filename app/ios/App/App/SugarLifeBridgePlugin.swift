@@ -25,13 +25,57 @@ extension KotlinByteArray {
 }
 private func kmpNow() -> KotlinLong { KotlinLong(longLong: Int64(Date().timeIntervalSince1970 * 1000)) }
 
-// MARK: - Обобщённый линк к одному peripheral (peripheral по UUID через retrievePeripherals)
+// MARK: - Один общий CBCentralManager на приложение (iOS-идиома «один central на процесс»)
 
-final class BleLink: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
+/// core#20: раньше КАЖДЫЙ BleLink поднимал свой CBCentralManager. Если для одного устройства когда-либо
+/// сосуществовали два линка (пере-добавление, гонка resume, ре-паринг), у каждого central своя ссылка на
+/// соединение, а CoreBluetooth держит peripheral подключённым, ПОКА ЖИВ ХОТЬ ОДИН central → cancel на одном
+/// не рвал, освобождало только закрытие приложения (сносит все центральные). Один общий central = одна ссылка
+/// на соединение → disconnect всегда реально освобождает. Он же скан (didDiscover) — один владелец эфира.
+final class SharedCentral: NSObject, CBCentralManagerDelegate {
+    static let shared = SharedCentral()
+    private var central: CBCentralManager!
+    private var links: [UUID: BleLink] = [:]     // peripheral UUID → линк (маршрут коннект-колбэков)
+    private var pending: [UUID] = []             // connect до poweredOn — отложить
+    private var wantScan = false
+    var scanHandler: ((CBPeripheral, [String: Any], NSNumber) -> Void)?
+
+    override init() { super.init(); central = CBCentralManager(delegate: self, queue: nil) }
+
+    func register(_ link: BleLink, for uuid: UUID) { links[uuid] = link }
+    // Снимаем маршрут только если он всё ещё НАШ: иначе disconnect старого линка стёр бы маршрут нового.
+    func unregister(_ uuid: UUID, _ link: BleLink) { if links[uuid] === link { links.removeValue(forKey: uuid) } }
+
+    func connect(_ uuid: UUID) {
+        guard central.state == .poweredOn else { if !pending.contains(uuid) { pending.append(uuid) }; return }
+        if let p = central.retrievePeripherals(withIdentifiers: [uuid]).first {
+            links[uuid]?.bind(p); central.connect(p, options: nil)
+        }
+    }
+    func cancel(_ p: CBPeripheral) { central.cancelPeripheralConnection(p) }
+
+    func startScan() { wantScan = true; if central.state == .poweredOn { central.scanForPeripherals(withServices: nil) } }
+    func stopScan() { wantScan = false; central.stopScan() }
+
+    func centralManagerDidUpdateState(_ c: CBCentralManager) {
+        guard c.state == .poweredOn else { return }
+        let p = pending; pending = []; p.forEach { connect($0) }
+        if wantScan { c.scanForPeripherals(withServices: nil) }
+    }
+    func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) { links[p.identifier]?.didConnect(p) }
+    func centralManager(_ c: CBCentralManager, didDisconnectPeripheral p: CBPeripheral, error: Error?) { links[p.identifier]?.didDisconnect() }
+    func centralManager(_ c: CBCentralManager, didFailToConnect p: CBPeripheral, error: Error?) { links[p.identifier]?.didFail() }
+    func centralManager(_ c: CBCentralManager, didDiscover p: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
+        scanHandler?(p, advertisementData, RSSI)
+    }
+}
+
+// MARK: - Линк к одному peripheral (соединение — через общий central; peripheral-делегат — здесь)
+
+final class BleLink: NSObject, CBPeripheralDelegate {
     private let peripheralUUID: UUID
     private let serviceUUID: CBUUID
     private let charUUIDs: [CBUUID]
-    private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
     private var chars: [CBUUID: CBCharacteristic] = [:]
     private var notifyHandlers: [CBUUID: (Data) -> Void] = [:]
@@ -43,15 +87,16 @@ final class BleLink: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
         self.serviceUUID = service
         self.charUUIDs = characteristics
         super.init()
-        central = CBCentralManager(delegate: self, queue: nil)
+        SharedCentral.shared.register(self, for: peripheralUUID)
     }
 
-    func connectNow() {
-        if let p = central.retrievePeripherals(withIdentifiers: [peripheralUUID]).first {
-            peripheral = p; p.delegate = self; central.connect(p, options: nil)
-        }
+    // Перерегистрируемся при каждом connect: reconnect-петля драйвера делает disconnect()→connect() на том же
+    // линке, а disconnect() снимает маршрут — без этого повторный коннект не встал бы.
+    func connectNow() { SharedCentral.shared.register(self, for: peripheralUUID); SharedCentral.shared.connect(peripheralUUID) }
+    func disconnect() {
+        if let p = peripheral { SharedCentral.shared.cancel(p) }
+        SharedCentral.shared.unregister(peripheralUUID, self)   // линк отпущен — снять маршрут (и дать ARC освободить)
     }
-    func disconnect() { if let p = peripheral { central.cancelPeripheralConnection(p) } }
     func subscribe(_ char: CBUUID, handler: @escaping (Data) -> Void) { notifyHandlers[char] = handler }
     func write(_ data: Data, to char: CBUUID) {
         guard let p = peripheral, let c = chars[char] else { return }
@@ -62,10 +107,12 @@ final class BleLink: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
         readHandlers[char] = completion; p.readValue(for: c)
     }
 
-    func centralManagerDidUpdateState(_ c: CBCentralManager) { if c.state == .poweredOn { connectNow() } }
-    func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) { onState?("Connected"); p.discoverServices(nil) }  // все сервисы: MAC 0x2A25 лежит в 0x180A, не в FF30
-    func centralManager(_ c: CBCentralManager, didDisconnectPeripheral p: CBPeripheral, error: Error?) { onState?("Disconnected") }
-    func centralManager(_ c: CBCentralManager, didFailToConnect p: CBPeripheral, error: Error?) { onState?("Error") }
+    // Колбэки соединения приходят из общего central, маршрутизированные по peripheral.
+    func bind(_ p: CBPeripheral) { peripheral = p; p.delegate = self }
+    func didConnect(_ p: CBPeripheral) { onState?("Connected"); p.discoverServices(nil) }  // все сервисы: MAC 0x2A25 в 0x180A, не в FF30
+    func didDisconnect() { onState?("Disconnected") }
+    func didFail() { onState?("Error") }
+
     func peripheral(_ p: CBPeripheral, didDiscoverServices error: Error?) {
         // discover наши характеристики в КАЖДОМ сервисе (FF31/FF32 в FF30, MAC 0x2A25 в 0x180A)
         for s in p.services ?? [] { p.discoverCharacteristics(charUUIDs, for: s) }
@@ -149,23 +196,23 @@ final class PumpBridge: PumpTransportBridge {
 
 // MARK: - Скан эфира → engine.submitAdvertisement
 
-final class SugarLifeScanner: NSObject, CBCentralManagerDelegate {
-    private var central: CBCentralManager!
+final class SugarLifeScanner {
     private let onAdvertisement: (String) -> Void
-    private var wantScan = false
-    init(onAdvertisement: @escaping (String) -> Void) { self.onAdvertisement = onAdvertisement; super.init(); central = CBCentralManager(delegate: self, queue: nil) }
     // Скан БЕЗ фильтра сервисов (как Android): iOS scanForPeripherals(withServices:[FF30]) отсекает сенсоры,
     // которые не кладут FF30 в основной advertisement (Sibionics не виден). Распознавание — в ядре по каталогу.
-    func start() { wantScan = true; if central.state == .poweredOn { central.scanForPeripherals(withServices: nil) } }
-    func stop() { wantScan = false; central.stopScan() }
-    func centralManagerDidUpdateState(_ c: CBCentralManager) { if c.state == .poweredOn && wantScan { start() } }
-    func centralManager(_ c: CBCentralManager, didDiscover p: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
-        let services = (advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID])?.map { $0.uuidString } ?? []
-        let dto: [String: Any] = ["bleId": p.identifier.uuidString, "name": p.name as Any, "serviceUuids": services, "rssi": RSSI.intValue]
-        if let data = try? JSONSerialization.data(withJSONObject: dto), let json = String(data: data, encoding: .utf8) {
-            onAdvertisement(json)
+    // Central — общий (SharedCentral): скан и коннекты не конкурируют за отдельные центральные (core#20).
+    init(onAdvertisement: @escaping (String) -> Void) {
+        self.onAdvertisement = onAdvertisement
+        SharedCentral.shared.scanHandler = { [onAdvertisement] p, adv, RSSI in
+            let services = (adv[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID])?.map { $0.uuidString } ?? []
+            let dto: [String: Any] = ["bleId": p.identifier.uuidString, "name": p.name as Any, "serviceUuids": services, "rssi": RSSI.intValue]
+            if let data = try? JSONSerialization.data(withJSONObject: dto), let json = String(data: data, encoding: .utf8) {
+                onAdvertisement(json)
+            }
         }
     }
+    func start() { SharedCentral.shared.startScan() }
+    func stop() { SharedCentral.shared.stopScan() }
 }
 
 // MARK: - Capacitor-плагин
