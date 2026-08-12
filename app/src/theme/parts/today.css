@@ -194,7 +194,10 @@
   background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
 }
 .upd-row > ion-icon { font-size: 20px; color: var(--color-accent-300); flex-shrink: 0; }
-.upd-text { flex: 1; min-width: 140px; }
+/* Заголовок не должен ломаться пополам ради кнопок. При min-width 140px на 393-м
+   экране кнопки вставали рядом и ужимали текст до двух строк — проверено на телефоне.
+   200px гарантируют перенос: либо строка целиком, либо кнопки ниже. */
+.upd-text { flex: 1; min-width: 200px; }
 .upd-text b { display: block; font-size: 14px; font-weight: 600; }
 .upd-text i { display: block; margin-top: 3px; font-size: 12px; font-style: normal; color: var(--color-neutral-400); line-height: 1.4; }
 .upd-actions { display: flex; gap: 8px; flex-shrink: 0; }
