@@ -11,6 +11,8 @@ import ReleaseBle from '@/ui/ReleaseBle';
 import NearbyTile from '@/ui/NearbyTile';
 import ConnectFeed from '@/ui/ConnectFeed';
 import UpdateReady from '@/ui/UpdateReady';
+import SnoozeBtn from '@/ui/SnoozeBtn';
+import { useОтложения, показывать, прибрать } from '@/settings/snooze';
 import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
@@ -201,6 +203,40 @@ export default function Today() {
   const longNoFood = daytime && !unloggedMeal && бодрыхЧасов != null && бодрыхЧасов >= 7;
 
 
+  /* Отложенные подсветки (#147). Эпизод отвечает «какой это случай», уровень —
+     «насколько плохо внутри случая». Отложили — молчим до смены эпизода или до
+     ухудшения на шаг; правило и его обоснование в domain/snooze.ts.
+
+     Эпизоды выбраны так, чтобы их смена означала «это уже другой случай»:
+     • батарея и резервуар — по отметке замены: поменял, значит начался новый цикл;
+     • застой резервуара — по часу начала застоя;
+     • подъём сахара — по самому подъёму: другой подъём это другой вопрос;
+     • «давно не ели» — по времени последнего приёма.
+
+     Уровни растут в сторону «хуже»: у батареи это 100 минус процент, у резервуара —
+     минус часы до конца. Шаги подобраны так, чтобы возврат означал заметное
+     изменение, а не дрожание шкалы. */
+  const отложения = useОтложения();
+  const эпБатарея = String(changes.battery ?? 0);
+  const эпРезервуар = String(changes.reservoir ?? 0);
+  const эпЗастой = String(Math.round((Date.now() - rstat.flatHours * 3600e3) / 3600e3));
+  const эпПодъём = String(Math.round((lastCarbT ?? 0) / 60000)) + ':' + Math.round(rise ?? 0);
+  const эпБезЕды = String(lastCarbT ?? 0);
+
+  const виднаБатарея = batteryLow
+    && показывать(отложения, 'battery', эпБатарея, 100 - (battery as number), 1);
+  const виденРезервуар = показывать(отложения, 'reservoir', эпРезервуар, Math.round(-(hoursLeft ?? 0)), 2);
+  const виденЗастой = stuck && показывать(отложения, 'stuck', эпЗастой, Math.round(rstat.flatHours), 6);
+  const виденПодъём = unloggedMeal && показывать(отложения, 'rise', эпПодъём, Math.round(rise ?? 0), 3);
+  const виднаЕда = longNoFood && показывать(отложения, 'nofood', эпБезЕды, Math.round(бодрыхЧасов ?? 0), 4);
+
+  /* Отложения с уже сменившимся эпизодом ни на что не влияют — выбрасываем при
+     заходе, чтобы список не рос вечно. Отдельной уборки по расписанию не нужно. */
+  useEffect(() => {
+    прибрать({ battery: эпБатарея, reservoir: эпРезервуар, stuck: эпЗастой, nofood: эпБезЕды });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [эпБатарея, эпРезервуар, эпЗастой, эпБезЕды]);
+
   // Локальные уведомления — только на переходе false→true (не спамим на каждый опрос).
   const suspendedRef = useRef(false);
   useEffect(() => {
@@ -318,45 +354,49 @@ export default function Today() {
           )}
 
           {/* окончание резервуара придётся на ночь — поменять заранее */}
-          {nightEmpty && (
+          {nightEmpty && виденРезервуар && (
             <div className="today-alert warn">
               <IonIcon icon={moonOutline} />
               <div>
                 <b>Инсулина ≈{Math.round(hoursLeft as number)} ч — закончится ночью (~{emptyTime})</b>
                 <span>Замените резервуар заранее, чтобы подача не прервалась во сне. Оценка по среднему расходу.</span>
+                <SnoozeBtn ключ="reservoir" эпизод={эпРезервуар} уровень={Math.round(-(hoursLeft ?? 0))} />
               </div>
             </div>
           )}
 
           {/* инсулин заканчивается днём — раньше про это не предупреждали вовсе */}
-          {soonEmpty && (
+          {soonEmpty && виденРезервуар && (
             <div className="today-alert warn">
               <IonIcon icon={warningOutline} />
               <div>
                 <b>Инсулина ≈{Math.round(hoursLeft as number)} ч — до ~{emptyAt}</b>
                 <span>Резервуар скоро опустеет, подача прервётся. Оценка по среднему расходу.</span>
+                <SnoozeBtn ключ="reservoir" эпизод={эпРезервуар} уровень={Math.round(-(hoursLeft ?? 0))} />
               </div>
             </div>
           )}
 
           {/* похоже, поел и не внёс — активные углеводы посчитаны неверно */}
-          {unloggedMeal && (
+          {виденПодъём && (
             <div className="today-alert warn">
               <IonIcon icon={restaurantOutline} />
               <div>
                 <b>Сахар вырос на {fmt(rise as number)} — еда записана?</b>
                 <span>За 2 часа поднялся до {toUnits(nowG as number)} {unitLabel()}, а углеводов не внесено. Если поели — добавьте, иначе активные углеводы и подсказки будут врать.</span>
+                <SnoozeBtn ключ="rise" эпизод={эпПодъём} уровень={Math.round(rise ?? 0)} />
               </div>
             </div>
           )}
 
           {/* давно не было еды — спокойное напоминание, без роста сахара */}
-          {longNoFood && (
+          {виднаЕда && (
             <div className="today-alert info">
               <IonIcon icon={restaurantOutline} />
               <div>
                 <b>Еды не вносили {Math.round(бодрыхЧасов as number)} ч</b>
                 <span>Либо давно не ели, либо забыли записать. Внесённая еда нужна для расчёта активных углеводов.</span>
+                <SnoozeBtn ключ="nofood" эпизод={эпБезЕды} уровень={Math.round(бодрыхЧасов ?? 0)} />
               </div>
             </div>
           )}
@@ -365,7 +405,7 @@ export default function Today() {
               ноль вовсе, и «1%» означает не «выключится сейчас». Сколько именно
               осталось, знает только собственная история человека, поэтому если циклов
               мы ещё не видели — так и говорим, а не подставляем чужую цифру. */}
-          {batteryLow && (
+          {виднаБатарея && (
             <div className="today-alert warn">
               <IonIcon icon={batteryDeadOutline} />
               <div>
@@ -383,6 +423,7 @@ export default function Today() {
                 <span className="alert-ask">
                   Поставил новую?
                   <ChangedButton what="battery" label="Поменял батарейку" />
+                  <SnoozeBtn ключ="battery" эпизод={эпБатарея} уровень={100 - (battery as number)} />
                 </span>
               </div>
             </div>
@@ -443,7 +484,7 @@ export default function Today() {
           <ReleaseBle />
 
           {/* подсветки резервуара */}
-          {stuck && (
+          {виденЗастой && (
             <div className="today-alert warn">
               <IonIcon icon={warningOutline} />
               <div>
@@ -456,6 +497,7 @@ export default function Today() {
                 <span className="alert-ask">
                   Или ты уже поменял, а помпа не заметила?
                   <ChangedButton what="reservoir" label="Поменял резервуар" />
+                  <SnoozeBtn ключ="stuck" эпизод={эпЗастой} уровень={Math.round(rstat.flatHours)} />
                 </span>
               </div>
             </div>

@@ -198,3 +198,16 @@
 .upd-text b { display: block; font-size: 14px; font-weight: 600; }
 .upd-text i { display: block; margin-top: 3px; font-size: 12px; font-style: normal; color: var(--color-neutral-400); line-height: 1.4; }
 .upd-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* «Потом» у подсветки (#147). Тише соседнего действия намеренно: «Поменял батарейку»
+   меняет данные, а «Потом» ничего не меняет — и претендовать на то же внимание не
+   должно. Но и не невидимая: человек её ищет, когда карточка мешает. */
+.snooze-btn {
+  margin-top: 6px; padding: 7px 12px; border-radius: 12px; cursor: pointer;
+  font-family: var(--font-body); font-size: 12px;
+  background: transparent; color: var(--color-neutral-400);
+  border: 1px solid var(--color-neutral-800);
+}
+.snooze-btn:active { background: var(--color-neutral-800); }
+/* Внутри подсветки без строки ответов кнопка стоит одна — отделяем её от текста. */
+.today-alert > div > .snooze-btn { display: inline-block; }
