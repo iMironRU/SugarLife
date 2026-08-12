@@ -6,16 +6,12 @@
 
 /* сворачиваемый заголовок секции */
 
-.profile-head { display: flex; align-items: center; gap: 14px; }
-.avatar {
-  width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
-  background: var(--c-avatar-bg); display: flex; align-items: center; justify-content: center;
-}
-.avatar ion-icon { font-size: 44px; color: var(--c-avatar-fg); }
-.profile-name { font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
-.profile-sub { font-size: 12px; color: var(--color-neutral-400); margin-top: 5px; }
+/* Шапка с аватаром и тройка показателей удалены вместе с разметкой (screens/Profile).
+   Правила не оставляем «на всякий случай»: мёртвый CSS переживает любой рефакторинг,
+   потому что удалить его боязно — непонятно, кто им ещё пользуется. */
 
-.stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 20px; }
+/* .stat — сетка показателей осталась только в «Метриках», и раскладку задаёт она
+   сама (.stat-grid4). Здесь — общий вид плитки. */
 .stat { border-radius: 16px; padding: 12px; background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900)); }
 .stat-label { font-size: 11px; color: var(--color-neutral-400); }
 .stat-val { font-size: 22px; font-weight: 600; margin-top: 6px; line-height: 1; }

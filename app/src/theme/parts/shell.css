@@ -61,11 +61,24 @@ ion-content { --background: var(--color-bg); }
    отнимает ровно 100px = 96 у ряда и 4 у отступа. Пока эти числа совпадают с
    правилами ниже, промахнуться нечем — а измерять было чем: замер попадал на
    середину анимации и переменная застревала на прошлом значении. */
+/* Объявление типа нужно, чтобы --p умела ПЛАВНО меняться: браузер анимирует
+   пользовательское свойство только тогда, когда знает, что это число, а не строка.
+   Без объявления переход просто не применяется, и поведение остаётся прежним —
+   мгновенным (Safari до 16.4). */
+@property --p { syntax: '<number>'; inherits: true; initial-value: 0; }
+
 :root {
   --p: 0;
   --sl-panel-rest: calc(env(safe-area-inset-top, 0px) + 190px);
   --sl-panel-h: calc(var(--sl-panel-rest) - 100px * var(--p));
 }
+/* Плавно — только на смене экрана, и никогда под пальцем.
+   За прокруткой панель обязана идти мгновенно: анимация здесь означала бы, что
+   панель отстаёт от пальца, — это ровно та рваность, ради которой три состояния и
+   заменили одной величиной. А вот при переходе на другой экран новое значение
+   приходит скачком, и скачок читается как моргание (класс ставит app/panel.ts). */
+:root.p-anim { transition: --p .26s cubic-bezier(.3, .9, .3, 1); }
+@media (prefers-reduced-motion: reduce) { :root.p-anim { transition: none; } }
 
 .hero-panel {
   position: absolute; top: 0; left: 0; right: 0; z-index: 10;
@@ -206,10 +219,22 @@ ion-content { --background: var(--color-bg); }
 @keyframes hp-wait-pulse { 0%, 100% { opacity: .45 } 50% { opacity: 1 } }
 .sync { font-size: 12px; color: var(--color-neutral-400); }
 .heart { color: var(--c-danger); }
-/* зелёная точка «реальное время» — уходит вместе с мелочью, когда панель уже узкая */
+/* Метка связи у названия крыла — уходит вместе с мелочью, когда панель уже узкая.
+   Зелёная: источник отдаёт данные. Красная: связи нет — это не «мелочь», но и не
+   повод оставлять её одну на схлопнутой панели: там про обрыв уже сказано строкой
+   статуса, крупно и словами. */
 .live-dot {
   width: calc(6px * (1 - var(--k-late))); height: 6px; border-radius: 50%; flex-shrink: 0;
   background: var(--c-glu); box-shadow: 0 0 6px var(--c-glu); opacity: calc(1 - var(--k-late));
+}
+.live-dot.is-off { background: var(--c-danger); box-shadow: 0 0 6px var(--c-danger); }
+/* Ожидание — те же часики, что в круге вместо стрелки (один знак на один смысл). */
+.hp-link-wait {
+  font-size: calc(11px * (1 - var(--k-late))); flex-shrink: 0;
+  color: var(--color-neutral-500); opacity: calc(1 - var(--k-late));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hp-link-wait { animation: hp-wait-pulse 1.8s ease-in-out infinite; }
 }
 .circle-spark { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 

@@ -17,12 +17,16 @@ import InstallPrompt from '@/ui/InstallPrompt';
 import HeroPanel from '@/app/HeroPanel';
 import { useStore } from '@/sources/store';
 import { useSnapshot } from '@/sources/bridge';
+import { diffBleActivity } from '@/sources/bleActivity';
+import { checkBridgeBattery } from '@/settings/bridgeAlerts';
 import { detectTherapy } from '@/domain/therapy';
 import { useTab, setTab, pressTab, getTab, TAB_PATHS } from '@/app/nav';
 import { useOnboarded } from '@/settings/onboarding';
 import { StackHost } from '@/app/stack';
 import { requestNotifyPermissionOnStart } from '@/platform/notify';
 import { startHistorySync } from '@/sources/historySync';
+import { прогретьРазделы } from '@/sections/lazy';
+import { прогретьГрафик } from '@/charts/warm';
 
 // Порядок вкладок: 0 Метрики · 1 НМГ · 2 Сегодня · 3 Инсулин · 4 Профиль
 function Pager() {
@@ -136,11 +140,35 @@ export default function App() {
   // реального события) — так пользователь явно видит и решает.
   useEffect(() => { requestNotifyPermissionOnStart(); }, []);
 
+  /* Прогрев кусков разделов и графика — в простое, после первого экрана.
+
+     Раздел, код которого ещё не приехал, открывается в два шага: сначала выезжает
+     пустая страница, потом в ней появляется содержимое. Экономии от этого никакой —
+     кусок всё равно скачается, только в самый неудобный момент, под нажатием.
+
+     Секунда задержки — чтобы не спорить за канал с первой загрузкой показаний: они
+     важнее любого раздела. Дальше очередь идёт по одному куску в простое. */
+  useEffect(() => {
+    const id = window.setTimeout(() => { прогретьРазделы(); void прогретьГрафик(); }, 1000);
+    return () => window.clearTimeout(id);
+  }, []);
+
   /* История НМГ у ядра единая (сенсор + Nightscout + облака), а у нас до сих пор
      наполнялась только из Nightscout. Подписываемся на мост и тянем недостающее —
      иначе показания сенсора, прочитанного напрямую, в историю не попадут вовсе
      (sources/historySync.ts, SugarLifeCore#6). */
   useEffect(() => startHistorySync(), []);
+
+  /* Ощущение подключения (SugarLifeCore#18). Диффим снимки здесь, а не в компоненте
+     ленты: вибро должно случиться, даже когда «Сегодня» не открыт — телефон в кармане,
+     сенсор поймался, и человек узнаёт об этом пальцем, а не глазами. */
+  useEffect(() => { if (snap) diffBleActivity(snap.devices); }, [snap]);
+
+  /* Разряд моста: предупреждаем один раз и заранее. Когда его батарейка сядет, помпа
+     просто перестанет отвечать — снаружи это выглядит как поломка помпы, и человек
+     будет искать неисправность там, где её нет (SugarLifeCore#8). */
+  const mountBattery = data?.device?.mountBattery ?? null;
+  useEffect(() => { checkBridgeBattery(mountBattery); }, [mountBattery]);
 
 
   // Если у моста уже есть данные монитора (нативный движок/драйвер) — открываем

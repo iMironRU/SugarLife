@@ -14,7 +14,10 @@ type Step = { kind: 'list' } | { kind: 'target'; item: Discovered } | { kind: 'p
    реально предлагает драйвер для этой категории (availableDrivers) — иначе секции нет:
    Nightscout-шим никогда не сканирует, категории без BLE (шприцы/глюкометры) сюда не попадают. */
 export default function DeviceScanSheet({ isOpen, onClose, kind, title }: {
-  isOpen: boolean; onClose: () => void; kind: 'sensor' | 'pump'; title: string;
+  /* kind не задан — не фильтруем вовсе. Так шторка работает и из карточки конкретной
+     категории («покажи сенсоры»), и из общего «что рядом», где категория заранее
+     неизвестна: движок сам узнаёт, что вещает (SugarLifeCore#12). */
+  isOpen: boolean; onClose: () => void; kind?: 'sensor' | 'pump'; title: string;
 }) {
   const snap = useSnapshot();
   const drivers = snap?.availableDrivers ?? [];
@@ -31,7 +34,7 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title }: {
   useEffect(() => { if (isOpen) sendIntent({ type: 'startScan' }); return () => { if (isOpen) sendIntent({ type: 'stopScan' }); }; }, [isOpen]);
 
   // релевантные категории: прямые устройства нужного kind + мосты, ведущие к нему
-  const relevant = discovered.filter((d) => {
+  const relevant = kind == null ? discovered : discovered.filter((d) => {
     const own = driverById(d.driverId);
     if (own?.kind === kind) return true;
     if (d.isTransport) return d.transportFor.some((t) => driverById(t)?.kind === kind);
@@ -97,7 +100,7 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title }: {
             <div className="list">
               {step.item.transportFor.map((tid) => {
                 const t = driverById(tid);
-                if (!t || t.kind !== kind) return null;
+                if (!t || (kind != null && t.kind !== kind)) return null;
                 return (
                   <Row key={tid} icon={bluetoothOutline} title={t.displayName}
                     onClick={() => pickTarget(step.item, tid)} />

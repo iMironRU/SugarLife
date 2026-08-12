@@ -1,35 +1,55 @@
 /* Экран «Сегодня» */
 
-/* ===== Панель углеводов (по макету): Б/Ж/У · активные · Еда ===== */
+/* ===== Панель углеводов: сейчас (верх) · записанное (низ) ===== */
 .carb-panel {
-  width: 100%; margin-top: 6px; display: flex; align-items: stretch; overflow: hidden;
-  border-radius: 20px; cursor: pointer; font-family: var(--font-body); color: var(--color-text);
+  width: 100%; margin-top: 6px; display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 20px; font-family: var(--font-body); color: var(--color-text);
   border: 1.5px solid color-mix(in srgb, var(--c-carb) 55%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 14%, transparent), color-mix(in srgb, var(--c-carb) 4%, transparent));
-  transition: background .16s;
 }
-.carb-panel:active { background: linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 20%, transparent), color-mix(in srgb, var(--c-carb) 7%, transparent)); }
 
-.carb-macros { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 14px 0 14px 18px; }
-.carb-macro { display: flex; align-items: baseline; gap: 5px; }
-.cm-k { font-size: 11px; color: var(--color-neutral-400); width: 12px; }
-.cm-v { font-size: 13px; font-weight: 600; }
-.cm-u { font-size: 10px; color: var(--color-neutral-400); }
-
-.carb-center { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 10px; }
-.carb-big { display: flex; align-items: baseline; gap: 5px; font-size: 40px; font-weight: 600; line-height: 1; letter-spacing: -.02em; color: var(--c-carb); }
+/* Верх — что действует сейчас. Число и подпись в строку: «0 г активные углеводы»
+   читается как фраза, а не как центрированная стопка ни при каком крае. */
+/* Сброс кнопочных умолчаний: раньше кнопкой была вся плитка и фон задавала она,
+   теперь кнопок две — без сброса браузер красит их в системный светлый. */
+.carb-now, .carb-hist { border: 0; font: inherit; color: inherit; background: none; }
+.carb-now {
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  padding: 14px 16px 12px; cursor: pointer; transition: background .16s;
+}
+.carb-now:active { background: color-mix(in srgb, var(--c-carb) 9%, transparent); }
+.carb-now-t { flex: 1; min-width: 0; }
+.carb-big { display: flex; align-items: baseline; gap: 4px; font-size: 38px; font-weight: 600; line-height: 1; letter-spacing: -.02em; color: var(--c-carb); }
 .carb-big span { font-size: 14px; font-weight: 500; color: var(--c-carb-2); }
 /* Неизвестно ≠ ноль: прочерк цветом углеводов читался как настоящее значение,
    а огромный «—» — как жирная жёлтая черта. Приглушаем (см. domain/loopValue.ts). */
 .carb-big.is-unknown, .carb-big.is-unknown span { color: var(--color-neutral-500); }
 .carb-big.is-unknown { font-size: 30px; }
-.carb-lbl { font-size: 11px; color: var(--color-neutral-400); margin-top: 5px; }
-.carb-sub { font-size: 10px; color: var(--color-neutral-500); margin-top: 3px; }
+.carb-lbl { font-size: 13px; color: var(--color-neutral-300); }
+.carb-sub { font-size: 11px; color: var(--color-neutral-500); margin-top: 2px; }
 
-.carb-food { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 4px; padding: 14px 18px 14px 0; text-align: right; }
-.carb-food ion-icon { font-size: 24px; color: var(--c-carb); }
-.carb-food-t { font-size: 14px; font-weight: 600; color: var(--color-text); }
-.carb-food-s { font-size: 10px; color: var(--color-neutral-400); line-height: 1.2; }
+/* Действие глаголом: «Еда» была существительным, и что произойдёт по нажатию —
+   ввод или журнал — приходилось угадывать. */
+.carb-add { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.carb-add ion-icon { font-size: 22px; color: var(--c-carb); }
+.carb-add span { font-size: 10px; color: var(--color-neutral-400); }
+
+/* Низ — что уже записано. Черта показывает границу «сейчас / было» и делит нажатия:
+   верх вносит, низ открывает журнал. */
+.carb-hist {
+  display: flex; align-items: center; gap: 8px; padding: 9px 16px 10px; cursor: pointer;
+  border-top: 1px solid color-mix(in srgb, var(--c-carb) 22%, transparent);
+  background: color-mix(in srgb, var(--c-carb) 7%, transparent);
+  transition: background .16s;
+}
+.carb-hist:active { background: color-mix(in srgb, var(--c-carb) 12%, transparent); }
+.carb-hist-l {
+  flex: 1; min-width: 0; text-align: left; font-size: 11.5px; color: var(--color-neutral-400);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.carb-hist-l b { font-weight: 600; color: var(--color-text); }
+.carb-hist-r { flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--color-neutral-400); }
+.carb-hist-r ion-icon { font-size: 13px; color: var(--color-neutral-500); }
 
 /* подсветки резервуара */
 .today-alert {
@@ -80,6 +100,81 @@
 .alert-ask { display: block; margin-top: 8px; }
 .alert-ask .changed-btn { margin-top: 6px; }
 
-/* Два ответа в строку: «да» и «нет» — равноправные, а не кнопка с отменой. */
-.alert-ask-row { display: flex; gap: 8px; }
+/* Ответы в строку. Переносятся, а не сжимаются: «Картридж и набор» на узком экране
+   должен уехать на вторую строку целиком, а не превратиться в «Картридж и…». */
+.alert-ask-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .alert-ask-row .changed-btn { margin-top: 6px; }
+
+/* «Отдать устройства»: действие в моменте, поэтому живёт среди подсветок, но выглядит
+   как кнопка, а не как сообщение — иначе его не найдут глазами. */
+.release-ble {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  margin-top: 12px; padding: 13px 15px; border-radius: 18px; cursor: pointer;
+  font-family: var(--font-body); color: var(--color-text);
+  background: var(--color-neutral-900);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+.release-ble ion-icon { font-size: 22px; color: var(--color-accent); flex-shrink: 0; }
+.release-ble b { display: block; font-size: 14px; font-weight: 600; }
+.release-ble i { display: block; margin-top: 3px; font-size: 12px; font-style: normal; color: var(--color-neutral-400); line-height: 1.4; }
+.release-ble:active { background: var(--color-neutral-800); }
+.release-ble.is-done { border-color: color-mix(in srgb, var(--c-glu) 45%, transparent); }
+.release-ble.is-done ion-icon { color: var(--c-glu); }
+
+/* Вход в поиск по эфиру. Два вида намеренно: карточка кричит, только когда есть о чём
+   кричать, — иначе человек привыкает к постоянному блоку и перестаёт его замечать
+   ровно тогда, когда замечать надо (ui/NearbyTile.tsx). */
+.nearby-tile {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  margin-top: 12px; padding: 14px 15px; border-radius: 18px; cursor: pointer;
+  font-family: var(--font-body); color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-neutral-900));
+  border: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
+}
+.nearby-tile > ion-icon:first-child { font-size: 22px; color: var(--color-accent); flex-shrink: 0; }
+.nearby-tile div { flex: 1; min-width: 0; }
+.nearby-tile b { display: block; font-size: 14px; font-weight: 600; }
+.nearby-tile span { display: block; margin-top: 3px; font-size: 12px; color: var(--color-neutral-400); line-height: 1.4; }
+.nearby-tile:active { background: color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900)); }
+
+.nearby-quiet {
+  width: 100%; display: flex; align-items: center; gap: 8px; text-align: left;
+  margin-top: 10px; padding: 9px 4px; cursor: pointer; background: none; border: 0;
+  font-family: var(--font-body); font-size: 12px; color: var(--color-neutral-500);
+}
+.nearby-quiet ion-icon { font-size: 15px; flex-shrink: 0; }
+.nearby-quiet span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nearby-chev { font-size: 14px; opacity: .6; }
+
+/* Журнал приёмов */
+.meal-log { margin-top: 12px; border-radius: 18px; overflow: hidden; background: var(--color-neutral-900); }
+.meal-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--color-neutral-800); }
+.meal-row:last-child { border-bottom: 0; }
+.meal-when { flex: 0 0 58px; }
+.meal-when b { display: block; font-size: 15px; font-weight: 600; }
+.meal-when span { display: block; font-size: 10px; color: var(--color-neutral-500); margin-top: 2px; }
+.meal-what { flex: 1; min-width: 0; }
+.meal-what b { display: block; font-size: 15px; font-weight: 600; color: var(--c-carb); }
+.meal-what span { display: block; font-size: 11px; color: var(--color-neutral-400); margin-top: 2px; }
+.meal-what span ion-icon { font-size: 11px; vertical-align: -1px; }
+.meal-del {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 12px; cursor: pointer;
+  border: 0; background: transparent; color: var(--color-neutral-500);
+}
+.meal-del ion-icon { font-size: 17px; }
+.meal-del:active { background: var(--color-neutral-800); color: var(--c-danger-2); }
+
+/* Лента подключения. Тонкие строки, а не карточки: это временные сообщения, и место
+   на главном они занимают ненадолго (ui/ConnectFeed.tsx). */
+.connect-feed { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.connect-line {
+  display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px;
+  background: var(--color-neutral-900); font-size: 12px; color: var(--color-neutral-300);
+}
+.connect-line ion-icon { font-size: 15px; flex-shrink: 0; }
+.connect-line span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.connect-line i { font-style: normal; font-size: 11px; color: var(--color-neutral-500); flex-shrink: 0; }
+.connect-line.is-captured ion-icon { color: var(--c-glu); }
+/* Потеря связи заметна цветом: её нужно увидеть, а успех можно и пропустить. */
+.connect-line.is-released { color: var(--c-danger-2); }
+.connect-line.is-released ion-icon { color: var(--c-danger-2); }

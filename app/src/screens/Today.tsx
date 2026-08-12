@@ -1,5 +1,5 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { AnalyticsSection } from '@/sections/lazy';
+import { AnalyticsSection, MealsSection } from '@/sections/lazy';
 import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, sparklesOutline, chevronForward } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/sources/store';
@@ -7,6 +7,9 @@ import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt, 
 import { reportContentScroll } from '@/app/panel';
 import { activeCarbs } from '@/domain/loopValue';
 import ChangedButton from '@/ui/ChangedButton';
+import ReleaseBle from '@/ui/ReleaseBle';
+import NearbyTile from '@/ui/NearbyTile';
+import ConnectFeed from '@/ui/ConnectFeed';
 import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
@@ -14,6 +17,7 @@ import { reservoirStats } from '@/domain/treatmentStats';
 import { batteryRuntime, BATTERY_KINDS } from '@/domain/battery';
 import { detectRefill } from '@/domain/refill';
 import { onlyLocal } from '@/domain/meals';
+import { часыБодрствования } from '@/domain/awake';
 import { useMeals } from '@/sources/mealStore';
 import type { Plateau } from '@/domain/plateau';
 import { getSeries, onDbChange } from '@/sources/db';
@@ -96,7 +100,23 @@ export default function Today() {
   const dayCarbs = Math.round(
     todayCarbs.reduce((a, b) => a + (b.carbs || 0), 0) + свои.reduce((a, b) => a + b.carbs, 0),
   );
-  const mealCount = todayCarbs.length + свои.length;
+  /* Счётчик приёмов — за СУТКИ, а не с полуночи. В час ночи «0 приёмов» формально
+     верно и совершенно бесполезно: человек ужинал четыре часа назад. А рядом эта же
+     колонка ведёт в журнал, где эти приёмы видны, — и «0» рядом с четырьмя записями
+     читается как поломка.
+
+     Сумма в граммах остаётся дневной: она подписана «всего за день», и по дням же
+     считается весь разбор. Разные окна тут не противоречие, а разные вопросы:
+     «сколько я съел сегодня» и «когда я ел в последний раз». */
+  const сутки = Date.now() - 24 * 3600e3;
+  const свежие = [
+    ...extras.events.filter((e) => (e.carbs ?? 0) > 0 && e.t >= сутки).map((e) => ({ t: e.t, carbs: e.carbs as number })),
+    ...onlyLocal(meals, extras.events).filter((m) => m.t >= сутки).map((m) => ({ t: m.t, carbs: m.carbs })),
+  ].sort((a, b) => a.t - b.t);
+  const mealCount = свежие.length;
+  /* Последний приём — из обоих источников. Отвечает на «я записал?»: с одного взгляда
+     видно и сколько, и как давно, и не надо идти в журнал проверять. */
+  const последний = свежие.length ? свежие[свежие.length - 1] : null;
   /* Активные углеводы тоже считает цикл, а не помпа: когда он молчит, это
      «неизвестно», а не «ноль». Прочерк плюс причина — см. domain/loopValue.ts. */
   const ac = activeCarbs(dev);
@@ -172,7 +192,12 @@ export default function Today() {
   const unloggedMeal = daytime && rise != null && rise >= 4 && (nowG as number) > 10
     && (hoursSinceCarb == null || hoursSinceCarb >= 2);
   // «давно не ел»: спокойный случай, без роста — просто напоминание
-  const longNoFood = daytime && !unloggedMeal && hoursSinceCarb != null && hoursSinceCarb >= 7;
+  /* Считаем часы, когда человек МОГ поесть, а не календарные. Иначе в восемь утра
+     подсветка объявляет восемь часов молчания — а человек спал, и это норма. Приложение,
+     которое регулярно говорит очевидную ерунду, перестают читать вообще, и настоящее
+     предупреждение проходит мимо вместе с ней (domain/awake.ts). */
+  const бодрыхЧасов = lastCarbT != null ? часыБодрствования(lastCarbT, Date.now()) : null;
+  const longNoFood = daytime && !unloggedMeal && бодрыхЧасов != null && бодрыхЧасов >= 7;
 
 
   // Локальные уведомления — только на переходе false→true (не спамим на каждый опрос).
@@ -208,27 +233,52 @@ export default function Today() {
       <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen">
           <DataGate>
-          {/* панель углеводов (по макету): Б/Ж/У · активные · Еда.
-              Б/Ж пусто — Nightscout не отдаёт белки/жиры, фейк не рисуем. */}
-          <button className="carb-panel" onClick={() => setFoodOpen(true)}>
-            <div className="carb-macros">
-              <div className="carb-macro"><span className="cm-k">Б</span><span className="cm-v">{DASH}</span></div>
-              <div className="carb-macro"><span className="cm-k">Ж</span><span className="cm-v">{DASH}</span></div>
-              <div className="carb-macro"><span className="cm-k">У</span><span className="cm-v">{toCarbs(dayCarbs, cu)}</span><span className="cm-u">{carbUnitLabel(cu)}</span></div>
-            </div>
+          {/* Панель углеводов: сейчас — сверху, записанное — снизу.
 
-            <div className="carb-center">
+              Три колонки (Б/Ж/У · активные · Еда) распались, как только из левой ушли
+              белки и жиры: три блока с разным выравниванием и размером висели рядом
+              без единой связи, и было непонятно, что к чему относится.
+
+              Связь есть, и она временная: наверху то, что действует сейчас и меняет
+              решение, внизу — что уже записано и где это посмотреть. Черта между
+              строками показывает эту границу; она же делит и нажатия — верх вносит,
+              низ открывает журнал.
+
+              Число и подпись встали в строку, а не стопкой: «0 г активные углеводы»
+              читается как фраза слева направо, а центрированная стопка посреди плитки
+              не принадлежала ни одному краю. */}
+          <div className="carb-panel">
+            <button className="carb-now" onClick={() => setFoodOpen(true)}>
               <div className={'carb-big' + (ac.known ? '' : ' is-unknown')}>{cob != null ? toCarbs(cob, cu) : DASH}<span>{carbUnitLabel(cu)}</span></div>
-              <div className="carb-lbl">активные углеводы</div>
-              <div className="carb-sub">{ac.reason ?? 'всего за день · ' + toCarbs(dayCarbs, cu) + ' ' + carbUnitLabel(cu)}</div>
-            </div>
+              <div className="carb-now-t">
+                <div className="carb-lbl">активные углеводы</div>
+                {ac.reason && <div className="carb-sub">{ac.reason}</div>}
+              </div>
+              {/* Действие названо глаголом. «Еда» была существительным: что случится по
+                  нажатию — открытие журнала или ввод — приходилось угадывать. */}
+              <span className="carb-add">
+                <IonIcon icon={restaurantOutline} />
+                <span>внести</span>
+              </span>
+            </button>
 
-            <div className="carb-food">
-              <IonIcon icon={restaurantOutline} />
-              <div className="carb-food-t">Еда</div>
-              <div className="carb-food-s">{mealCount} {mealsWord(mealCount)}</div>
-            </div>
-          </button>
+            {/* Нижняя строка отвечает на «я это вообще записал?» — вопрос, который
+                человек задаёт себе чаще всего. Раньше проверить было негде: просить
+                точное время и не показывать результат — нечестно. */}
+            <button className="carb-hist"
+              onClick={() => push(<MealsSection onClose={pop} />)}>
+              <span className="carb-hist-l">
+                {последний
+                  ? <>Последний — <b>{toCarbs(последний.carbs, cu)} {carbUnitLabel(cu)}</b>, {agoText(последний.t)}</>
+                  : 'За сутки приёмов не вносили'}
+              </span>
+              <span className="carb-hist-r">
+                {mealCount > 0 && <>{mealCount} {mealsWord(mealCount)} · {toCarbs(dayCarbs, cu)} {carbUnitLabel(cu)}</>}
+                {mealCount === 0 && 'журнал'}
+                <IonIcon icon={chevronForward} />
+              </span>
+            </button>
+          </div>
 
 
           {/* Разбор — отдельный экран, а не врезка: «Сегодня» про то, что делать
@@ -304,7 +354,7 @@ export default function Today() {
             <div className="today-alert info">
               <IonIcon icon={restaurantOutline} />
               <div>
-                <b>Еды не вносили {Math.round(hoursSinceCarb as number)} ч</b>
+                <b>Еды не вносили {Math.round(бодрыхЧасов as number)} ч</b>
                 <span>Либо давно не ели, либо забыли записать. Внесённая еда нужна для расчёта активных углеводов.</span>
               </div>
             </div>
@@ -346,24 +396,44 @@ export default function Today() {
                 <b>Похоже, ты заправил картридж</b>
                 <span>
                   Остаток поднялся с {Math.round(заправка.from)} до {Math.round(заправка.to)} ед {agoText(заправка.at)}.
-                  В Nightscout события об этом нет, поэтому спрашиваем: отметить замену резервуара?
+                  В Nightscout события об этом нет, поэтому спрашиваем.
                 </span>
+                {/* Один вопрос, три ответа, а не два вопроса подряд.
+
+                    Сначала я спрашивал отдельно про картридж и отдельно про набор —
+                    формально честно (скачок остатка говорит только про картридж), а на
+                    деле человек отвечал дважды про одно решение. В жизни картридж и
+                    набор чаще меняют вместе: помпа сама ведёт через перемотку, замену и
+                    заполнение. Значит «оба» — обычный случай, а «только картридж» —
+                    отдельный, и это выбор, а не два допроса. */}
                 <span className="alert-ask alert-ask-row">
-                  <button className="changed-btn is-undo" onClick={() => { markChanged('reservoir', заправка.at); markRefillAsked(заправка.at); }}>
-                    Да, заправил
+                  <button className="changed-btn is-undo"
+                    onClick={() => { markChanged('reservoir', заправка.at); markChanged('site', заправка.at); markRefillAsked(заправка.at); }}>
+                    Картридж и набор
+                  </button>
+                  <button className="changed-btn"
+                    onClick={() => { markChanged('reservoir', заправка.at); markRefillAsked(заправка.at); }}>
+                    Только картридж
                   </button>
                   <button className="changed-btn" onClick={() => markRefillAsked(заправка.at)}>Нет</button>
-                </span>
-                {/* Отдельным вопросом: скачок остатка говорит про КАРТРИДЖ. Набор часто
-                    меняют вместе с ним, но не всегда, а признака смены набора в данных
-                    нет вовсе — поэтому только спрашиваем, а не выводим. */}
-                <span className="alert-ask">
-                  Заодно и инфузионный набор поменял?
-                  <ChangedButton what="site" label="Да, и набор" />
                 </span>
               </div>
             </div>
           )}
+
+          {/* Лента подключения: «сейчас поднимается вот что». Живёт минуты, потом
+              исчезает сама — подключение это событие, а не состояние (ui/ConnectFeed). */}
+          <ConnectFeed />
+
+          {/* Вход в поиск по эфиру. Заметен, только когда подключать нечего или связь
+              отвалилась; когда всё работает — тихая строка (ui/NearbyTile.tsx). */}
+          <NearbyTile />
+
+          {/* Отдать устройства. Рядом с подсветками, а не в настройках: это действие
+              нужно в моменте — «дай отсканировать сенсор родным приложением», — и
+              искать его по разделам человек не будет. Само появляется, только когда
+              есть что отпускать. */}
+          <ReleaseBle />
 
           {/* подсветки резервуара */}
           {stuck && (

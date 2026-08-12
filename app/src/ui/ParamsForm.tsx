@@ -41,7 +41,10 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
           return (
             <div key={p.key} className="list">
               <div className="list-row">
-                <span className="pick-main"><span className="list-title">{p.title}</span></span>
+                <span className="pick-main">
+                  <span className="list-title">{p.title}</span>
+                  {p.hint && <span className="pick-sub">{p.hint}</span>}
+                </span>
                 <IonToggle checked={on} onIonChange={(e) => onChange(p.key, String(e.detail.checked))} />
               </div>
             </div>
@@ -52,6 +55,7 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
           return (
             <div key={p.key} className="param">
               <div className="field-label">{p.title}{p.required && <span className="param-req"> · обязательно</span>}</div>
+              {p.hint && <div className="field-hint param-hint">{p.hint}</div>}
               <div className="period">
                 {p.options.map((o) => (
                   <button key={o}
@@ -85,6 +89,10 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
                 </button>
               )}
             </div>
+            {/* Подсказку пишет тот, кто знает железку, — ядро. Мы её только показываем:
+                хардкод под конкретный коннектор здесь означал бы, что каждое новое
+                устройство требует правки интерфейса. */}
+            {p.hint && <div className="field-hint param-hint">{p.hint}</div>}
           </div>
         );
       })}

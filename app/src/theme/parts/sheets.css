@@ -104,3 +104,39 @@
   border-left: 2px solid var(--c-danger-2);
   padding-left: 10px;
 }
+
+/* Высокая шторка с прокруткой (еда): фиксированная высота вместо auto, иначе контент
+   растёт до предела и прокручиваться нечему. */
+.sheet-tall { --height: 88%; }
+
+/* Закреплённый подвал шторки: главное действие не должно уезжать за содержимое.
+
+   В шторке еды кнопка «сохранить» лежала последней в потоке, под справочником — то
+   есть чтобы сохранить приём, надо было пролистать каталог из семи десятков плиток.
+   А при открытой клавиатуре её не было видно вовсе, вместе с полем, которое человек
+   в этот момент заполнял.
+
+   Отступ снизу — под домашнюю полосу телефона, иначе кнопка попадает под жест. */
+/* Колонку задаём ВНУТРЕННЕЙ части модалки, а не самому ion-modal.
+
+   Первая версия ставила display:flex на хост — и это переспорило ионовское
+   `.overlay-hidden { display: none }`: у обоих селекторов одинаковая специфичность, а
+   наш стиль подключается позже. Закрытые модалки перестали прятаться и легли поверх
+   приложения невидимым блоком — интерфейс переставал нажиматься целиком, при том что
+   выглядел нормально. Худший вид поломки: видно, что что-то не так, но непонятно что.
+
+   ::part(content) трогает только внутренность и в состояние показа не вмешивается. */
+.sheet-modal::part(content) { display: flex; flex-direction: column; }
+.sheet-modal ion-content { flex: 1 1 auto; min-height: 0; }
+.sheet-foot {
+  flex: 0 0 auto; display: flex; align-items: stretch; gap: 10px;
+  padding: 10px 18px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: var(--color-bg); border-top: 1px solid var(--color-neutral-800);
+}
+.sheet-foot .food-save { margin-top: 0; flex: 1 1 auto; }
+.sheet-cancel {
+  flex: 0 0 auto; padding: 0 18px; min-height: 48px; border-radius: 16px; cursor: pointer;
+  border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
+  color: var(--color-neutral-300); font-size: 15px; font-family: var(--font-body);
+}
+.sheet-cancel:active { background: var(--color-neutral-800); }

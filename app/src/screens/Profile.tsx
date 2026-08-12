@@ -1,17 +1,15 @@
 import { IonPage, IonContent, IonIcon, IonToggle } from '@ionic/react';
-import { DevicesSection, LoopSetupSection, ServicesSection } from '@/sections/lazy';
+import { DevicesSection, DiagnosticsSection, LoopSetupSection, ServicesSection } from '@/sections/lazy';
 import {
-  personCircle, downloadOutline,
+  downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
-  hardwareChipOutline, cloudOutline, repeat, sparklesOutline,
+  hardwareChipOutline, cloudOutline, repeat, sparklesOutline, documentTextOutline,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '@/sources/store';
 import { resetLocalData } from '@/settings/reset';
 import { useClouds } from '@/sources/clouds';
-import { stats } from '@/domain/agp';
-import { detectTherapy, therapyLabel } from '@/domain/therapy';
-import { fmt, toUnits, unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
+import { unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
 import { countEntries } from '@/sources/db';
 import { exportGlucoseCsv } from '@/platform/export';
 import { useTheme } from '../theme/useTheme';
@@ -20,6 +18,8 @@ import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNative
 import { useStack } from '@/app/stackCtx';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
 import { useLoopProfile, LOOP_MODES } from '@/settings/loopProfile';
+import { useDeviceConfig, deviceStatus } from '@/settings/deviceConfig';
+import { pumpById, sensorById } from '@/domain/catalog';
 import Row from '@/ui/Row';
 import { useAnalyticsOn, setAnalyticsOn } from '@/settings/analytics';
 import UnitsModal from '@/sheets/UnitsModal';
@@ -129,18 +129,23 @@ export default function Profile() {
     : upd.status === 'current' ? `Актуально · проверено ${agoMin != null && agoMin > 0 ? agoMin + ' мин назад' : 'только что'}`
     : 'Проверяю…';
 
+  /* Что записано в устройствах — коротко, для строки-входа. Названия моделей, а не
+     «настроено»: человек проверяет глазами свою помпу и свой сенсор, а слово
+     «настроено» одинаково выглядит и когда всё верно, и когда записана не та модель. */
+  const devCfg = useDeviceConfig();
+  const устройства = [pumpById(devCfg.pumpId)?.model, sensorById(devCfg.sensorId)?.name]
+    .filter(Boolean).join(' · ') || 'ничего не записано';
+  /* Справа — только то, что требует действия. Строка молчит, пока всё в порядке:
+     постоянная надпись «настроено» перестаёт читаться, и «нужен мост» рядом с ней
+     пропадёт вместе со всеми остальными. */
+  const нуженМост = deviceStatus('pump', devCfg) === 'needsBridge'
+    || deviceStatus('sensor', devCfg) === 'needsBridge';
+
   const loop = useLoopProfile();
   const loopMode = LOOP_MODES.find((m) => m.id === loop.mode);
   const loopSub = loop.savedAt
     ? `${loopMode?.code} · ${loopMode?.name.toLowerCase()}`
     : 'не настроен';
-
-  const gs = data?.entries?.length ? stats(data.entries) : null;
-  const gmi = gs ? fmt(gs.gmi) : DASH;
-  const mean = gs ? toUnits(gs.mean) : DASH;
-  const ic = data?.profile?.ic != null ? '1:' + fmt(data.profile.ic) : DASH;
-  const therapy = therapyLabel(detectTherapy(data));
-  const name = data?.profile?.name || 'Профиль';
 
   const themes: { key: 'system' | 'light' | 'dark'; label: string; icon: string }[] = [
     { key: 'system', label: 'Системная', icon: ellipse },
@@ -152,20 +157,66 @@ export default function Profile() {
     <IonPage>
       <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
-          {/* профиль */}
-          <div className="profile-head">
-            <div className="avatar"><IonIcon icon={personCircle} /></div>
-            <div>
-              <div className="profile-name">{name}</div>
-              <div className="profile-sub">{therapy} · Nightscout</div>
-            </div>
-          </div>
+          {/* Шапки с именем и тройки показателей здесь больше нет — по трём разным
+              причинам, и ни одна не про экономию места.
 
-          {/* показатели */}
-          <div className="stat-row">
-            <div className="stat"><div className="stat-label">GMI (≈HbA1c)</div><div className="stat-val">{gmi}<span>%</span></div></div>
-            <div className="stat"><div className="stat-label">Ср. сахар</div><div className="stat-val">{mean}<span>{unitLabel()}</span></div></div>
-            <div className="stat"><div className="stat-label">СУИ</div><div className="stat-val">{ic}<span></span></div></div>
+              GMI и средний сахар живут в «Метриках», где у них есть период. Здесь они
+              считались по тому, что держит стор для главного экрана, — по последним
+              288 точкам, то есть примерно за сутки, и подпись об этом молчала. GMI за
+              сутки — не оценка HbA1c ничем, кроме названия; человек же сравнивает эту
+              цифру с анализом из лаборатории. Дубль был не только лишним, но и хуже
+              оригинала.
+
+              СУИ приезжает из профиля Nightscout: с нативным ядром или без облака его
+              просто нет, и на его месте стоял бы прочерк. А там, где он действительно
+              нужен, он и так виден — в строке болюса при вводе еды.
+
+              Имя и «Замкнутый цикл · Nightscout» — то же самое: имя берётся из профиля
+              Nightscout, без него в аватаре стояло бы слово «Профиль». Тип терапии
+              виден в устройствах, источник — в облаках.
+
+              Когда появятся мульти-профили, переключатель вернётся сюда настоящим
+              элементом управления, а не подписью под аватаром. */}
+
+          {/* Порядок разделов — по тому, зачем сюда заходят, а не по тому, что важнее
+              звучит. Приходят посмотреть: на связи ли облако, что вообще подключено,
+              какая петля настроена. Единицы глюкозы меняют один раз в жизни, но они
+              стояли первыми и отодвигали вниз всё, ради чего экран открывают.
+
+              Поэтому сверху то, что работает, ниже — настройки. Диагностика, версия и
+              оформление в конце: туда идут по конкретному поводу и заранее знают, что
+              ищут.
+
+              Заголовков над этими тремя строками нет намеренно. Раньше их было три —
+              «Устройства», «Сервисы», «Алгоритм», — и каждый стоял над единственной
+              строкой, повторяя её же название. Заголовок нужен, когда он собирает
+              разнородное под общим смыслом; над одной строкой он только отнимает
+              высоту и разбивает на три куска то, что глазом читается как один список
+              входов.
+
+              Своего имени у этой тройки нет и не придумывается: устройства — железо,
+              облака — транспорт, профиль петли — правила счёта. Общее у них только
+              «моё, работающее», а заголовок, который приходится сочинять, обычно
+              означает, что группы нет. Строки называют себя сами.
+
+              Границу ЧТО (устройства) и КАК (сервисы) из docs/CONNECT-UX.md §10 это не
+              трогает: разделы разные, входы разные, рядом стоят только строки. */}
+          <div className="list">
+            {/* Подпись — то, что записано на самом деле. Заголовок перечисляет, что
+                внутри раздела, и на вопрос «а что у меня подключено» не отвечал: за
+                ответом надо было открывать. Самый быстрый взгляд — тот, ради которого
+                никуда не переходят. */}
+            <Row icon={hardwareChipOutline} title="Помпа, сенсоры, глюкометр, петля"
+              sub={устройства} value={нуженМост ? 'нужен мост' : undefined}
+              onClick={() => push(<DevicesSection onClose={pop} />)} />
+            {/* облако — такой же транспорт, как мост, только со своими настройками
+                (URL/токен) и статусом (доступность/связь) вместо сигнала и батареи */}
+            <Row icon={cloudOutline} title="Облака" sub="Nightscout и другие источники"
+              value={cloudsValue}
+              onClick={() => push(<ServicesSection onClose={pop} />)} />
+            {/* профиль петли: только настройка — подача не включается (решение 0004) */}
+            <Row icon={repeat} title="Профиль петли" sub={loopSub}
+              onClick={() => push(<LoopSetupSection onClose={pop} />)} />
           </div>
 
           {/* настройки */}
@@ -181,31 +232,21 @@ export default function Profile() {
           </div>
           {exportMsg && <div className="metric-note" style={{ marginTop: 8 }}>{exportMsg}</div>}
 
+          {/* Про хранение — рядом с экспортом: вопрос «а где вообще лежат мои данные»
+              возникает именно здесь. */}
           <div className="metric-note" style={{ marginTop: 14 }}>
             Данные хранятся только на этом устройстве, без облака и аккаунта.
           </div>
 
-          {/* устройства (ЧТО) — отдельный полноэкранный раздел, не инлайн-список
-              (см. docs/CONNECT-UX.md §10 «Карта интерфейса»: Профиль → Устройства) */}
-          <div className="section-label sec">Устройства</div>
+          {/* Диагностика — в глубине, а не на виду: человеку с диабетом она нужна раз в
+              полгода, когда что-то не работает, и место на главном занимать не должна.
+              Но найти её надо уметь быстро, поэтому рядом с «о приложении», где и так
+              ищут версию и обновление (SugarLifeCore#17). */}
+          <div className="section-label sec">Диагностика</div>
           <div className="list">
-            <Row icon={hardwareChipOutline} title="Помпа, сенсоры, глюкометр, петля"
-              onClick={() => push(<DevicesSection onClose={pop} />)} />
-          </div>
-
-          {/* способы / сервисы (КАК): облако — такой же транспорт, как мост, только со своими
-              настройками (URL/токен) и статусом (доступность/связь) вместо сигнала/батареи */}
-          <div className="section-label sec">Сервисы</div>
-          <div className="list">
-            <Row icon={cloudOutline} title="Облака" value={cloudsValue}
-              onClick={() => push(<ServicesSection onClose={pop} />)} />
-          </div>
-
-          {/* алгоритм: профиль петли. Только настройка — подача не включается (решение 0004) */}
-          <div className="section-label sec">Алгоритм</div>
-          <div className="list">
-            <Row icon={repeat} title="Профиль петли" sub={loopSub}
-              onClick={() => push(<LoopSetupSection onClose={pop} />)} />
+            <Row icon={documentTextOutline} title="Логи работы"
+              sub="уровень подробности, запись в файл, выгрузка"
+              onClick={() => push(<DiagnosticsSection onClose={pop} />)} />
           </div>
 
           {/* о приложении: версия + сборка + обновление */}

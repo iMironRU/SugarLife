@@ -8,7 +8,9 @@ import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusL
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
+import { связь } from '@/domain/deviceState';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
+import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
 import { sourceStatusLabel, sourceStatusWarn } from '@/domain/sourceStatus';
 import { agoText, toUnits, unitLabel } from '@/domain/units';
 import { useStore } from '@/sources/store';
@@ -138,6 +140,11 @@ export default function DeviceSection({ onClose, cat, title }: {
      заряд OrangeLink в pump.extended.OrangeLinkBattery. Чего не знаем — не рисуем. */
   const bridgeTelemetry: { k: string; v: string }[] = [];
   if (bridge && dev?.mountBattery != null) bridgeTelemetry.push({ k: 'Заряд моста', v: dev.mountBattery + '%' });
+  /* Мост как устройство в снимке движка (SugarLifeCore#8). Пока его там нет, работаем
+     с тем, что даёт Nightscout, — заряд. Появится в снимке: прошивка, сигнал, проверка. */
+  const bleМост = (snap?.devices ?? []).find((d) => d.roles?.includes('Transport') || d.roles?.includes('Bridge')) ?? null;
+  const [проверка, setПроверка] = useState<'нет' | 'идёт' | 'принято' | 'ошибка'>('нет');
+  const alert = useBridgeAlert();
 
   const modelIcon = cat === 'pump' ? flash : hardwareChipOutline;
   const setModel = (id: string) => setDeviceConfig(cat === 'pump' ? { pumpId: id } : { sensorId: id });
@@ -166,9 +173,19 @@ export default function DeviceSection({ onClose, cat, title }: {
      возраст показания, подсказка и тумблер авто-подключения (контракт 1.7).
      В браузере его нет вовсе: Nightscout-шим отдаёт только сервис, не железку. */
   const ble = (snap?.devices ?? []).find((d) => d.kind === cat) ?? null;
-  const bleLive = ble?.connection === 'Connected' || ble?.connection === 'Streaming';
+  /* Живость — по общему правилу (domain/deviceState.ts), а не по линку на месте.
+     Здесь и на «Сегодня» это должен быть один и тот же ответ: расхождение экранов
+     ровно с такой самодельной проверки и начиналось (SugarLifeCore#19). Разница не
+     косметическая: Connected при Acquiring — связь есть, показаний нет. */
+  const bleLive = связь(ble) === 'live';
   /* Что мост рассказывает о себе сам (1.7). Чего не прислал — не рисуем: пустая
      строка «Последнее показание —» хуже отсутствующей, она выглядит как поломка. */
+  /* Кандидаты в основной источник — те, кто отдаёт глюкозу. Роль берём из снимка, а
+     не гадаем по виду устройства: помпа тоже kind-устройство, но сахар не отдаёт. */
+  const источникиГлюкозы = (snap?.devices ?? []).filter(
+    (d) => d.kind === 'sensor' || (d.roles ?? []).includes('GlucoseSource'),
+  );
+
   const bleStatus = sourceStatusLabel(ble?.status);
   const bleAge = ble?.latestAtMs != null ? agoText(ble.latestAtMs) : null;
 
@@ -331,6 +348,43 @@ export default function DeviceSection({ onClose, cat, title }: {
               </>
             )}
 
+            {/* Основной источник глюкозы. Показываем ТОЛЬКО когда источников больше
+                одного: при единственном сенсоре выбор бессмысленен, а список из одной
+                строки с отметкой «сейчас» — это интерфейс ради интерфейса.
+
+                Отмечаем тот, у кого primary в снимке, а не тот, что мы отправили:
+                интент подтверждает приём, а не результат, и рисовать выбор по своему
+                намерению значит однажды показать не то, что происходит на деле
+                (SugarLifeCore#14). */}
+            {cat === 'sensor' && источникиГлюкозы.length > 1 && (
+              <>
+                <div className="section-label sec">Основной источник</div>
+                <div className="list">
+                  {источникиГлюкозы.map((d) => (
+                    <button key={d.id} className="list-row"
+                      onClick={() => sendIntent({ type: 'setPrimarySource', sourceId: d.id })}>
+                      <span className="pick-main">
+                        <span className="list-title">{d.name}</span>
+                        <span className="pick-sub">{sourceStatusLabel(d.status) ?? 'источник глюкозы'}</span>
+                      </span>
+                      {d.primary && <span className="meth-now">сейчас</span>}
+                    </button>
+                  ))}
+                  <button className="list-row" onClick={() => sendIntent({ type: 'setPrimarySource', sourceId: null })}>
+                    <span className="pick-main">
+                      <span className="list-title">Автоматически</span>
+                      <span className="pick-sub">приложение выберет само и переключится, когда датчик кончится</span>
+                    </span>
+                    {!источникиГлюкозы.some((d) => d.primary) && <span className="meth-now">сейчас</span>}
+                  </button>
+                </div>
+                <div className="sheet-note">
+                  Отсюда берётся сахар в круге наверху. Выбор переживает перезапуск; если
+                  выбранный датчик пропадёт, приложение вернётся к автоматическому.
+                </div>
+              </>
+            )}
+
             {ble && (bleStatus || bleAge || ble.note || ble.autoConnect != null) && (
               <>
                 <div className="section-label sec">Связь</div>
@@ -372,10 +426,35 @@ export default function DeviceSection({ onClose, cat, title }: {
                     <div key={r.k} className="basal-row"><span>{r.k}</span><b>{r.v}</b></div>
                   ))}
                 </div>
+                {/* «Проверить связь» — единственное действие, которое у моста есть:
+                    настраивать в нём нечего, а вот убедиться, что он отвечает, нужно
+                    ровно тогда, когда помпа молчит и непонятно, кто виноват. */}
+                {bleМост?.testable && (
+                  <button className="changed-btn" style={{ marginTop: 10 }}
+                    onClick={() => { setПроверка('идёт'); void sendIntent({ type: 'testDevice', deviceId: bleМост.id })
+                      .then((r) => setПроверка(r.accepted ? 'принято' : 'ошибка')); }}>
+                    {проверка === 'идёт' ? 'Проверяю…' : проверка === 'принято' ? 'Запрос отправлен' : 'Проверить связь'}
+                  </button>
+                )}
+
+                {/* Порог разрядки — настройка приложения, а не железа: в мосте нет
+                    понятия «когда меня беспокоить». Когда его батарейка сядет, помпа
+                    просто перестанет отвечать, и человек будет искать поломку там, где
+                    её нет (settings/bridgeAlerts.ts). */}
+                <div className="list" style={{ marginTop: 10 }}>
+                  <div className="list-row">
+                    <span className="pick-main">
+                      <span className="list-title">Предупредить о разряде</span>
+                      <span className="pick-sub">один раз, когда заряд упадёт ниже {alert.threshold}%</span>
+                    </span>
+                    <IonToggle checked={alert.on} onIonChange={(e) => setBridgeAlert({ on: e.detail.checked })} />
+                  </div>
+                </div>
+
                 <div className="sheet-note">
                   Настраивать в мосте нечего — это транспорт. Серийник и частота относятся
-                  к помпе за ним. Прошивку, уровень сигнала и проверку связи покажем, когда
-                  приложение начнёт читать мост напрямую.
+                  к помпе за ним. Прошивку и уровень сигнала покажем, когда приложение
+                  начнёт читать мост напрямую.
                 </div>
               </>
             )}

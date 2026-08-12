@@ -14,7 +14,6 @@
    На проводе имени типа нет, важна структура. */
 import { useEffect, useState } from 'react';
 import { nightscoutBridge } from './bridgeNightscout';
-import { getCfg } from './nightscout';
 
 // ---- UiSnapshot ----
 export interface Monitor {
@@ -46,6 +45,10 @@ export type ParamType = 'Text' | 'Secret' | 'Number' | 'Bool' | 'Enum';
 export interface Param {
   key: string; title: string; type: ParamType; required: boolean; default: string | null; options: string[];
   scan?: 'qr' | null; // rev ≥ 1.5+: поле сканируется камерой (кнопка «Сканировать QR»)
+  /* Короткая подсказка под полем: «где взять токен с правом записи», «где искать
+     серийник на помпе». Текст пишет тот, кто знает железку, — ядро; у нас ноль
+     хардкода под конкретный коннектор (SugarLifeCore#16). */
+  hint?: string | null;
 }
 export interface SettingsSpec { parameters: Param[]; }
 
@@ -89,6 +92,26 @@ export interface DeviceView {
 }
 /** Историческое имя той же сущности — оставлено, чтобы не переписывать экраны. */
 export type DeviceInfo = DeviceView;
+/* Базальный профиль, прочитанный движком (rev ≥ 1.8, SugarLifeCore#7).
+
+   Не голый список сегментов, а контейнер — и оба дополнительных поля появились по
+   нашей просьбе, потому что каждое закрывает свой класс ошибок.
+
+   origin — чьё это. На помпе лежит то, что реально работает сейчас; в Nightscout то,
+   что туда однажды выгрузили. Это разные степени доверия, и расхождение между ними —
+   полезная находка, но только если известно, что с чем сравниваем.
+
+   timezone — на какое время размечены интервалы. У помпы это null, и null здесь НЕ
+   «нет данных», а смысл: у 722 нет понятия зоны, времена — её собственные настенные
+   часы. Считать их локальными для телефона нельзя: у путешественника телефон в одной
+   зоне, помпа в другой, и он правил бы не тот интервал. */
+export interface BasalSegmentView { startMinutes: number; rateUPerHour: number }
+export interface BasalProfileView {
+  segments: BasalSegmentView[];
+  origin: 'Pump' | 'Nightscout';
+  timezone: string | null;
+}
+
 export interface Insights { mode: 'Observe' | 'Advisory' | 'ClosedLoop'; messages: string[]; }
 export interface PendingWrite { id: string; description: string; state: string; needsAttention: boolean; }
 
@@ -127,6 +150,8 @@ export interface UiSnapshot {
   discovered?: Discovered[];
   availableDrivers?: DriverDescriptor[];
   logging?: LoggingState | null;
+  // rev ≥ 1.8: базальный профиль с провенансом. Отсутствует — ещё не прочитан.
+  pumpBasal?: BasalProfileView | null;
 }
 
 // ---- История (rev ≥ 1.1): query(HistoryQuery) → HistoryResult ----
@@ -146,6 +171,10 @@ export type Intent =
      воскресает из входящего потока — иначе кнопка «Забыть» не работала бы вовсе.
      recordDevice (запись без драйвера) ядро ещё не выпустило — добавим, когда выйдет. */
   | { type: 'removeDevice'; deviceId: string }                          // rev ≥ 1.8
+  /* rev ≥ 1.8: какой сенсор считать основным источником глюкозы. sourceId — это
+     DeviceView.id; null снимает ручной выбор и возвращает авто. Явный выбор сильнее
+     авто, пока выбранный источник жив; не стало его — движок сам падает обратно. */
+  | { type: 'setPrimarySource'; sourceId: string | null }               // rev ≥ 1.8
   | { type: 'testDevice'; deviceId: string }
   | { type: 'setParams'; deviceId: string; params: Record<string, string> }
   | { type: 'setWiring'; deviceId: string; asInput: boolean; asOutput: boolean }
@@ -195,14 +224,25 @@ declare global {
 
 const BRIDGE_MAJOR = '1';
 
-// Нативный движок ПРИОРИТЕТНЕЕ NS-шима: он источник правды — реальные драйверы/BLE + сам тянет Nightscout
-// внутри (addCloudSource). NS-шим остаётся только браузерным фолбэком, когда нативного моста нет.
-// (Снят временный гейт «при настроенном NS всегда шим»: он был заглушкой на время, пока в движке не было
-//  реальных источников; теперь они есть — реинтеграция #5.)
+/* Движок первым, шим — браузерный запасной путь.
+
+   До 11.08.2026 здесь стоял обратный приоритет: при настроенном Nightscout мы ВСЕГДА
+   брали шим. Гейт был поставлен осознанно и был правильным — движок тогда отдавал
+   данные симулятора-скелета, и показывать вымышленный сахар вместо настоящего нельзя.
+
+   Он же оказался и причиной того, что BLE не включался вовсе: шим отдаёт свой короткий
+   список драйверов и пустой discovered, поэтому «прямое чтение» оставалось серым, а
+   скан недоступен. Данные при этом шли, и снаружи выглядело как «вроде работает» —
+   худший вид поломки (SugarLifeCore#13).
+
+   Теперь у движка реальные драйверы, и он же сам тянет Nightscout внутри через
+   addCloudSource — то есть он источник правды, а не альтернатива ему. Шим остаётся там,
+   где движка нет по построению: в браузере.
+
+   Проверка мажорной версии остаётся: несовместимый мост лучше не брать вовсе. */
 export function getBridge(): SugarLifeBridge {
   const native = typeof window !== 'undefined' ? window.SugarLifeBridge : undefined;
   if (native && String(native.bridgeRevision).split('.')[0] === BRIDGE_MAJOR) return native;
-  if (typeof window !== 'undefined' && getCfg()?.url) return nightscoutBridge;
   return nightscoutBridge;
 }
 
