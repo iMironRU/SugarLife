@@ -182,3 +182,19 @@
 /* Потеря связи заметна цветом: её нужно увидеть, а успех можно и пропустить. */
 .connect-line.is-released { color: var(--c-danger-2); }
 .connect-line.is-released ion-icon { color: var(--c-danger-2); }
+
+/* Обновление скачано и ждёт перезапуска (ui/UpdateReady.tsx, #150).
+
+   Тихая строка, а не подсветка: рядом с «инсулина на два часа» жёлтая карточка про
+   обновление уравнивала бы несравнимое. Поэтому нейтральный фон, обычная рамка и
+   размер текста как у подписей — заметно, но не тревожно. */
+.upd-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: 12px; padding: 12px 14px; border-radius: 16px;
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+}
+.upd-row > ion-icon { font-size: 20px; color: var(--color-accent-300); flex-shrink: 0; }
+.upd-text { flex: 1; min-width: 140px; }
+.upd-text b { display: block; font-size: 14px; font-weight: 600; }
+.upd-text i { display: block; margin-top: 3px; font-size: 12px; font-style: normal; color: var(--color-neutral-400); line-height: 1.4; }
+.upd-actions { display: flex; gap: 8px; flex-shrink: 0; }

@@ -10,6 +10,7 @@ import ChangedButton from '@/ui/ChangedButton';
 import ReleaseBle from '@/ui/ReleaseBle';
 import NearbyTile from '@/ui/NearbyTile';
 import ConnectFeed from '@/ui/ConnectFeed';
+import UpdateReady from '@/ui/UpdateReady';
 import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
@@ -428,6 +429,12 @@ export default function Today() {
           {/* Вход в поиск по эфиру. Заметен, только когда подключать нечего или связь
               отвалилась; когда всё работает — тихая строка (ui/NearbyTile.tsx). */}
           <NearbyTile />
+
+          {/* Обновление скачано и ждёт перезапуска. Ниже связи и выше подсветок
+              резервуара намеренно: это не медицинское событие и не должно попадаться
+              раньше них, но и в настройках его никто не найдёт — а не найдя, человек
+              останется на старой сборке навсегда (ui/UpdateReady.tsx, #150). */}
+          <UpdateReady />
 
           {/* Отдать устройства. Рядом с подсветками, а не в настройках: это действие
               нужно в моменте — «дай отсканировать сенсор родным приложением», — и
