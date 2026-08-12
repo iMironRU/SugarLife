@@ -175,6 +175,12 @@ export default function DeviceSection({ onClose, cat, title }: {
   const bleLive = ble?.connection === 'Connected' || ble?.connection === 'Streaming';
   /* Что мост рассказывает о себе сам (1.7). Чего не прислал — не рисуем: пустая
      строка «Последнее показание —» хуже отсутствующей, она выглядит как поломка. */
+  /* Кандидаты в основной источник — те, кто отдаёт глюкозу. Роль берём из снимка, а
+     не гадаем по виду устройства: помпа тоже kind-устройство, но сахар не отдаёт. */
+  const источникиГлюкозы = (snap?.devices ?? []).filter(
+    (d) => d.kind === 'sensor' || (d.roles ?? []).includes('GlucoseSource'),
+  );
+
   const bleStatus = sourceStatusLabel(ble?.status);
   const bleAge = ble?.latestAtMs != null ? agoText(ble.latestAtMs) : null;
 
@@ -333,6 +339,43 @@ export default function DeviceSection({ onClose, cat, title }: {
                   {paramsMissing.length
                     ? 'Без этого прямое чтение по радио не заработает: ' + paramsMissing.map((p) => p.title.toLowerCase()).join(', ') + '.'
                     : 'Понадобится приложению для чтения помпы по радио. Через Nightscout данные идут и без этого.'}
+                </div>
+              </>
+            )}
+
+            {/* Основной источник глюкозы. Показываем ТОЛЬКО когда источников больше
+                одного: при единственном сенсоре выбор бессмысленен, а список из одной
+                строки с отметкой «сейчас» — это интерфейс ради интерфейса.
+
+                Отмечаем тот, у кого primary в снимке, а не тот, что мы отправили:
+                интент подтверждает приём, а не результат, и рисовать выбор по своему
+                намерению значит однажды показать не то, что происходит на деле
+                (SugarLifeCore#14). */}
+            {cat === 'sensor' && источникиГлюкозы.length > 1 && (
+              <>
+                <div className="section-label sec">Основной источник</div>
+                <div className="list">
+                  {источникиГлюкозы.map((d) => (
+                    <button key={d.id} className="list-row"
+                      onClick={() => sendIntent({ type: 'setPrimarySource', sourceId: d.id })}>
+                      <span className="pick-main">
+                        <span className="list-title">{d.name}</span>
+                        <span className="pick-sub">{sourceStatusLabel(d.status) ?? 'источник глюкозы'}</span>
+                      </span>
+                      {d.primary && <span className="meth-now">сейчас</span>}
+                    </button>
+                  ))}
+                  <button className="list-row" onClick={() => sendIntent({ type: 'setPrimarySource', sourceId: null })}>
+                    <span className="pick-main">
+                      <span className="list-title">Автоматически</span>
+                      <span className="pick-sub">приложение выберет само и переключится, когда датчик кончится</span>
+                    </span>
+                    {!источникиГлюкозы.some((d) => d.primary) && <span className="meth-now">сейчас</span>}
+                  </button>
+                </div>
+                <div className="sheet-note">
+                  Отсюда берётся сахар в круге наверху. Выбор переживает перезапуск; если
+                  выбранный датчик пропадёт, приложение вернётся к автоматическому.
                 </div>
               </>
             )}

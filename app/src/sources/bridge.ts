@@ -171,6 +171,10 @@ export type Intent =
      воскресает из входящего потока — иначе кнопка «Забыть» не работала бы вовсе.
      recordDevice (запись без драйвера) ядро ещё не выпустило — добавим, когда выйдет. */
   | { type: 'removeDevice'; deviceId: string }                          // rev ≥ 1.8
+  /* rev ≥ 1.8: какой сенсор считать основным источником глюкозы. sourceId — это
+     DeviceView.id; null снимает ручной выбор и возвращает авто. Явный выбор сильнее
+     авто, пока выбранный источник жив; не стало его — движок сам падает обратно. */
+  | { type: 'setPrimarySource'; sourceId: string | null }               // rev ≥ 1.8
   | { type: 'testDevice'; deviceId: string }
   | { type: 'setParams'; deviceId: string; params: Record<string, string> }
   | { type: 'setWiring'; deviceId: string; asInput: boolean; asOutput: boolean }

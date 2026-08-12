@@ -128,9 +128,28 @@
 
 /* Правая колонка плитки — вход в журнал. Стрелка мелкая: это не главное действие
    плитки (главное — внести), но и не скрытый жест. */
-.carb-food { position: relative; cursor: pointer; }
-.carb-food-chev { position: absolute; top: -2px; right: -4px; font-size: 13px; color: var(--color-neutral-500); }
+.carb-food { cursor: pointer; }
 .carb-food:active { opacity: .7; }
+/* Шеврон в потоке рядом со счётчиком: абсолютный уезжал от угла колонки, потому что
+   её ширина зависит от длины «N приёмов» («1 приём» и «12 приёмов» — разная). */
+.carb-food-s { display: inline-flex; align-items: center; gap: 2px; }
+.carb-food-s ion-icon { font-size: 12px; color: var(--color-neutral-500); }
+
+/* Последний приём вместо прочерков Б/Ж/У: отвечает на «я это записал?».
+
+   Отступы те же, что были у колонки Б/Ж/У: без них колонка вставала вплотную к рамке
+   и подпись обрезалась — плитка режет всё, что вылезает. */
+.carb-last {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
+  padding: 14px 0 14px 18px;
+}
+/* Не капсом: «ПОСЛЕДНИЙ» в семьдесят пикселей не помещается, а сокращать до «ПОСЛ.»
+   значит экономить на понятности ради регистра. */
+.cl-cap { font-size: 11px; color: var(--color-neutral-400); }
+.cl-val { margin-top: 4px; font-size: 20px; font-weight: 600; color: var(--c-carb); display: flex; align-items: baseline; gap: 3px; }
+.cl-val span { font-size: 11px; font-weight: 500; color: var(--c-carb-2); }
+.cl-val.cl-none { color: var(--color-neutral-600); }
+.cl-when { margin-top: 2px; font-size: 11px; color: var(--color-neutral-400); }
 
 /* Журнал приёмов */
 .meal-log { margin-top: 12px; border-radius: 18px; overflow: hidden; background: var(--color-neutral-900); }

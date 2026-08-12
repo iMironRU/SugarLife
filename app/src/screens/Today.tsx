@@ -109,8 +109,14 @@ export default function Today() {
      считается весь разбор. Разные окна тут не противоречие, а разные вопросы:
      «сколько я съел сегодня» и «когда я ел в последний раз». */
   const сутки = Date.now() - 24 * 3600e3;
-  const mealCount = extras.events.filter((e) => (e.carbs ?? 0) > 0 && e.t >= сутки).length
-    + onlyLocal(meals, extras.events).filter((m) => m.t >= сутки).length;
+  const свежие = [
+    ...extras.events.filter((e) => (e.carbs ?? 0) > 0 && e.t >= сутки).map((e) => ({ t: e.t, carbs: e.carbs as number })),
+    ...onlyLocal(meals, extras.events).filter((m) => m.t >= сутки).map((m) => ({ t: m.t, carbs: m.carbs })),
+  ].sort((a, b) => a.t - b.t);
+  const mealCount = свежие.length;
+  /* Последний приём — из обоих источников. Отвечает на «я записал?»: с одного взгляда
+     видно и сколько, и как давно, и не надо идти в журнал проверять. */
+  const последний = свежие.length ? свежие[свежие.length - 1] : null;
   /* Активные углеводы тоже считает цикл, а не помпа: когда он молчит, это
      «неизвестно», а не «ноль». Прочерк плюс причина — см. domain/loopValue.ts. */
   const ac = activeCarbs(dev);
@@ -230,10 +236,28 @@ export default function Today() {
           {/* панель углеводов (по макету): Б/Ж/У · активные · Еда.
               Б/Ж пусто — Nightscout не отдаёт белки/жиры, фейк не рисуем. */}
           <button className="carb-panel" onClick={() => setFoodOpen(true)}>
-            <div className="carb-macros">
-              <div className="carb-macro"><span className="cm-k">Б</span><span className="cm-v">{DASH}</span></div>
-              <div className="carb-macro"><span className="cm-k">Ж</span><span className="cm-v">{DASH}</span></div>
-              <div className="carb-macro"><span className="cm-k">У</span><span className="cm-v">{toCarbs(dayCarbs, cu)}</span><span className="cm-u">{carbUnitLabel(cu)}</span></div>
+            {/* Слева — последний приём вместо прочерков Б/Ж/У.
+
+                Белки и жиры мы не считаем и не собираемся: цель приложения — доза по
+                углеводам, а не дневник питания. Три прочерка в самом заметном месте
+                экрана читались не как «пока не заполнили», а как поломка.
+
+                Вместо них — ответ на вопрос, который человек задаёт себе чаще всего:
+                «я это вообще записал?». Он проверяем с одного взгляда и избавляет от
+                похода в журнал. */}
+            <div className="carb-last">
+              <div className="cl-cap">Последний</div>
+              {последний ? (
+                <>
+                  <div className="cl-val">{toCarbs(последний.carbs, cu)}<span>{carbUnitLabel(cu)}</span></div>
+                  <div className="cl-when">{agoText(последний.t).replace(' назад', '')}</div>
+                </>
+              ) : (
+                <>
+                  <div className="cl-val cl-none">{DASH}</div>
+                  <div className="cl-when">не вносили</div>
+                </>
+              )}
             </div>
 
             <div className="carb-center">
@@ -250,8 +274,12 @@ export default function Today() {
               onClick={(e) => { e.stopPropagation(); push(<MealsSection onClose={pop} />); }}>
               <IonIcon icon={restaurantOutline} />
               <div className="carb-food-t">Еда</div>
-              <div className="carb-food-s">{mealCount} {mealsWord(mealCount)}</div>
-              <IonIcon icon={chevronForward} className="carb-food-chev" />
+              {/* Шеврон в потоке, а не абсолютом: абсолютный уезжал от угла колонки,
+                  потому что её размер зависит от длины «N приёмов». */}
+              <div className="carb-food-s">
+                {mealCount} {mealsWord(mealCount)}
+                <IonIcon icon={chevronForward} />
+              </div>
             </div>
           </button>
 
