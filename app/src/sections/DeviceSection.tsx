@@ -8,8 +8,9 @@ import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusL
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
-import { связь } from '@/domain/deviceState';
-import { useSnapshot, sendIntent } from '@/sources/bridge';
+import { связь, меткаСвязи, предложениеСлияния } from '@/domain/deviceState';
+import { useSnapshot, sendIntent, type DeviceView } from '@/sources/bridge';
+
 import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
 import { sourceStatusLabel, sourceStatusWarn } from '@/domain/sourceStatus';
 import { agoText, toUnits, unitLabel } from '@/domain/units';
@@ -31,6 +32,12 @@ import SmbgSheet from '@/sheets/SmbgSheet';
 import { useSmbg } from '@/settings/smbg';
 import { useStack } from '@/app/stackCtx';
 import { toSegs, daily } from '@/domain/basal';
+
+/* Как назвать канал человеку. Слова движка (direct/bridged/cloud) отвечают на вопрос
+   «откуда я это знаю», и перевод должен отвечать на тот же — не «BLE» и не «NS». */
+const КАНАЛ: Record<'direct' | 'bridged' | 'cloud', string> = {
+  direct: 'Напрямую', bridged: 'Через мост', cloud: 'Через облако',
+};
 
 export type DeviceCatKey = 'sensor' | 'pump' | 'meter' | 'loop';
 
@@ -186,6 +193,13 @@ export default function DeviceSection({ onClose, cat, title }: {
     (d) => d.kind === 'sensor' || (d.roles ?? []).includes('GlucoseSource'),
   );
 
+  /* Спрашивать ли про слияние каналов. Отказ живёт до закрытия экрана и не пишется
+     в настройки намеренно: «нет» здесь значит «не сейчас», а не «никогда». Записать
+     его навсегда — значит закрыть человеку путь, когда он купит второй мост или
+     разберётся, чья это помпа в облаке; а движок, получив серийник, сольёт их сам. */
+  const [спрашивать, setСпрашивать] = useState(true);
+  const слияние = cat === 'pump' && спрашивать ? предложениеСлияния(snap) : null;
+
   const bleStatus = sourceStatusLabel(ble?.status);
   const bleAge = ble?.latestAtMs != null ? agoText(ble.latestAtMs) : null;
 
@@ -219,6 +233,38 @@ export default function DeviceSection({ onClose, cat, title }: {
         <PageHead title={title} subtitle={status ? deviceStatusLabel(status) : 'Устройство'} onBack={onClose} />
 
         <>
+            {/* Вопрос про слияние — до всего остального: пока он не решён, экран ниже
+                показывает одну помпу дважды, и это первое, что стоит объяснить.
+
+                Утверждения тут нет: показываем строку, которой назвался источник в
+                Nightscout, и модель с серийником своей помпы — и спрашиваем. Сказать
+                за человека «похоже, это одна и та же» было бы догадкой по соседству
+                в списке, а цена ошибки — два разных устройства, слитые в одно
+                (общий Nightscout в семье, вторая помпа в доме). Правило, когда
+                спрашивать вообще, — в domain/deviceState.ts. */}
+            {слияние && (
+              <div className="today-alert">
+                <IonIcon icon={cloudOutline} />
+                <div>
+                  <b>Это ваша помпа?</b>
+                  <span>
+                    Nightscout сообщает устройство «{слияние.облако.sourceLabel}».
+                    У вас записана {слияние.железка.name}
+                    {слияние.серийник ? ` (SN ${слияние.серийник})` : ''}. Серийник не
+                    совпал, поэтому сами не объединяем. Если это она — состояние будет
+                    одной карточкой с двумя каналами вместо двух помп в списке.
+                  </span>
+                  <span className="alert-ask alert-ask-row">
+                    <button className="changed-btn is-undo" onClick={() => {
+                      sendIntent({ type: 'mapChannel', channelId: слияние.облако.id, deviceId: слияние.железка.id });
+                      setСпрашивать(false);
+                    }}>Да, это она</button>
+                    <button className="changed-btn" onClick={() => setСпрашивать(false)}>Нет</button>
+                  </span>
+                </div>
+              </div>
+            )}
+
             {hasModel && (
               <>
                 <div className="section-label sec">Как получаем данные</div>
@@ -381,6 +427,43 @@ export default function DeviceSection({ onClose, cat, title }: {
                 <div className="sheet-note">
                   Отсюда берётся сахар в круге наверху. Выбор переживает перезапуск; если
                   выбранный датчик пропадёт, приложение вернётся к автоматическому.
+                </div>
+              </>
+            )}
+
+            {/* Каналы (SugarLifeCore#23). Одна карточка, каналы списком — потому что
+                это одно устройство, до которого мы дотягиваемся двумя дорогами.
+                Верхние поля описывают активный канал, и без этого списка непонятно,
+                откуда взялось «на связи»: помпа рядом или облако помнит её последний
+                документ. Разные факты, и человеку важно, какой из них.
+
+                Рисуем только когда каналов больше одного: у одноканального устройства
+                строка «напрямую» ничего не добавляет к тому, что уже сказано выше. */}
+            {(ble?.channels?.length ?? 0) > 1 && (
+              <>
+                <div className="section-label sec">Каналы</div>
+                <div className="list">
+                  {ble!.channels!.map((c) => {
+                    const с = связь(c as unknown as DeviceView);
+                    return (
+                      <div key={c.id} className="list-row" style={{ cursor: 'default' }}>
+                        <IonIcon icon={c.kind === 'cloud' ? cloudOutline : bluetoothOutline} className="list-ico" />
+                        <span className="pick-main">
+                          <span className="list-title">{КАНАЛ[c.kind]}</span>
+                          <span className="pick-sub">
+                            {c.label ? c.label + ' · ' : ''}
+                            {меткаСвязи[с] ?? 'состояние неизвестно'}
+                            {c.latestAtMs != null ? ' · ' + agoText(c.latestAtMs) : ''}
+                          </span>
+                        </span>
+                        {c.id === ble!.activeChannel && <span className="meth-now">сейчас</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="sheet-note">
+                  Приложение само берёт тот канал, где данные свежее. Прямая связь
+                  предпочтительнее облака, но молчащая прямая уступает живому облаку.
                 </div>
               </>
             )}

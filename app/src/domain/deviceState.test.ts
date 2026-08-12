@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { связь, источникГлюкозы, источникПомпы, связьГлюкозы } from './deviceState';
+import { связь, источникГлюкозы, источникПомпы, связьГлюкозы, предложениеСлияния, серийникИз } from './deviceState';
 import type { DeviceView, UiSnapshot } from '@/sources/bridge';
 
 /* Правило состояния связи проверяем тестами, потому что именно в нём живёт баг, с
@@ -120,5 +120,46 @@ describe('связьГлюкозы', () => {
 
   it('снимка нет — молчим, а не рисуем обрыв', () => {
     expect(связьГлюкозы(null)).toBe('unknown');
+  });
+});
+
+/* Предложение слияния — единственное место, где интерфейс делает утверждение о
+   железке. Ошибка здесь сливает два РАЗНЫХ устройства в одно, и человек об этом не
+   узнает: показания просто станут «одной помпой». Поэтому правило под тестами
+   целиком, включая случаи, когда предлагать нельзя. */
+describe('предложение слить облачную помпу с железкой', () => {
+  const облако = (p = {}) => dev({ id: 'ns-pump', kind: 'pump', driverId: null, sourceLabel: 'AndroidAPS-DASH', ...p });
+  const железка = (p = {}) => dev({ id: 'medtronic-722:123456', kind: 'pump', driverId: 'medtronic-722', ...p });
+
+  it('обе есть по отдельности — предлагаем, с серийником для вопроса', () => {
+    const s = предложениеСлияния(snap([облако(), железка()]));
+    expect(s?.облако.sourceLabel).toBe('AndroidAPS-DASH');
+    expect(s?.серийник).toBe('123456');
+  });
+
+  it('молчим, если показать нечего: без sourceLabel вопрос выродится в «подтвердите нашу догадку»', () => {
+    expect(предложениеСлияния(snap([облако({ sourceLabel: null }), железка()]))).toBeNull();
+  });
+
+  it('уже слито — не предлагаем переделать сделанное', () => {
+    const слитая = железка({
+      activeChannel: 'ble-1',
+      channels: [
+        { id: 'ble-1', kind: 'direct', priority: 0, connection: 'Streaming', status: 'Live', live: true, latestAtMs: 1 },
+        { id: 'ns-pump', kind: 'cloud', priority: 10, connection: 'Connected', status: 'Delayed', live: false, latestAtMs: 2 },
+      ],
+    });
+    expect(предложениеСлияния(snap([слитая]))).toBeNull();
+  });
+
+  it('одна помпа — сливать не с чем', () => {
+    expect(предложениеСлияния(snap([железка()]))).toBeNull();
+    expect(предложениеСлияния(snap([облако()]))).toBeNull();
+  });
+
+  it('серийник берём из id, а нет — так нет', () => {
+    expect(серийникИз('medtronic-722:123456')).toBe('123456');
+    expect(серийникИз('medtronic-722')).toBeNull();
+    expect(серийникИз('medtronic-722:')).toBeNull();
   });
 });

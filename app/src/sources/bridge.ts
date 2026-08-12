@@ -95,6 +95,11 @@ export interface DeviceView {
      activeChannel — тот канал, чьи connection/status/live/latestAtMs подняты наверх. */
   channels?: ChannelView[];
   activeChannel?: string | null;
+  /* Как источник называет себя сам (rev ≥ 1.8, SugarLifeCore#23). Для облака это
+     devicestatus.device из Nightscout — «AndroidAPS-DASH», «Loop». Нужно ровно там,
+     где мы собираемся спросить человека «это твоя помпа?»: показать надо реальную
+     строку, а не наш пересказ, иначе он подтверждает не то, что видит движок. */
+  sourceLabel?: string | null;
 }
 /* Канал доставки состояния (rev ≥ 1.8, SugarLifeCore#23).
 
@@ -113,6 +118,7 @@ export interface ChannelView {
   status: SourceStatus;
   live: boolean;
   latestAtMs: number | null;
+  label?: string | null;         // как называет себя источник этого канала
 }
 /** Историческое имя той же сущности — оставлено, чтобы не переписывать экраны. */
 export type DeviceInfo = DeviceView;
