@@ -1,7 +1,7 @@
 import { IonPage, IonContent, IonIcon, IonToggle } from '@ionic/react';
 import { DevicesSection, DiagnosticsSection, LoopSetupSection, ServicesSection } from '@/sections/lazy';
 import {
-  personCircle, downloadOutline,
+  downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
   hardwareChipOutline, cloudOutline, repeat, sparklesOutline, documentTextOutline,
 } from 'ionicons/icons';
@@ -9,9 +9,7 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/sources/store';
 import { resetLocalData } from '@/settings/reset';
 import { useClouds } from '@/sources/clouds';
-import { stats } from '@/domain/agp';
-import { detectTherapy, therapyLabel } from '@/domain/therapy';
-import { fmt, toUnits, unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
+import { unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
 import { countEntries } from '@/sources/db';
 import { exportGlucoseCsv } from '@/platform/export';
 import { useTheme } from '../theme/useTheme';
@@ -149,13 +147,6 @@ export default function Profile() {
     ? `${loopMode?.code} · ${loopMode?.name.toLowerCase()}`
     : 'не настроен';
 
-  const gs = data?.entries?.length ? stats(data.entries) : null;
-  const gmi = gs ? fmt(gs.gmi) : DASH;
-  const mean = gs ? toUnits(gs.mean) : DASH;
-  const ic = data?.profile?.ic != null ? '1:' + fmt(data.profile.ic) : DASH;
-  const therapy = therapyLabel(detectTherapy(data));
-  const name = data?.profile?.name || 'Профиль';
-
   const themes: { key: 'system' | 'light' | 'dark'; label: string; icon: string }[] = [
     { key: 'system', label: 'Системная', icon: ellipse },
     { key: 'light', label: 'Светлая', icon: sunny },
@@ -166,21 +157,26 @@ export default function Profile() {
     <IonPage>
       <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen screen-pad">
-          {/* профиль */}
-          <div className="profile-head">
-            <div className="avatar"><IonIcon icon={personCircle} /></div>
-            <div>
-              <div className="profile-name">{name}</div>
-              <div className="profile-sub">{therapy} · Nightscout</div>
-            </div>
-          </div>
+          {/* Шапки с именем и тройки показателей здесь больше нет — по трём разным
+              причинам, и ни одна не про экономию места.
 
-          {/* показатели */}
-          <div className="stat-row">
-            <div className="stat"><div className="stat-label">GMI (≈HbA1c)</div><div className="stat-val">{gmi}<span>%</span></div></div>
-            <div className="stat"><div className="stat-label">Ср. сахар</div><div className="stat-val">{mean}<span>{unitLabel()}</span></div></div>
-            <div className="stat"><div className="stat-label">СУИ</div><div className="stat-val">{ic}<span></span></div></div>
-          </div>
+              GMI и средний сахар живут в «Метриках», где у них есть период. Здесь они
+              считались по тому, что держит стор для главного экрана, — по последним
+              288 точкам, то есть примерно за сутки, и подпись об этом молчала. GMI за
+              сутки — не оценка HbA1c ничем, кроме названия; человек же сравнивает эту
+              цифру с анализом из лаборатории. Дубль был не только лишним, но и хуже
+              оригинала.
+
+              СУИ приезжает из профиля Nightscout: с нативным ядром или без облака его
+              просто нет, и на его месте стоял бы прочерк. А там, где он действительно
+              нужен, он и так виден — в строке болюса при вводе еды.
+
+              Имя и «Замкнутый цикл · Nightscout» — то же самое: имя берётся из профиля
+              Nightscout, без него в аватаре стояло бы слово «Профиль». Тип терапии
+              виден в устройствах, источник — в облаках.
+
+              Когда появятся мульти-профили, переключатель вернётся сюда настоящим
+              элементом управления, а не подписью под аватаром. */}
 
           {/* Порядок разделов — по тому, зачем сюда заходят, а не по тому, что важнее
               звучит. Приходят посмотреть: на связи ли облако, что вообще подключено,

@@ -22,7 +22,6 @@
   --c-act: #a99ee6; --c-act-3: #6d5fb8;
   --c-danger: #c96b7a; --c-danger-2: #d98a96;
   --c-trend: #b0713d; --c-trend-2: #a8683a;
-  --c-avatar-bg: #efedf7; --c-avatar-fg: #2a2350;
 
   --font-body: "Inter", system-ui, sans-serif;
 
@@ -65,7 +64,6 @@
   --c-act: #6152c8; --c-act-3: #9a8ee0;
   --c-danger: #b44a5c; --c-danger-2: #9c3b4d;
   --c-trend: #9a5f2e; --c-trend-2: #c08a56;
-  --c-avatar-bg: #e7e5f5; --c-avatar-fg: #2a2350;
   --ion-background-color-rgb: 244, 244, 248;
   --ion-text-color-rgb: 20, 21, 28;
 }
