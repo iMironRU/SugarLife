@@ -75,10 +75,23 @@ export interface NativeUpdateInfo {
   publishedAt: string | null;
 }
 
+/* Выпускается ли сейчас APK. Пока false — автосборка выключена (SugarLife#133):
+   движок подключается composite-сборкой по локальному пути, и на раннере она падает.
+
+   Проверка обновления держится на инварианте «релиз android-latest = последний main»,
+   поэтому «SHA отличается» и означало «новее». Инвариант сломался вместе со сборкой:
+   релиз замер на 30 июля, и любая установленная сборка новее его. Кнопка «Скачать
+   APK» предлагала бы откат — то есть ровно то, чего человек от неё не ждёт.
+
+   Прячем целиком, а не подписываем дату: подпись под кнопкой читают не все, а
+   устанавливают её нажатием. Вернуть — одной строкой, когда закроется #133. */
+export const ВЫПУСКАЕТСЯ_APK = false;
+
 // Проверить нативный слой (Android): есть ли в релизе android-latest более
 // свежий APK, чем установленный. Релиз всегда отражает последний main, поэтому
 // «SHA отличается» == «новее» (история движется только вперёд).
 export async function checkNativeUpdate(): Promise<NativeUpdateInfo | 'error'> {
+  if (!ВЫПУСКАЕТСЯ_APK) return { hasUpdate: false, build: null, apkUrl: null, publishedAt: null };
   try {
     const r = await fetch(`https://api.github.com/repos/${REPO}/releases/tags/${ANDROID_TAG}`, {
       headers: { Accept: 'application/vnd.github+json' },

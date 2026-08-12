@@ -56,10 +56,42 @@ describe('кого считать источником', () => {
      которой ничего не слышно. */
   it('помпа — только помпа: сервис с ролью PumpStateSource за неё не отвечает', () => {
     const ns = dev({ id: 'nightscout', kind: 'service', roles: ['PumpStateSource'] });
-    const pump = dev({ id: 'mm', kind: 'pump' });
+    const pump = dev({ id: 'mm', kind: 'pump', driverId: 'medtronic-722' });
     expect(источникПомпы(snap([ns, pump]))?.id).toBe('mm');
     expect(источникПомпы(snap([ns]))).toBeNull();
     expect(связь(источникПомпы(snap([ns])))).toBe('unknown');
+  });
+
+  /* Предупреждение ядра (SugarLifeCore#19): движок ставит kind по ролям, поэтому
+     облачный источник состояния помпы приезжает на нативе тоже как kind:'pump'.
+     Проверка «kind === pump» одна поймала бы его и зажгла зелёную точку от сокета. */
+  it('облачная «помпа» с kind:pump за железку не отвечает — по driverId', () => {
+    const облако = dev({ id: 'ns-pump', kind: 'pump', driverId: null, connection: 'Streaming' });
+    expect(источникПомпы(snap([облако]))).toBeNull();
+  });
+
+  it('каналы точнее признака: активный cloud — не прямая связь с помпой', () => {
+    const каналы = dev({
+      id: 'mm', kind: 'pump', driverId: 'medtronic-722', connection: 'Connected',
+      activeChannel: 'ns-pump',
+      channels: [
+        { id: 'ble-1', kind: 'direct', priority: 0, connection: 'Disconnected', status: 'Disconnected', live: false, latestAtMs: null },
+        { id: 'ns-pump', kind: 'cloud', priority: 10, connection: 'Connected', status: 'Live', live: true, latestAtMs: 1 },
+      ],
+    });
+    expect(источникПомпы(snap([каналы]))).toBeNull();
+  });
+
+  it('активен прямой канал — это она и есть', () => {
+    const прямой = dev({
+      id: 'mm', kind: 'pump', driverId: 'medtronic-722', status: 'Live',
+      activeChannel: 'ble-1',
+      channels: [
+        { id: 'ble-1', kind: 'direct', priority: 0, connection: 'Streaming', status: 'Live', live: true, latestAtMs: 1 },
+      ],
+    });
+    expect(источникПомпы(snap([прямой]))?.id).toBe('mm');
+    expect(связь(источникПомпы(snap([прямой])))).toBe('live');
   });
 });
 

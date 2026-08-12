@@ -14,7 +14,7 @@ import { countEntries } from '@/sources/db';
 import { exportGlucoseCsv } from '@/platform/export';
 import { useTheme } from '../theme/useTheme';
 import { reportContentScroll } from '@/app/panel';
-import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload } from '@/platform/appUpdate';
+import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload, ВЫПУСКАЕТСЯ_APK } from '@/platform/appUpdate';
 import { useStack } from '@/app/stackCtx';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
 import { useLoopProfile, LOOP_MODES } from '@/settings/loopProfile';
@@ -82,6 +82,11 @@ export default function Profile() {
         if (r.hasUpdate && r.apkUrl) {
           setApkUrl(r.apkUrl);
           setUpdateMsg('Нужна новая сборка приложения' + (r.build ? ` (${r.build})` : '') + '.');
+        } else if (!ВЫПУСКАЕТСЯ_APK) {
+          /* Не «у вас последняя версия»: про нативную часть мы этого не знаем — новых
+             сборок просто нет. Разница важна тому, кто ждёт исправления именно в
+             нативном слое и иначе решил бы, что оно уже у него. */
+          setUpdateMsg('Обновлено по воздуху. Сборка приложения сейчас не выпускается — нативная часть остаётся прежней.');
         } else {
           setUpdateMsg('У вас последняя версия.');
           window.setTimeout(() => setUpdateMsg(null), 4000);
