@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { прочитать, записать } from './storage';
 
 /* Показывать ли разбор данных.
 
@@ -17,14 +18,14 @@ let state = read();
 const subs = new Set<() => void>();
 
 function read(): boolean {
-  try { return localStorage.getItem(KEY) !== '0'; } catch { return true; }
+  return прочитать(KEY) !== '0';
 }
 
 export function analyticsOn(): boolean { return state; }
 
 export function setAnalyticsOn(v: boolean): void {
   state = v;
-  try { localStorage.setItem(KEY, v ? '1' : '0'); } catch { /* ignore */ }
+  записать(KEY, v ? '1' : '0');
   subs.forEach((f) => f());
 }
 

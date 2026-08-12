@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { прочитатьJson, записатьJson } from './storage';
 
 /* Показания глюкометра, внесённые руками.
 
@@ -31,7 +32,7 @@ export interface Smbg {
 
 function load(): Smbg[] {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) || 'null');
+    const v = прочитатьJson<Smbg[] | null>(KEY, null);
     return Array.isArray(v) ? v.filter((x) => Number.isFinite(x?.t) && Number.isFinite(x?.mmol)) : [];
   } catch { return []; }
 }
@@ -39,7 +40,7 @@ function load(): Smbg[] {
 let state = load();
 const subs = new Set<() => void>();
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ignore */ }
+  записатьJson(KEY, state);
   subs.forEach((f) => f());
 }
 

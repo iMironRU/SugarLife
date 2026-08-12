@@ -1,3 +1,4 @@
+import { прочитать, записать, убрать } from './storage';
 /* Пройден ли онбординг (docs/CONNECT-UX.md §7, путь 1).
    Онбординг — главный путь, но НЕ стена: человек может выйти и пользоваться приложением
    с прочерками. Флаг нужен именно для этого — чтобы «настрою потом» не превращалось
@@ -10,17 +11,14 @@ let state = read();
 const subs = new Set<() => void>();
 
 function read(): boolean {
-  try { return localStorage.getItem(KEY) === '1'; } catch { return false; }
+  return прочитать(KEY) === '1';
 }
 
 export function isOnboarded(): boolean { return state; }
 
 export function setOnboarded(v: boolean): void {
   state = v;
-  try {
-    if (v) localStorage.setItem(KEY, '1');
-    else localStorage.removeItem(KEY);
-  } catch { /* ignore */ }
+  if (v) записать(KEY, '1'); else убрать(KEY);
   subs.forEach((f) => f());
 }
 

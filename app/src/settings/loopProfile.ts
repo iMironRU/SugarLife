@@ -1,3 +1,4 @@
+import { прочитатьJson, записатьJson } from './storage';
 /* Профиль петли: режим (уровень полномочий) и лимиты.
 
    ВАЖНО: это ТОЛЬКО интерфейс и локальный конфиг. Ни одна команда в помпу отсюда
@@ -91,7 +92,7 @@ const DEFAULT: LoopProfile = { mode: 'l0', values: defaults(), doctorOk: false, 
 
 function load(): LoopProfile {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) || 'null');
+    const v = прочитатьJson<Partial<LoopProfile> | null>(KEY, null);
     return v ? { ...DEFAULT, ...v, values: { ...defaults(), ...(v.values || {}) } } : DEFAULT;
   } catch { return DEFAULT; }
 }
@@ -102,7 +103,7 @@ const subs = new Set<() => void>();
 export function getLoopProfile(): LoopProfile { return state; }
 export function saveLoopProfile(p: Partial<LoopProfile>): void {
   state = { ...state, ...p };
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ignore */ }
+  записатьJson(KEY, state);
   subs.forEach((f) => f());
 }
 export function useLoopProfile(): LoopProfile {
