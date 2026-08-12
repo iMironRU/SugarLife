@@ -120,6 +120,10 @@
 .release-ble:active { background: var(--color-neutral-800); }
 .release-ble.is-done { border-color: color-mix(in srgb, var(--c-glu) 45%, transparent); }
 .release-ble.is-done ion-icon { color: var(--c-glu); }
+/* Не вышло — предупреждение, а не ошибка: связь осталась, данные идут, потерять
+   ничего нельзя. Красный тут пугал бы сильнее, чем стоит событие. */
+.release-ble.is-fail { border-color: color-mix(in srgb, var(--c-carb) 50%, transparent); }
+.release-ble.is-fail ion-icon { color: var(--c-carb); }
 
 /* Вход в поиск по эфиру. Два вида намеренно: карточка кричит, только когда есть о чём
    кричать, — иначе человек привыкает к постоянному блоку и перестаёт его замечать
