@@ -8,7 +8,7 @@ import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusL
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
-import { связь, меткаСвязи, предложениеСлияния, толькоОблако } from '@/domain/deviceState';
+import { связь, меткаСвязи, предложениеСлияния, своиЖелезки } from '@/domain/deviceState';
 import { useSnapshot, sendIntent, type DeviceView } from '@/sources/bridge';
 
 import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
@@ -241,7 +241,7 @@ export default function DeviceSection({ onClose, cat, title }: {
 
   const onForget = async () => {
     if (cat !== 'sensor' && cat !== 'pump') return;
-    const свои = (snap?.devices ?? []).filter((d) => d.kind === cat && !толькоОблако(d));
+    const свои = своиЖелезки(snap, cat);
     const хвост = свои.length > 1 ? ` Записей в движке: ${свои.length} — уберём все.` : '';
     if (!window.confirm(`Забыть ${title.toLowerCase()}? Модель и мост нужно будет выбрать заново.${хвост}`)) return;
 
