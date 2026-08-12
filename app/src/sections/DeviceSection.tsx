@@ -8,7 +8,7 @@ import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusL
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
-import { связь, меткаСвязи, предложениеСлияния } from '@/domain/deviceState';
+import { связь, меткаСвязи, предложениеСлияния, толькоОблако } from '@/domain/deviceState';
 import { useSnapshot, sendIntent, type DeviceView } from '@/sources/bridge';
 
 import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
@@ -221,9 +221,40 @@ export default function DeviceSection({ onClose, cat, title }: {
     : hasBleDriver ? () => setScanOpen(true)
     : undefined;
 
-  const onForget = () => {
+  /* «Забыть» должно доходить до движка, а не только до нашего конфига.
+
+     Симптом с железа (SugarLifeCore#26): два Sibionics на один сенсор, «забыть» не
+     убирает — карточка возвращается. Мы чистили локальный реестр моделей, а запись в
+     базе движка оставалась и восстанавливалась на старте. Для человека это выглядит
+     как «кнопка не работает», и он жмёт её снова и снова.
+
+     Убираем ВСЕ устройства этого вида, а не только то, что показано в карточке.
+     Ровно в этом суть находки ядра: живые инстансы одного сенсора движок сливает по
+     MAC, а мёртвый старый bleId не сольётся никогда — он не подключается, резолвить
+     нечего. Убрать его может только «забыть», и если убрать одно из двух, второе
+     останется висеть, а человек будет думать, что забыл.
+
+     Облачные источники не трогаем. На нативе облачный поток приезжает с тем же kind
+     (движок метит вид по ролям), и «забыть свою помпу» снесло бы заодно приём данных
+     о ней из Nightscout — то есть выключило бы мониторинг вместо удаления записи. */
+  const [неЗабылось, setНеЗабылось] = useState<string | null>(null);
+
+  const onForget = async () => {
     if (cat !== 'sensor' && cat !== 'pump') return;
-    if (!window.confirm(`Забыть ${title.toLowerCase()}? Модель и мост нужно будет выбрать заново.`)) return;
+    const свои = (snap?.devices ?? []).filter((d) => d.kind === cat && !толькоОблако(d));
+    const хвост = свои.length > 1 ? ` Записей в движке: ${свои.length} — уберём все.` : '';
+    if (!window.confirm(`Забыть ${title.toLowerCase()}? Модель и мост нужно будет выбрать заново.${хвост}`)) return;
+
+    const отказ: string[] = [];
+    for (const d of свои) {
+      const r = await sendIntent({ type: 'removeDevice', deviceId: d.id });
+      if (!r.accepted) отказ.push(d.name || d.id);
+    }
+    /* Движок отказал — локальный конфиг не трогаем и не закрываемся. Иначе получилось
+       бы худшее из двух: модель забыта, а карточка вернётся при следующем запуске, и
+       связать одно с другим человек уже не сможет. */
+    if (отказ.length) { setНеЗабылось(отказ.join(', ')); return; }
+
     forgetDevice(cat);
     onClose();
   };
@@ -597,6 +628,15 @@ export default function DeviceSection({ onClose, cat, title }: {
                 <IonIcon icon={trashOutline} />
                 Забыть устройство
               </button>
+            )}
+            {/* Отказ движка показываем здесь же, а не всплывающим окном: человек
+                остался на карточке, и объяснение должно быть там, где он смотрит. */}
+            {неЗабылось && (
+              <div className="sheet-note warn">
+                Движок не принял удаление ({неЗабылось}). Модель оставили на месте — иначе
+                она пропала бы из настроек, а карточка вернулась бы при следующем запуске.
+                Попробуйте ещё раз; если повторится, это уже не про настройки.
+              </div>
             )}
           </>
 
