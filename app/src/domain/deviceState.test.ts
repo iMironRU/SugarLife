@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { связь, источникГлюкозы, источникПомпы, связьГлюкозы, предложениеСлияния, серийникИз } from './deviceState';
+import { связь, источникГлюкозы, источникПомпы, связьГлюкозы, предложениеСлияния, серийникИз, своиЖелезки } from './deviceState';
 import type { DeviceView, UiSnapshot } from '@/sources/bridge';
 
 /* Правило состояния связи проверяем тестами, потому что именно в нём живёт баг, с
@@ -169,5 +169,29 @@ describe('предложение слить облачную помпу с же�
     expect(серийникИз('medtronic-722:123456')).toBe('123456');
     expect(серийникИз('medtronic-722')).toBeNull();
     expect(серийникИз('medtronic-722:')).toBeNull();
+  });
+});
+
+
+/* Список для «забыть устройство». Ядро подтвердило (SugarLifeCore#26): removeDevice
+   на облачный источник НЕ игнорируется — движок снимет его и положит в tombstone,
+   и приём данных из Nightscout не вернётся даже после перезапуска. Ошибка здесь не
+   портит вид, а тихо выключает человеку мониторинг по кнопке «забыть помпу». */
+describe('своиЖелезки', () => {
+  it('облачный поток в список на удаление не попадает — ни по kind, ни по каналу', () => {
+    const облакоСервис = dev({ id: 'ns-pump', kind: 'service', roles: ['PumpStateSource'] });
+    const облакоСтарое = dev({ id: 'ns-pump-old', kind: 'pump', driverId: null });
+    const железка = dev({ id: 'mm', kind: 'pump', driverId: 'medtronic-722' });
+    expect(своиЖелезки(snap([облакоСервис, облакоСтарое, железка]), 'pump').map((d) => d.id)).toEqual(['mm']);
+  });
+
+  it('два инстанса одного сенсора — оба: мёртвый bleId сам не сольётся', () => {
+    const живой = dev({ id: 'sib-new', kind: 'sensor', driverId: 'sibionics' });
+    const мёртвый = dev({ id: 'sib-old', kind: 'sensor', driverId: 'sibionics', connection: 'Disconnected' });
+    expect(своиЖелезки(snap([живой, мёртвый]), 'sensor')).toHaveLength(2);
+  });
+
+  it('снимка нет — пусто, а не падение', () => {
+    expect(своиЖелезки(null, 'pump')).toEqual([]);
   });
 });
