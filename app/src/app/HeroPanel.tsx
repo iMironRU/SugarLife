@@ -9,6 +9,7 @@ import { deviceAges } from '@/domain/treatmentStats';
 import { useChanges } from '@/settings/changes';
 import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
 import { syncToActiveScreen, плавно } from '@/app/panel';
+import { связь, связьГлюкозы, источникПомпы, меткаСвязи, type Связь } from '@/domain/deviceState';
 import { activeInsulin } from '@/domain/loopValue';
 import { useSnapshot } from '@/sources/bridge';
 import CircleSparkline from '@/charts/CircleSparkline';
@@ -32,6 +33,22 @@ function shortStatus(s?: string | null): string {
 }
 const battColor = (p: number) => (p <= 20 ? 'var(--c-danger)' : p <= 50 ? 'var(--c-carb)' : 'var(--c-glu)');
 
+/* Метка связи у названия крыла.
+
+   Четыре состояния — три знака и молчание. «Не знаю» рисуем именно ничем: старый
+   мост состояния не присылает, и любая метка на его месте была бы утверждением,
+   которого мы сделать не можем. Пустое место читается как «неизвестно» само.
+
+   Ожидание — часики, те же, что в круге вместо стрелки: там они уже означают
+   «источник ещё не отдаёт свежее», и вводить для того же смысла второй знак значит
+   заставлять запоминать два. */
+function ТочкаСвязи({ что }: { что: Связь }) {
+  if (что === 'unknown') return null;
+  const title = меткаСвязи[что] ?? undefined;
+  if (что === 'wait') return <IonIcon className="hp-link-wait" icon={timeOutline} title={title} />;
+  return <span className={'live-dot' + (что === 'off' ? ' is-off' : '')} title={title} />;
+}
+
 /* Верхняя панель — единый постоянный элемент над контентом на ВСЕХ экранах.
 
    Состояний у неё нет: разметка одна и та же всегда, а размеры выражены в CSS
@@ -40,7 +57,8 @@ const battColor = (p: number) => (p <= 20 ? 'var(--c-danger)' : p <= 50 ? 'var(-
    прокрутке ни одним React-рендером. */
 export default function HeroPanel() {
   const { data, live, status } = useStore();
-  const m = useSnapshot()?.monitor ?? null; // монитор из моста (контракт)
+  const снимок = useSnapshot(); // снимок движка — единственная правда о состоянии
+  const m = снимок?.monitor ?? null; // монитор из моста (контракт)
   useUnit(); // перерисовка при смене единиц
   const tab = useTab();
   const extras = useDeviceExtras();
@@ -140,6 +158,17 @@ export default function HeroPanel() {
     : 'нет данных';
   const syncWarn = syncState === 'offline' || syncState === 'stale';
 
+  /* Состояние связи обоих крыльев — из снимка движка, и только из него
+     (SugarLifeCore#19). Раньше зелёная точка у «НМГ» горела от сокета стора, а у
+     «Помпы» состояния не было вовсе: экран устройств говорил «на связи», главный
+     экран об этом молчал, и человек получал два разных ответа на один вопрос.
+
+     Стор остался источником данных — резервуар, история, события; но не источником
+     того, работает ли связь сейчас. Правило одно на всё приложение, в
+     domain/deviceState.ts, и та же функция читает карточку устройства. */
+  const связьНмг = связьГлюкозы(снимок);
+  const связьПомпы = связь(источникПомпы(снимок));
+
   // датчик (день N) — слева; запас инсулина (≈N дн) — справа
   const ages = deviceAges(extras.events, changes);
   /* Без настроенного источника день датчика не показываем: события замены лежат
@@ -193,7 +222,7 @@ export default function HeroPanel() {
             <span className="hp-ico"><IonIcon icon={pulse} /></span>
             <span className="hp-head">
               <span className="hp-name">НМГ</span>
-              {live && <span className="live-dot" title="реальное время" />}
+              <ТочкаСвязи что={связьНмг} />
             </span>
             <span className="hp-sub">{nmgSub}{staleSensor && <IonIcon className="hp-stale" icon={timeOutline} />}</span>
             <span className="hp-val">{nmgVal}</span>
@@ -203,7 +232,13 @@ export default function HeroPanel() {
 
           <button className="hp-wing hp-wing-r" onClick={() => setTab(3)}>
             <span className="hp-ico"><IonIcon icon={flash} /></span>
-            <span className="hp-name">Помпа</span>
+            <span className="hp-head">
+              <span className="hp-name">Помпа</span>
+              <ТочкаСвязи что={связьПомпы} />
+            </span>
+            {/* «Цикл вкл / Пауза» — это режим подачи, а не связь: помпа может стоять
+                на паузе, будучи на связи, и молчать, будучи в замкнутом цикле. Два
+                разных факта, поэтому две разные метки, а не одна на двоих. */}
             <span className="hp-sub">{pumpStatus}</span>
             <span className="hp-val">{reservoir}</span>
             <span className="hp-sub">{resSub2}{staleDays && <IonIcon className="hp-stale" icon={timeOutline} />}</span>

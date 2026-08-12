@@ -8,6 +8,7 @@ import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusL
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
+import { связь } from '@/domain/deviceState';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
 import { sourceStatusLabel, sourceStatusWarn } from '@/domain/sourceStatus';
@@ -172,7 +173,11 @@ export default function DeviceSection({ onClose, cat, title }: {
      возраст показания, подсказка и тумблер авто-подключения (контракт 1.7).
      В браузере его нет вовсе: Nightscout-шим отдаёт только сервис, не железку. */
   const ble = (snap?.devices ?? []).find((d) => d.kind === cat) ?? null;
-  const bleLive = ble?.connection === 'Connected' || ble?.connection === 'Streaming';
+  /* Живость — по общему правилу (domain/deviceState.ts), а не по линку на месте.
+     Здесь и на «Сегодня» это должен быть один и тот же ответ: расхождение экранов
+     ровно с такой самодельной проверки и начиналось (SugarLifeCore#19). Разница не
+     косметическая: Connected при Acquiring — связь есть, показаний нет. */
+  const bleLive = связь(ble) === 'live';
   /* Что мост рассказывает о себе сам (1.7). Чего не прислал — не рисуем: пустая
      строка «Последнее показание —» хуже отсутствующей, она выглядит как поломка. */
   /* Кандидаты в основной источник — те, кто отдаёт глюкозу. Роль берём из снимка, а
