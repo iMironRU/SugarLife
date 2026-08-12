@@ -50,3 +50,6 @@ export const DiscoverySection = ленивый<{ onClose: () => void }>(
 
 export const MealsSection = ленивый<{ onClose: () => void }>(
   () => import('./MealsSection'), 'Приёмы пищи');
+
+export const DiagnosticsSection = ленивый<{ onClose: () => void }>(
+  () => import('./DiagnosticsSection'), 'Диагностика');

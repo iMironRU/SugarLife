@@ -1,9 +1,9 @@
 import { IonPage, IonContent, IonIcon, IonToggle } from '@ionic/react';
-import { DevicesSection, LoopSetupSection, ServicesSection } from '@/sections/lazy';
+import { DevicesSection, DiagnosticsSection, LoopSetupSection, ServicesSection } from '@/sections/lazy';
 import {
   personCircle, downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
-  hardwareChipOutline, cloudOutline, repeat, sparklesOutline,
+  hardwareChipOutline, cloudOutline, repeat, sparklesOutline, documentTextOutline,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '@/sources/store';
@@ -206,6 +206,17 @@ export default function Profile() {
           <div className="list">
             <Row icon={repeat} title="Профиль петли" sub={loopSub}
               onClick={() => push(<LoopSetupSection onClose={pop} />)} />
+          </div>
+
+          {/* Диагностика — в глубине, а не на виду: человеку с диабетом она нужна раз в
+              полгода, когда что-то не работает, и место на главном занимать не должна.
+              Но найти её надо уметь быстро, поэтому рядом с «о приложении», где и так
+              ищут версию и обновление (SugarLifeCore#17). */}
+          <div className="section-label sec">Диагностика</div>
+          <div className="list">
+            <Row icon={documentTextOutline} title="Логи работы"
+              sub="уровень подробности, запись в файл, выгрузка"
+              onClick={() => push(<DiagnosticsSection onClose={pop} />)} />
           </div>
 
           {/* о приложении: версия + сборка + обновление */}

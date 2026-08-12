@@ -45,6 +45,10 @@ export type ParamType = 'Text' | 'Secret' | 'Number' | 'Bool' | 'Enum';
 export interface Param {
   key: string; title: string; type: ParamType; required: boolean; default: string | null; options: string[];
   scan?: 'qr' | null; // rev ≥ 1.5+: поле сканируется камерой (кнопка «Сканировать QR»)
+  /* Короткая подсказка под полем: «где взять токен с правом записи», «где искать
+     серийник на помпе». Текст пишет тот, кто знает железку, — ядро; у нас ноль
+     хардкода под конкретный коннектор (SugarLifeCore#16). */
+  hint?: string | null;
 }
 export interface SettingsSpec { parameters: Param[]; }
 
