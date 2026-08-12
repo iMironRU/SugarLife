@@ -3,19 +3,20 @@ import { MGDL_PER_MMOL } from '@/domain/types';
    Внимание: конвертируется ТОЛЬКО глюкоза. Инсулин/углеводы форматируются
    через fmt() и единицами не затрагиваются. */
 import { useSyncExternalStore } from 'react';
+import { прочитать, записать } from '@/settings/storage';
 
 export type Unit = 'mmol' | 'mgdl';
 
 const KEY = 'sl.units';
 
-let unit: Unit = (typeof localStorage !== 'undefined' && (localStorage.getItem(KEY) as Unit)) || 'mmol';
+let unit: Unit = (прочитать(KEY) as Unit) || 'mmol';
 const subs = new Set<() => void>();
 
 export function getUnit(): Unit { return unit; }
 export function setUnit(u: Unit) {
   if (u === unit) return;
   unit = u;
-  try { localStorage.setItem(KEY, u); } catch { /* ignore */ }
+  записать(KEY, u);
   subs.forEach((f) => f());
 }
 function subscribe(cb: () => void) { subs.add(cb); return () => { subs.delete(cb); }; }
@@ -43,14 +44,14 @@ export type CarbUnit = 'g' | 'xe';
 export const XE_GRAMS = 12; // 1 Х.Е. = 12 г
 const CKEY = 'sl.carbunits';
 
-let carbUnit: CarbUnit = (typeof localStorage !== 'undefined' && (localStorage.getItem(CKEY) as CarbUnit)) || 'g';
+let carbUnit: CarbUnit = (прочитать(CKEY) as CarbUnit) || 'g';
 const csubs = new Set<() => void>();
 
 export function getCarbUnit(): CarbUnit { return carbUnit; }
 export function setCarbUnit(u: CarbUnit) {
   if (u === carbUnit) return;
   carbUnit = u;
-  try { localStorage.setItem(CKEY, u); } catch { /* ignore */ }
+  записать(CKEY, u);
   csubs.forEach((f) => f());
 }
 function csubscribe(cb: () => void) { csubs.add(cb); return () => { csubs.delete(cb); }; }

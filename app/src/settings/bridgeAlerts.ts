@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { прочитатьJson, записатьJson } from './storage';
 import { notify } from '@/platform/notify';
 
 /* Предупреждение о разряде моста.
@@ -29,7 +30,7 @@ const DEFAULT: BridgeAlertCfg = { on: true, threshold: 20, firedAt: null };
 
 function load(): BridgeAlertCfg {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) || 'null');
+    const v = прочитатьJson<Partial<BridgeAlertCfg> | null>(KEY, null);
     return v && typeof v === 'object' ? { ...DEFAULT, ...v } : DEFAULT;
   } catch { return DEFAULT; }
 }
@@ -37,7 +38,7 @@ function load(): BridgeAlertCfg {
 let state = load();
 const subs = new Set<() => void>();
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ignore */ }
+  записатьJson(KEY, state);
   subs.forEach((f) => f());
 }
 

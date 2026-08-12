@@ -1,3 +1,4 @@
+import { прочитатьJson, записатьJson } from './storage';
 /* Выбор устройства/инсулина пользователем. Хранится ТОЛЬКО локально (localStorage) —
    в Nightscout этого нет и писать некуда. v1: помпа + один быстрый инсулин.
    На будущее сюда добавятся режим (помпа/МДИ), базальный инсулин, мульти-профиль. */
@@ -33,7 +34,7 @@ const DEFAULT: DeviceConfig = {
 
 function load(): DeviceConfig {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) || 'null');
+    const v = прочитатьJson<Partial<DeviceConfig> | null>(KEY, null);
     return v ? { ...DEFAULT, ...v } : DEFAULT;
   } catch { return DEFAULT; }
 }
@@ -44,7 +45,7 @@ const subs = new Set<() => void>();
 export function getDeviceConfig(): DeviceConfig { return state; }
 export function setDeviceConfig(patch: Partial<DeviceConfig>): void {
   state = { ...state, ...patch };
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ignore */ }
+  записатьJson(KEY, state);
   subs.forEach((f) => f());
 }
 export function useDeviceConfig(): DeviceConfig {

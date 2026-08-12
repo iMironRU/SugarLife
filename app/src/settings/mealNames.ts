@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { прочитатьJson, записатьJson } from './storage';
 
 /* Имена повторяющихся приёмов.
 
@@ -25,7 +26,7 @@ interface Хранимое {
 
 function load(): Хранимое {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) || 'null');
+    const v = прочитатьJson<{ names?: Record<string, string>; skipped?: unknown } | null>(KEY, null);
     return v && typeof v === 'object'
       ? { names: v.names ?? {}, skipped: Array.isArray(v.skipped) ? v.skipped : [] }
       : { names: {}, skipped: [] };
@@ -35,7 +36,7 @@ function load(): Хранимое {
 let state = load();
 const subs = new Set<() => void>();
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ignore */ }
+  записатьJson(KEY, state);
   subs.forEach((f) => f());
 }
 
