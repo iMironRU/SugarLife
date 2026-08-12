@@ -14,8 +14,8 @@
    теперь кнопок две — без сброса браузер красит их в системный светлый. */
 .carb-now, .carb-hist { border: 0; font: inherit; color: inherit; background: none; }
 .carb-now {
-  display: flex; align-items: center; gap: 12px; text-align: left;
-  padding: 14px 16px 12px; cursor: pointer; transition: background .16s;
+  display: flex; align-items: center; gap: 9px; text-align: left;
+  padding: 14px 13px 12px; cursor: pointer; transition: background .16s;
 }
 .carb-now:active { background: color-mix(in srgb, var(--c-carb) 9%, transparent); }
 .carb-now-t { flex: 1; min-width: 0; }
@@ -25,7 +25,7 @@
    а огромный «—» — как жирная жёлтая черта. Приглушаем (см. domain/loopValue.ts). */
 .carb-big.is-unknown, .carb-big.is-unknown span { color: var(--color-neutral-500); }
 .carb-big.is-unknown { font-size: 30px; }
-.carb-lbl { font-size: 13px; color: var(--color-neutral-300); }
+.carb-lbl { font-size: 12.5px; line-height: 1.25; color: var(--color-neutral-300); }
 .carb-sub { font-size: 11px; color: var(--color-neutral-500); margin-top: 2px; }
 
 /* Действие глаголом: «Еда» была существительным, и что произойдёт по нажатию —
@@ -37,7 +37,7 @@
 /* Низ — что уже записано. Черта показывает границу «сейчас / было» и делит нажатия:
    верх вносит, низ открывает журнал. */
 .carb-hist {
-  display: flex; align-items: center; gap: 8px; padding: 9px 16px 10px; cursor: pointer;
+  display: flex; align-items: center; gap: 8px; padding: 9px 13px 10px; cursor: pointer;
   border-top: 1px solid color-mix(in srgb, var(--c-carb) 22%, transparent);
   background: color-mix(in srgb, var(--c-carb) 7%, transparent);
   transition: background .16s;
@@ -71,29 +71,38 @@
 .macros b { font-weight: 600; }
 .carbs { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 10px; }
 
-/* Плитка «Аналитика» — рядом с панелью углеводов и в её же логике: рамка цветом
-   темы, мягкая заливка, крупная область нажатия. Разный вид у двух соседних входов
-   читался бы как разная важность. */
-.an-panel {
-  width: 100%; margin-top: 10px; display: flex; align-items: stretch; overflow: hidden;
+/* Углеводы и разбор в одной строке (#148). Плитка углеводов растягивается, разбор
+   занимает фиксированную четверть: у него одна задача — быть заметным и сказать,
+   есть ли новое, а ширина под это не нужна. */
+.today-row { display: flex; gap: 10px; align-items: stretch; margin-top: 6px; }
+.today-row .carb-panel { flex: 1; min-width: 0; margin-top: 0; }
+
+.an-tile {
+  position: relative; flex: 0 0 23%; min-width: 78px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
   border-radius: 20px; cursor: pointer; font-family: var(--font-body); color: var(--color-text);
   border: 1.5px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 14%, transparent), color-mix(in srgb, var(--color-accent) 4%, transparent));
   transition: background .16s;
 }
-.an-panel:active { background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 20%, transparent), color-mix(in srgb, var(--color-accent) 7%, transparent)); }
-.an-panel.is-off {
-  cursor: default; opacity: .5;
-  border-color: var(--color-neutral-800); background: var(--color-neutral-900);
+.an-tile:active { background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 20%, transparent), color-mix(in srgb, var(--color-accent) 7%, transparent)); }
+.an-tile ion-icon { font-size: 24px; color: var(--color-accent); }
+.an-tile-t { font-size: 12px; font-weight: 600; }
+
+/* Значок непрочитанного. Жёлтый по умолчанию, красный — только когда среди нового
+   есть bad: «данных мало для разбора» и «половина показаний не доехала» не одного
+   веса, и одинаковый красный кружок уравнял бы их. */
+.an-badge {
+  position: absolute; top: 8px; right: 8px; min-width: 19px; height: 19px; padding: 0 5px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 10px; font-size: 11px; font-weight: 700;
+  background: var(--c-carb); color: var(--color-bg);
 }
-.an-ico { display: flex; align-items: center; padding: 16px 0 16px 18px; }
-.an-ico ion-icon { font-size: 26px; color: var(--color-accent); }
-.an-panel.is-off .an-ico ion-icon { color: var(--color-neutral-500); }
-.an-center { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 16px 14px; }
-.an-t { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
-.an-s { font-size: 11.5px; color: var(--color-neutral-400); text-wrap: pretty; }
-.an-go { display: flex; align-items: center; padding-right: 16px; }
-.an-go ion-icon { font-size: 18px; color: var(--color-neutral-500); }
+.an-badge.is-bad { background: var(--c-danger); color: #fff; }
+
+/* Выключенный разбор — строкой, а не плиткой: место в ряду стоит дорого, а сообщение
+   «вы это выключили» не стоит ничего. Прятать всё же нельзя. */
+.an-off-note { margin-top: 8px; font-size: 11.5px; color: var(--color-neutral-500); }
 
 /* Проактивный вопрос внутри подсветки: спросить дешевле, чем заставлять искать,
    где это исправить (принцип «проактивные вопросы вместо ретроактивных правок»). */

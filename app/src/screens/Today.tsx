@@ -30,16 +30,10 @@ import FoodSheet from '@/sheets/FoodSheet';
 import { DataGate } from '@/ui/NotConfigured';
 import { useStack } from '@/app/stackCtx';
 import { useAnalyticsOn } from '@/settings/analytics';
+import { useAnalysis, непрочитанныеВажные } from '@/domain/useAnalysis';
+import { useSeenInsights } from '@/settings/seenInsights';
 
 const DASH = '—';
-
-// склонение «приём/приёма/приёмов»
-function mealsWord(n: number): string {
-  const d = n % 10, dd = n % 100;
-  if (d === 1 && dd !== 11) return 'приём';
-  if (d >= 2 && d <= 4 && (dd < 10 || dd >= 20)) return 'приёма';
-  return 'приёмов';
-}
 
 const isPaused = (s?: string | null) => {
   const l = (s || '').toLowerCase();
@@ -203,6 +197,22 @@ export default function Today() {
   const longNoFood = daytime && !unloggedMeal && бодрыхЧасов != null && бодрыхЧасов >= 7;
 
 
+  /* Счётчик важного на плитке разбора (#148). Считаем НЕПРОЧИТАННОЕ: постоянное
+     число через неделю означает ноль — человек перестаёт его видеть, и когда там
+     появится настоящая беда, он не отличит её от привычной цифры.
+
+     Расчёт общий с самим разбором и попадает в те же кэши — второго чтения базы и
+     второго счёта не происходит (domain/useAnalysis.ts). */
+  const { analysis } = useAnalysis(14);
+  const виденные = useSeenInsights();
+  const новых = analyticsOn ? непрочитанныеВажные(analysis, виденные) : 0;
+  /* Красный — только когда среди непрочитанного есть bad. «Данных мало для разбора» и
+     «половина показаний не доехала» не одного веса, и одинаковый красный кружок
+     уравнял бы их. */
+  const срочное = analysis.insights.some(
+    (i) => i.severity === 'bad' && !виденные.includes(i.id),
+  );
+
   /* Отложенные подсветки (#147). Эпизод отвечает «какой это случай», уровень —
      «насколько плохо внутри случая». Отложили — молчим до смены эпизода или до
      ухудшения на шаг; правило и его обоснование в domain/snooze.ts.
@@ -284,6 +294,14 @@ export default function Today() {
               Число и подпись встали в строку, а не стопкой: «0 г активные углеводы»
               читается как фраза слева направо, а центрированная стопка посреди плитки
               не принадлежала ни одному краю. */}
+          {/* Углеводы и аналитика — в одну строку (#148). Аналитика занимала целую
+              строку ради двух слов, а ниже идут подсветки: чем раньше они попадают в
+              поле зрения, тем выше шанс, что их прочитают, а не пролистают.
+
+              Углеводам три четверти, аналитике четверть: в плитке углеводов живут два
+              числа и действие, а у входа в разбор задача одна — быть заметным и
+              сказать, есть ли там что-то новое. */}
+          <div className="today-row">
           <div className="carb-panel">
             <button className="carb-now" onClick={() => setFoodOpen(true)}>
               <div className={'carb-big' + (ac.known ? '' : ' is-unknown')}>{cob != null ? toCarbs(cob, cu) : DASH}<span>{carbUnitLabel(cu)}</span></div>
@@ -304,13 +322,17 @@ export default function Today() {
                 точное время и не показывать результат — нечестно. */}
             <button className="carb-hist"
               onClick={() => push(<MealsSection onClose={pop} />)}>
+              {/* Коротко, потому что плитка отдала четверть ширины разбору (#148).
+                  «5 ч» вместо «5 ч назад» и цифра вместо «3 приёма»: длинная форма
+                  обрезалась многоточием — и обрезалось на ней как раз число, то
+                  единственное, ради чего строку читают. */}
               <span className="carb-hist-l">
                 {последний
-                  ? <>Последний — <b>{toCarbs(последний.carbs, cu)} {carbUnitLabel(cu)}</b>, {agoText(последний.t)}</>
-                  : 'За сутки приёмов не вносили'}
+                  ? <>Последний <b>{toCarbs(последний.carbs, cu)} {carbUnitLabel(cu)}</b> · {agoText(последний.t).replace(' назад', '')}</>
+                  : 'За сутки не вносили'}
               </span>
               <span className="carb-hist-r">
-                {mealCount > 0 && <>{mealCount} {mealsWord(mealCount)} · {toCarbs(dayCarbs, cu)} {carbUnitLabel(cu)}</>}
+                {mealCount > 0 && <>{mealCount} · {toCarbs(dayCarbs, cu)} {carbUnitLabel(cu)}</>}
                 {mealCount === 0 && 'журнал'}
                 <IonIcon icon={chevronForward} />
               </span>
@@ -323,23 +345,25 @@ export default function Today() {
               обе — крупные входы, стоящие рядом, и разнобой в оформлении читался бы
               как разная важность. Выключенный показываем погасшим, а не прячем —
               иначе выключивший однажды уже не вспомнит, что это было. */}
-          {analyticsOn ? (
-            <button className="an-panel" onClick={() => push(<AnalyticsSection onClose={pop} />)}>
-              <div className="an-ico"><IonIcon icon={sparklesOutline} /></div>
-              <div className="an-center">
-                <div className="an-t">Аналитика</div>
-                <div className="an-s">расходники, сахар, пропуски в данных</div>
-              </div>
-              <div className="an-go"><IonIcon icon={chevronForward} /></div>
+          {analyticsOn && (
+            <button className="an-tile" onClick={() => push(<AnalyticsSection onClose={pop} />)}>
+              <IonIcon icon={sparklesOutline} />
+              <span className="an-tile-t">Разбор</span>
+              {/* Значка нет, когда важного нет: пустой счётчик приучает на счётчик не
+                  смотреть. Число — только про непрочитанное, иначе постоянная «12»
+                  через неделю не означает ничего (domain/useAnalysis.ts). */}
+              {новых > 0 && (
+                <span className={'an-badge' + (срочное ? ' is-bad' : '')}>{новых}</span>
+              )}
             </button>
-          ) : (
-            <div className="an-panel is-off">
-              <div className="an-ico"><IonIcon icon={sparklesOutline} /></div>
-              <div className="an-center">
-                <div className="an-t">Аналитика выключена</div>
-                <div className="an-s">включить: Профиль → Настройки → Выводить аналитику</div>
-              </div>
-            </div>
+          )}
+          </div>
+
+          {/* Выключенный разбор — строкой под рядом, а не плиткой в нём: место в ряду
+              стоит дорого, а сообщение «вы это выключили» не стоит ничего. Но и
+              спрятать нельзя — выключивший однажды не вспомнит, что это было. */}
+          {!analyticsOn && (
+            <div className="an-off-note">Разбор данных выключен · Профиль → Настройки</div>
           )}
 
           {/* помпа на паузе — важный статус, не прячем (авторитетно из AAPS) */}
