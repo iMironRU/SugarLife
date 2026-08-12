@@ -149,3 +149,18 @@
 }
 .meal-del ion-icon { font-size: 17px; }
 .meal-del:active { background: var(--color-neutral-800); color: var(--c-danger-2); }
+
+/* Лента подключения. Тонкие строки, а не карточки: это временные сообщения, и место
+   на главном они занимают ненадолго (ui/ConnectFeed.tsx). */
+.connect-feed { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.connect-line {
+  display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px;
+  background: var(--color-neutral-900); font-size: 12px; color: var(--color-neutral-300);
+}
+.connect-line ion-icon { font-size: 15px; flex-shrink: 0; }
+.connect-line span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.connect-line i { font-style: normal; font-size: 11px; color: var(--color-neutral-500); flex-shrink: 0; }
+.connect-line.is-captured ion-icon { color: var(--c-glu); }
+/* Потеря связи заметна цветом: её нужно увидеть, а успех можно и пропустить. */
+.connect-line.is-released { color: var(--c-danger-2); }
+.connect-line.is-released ion-icon { color: var(--c-danger-2); }

@@ -9,6 +9,7 @@ import { activeCarbs } from '@/domain/loopValue';
 import ChangedButton from '@/ui/ChangedButton';
 import ReleaseBle from '@/ui/ReleaseBle';
 import NearbyTile from '@/ui/NearbyTile';
+import ConnectFeed from '@/ui/ConnectFeed';
 import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
@@ -394,6 +395,10 @@ export default function Today() {
               </div>
             </div>
           )}
+
+          {/* Лента подключения: «сейчас поднимается вот что». Живёт минуты, потом
+              исчезает сама — подключение это событие, а не состояние (ui/ConnectFeed). */}
+          <ConnectFeed />
 
           {/* Вход в поиск по эфиру. Заметен, только когда подключать нечего или связь
               отвалилась; когда всё работает — тихая строка (ui/NearbyTile.tsx). */}

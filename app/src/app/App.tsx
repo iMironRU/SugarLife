@@ -17,6 +17,7 @@ import InstallPrompt from '@/ui/InstallPrompt';
 import HeroPanel from '@/app/HeroPanel';
 import { useStore } from '@/sources/store';
 import { useSnapshot } from '@/sources/bridge';
+import { diffBleActivity } from '@/sources/bleActivity';
 import { detectTherapy } from '@/domain/therapy';
 import { useTab, setTab, pressTab, getTab, TAB_PATHS } from '@/app/nav';
 import { useOnboarded } from '@/settings/onboarding';
@@ -141,6 +142,11 @@ export default function App() {
      иначе показания сенсора, прочитанного напрямую, в историю не попадут вовсе
      (sources/historySync.ts, SugarLifeCore#6). */
   useEffect(() => startHistorySync(), []);
+
+  /* Ощущение подключения (SugarLifeCore#18). Диффим снимки здесь, а не в компоненте
+     ленты: вибро должно случиться, даже когда «Сегодня» не открыт — телефон в кармане,
+     сенсор поймался, и человек узнаёт об этом пальцем, а не глазами. */
+  useEffect(() => { if (snap) diffBleActivity(snap.devices); }, [snap]);
 
 
   // Если у моста уже есть данные монитора (нативный движок/драйвер) — открываем
