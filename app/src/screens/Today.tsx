@@ -233,55 +233,52 @@ export default function Today() {
       <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
         <div className="screen">
           <DataGate>
-          {/* панель углеводов (по макету): Б/Ж/У · активные · Еда.
-              Б/Ж пусто — Nightscout не отдаёт белки/жиры, фейк не рисуем. */}
-          <button className="carb-panel" onClick={() => setFoodOpen(true)}>
-            {/* Слева — последний приём вместо прочерков Б/Ж/У.
+          {/* Панель углеводов: сейчас — сверху, записанное — снизу.
 
-                Белки и жиры мы не считаем и не собираемся: цель приложения — доза по
-                углеводам, а не дневник питания. Три прочерка в самом заметном месте
-                экрана читались не как «пока не заполнили», а как поломка.
+              Три колонки (Б/Ж/У · активные · Еда) распались, как только из левой ушли
+              белки и жиры: три блока с разным выравниванием и размером висели рядом
+              без единой связи, и было непонятно, что к чему относится.
 
-                Вместо них — ответ на вопрос, который человек задаёт себе чаще всего:
-                «я это вообще записал?». Он проверяем с одного взгляда и избавляет от
-                похода в журнал. */}
-            <div className="carb-last">
-              <div className="cl-cap">Последний</div>
-              {последний ? (
-                <>
-                  <div className="cl-val">{toCarbs(последний.carbs, cu)}<span>{carbUnitLabel(cu)}</span></div>
-                  <div className="cl-when">{agoText(последний.t).replace(' назад', '')}</div>
-                </>
-              ) : (
-                <>
-                  <div className="cl-val cl-none">{DASH}</div>
-                  <div className="cl-when">не вносили</div>
-                </>
-              )}
-            </div>
+              Связь есть, и она временная: наверху то, что действует сейчас и меняет
+              решение, внизу — что уже записано и где это посмотреть. Черта между
+              строками показывает эту границу; она же делит и нажатия — верх вносит,
+              низ открывает журнал.
 
-            <div className="carb-center">
+              Число и подпись встали в строку, а не стопкой: «0 г активные углеводы»
+              читается как фраза слева направо, а центрированная стопка посреди плитки
+              не принадлежала ни одному краю. */}
+          <div className="carb-panel">
+            <button className="carb-now" onClick={() => setFoodOpen(true)}>
               <div className={'carb-big' + (ac.known ? '' : ' is-unknown')}>{cob != null ? toCarbs(cob, cu) : DASH}<span>{carbUnitLabel(cu)}</span></div>
-              <div className="carb-lbl">активные углеводы</div>
-              <div className="carb-sub">{ac.reason ?? 'всего за день · ' + toCarbs(dayCarbs, cu) + ' ' + carbUnitLabel(cu)}</div>
-            </div>
-
-            {/* Правая колонка — вход в журнал, а не украшение. Плитка целиком значит
-                «внести», и это правильно; но проверить, что записалось и с каким
-                временем, до сих пор было негде. Просить точное время и не показывать
-                результат — нечестно. Новых блоков на экране при этом не появилось. */}
-            <div className="carb-food" role="button"
-              onClick={(e) => { e.stopPropagation(); push(<MealsSection onClose={pop} />); }}>
-              <IonIcon icon={restaurantOutline} />
-              <div className="carb-food-t">Еда</div>
-              {/* Шеврон в потоке, а не абсолютом: абсолютный уезжал от угла колонки,
-                  потому что её размер зависит от длины «N приёмов». */}
-              <div className="carb-food-s">
-                {mealCount} {mealsWord(mealCount)}
-                <IonIcon icon={chevronForward} />
+              <div className="carb-now-t">
+                <div className="carb-lbl">активные углеводы</div>
+                {ac.reason && <div className="carb-sub">{ac.reason}</div>}
               </div>
-            </div>
-          </button>
+              {/* Действие названо глаголом. «Еда» была существительным: что случится по
+                  нажатию — открытие журнала или ввод — приходилось угадывать. */}
+              <span className="carb-add">
+                <IonIcon icon={restaurantOutline} />
+                <span>внести</span>
+              </span>
+            </button>
+
+            {/* Нижняя строка отвечает на «я это вообще записал?» — вопрос, который
+                человек задаёт себе чаще всего. Раньше проверить было негде: просить
+                точное время и не показывать результат — нечестно. */}
+            <button className="carb-hist"
+              onClick={() => push(<MealsSection onClose={pop} />)}>
+              <span className="carb-hist-l">
+                {последний
+                  ? <>Последний — <b>{toCarbs(последний.carbs, cu)} {carbUnitLabel(cu)}</b>, {agoText(последний.t)}</>
+                  : 'За сутки приёмов не вносили'}
+              </span>
+              <span className="carb-hist-r">
+                {mealCount > 0 && <>{mealCount} {mealsWord(mealCount)} · {toCarbs(dayCarbs, cu)} {carbUnitLabel(cu)}</>}
+                {mealCount === 0 && 'журнал'}
+                <IonIcon icon={chevronForward} />
+              </span>
+            </button>
+          </div>
 
 
           {/* Разбор — отдельный экран, а не врезка: «Сегодня» про то, что делать

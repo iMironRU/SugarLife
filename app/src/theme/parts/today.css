@@ -1,35 +1,55 @@
 /* Экран «Сегодня» */
 
-/* ===== Панель углеводов (по макету): Б/Ж/У · активные · Еда ===== */
+/* ===== Панель углеводов: сейчас (верх) · записанное (низ) ===== */
 .carb-panel {
-  width: 100%; margin-top: 6px; display: flex; align-items: stretch; overflow: hidden;
-  border-radius: 20px; cursor: pointer; font-family: var(--font-body); color: var(--color-text);
+  width: 100%; margin-top: 6px; display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 20px; font-family: var(--font-body); color: var(--color-text);
   border: 1.5px solid color-mix(in srgb, var(--c-carb) 55%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 14%, transparent), color-mix(in srgb, var(--c-carb) 4%, transparent));
-  transition: background .16s;
 }
-.carb-panel:active { background: linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 20%, transparent), color-mix(in srgb, var(--c-carb) 7%, transparent)); }
 
-.carb-macros { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 14px 0 14px 18px; }
-.carb-macro { display: flex; align-items: baseline; gap: 5px; }
-.cm-k { font-size: 11px; color: var(--color-neutral-400); width: 12px; }
-.cm-v { font-size: 13px; font-weight: 600; }
-.cm-u { font-size: 10px; color: var(--color-neutral-400); }
-
-.carb-center { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 10px; }
-.carb-big { display: flex; align-items: baseline; gap: 5px; font-size: 40px; font-weight: 600; line-height: 1; letter-spacing: -.02em; color: var(--c-carb); }
+/* Верх — что действует сейчас. Число и подпись в строку: «0 г активные углеводы»
+   читается как фраза, а не как центрированная стопка ни при каком крае. */
+/* Сброс кнопочных умолчаний: раньше кнопкой была вся плитка и фон задавала она,
+   теперь кнопок две — без сброса браузер красит их в системный светлый. */
+.carb-now, .carb-hist { border: 0; font: inherit; color: inherit; background: none; }
+.carb-now {
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  padding: 14px 16px 12px; cursor: pointer; transition: background .16s;
+}
+.carb-now:active { background: color-mix(in srgb, var(--c-carb) 9%, transparent); }
+.carb-now-t { flex: 1; min-width: 0; }
+.carb-big { display: flex; align-items: baseline; gap: 4px; font-size: 38px; font-weight: 600; line-height: 1; letter-spacing: -.02em; color: var(--c-carb); }
 .carb-big span { font-size: 14px; font-weight: 500; color: var(--c-carb-2); }
 /* Неизвестно ≠ ноль: прочерк цветом углеводов читался как настоящее значение,
    а огромный «—» — как жирная жёлтая черта. Приглушаем (см. domain/loopValue.ts). */
 .carb-big.is-unknown, .carb-big.is-unknown span { color: var(--color-neutral-500); }
 .carb-big.is-unknown { font-size: 30px; }
-.carb-lbl { font-size: 11px; color: var(--color-neutral-400); margin-top: 5px; }
-.carb-sub { font-size: 10px; color: var(--color-neutral-500); margin-top: 3px; }
+.carb-lbl { font-size: 13px; color: var(--color-neutral-300); }
+.carb-sub { font-size: 11px; color: var(--color-neutral-500); margin-top: 2px; }
 
-.carb-food { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 4px; padding: 14px 18px 14px 0; text-align: right; }
-.carb-food ion-icon { font-size: 24px; color: var(--c-carb); }
-.carb-food-t { font-size: 14px; font-weight: 600; color: var(--color-text); }
-.carb-food-s { font-size: 10px; color: var(--color-neutral-400); line-height: 1.2; }
+/* Действие глаголом: «Еда» была существительным, и что произойдёт по нажатию —
+   ввод или журнал — приходилось угадывать. */
+.carb-add { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.carb-add ion-icon { font-size: 22px; color: var(--c-carb); }
+.carb-add span { font-size: 10px; color: var(--color-neutral-400); }
+
+/* Низ — что уже записано. Черта показывает границу «сейчас / было» и делит нажатия:
+   верх вносит, низ открывает журнал. */
+.carb-hist {
+  display: flex; align-items: center; gap: 8px; padding: 9px 16px 10px; cursor: pointer;
+  border-top: 1px solid color-mix(in srgb, var(--c-carb) 22%, transparent);
+  background: color-mix(in srgb, var(--c-carb) 7%, transparent);
+  transition: background .16s;
+}
+.carb-hist:active { background: color-mix(in srgb, var(--c-carb) 12%, transparent); }
+.carb-hist-l {
+  flex: 1; min-width: 0; text-align: left; font-size: 11.5px; color: var(--color-neutral-400);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.carb-hist-l b { font-weight: 600; color: var(--color-text); }
+.carb-hist-r { flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--color-neutral-400); }
+.carb-hist-r ion-icon { font-size: 13px; color: var(--color-neutral-500); }
 
 /* подсветки резервуара */
 .today-alert {
@@ -125,31 +145,6 @@
 .nearby-quiet ion-icon { font-size: 15px; flex-shrink: 0; }
 .nearby-quiet span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nearby-chev { font-size: 14px; opacity: .6; }
-
-/* Правая колонка плитки — вход в журнал. Стрелка мелкая: это не главное действие
-   плитки (главное — внести), но и не скрытый жест. */
-.carb-food { cursor: pointer; }
-.carb-food:active { opacity: .7; }
-/* Шеврон в потоке рядом со счётчиком: абсолютный уезжал от угла колонки, потому что
-   её ширина зависит от длины «N приёмов» («1 приём» и «12 приёмов» — разная). */
-.carb-food-s { display: inline-flex; align-items: center; gap: 2px; }
-.carb-food-s ion-icon { font-size: 12px; color: var(--color-neutral-500); }
-
-/* Последний приём вместо прочерков Б/Ж/У: отвечает на «я это записал?».
-
-   Отступы те же, что были у колонки Б/Ж/У: без них колонка вставала вплотную к рамке
-   и подпись обрезалась — плитка режет всё, что вылезает. */
-.carb-last {
-  flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
-  padding: 14px 0 14px 18px;
-}
-/* Не капсом: «ПОСЛЕДНИЙ» в семьдесят пикселей не помещается, а сокращать до «ПОСЛ.»
-   значит экономить на понятности ради регистра. */
-.cl-cap { font-size: 11px; color: var(--color-neutral-400); }
-.cl-val { margin-top: 4px; font-size: 20px; font-weight: 600; color: var(--c-carb); display: flex; align-items: baseline; gap: 3px; }
-.cl-val span { font-size: 11px; font-weight: 500; color: var(--c-carb-2); }
-.cl-val.cl-none { color: var(--color-neutral-600); }
-.cl-when { margin-top: 2px; font-size: 11px; color: var(--color-neutral-400); }
 
 /* Журнал приёмов */
 .meal-log { margin-top: 12px; border-radius: 18px; overflow: hidden; background: var(--color-neutral-900); }
