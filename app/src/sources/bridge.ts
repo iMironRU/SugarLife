@@ -236,6 +236,18 @@ export type Intent =
      Движок с шага 2 сливает их сам, когда Nightscout несёт серийник настроенной
      помпы; ручная привязка сильнее автоматической и нужна там, где серийника нет. */
   | { type: 'mapChannel'; channelId: string; deviceId: string | null }    // rev ≥ 1.8
+  /* Приём пищи в единую историю движка (rev ≥ 1.8, SugarLifeCore#25). Отсюда еда
+     уезжает туда же, куда болюсы, — в Nightscout аплоадером, дальше в Apple Health и
+     Health Connect коннектором. Второго писателя не появляется: пишет движок.
+
+     id — наш ключ идемпотентности (domain/meals.ts), ложится в externalId записи.
+     Повторная отправка после обрыва обязана распознаваться как повтор: задвоенные
+     углеводы — задвоенная доза.
+
+     atMs — время ЕДЫ, не внесения. insulin как есть: есть — записываем факт, нет —
+     значит не вводили, а не «посчитайте сами». */
+  | { type: 'logMeal'; id: string; atMs: number; carbs: number;
+      insulin?: number | null; kind?: string | null; note?: string | null }  // rev ≥ 1.8
   | { type: 'releaseBle' };                                              // rev ≥ 1.7
 
 export interface SugarLifeBridge {
