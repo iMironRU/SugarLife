@@ -20,6 +20,8 @@ import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNative
 import { useStack } from '@/app/stackCtx';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
 import { useLoopProfile, LOOP_MODES } from '@/settings/loopProfile';
+import { useDeviceConfig, deviceStatus } from '@/settings/deviceConfig';
+import { pumpById, sensorById } from '@/domain/catalog';
 import Row from '@/ui/Row';
 import { useAnalyticsOn, setAnalyticsOn } from '@/settings/analytics';
 import UnitsModal from '@/sheets/UnitsModal';
@@ -129,6 +131,18 @@ export default function Profile() {
     : upd.status === 'current' ? `Актуально · проверено ${agoMin != null && agoMin > 0 ? agoMin + ' мин назад' : 'только что'}`
     : 'Проверяю…';
 
+  /* Что записано в устройствах — коротко, для строки-входа. Названия моделей, а не
+     «настроено»: человек проверяет глазами свою помпу и свой сенсор, а слово
+     «настроено» одинаково выглядит и когда всё верно, и когда записана не та модель. */
+  const devCfg = useDeviceConfig();
+  const устройства = [pumpById(devCfg.pumpId)?.model, sensorById(devCfg.sensorId)?.name]
+    .filter(Boolean).join(' · ') || 'ничего не записано';
+  /* Справа — только то, что требует действия. Строка молчит, пока всё в порядке:
+     постоянная надпись «настроено» перестаёт читаться, и «нужен мост» рядом с ней
+     пропадёт вместе со всеми остальными. */
+  const нуженМост = deviceStatus('pump', devCfg) === 'needsBridge'
+    || deviceStatus('sensor', devCfg) === 'needsBridge';
+
   const loop = useLoopProfile();
   const loopMode = LOOP_MODES.find((m) => m.id === loop.mode);
   const loopSub = loop.savedAt
@@ -168,28 +182,25 @@ export default function Profile() {
             <div className="stat"><div className="stat-label">СУИ</div><div className="stat-val">{ic}<span></span></div></div>
           </div>
 
-          {/* настройки */}
-          <div className="section-label sec">Настройки</div>
-          <div className="list">
-            <Row icon={optionsOutline} title="Единицы глюкозы" value={unitLabel(unit)} onClick={() => setUnitsOpen(true)} />
-            <Row icon={nutritionOutline} title="Единицы еды" value={carbUnitLabel(carbUnit)} onClick={() => setCarbUnitsOpen(true)} />
-            <Row icon={sparklesOutline} title="Выводить аналитику"
-              sub="разбор данных на «Сегодня» и отдельным экраном"
-              right={<IonToggle checked={analyticsOn} onIonChange={(e) => setAnalyticsOn(e.detail.checked)} />} />
-            <Row icon={downloadOutline} title="Экспорт глюкозы в CSV" chevron={false} onClick={doExport} disabled={exporting}
-              value={exporting ? 'выгрузка…' : count != null ? `${count} зап.` : DASH} />
-          </div>
-          {exportMsg && <div className="metric-note" style={{ marginTop: 8 }}>{exportMsg}</div>}
+          {/* Порядок разделов — по тому, зачем сюда заходят, а не по тому, что важнее
+              звучит. Приходят посмотреть: на связи ли облако, что вообще подключено,
+              какая петля настроена. Единицы глюкозы меняют один раз в жизни, но они
+              стояли первыми и отодвигали вниз всё, ради чего экран открывают.
 
-          <div className="metric-note" style={{ marginTop: 14 }}>
-            Данные хранятся только на этом устройстве, без облака и аккаунта.
-          </div>
+              Поэтому сверху три блока про то, что работает (устройства · облака ·
+              петля), настройки — под ними. Диагностика, версия и оформление ниже:
+              туда идут по конкретному поводу и заранее знают, что ищут. */}
 
           {/* устройства (ЧТО) — отдельный полноэкранный раздел, не инлайн-список
               (см. docs/CONNECT-UX.md §10 «Карта интерфейса»: Профиль → Устройства) */}
           <div className="section-label sec">Устройства</div>
           <div className="list">
+            {/* Подпись — то, что записано на самом деле. Заголовок перечисляет, что
+                внутри раздела, и на вопрос «а что у меня подключено» не отвечал: за
+                ответом надо было открывать. Самый быстрый взгляд — тот, ради которого
+                никуда не переходят. */}
             <Row icon={hardwareChipOutline} title="Помпа, сенсоры, глюкометр, петля"
+              sub={устройства} value={нуженМост ? 'нужен мост' : undefined}
               onClick={() => push(<DevicesSection onClose={pop} />)} />
           </div>
 
@@ -206,6 +217,25 @@ export default function Profile() {
           <div className="list">
             <Row icon={repeat} title="Профиль петли" sub={loopSub}
               onClick={() => push(<LoopSetupSection onClose={pop} />)} />
+          </div>
+
+          {/* настройки */}
+          <div className="section-label sec">Настройки</div>
+          <div className="list">
+            <Row icon={optionsOutline} title="Единицы глюкозы" value={unitLabel(unit)} onClick={() => setUnitsOpen(true)} />
+            <Row icon={nutritionOutline} title="Единицы еды" value={carbUnitLabel(carbUnit)} onClick={() => setCarbUnitsOpen(true)} />
+            <Row icon={sparklesOutline} title="Выводить аналитику"
+              sub="разбор данных на «Сегодня» и отдельным экраном"
+              right={<IonToggle checked={analyticsOn} onIonChange={(e) => setAnalyticsOn(e.detail.checked)} />} />
+            <Row icon={downloadOutline} title="Экспорт глюкозы в CSV" chevron={false} onClick={doExport} disabled={exporting}
+              value={exporting ? 'выгрузка…' : count != null ? `${count} зап.` : DASH} />
+          </div>
+          {exportMsg && <div className="metric-note" style={{ marginTop: 8 }}>{exportMsg}</div>}
+
+          {/* Про хранение — рядом с экспортом: вопрос «а где вообще лежат мои данные»
+              возникает именно здесь. */}
+          <div className="metric-note" style={{ marginTop: 14 }}>
+            Данные хранятся только на этом устройстве, без облака и аккаунта.
           </div>
 
           {/* Диагностика — в глубине, а не на виду: человеку с диабетом она нужна раз в
