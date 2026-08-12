@@ -9,8 +9,11 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import org.json.JSONArray
@@ -221,9 +224,23 @@ class SugarLifeScanner(context: Context, private val onAdvertisement: (String) -
 
     fun start() {
         if (scanning) return
-        val scanner = adapter?.bluetoothLeScanner ?: return
+        val adapter = this.adapter ?: return
+        val scanner = adapter.bluetoothLeScanner ?: return
         scanning = true
-        scanner.startScan(callback)   // без фильтров — распознавание по каталогу в ядре (как iOS фильтр на будущее)
+        // issue #30: дефолтный скан — legacy-only + low-power → НЕ видит BLE-5 extended/periodic рекламу
+        // (так рекламируется GS1) → сенсор не находился на Android, а legacy-помпа находилась. Явно включаем
+        // видимость extended-рекламы + активный режим на экране поиска.
+        val settings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    setLegacy(false)   // отдавать И legacy, И extended рекламу (иначе только legacy)
+                    if (adapter.isLeCodedPhySupported) setPhy(ScanSettings.PHY_LE_ALL_SUPPORTED)
+                }
+            }
+            .build()
+        // Фильтров нет: ищем и сенсор (FF30, extended), и помпу (RileyLink, legacy) — распознаёт каталог в ядре.
+        scanner.startScan(emptyList<ScanFilter>(), settings, callback)
     }
     fun stop() {
         if (!scanning) return
