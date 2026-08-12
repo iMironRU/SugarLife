@@ -89,6 +89,30 @@ export interface DeviceView {
      Пока поле не приедет в снимок, это же состояние живёт у нас в settings/deviceConfig.ts. */
   registryState?: 'Recorded' | 'Configured' | 'Linked' | 'Paused';
   driverId?: string | null;
+  /* rev ≥ 1.8 (SugarLifeCore#23). Одно ЛОГИЧЕСКОЕ устройство достижимо несколькими
+     каналами: помпа — напрямую по BLE и одновременно через Nightscout. Пусто или
+     отсутствует — устройство одноканальное, и верхние поля описывают его целиком.
+     activeChannel — тот канал, чьи connection/status/live/latestAtMs подняты наверх. */
+  channels?: ChannelView[];
+  activeChannel?: string | null;
+}
+/* Канал доставки состояния (rev ≥ 1.8, SugarLifeCore#23).
+
+   Нужен ровно затем, чтобы «на связи» не значило разного. Помпа, о которой мы знаем
+   через облако, и помпа, с которой мы говорим напрямую, — это два разных факта, и
+   единственный способ не путать их в интерфейсе — спросить у движка, каким каналом
+   пришло состояние, а не угадывать по виду устройства.
+
+   С шага 3 (#23) статус НЕ-глюкозного канала считается по возрасту данных, а не по
+   сокету: молчащая час облачная помпа приезжает Delayed, а не Live. */
+export interface ChannelView {
+  id: string;                    // источник-инстанс: bleId или «ns-pump»
+  kind: 'direct' | 'bridged' | 'cloud';
+  priority: number;              // меньше — предпочтительнее (прямой 0 < облако 10)
+  connection: Link;
+  status: SourceStatus;
+  live: boolean;
+  latestAtMs: number | null;
 }
 /** Историческое имя той же сущности — оставлено, чтобы не переписывать экраны. */
 export type DeviceInfo = DeviceView;
@@ -201,6 +225,11 @@ export type Intent =
   | { type: 'configureBackup'; provider: 's3' | 'webdav'; params: Record<string, string> }
   | { type: 'backup' }
   | { type: 'restore' }
+  /* Привязать канал к логическому устройству (rev ≥ 1.8, SugarLifeCore#23): «эта
+     помпа в облаке — та же, что моя по BLE». deviceId = null снимает привязку.
+     Движок с шага 2 сливает их сам, когда Nightscout несёт серийник настроенной
+     помпы; ручная привязка сильнее автоматической и нужна там, где серийника нет. */
+  | { type: 'mapChannel'; channelId: string; deviceId: string | null }    // rev ≥ 1.8
   | { type: 'releaseBle' };                                              // rev ≥ 1.7
 
 export interface SugarLifeBridge {
