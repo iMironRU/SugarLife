@@ -212,7 +212,13 @@ ion-content { --background: var(--color-bg); }
 .hp-iob.is-unknown { color: var(--color-neutral-500); }
 /* Часики на месте стрелки тренда: источник ещё не отдаёт свежее, и направление
    относится к старому показанию (domain — SourceStatus в contract 1.7). */
+/* Приглушённое последнее значение: оно было настоящим, но текущим уже не является.
+   Прятать его нечестно — человеку важно знать, от чего он ушёл; важно лишь, чтобы
+   оно не выглядело живым (SugarLifeCore#27). */
+.hp-value.is-stale { color: var(--color-neutral-500); }
 .hp-arrow.hp-wait { color: var(--color-neutral-500); }
+/* Часики вместо числа: занимают его место, поэтому и размер числа. */
+.hp-arrow.hp-wait-big { font-size: calc(38px - 22px * var(--p)); }
 @media (prefers-reduced-motion: no-preference) {
   .hp-arrow.hp-wait { animation: hp-wait-pulse 1.8s ease-in-out infinite; }
 }
