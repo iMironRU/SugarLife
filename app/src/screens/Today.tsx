@@ -364,20 +364,26 @@ export default function Today() {
                 <b>Похоже, ты заправил картридж</b>
                 <span>
                   Остаток поднялся с {Math.round(заправка.from)} до {Math.round(заправка.to)} ед {agoText(заправка.at)}.
-                  В Nightscout события об этом нет, поэтому спрашиваем: отметить замену резервуара?
+                  В Nightscout события об этом нет, поэтому спрашиваем.
                 </span>
+                {/* Один вопрос, три ответа, а не два вопроса подряд.
+
+                    Сначала я спрашивал отдельно про картридж и отдельно про набор —
+                    формально честно (скачок остатка говорит только про картридж), а на
+                    деле человек отвечал дважды про одно решение. В жизни картридж и
+                    набор чаще меняют вместе: помпа сама ведёт через перемотку, замену и
+                    заполнение. Значит «оба» — обычный случай, а «только картридж» —
+                    отдельный, и это выбор, а не два допроса. */}
                 <span className="alert-ask alert-ask-row">
-                  <button className="changed-btn is-undo" onClick={() => { markChanged('reservoir', заправка.at); markRefillAsked(заправка.at); }}>
-                    Да, заправил
+                  <button className="changed-btn is-undo"
+                    onClick={() => { markChanged('reservoir', заправка.at); markChanged('site', заправка.at); markRefillAsked(заправка.at); }}>
+                    Картридж и набор
+                  </button>
+                  <button className="changed-btn"
+                    onClick={() => { markChanged('reservoir', заправка.at); markRefillAsked(заправка.at); }}>
+                    Только картридж
                   </button>
                   <button className="changed-btn" onClick={() => markRefillAsked(заправка.at)}>Нет</button>
-                </span>
-                {/* Отдельным вопросом: скачок остатка говорит про КАРТРИДЖ. Набор часто
-                    меняют вместе с ним, но не всегда, а признака смены набора в данных
-                    нет вовсе — поэтому только спрашиваем, а не выводим. */}
-                <span className="alert-ask">
-                  Заодно и инфузионный набор поменял?
-                  <ChangedButton what="site" label="Да, и набор" />
                 </span>
               </div>
             </div>

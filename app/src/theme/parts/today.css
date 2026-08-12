@@ -80,8 +80,9 @@
 .alert-ask { display: block; margin-top: 8px; }
 .alert-ask .changed-btn { margin-top: 6px; }
 
-/* Два ответа в строку: «да» и «нет» — равноправные, а не кнопка с отменой. */
-.alert-ask-row { display: flex; gap: 8px; }
+/* Ответы в строку. Переносятся, а не сжимаются: «Картридж и набор» на узком экране
+   должен уехать на вторую строку целиком, а не превратиться в «Картридж и…». */
+.alert-ask-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .alert-ask-row .changed-btn { margin-top: 6px; }
 
 /* «Отдать устройства»: действие в моменте, поэтому живёт среди подсветок, но выглядит
