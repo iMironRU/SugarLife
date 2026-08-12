@@ -1,7 +1,7 @@
 import { IonIcon } from '@ionic/react';
-import { bluetoothOutline, checkmarkCircleOutline } from 'ionicons/icons';
-import { useState } from 'react';
-import { sendIntent, useSnapshot } from '@/sources/bridge';
+import { bluetoothOutline, checkmarkCircleOutline, warningOutline } from 'ionicons/icons';
+import { useEffect, useRef, useState } from 'react';
+import { sendIntent, useSnapshot, type UiSnapshot } from '@/sources/bridge';
 
 /* «Отдать устройства» — разом отпустить все BLE-подключения.
 
@@ -16,30 +16,83 @@ import { sendIntent, useSnapshot } from '@/sources/bridge';
    вообще, и мы теряем весь ночной мониторинг.
 
    Показываем только когда есть кому отпускать: в браузере BLE нет как класса, и
-   кнопка, которая ничего не делает, хуже её отсутствия. */
+   кнопка, которая ничего не делает, хуже её отсутствия.
+
+   ПОЧЕМУ ЗДЕСЬ ПРОВЕРКА, А НЕ ПРОСТО «ГОТОВО». Раньше кнопка объявляла успех сразу
+   после отправки. На железе оказалось, что iOS-натив интент принимает, а peripheral
+   не отпускает (SugarLifeCore#20): связь рвётся только при закрытии приложения.
+   Человек читал «устройства отпущены», шёл подключаться родным приложением и не
+   понимал, почему сенсор занят.
+
+   Причём «принято» тут и не могло значить «сделано»: sendIntent по контракту
+   подтверждает ПРИЁМ, не исполнение. Единственное честное доказательство — снимок:
+   отпущенные устройства обязаны стать Disconnected. Его и ждём. Не дождались —
+   говорим прямо, что не вышло, и что помогает пока только закрытие приложения. */
+
+const ОЖИДАНИЕ_МС = 6000; // столько ждём, пока движок доложит об отключении
+
+const живыеLink = (s: UiSnapshot | null) => (s?.devices ?? []).filter(
+  (d) => d.kind !== 'service' && d.connection !== 'Disconnected',
+);
+
 export default function ReleaseBle() {
   const snap = useSnapshot();
-  const [отдано, setОтдано] = useState(false);
+  const [фаза, setФаза] = useState<'idle' | 'ждём' | 'готово' | 'не вышло'>('idle');
 
-  const bleУстройства = (snap?.devices ?? []).filter(
-    (d) => d.kind !== 'service' && d.connection !== 'Disconnected',
-  );
-  if (!bleУстройства.length) return null;
+  /* Свежий снимок для проверки после нажатия. Замыкание в таймере видело бы тот
+     снимок, что был в момент нажатия, — то есть заведомо ещё подключённые устройства,
+     и проверка всегда отвечала бы «не вышло». */
+  const текущий = useRef(snap);
+  useEffect(() => { текущий.current = snap; }, [snap]);
+
+  const bleУстройства = живыеLink(snap);
+  /* Кнопка исчезает, когда отпускать некого, — но не в момент, когда мы показываем
+     результат: иначе ответ на нажатие пропадал бы вместе с поводом для него, ровно
+     в тот миг, когда всё получилось. */
+  if (!bleУстройства.length && фаза === 'idle') return null;
 
   const отдать = async () => {
-    await sendIntent({ type: 'releaseBle' });
-    setОтдано(true);
-    window.setTimeout(() => setОтдано(false), 6000);
+    setФаза('ждём');
+    const r = await sendIntent({ type: 'releaseBle' });
+    if (!r.accepted) { setФаза('не вышло'); return; }
+
+    /* Ждём не «сколько-нибудь», а появления факта: устройств с живым линком не
+       осталось. Опрашиваем снимок, потому что подписка здесь не поможет — компонент
+       перерисуется, а обещание нужно проверить один раз и по времени. */
+    const до = Date.now() + ОЖИДАНИЕ_МС;
+    const проверить = () => {
+      if (!живыеLink(текущий.current).length) {
+        setФаза('готово');
+        window.setTimeout(() => setФаза('idle'), 6000);
+        return;
+      }
+      if (Date.now() >= до) { setФаза('не вышло'); return; }
+      window.setTimeout(проверить, 700);
+    };
+    window.setTimeout(проверить, 700);
   };
 
+  const вид = фаза === 'готово' ? { icon: checkmarkCircleOutline, cls: ' is-done' }
+    : фаза === 'не вышло' ? { icon: warningOutline, cls: ' is-fail' }
+    : { icon: bluetoothOutline, cls: '' };
+
   return (
-    <button className={'release-ble' + (отдано ? ' is-done' : '')} onClick={отдать} disabled={отдано}>
-      <IonIcon icon={отдано ? checkmarkCircleOutline : bluetoothOutline} />
+    <button className={'release-ble' + вид.cls} onClick={отдать} disabled={фаза === 'ждём' || фаза === 'готово'}>
+      <IonIcon icon={вид.icon} />
       <span>
-        <b>{отдано ? 'Устройства отпущены' : 'Отдать устройства'}</b>
+        <b>
+          {фаза === 'готово' ? 'Устройства отпущены'
+            : фаза === 'ждём' ? 'Отпускаю…'
+            : фаза === 'не вышло' ? 'Отпустить не вышло'
+            : 'Отдать устройства'}
+        </b>
         <i>
-          {отдано
+          {фаза === 'готово'
             ? 'Можно подключаться с другого телефона. Мы вернёмся сами, когда их освободят.'
+            : фаза === 'ждём'
+            ? 'Проверяю, что связь действительно разорвана'
+            : фаза === 'не вышло'
+            ? 'Связь осталась. Пока помогает только полностью закрыть приложение — мы чиним это.'
             : `Отпустить ${bleУстройства.length === 1 ? 'подключение' : 'подключения'} по блютусу — чтобы сенсор увидел другой телефон`}
         </i>
       </span>
