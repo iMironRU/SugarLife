@@ -2,7 +2,7 @@ import { IonIcon } from '@ionic/react';
 import { useState } from 'react';
 import { restaurantOutline, cloudOutline, trashOutline } from 'ionicons/icons';
 import PageHead from '@/ui/PageHead';
-import { useStore } from '@/sources/store';
+import { useTreatments } from '@/sources/db';
 import { useMeals, deleteMeal } from '@/sources/mealStore';
 import { useCarbUnit, toCarbs, carbUnitLabel, plural } from '@/domain/units';
 import { onlyLocal } from '@/domain/meals';
@@ -19,21 +19,27 @@ import { onlyLocal } from '@/domain/meals';
    Но пометку источника оставляем: удалить можно только своё, чужое приедет снова.
 
    Сутки по умолчанию: столько живут активные углеводы и столько человек помнит, что
-   ел. Неделя — по запросу, для разбора. */
+   ел. Неделя — по запросу, для разбора.
+
+   Лечение берём из локальной базы, а не из живого стора. Стор держит последние 120
+   событий — и на неделе это оказалось пусто: события лечения у человека с помпой почти
+   целиком temp basal, они идут каждые несколько минут и вытесняют всё остальное. За сто
+   двадцать событий набирается несколько часов, а не неделя. В IndexedDB же лежит
+   докачанная история, и окно там задаём мы. */
 
 const ЧАС = 3600e3;
 
 export default function MealsSection({ onClose }: { onClose: () => void }) {
-  const { data } = useStore();
   const meals = useMeals();
   const cu = useCarbUnit();
   const [окно, setОкно] = useState<24 | 168>(24);
 
+  const лечение = useTreatments(окно * ЧАС);
   const от = Date.now() - окно * ЧАС;
-  const свои = onlyLocal(meals, data?.treatments ?? [])
+  const свои = onlyLocal(meals, лечение)
     .filter((m) => m.t >= от)
     .map((m) => ({ id: m.id, t: m.t, carbs: m.carbs, kind: m.kind, своё: true }));
-  const облачные = (data?.treatments ?? [])
+  const облачные = лечение
     .filter((t) => (t.carbs ?? 0) > 0 && t.t >= от)
     .map((t) => ({ id: 'ns' + t.t, t: t.t, carbs: t.carbs as number, kind: t.type, своё: false }));
 
