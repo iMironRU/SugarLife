@@ -57,7 +57,11 @@ export type SessionState = 'WarmingUp' | 'Active' | 'Expiring' | 'Expired' | 'St
 /* Проекция устройства — read-only. Каноническое имя DeviceView (так зовётся в движке),
    DeviceInfo — исторический алиас веба, та же сущность. */
 export interface DeviceView {
-  id: string; name: string; kind: 'sensor' | 'pump' | 'service';
+  /* 'bridge' — rev ≥ 1.8 (SugarLifeCore#8): мост стал отдельным устройством, а не
+     свойством помпы. Так и есть на самом деле: у OrangeLink свой линк, свой заряд и
+     своя прошивка, и когда садится он — молчит помпа. Пока мост был строкой в
+     карточке помпы, это выглядело как поломка помпы. */
+  id: string; name: string; kind: 'sensor' | 'pump' | 'service' | 'bridge';
   roles: string[];
   /* ТОЛЬКО живой линк. Жизненный цикл записи в реестре (записано / настроено / забыто)
      сюда не помещается и придёт в 1.8 как registryState + driverId (SugarLifeCore#2);
@@ -95,6 +99,17 @@ export interface DeviceView {
      activeChannel — тот канал, чьи connection/status/live/latestAtMs подняты наверх. */
   channels?: ChannelView[];
   activeChannel?: string | null;
+  /* За каким мостом стоит это устройство (rev ≥ 1.8, SugarLifeCore#8). У помпы за
+     OrangeLink здесь id моста-устройства. Связь именно такая, а не наоборот: мост
+     может обслуживать несколько железок, и «мост знает свою помпу» было бы неправдой. */
+  behindBridgeId?: string | null;
+  /* Телеметрия, которую устройство рассказывает о себе само (rev ≥ 1.8): заряд,
+     прошивка, уровень сигнала. Display-only — решений по ним не принимаем.
+     Отсутствие поля — нормальное состояние, а не дырка: драйвер мог не уметь читать
+     батарею. Пустую строку вместо значения не рисуем, она выглядит как поломка. */
+  batteryPct?: number | null;
+  firmware?: string | null;
+  rssi?: number | null;
   /* Как источник называет себя сам (rev ≥ 1.8, SugarLifeCore#23). Для облака это
      devicestatus.device из Nightscout — «AndroidAPS-DASH», «Loop». Нужно ровно там,
      где мы собираемся спросить человека «это твоя помпа?»: показать надо реальную
