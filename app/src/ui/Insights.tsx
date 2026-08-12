@@ -36,10 +36,20 @@ function Card({ it, open, onToggle }: { it: Insight; open: boolean; onToggle: ()
   );
 }
 
-type TabKey = 'attention' | 'notes' | 'ok';
+/* Находки показываем ВСЕ и сразу, разделами (SugarLife#149).
+
+   Было три вкладки: «Внимание / Заметки / В норме», и в каждый момент видна одна.
+   Сверху к ним прибавлялся ряд фильтров по виду находки, который не влезал в
+   ширину — «Привычки» уезжали за край. Два фильтра над списком из девяти пунктов.
+
+   Фильтры нужны, когда список не окинуть взглядом. Девять окидываются. А вкладки к
+   тому же прячут: человек видел «Внимание» и не знал, что во второй вкладке лежит
+   объяснение, ради которого он и зашёл.
+
+   Разделы решают обе задачи разом: ничего не спрятано, счётчик стоит там же, где
+   заголовок, и прокрутка исчезла вместе с чипами. */
 
 export default function Insights({ analysis }: { analysis: Analysis | null }) {
-  const [tab, setTab] = useState<TabKey>('attention');
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   if (!analysis) {
     return (
@@ -62,33 +72,36 @@ export default function Insights({ analysis }: { analysis: Analysis | null }) {
   const notes = analysis.insights.filter((i) => i.severity === 'info');
   const ok = analysis.insights.filter((i) => i.severity === 'good');
 
-  const tabs: { key: TabKey; label: string; items: Insight[]; color: string; empty: string }[] = [
-    { key: 'attention', label: 'Внимание', items: attention, color: attention.some((i) => i.severity === 'bad') ? 'var(--c-danger)' : 'var(--c-carb)', empty: 'Ничего срочного.' },
-    { key: 'notes', label: 'Заметки', items: notes, color: 'var(--color-accent)', empty: 'Заметок нет.' },
-    { key: 'ok', label: 'В норме', items: ok, color: 'var(--c-glu)', empty: 'Пока пусто.' },
+  const разделы: { label: string; items: Insight[]; color: string }[] = [
+    { label: 'Внимание', items: attention, color: attention.some((i) => i.severity === 'bad') ? 'var(--c-danger)' : 'var(--c-carb)' },
+    { label: 'Заметки', items: notes, color: 'var(--color-accent)' },
+    { label: 'В норме', items: ok, color: 'var(--c-glu)' },
   ];
-  const active = tabs.find((t) => t.key === tab)!;
 
   return (
     <>
-      <div className="ins-tabs">
-        {tabs.map((t) => {
-          const on = tab === t.key;
-          return (
-            <button key={t.key} className={'ins-tab' + (on ? ' on' : '')} onClick={() => setTab(t.key)}
-              style={on ? { borderColor: `color-mix(in srgb, ${t.color} 60%, transparent)`, background: `color-mix(in srgb, ${t.color} 16%, var(--color-neutral-900))` } : undefined}>
-              <span>{t.label}</span>
-              <span className="ins-tab-count" style={t.items.length ? { color: t.color } : undefined}>{t.items.length}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {active.items.length ? (
-        <div className="insights">{active.items.map((it) => <Card key={it.id} it={it} open={openIds.has(it.id)} onToggle={() => toggle(it.id)} />)}</div>
-      ) : (
-        <div className="metric-note" style={{ marginTop: 12 }}>{active.empty}</div>
+      {/* «Внимание» пустое — говорим об этом словами. Отсутствие срочного это ответ,
+          а не отсутствие ответа: человек пришёл узнать, всё ли в порядке, и молчание
+          он прочитает как «не посчиталось». Остальные разделы при пустоте просто не
+          рисуем — «заметок нет» ничего никому не сообщает. */}
+      {!attention.length && (
+        <div className="ins-calm">
+          <IonIcon icon={checkmarkCircle} style={{ color: 'var(--c-glu)' }} />
+          <span>Ничего срочного не нашлось.</span>
+        </div>
       )}
+
+      {разделы.filter((р) => р.items.length).map((р) => (
+        <div key={р.label}>
+          <div className="ins-head">
+            <span className="ins-head-l" style={{ color: р.color }}>{р.label}</span>
+            <span className="ins-head-n">{р.items.length}</span>
+          </div>
+          <div className="insights">
+            {р.items.map((it) => <Card key={it.id} it={it} open={openIds.has(it.id)} onToggle={() => toggle(it.id)} />)}
+          </div>
+        </div>
+      ))}
     </>
   );
 }

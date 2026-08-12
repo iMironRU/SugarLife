@@ -201,15 +201,26 @@
 .ins-loading b { display: block; font-size: 14px; font-weight: 600; }
 .ins-loading span { display: block; font-size: 12px; color: var(--color-neutral-400); margin-top: 2px; }
 
-.ins-tabs { display: flex; gap: 6px; margin: 4px 0 12px; }
-.ins-tab {
-  flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 9px 6px; border-radius: 13px; cursor: pointer; font-family: var(--font-body);
-  font-size: 12.5px; font-weight: 500; color: var(--color-neutral-300);
-  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+/* Разделы находок вместо вкладок (SugarLife#149). Вкладки показывали одну группу из
+   трёх и прятали остальные — человек видел «Внимание» и не знал, что объяснение, за
+   которым он пришёл, лежит в соседней. Заголовок со счётчиком стоит там же, где
+   раньше был чип, но ничего не переключает и ничего не скрывает. */
+.ins-head {
+  display: flex; align-items: baseline; gap: 8px;
+  margin: 18px 2px 8px; font-size: 12px;
 }
-.ins-tab.on { color: var(--color-text); font-weight: 600; }
-.ins-tab-count { font-size: 12px; font-weight: 700; color: var(--color-neutral-500); }
+.ins-head-l { font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+.ins-head-n { color: var(--color-neutral-500); font-weight: 600; }
+
+/* «Ничего срочного» — единственная пустота, о которой стоит сказать словами:
+   человек пришёл узнать, всё ли в порядке, и молчание он прочтёт как «не посчиталось». */
+.ins-calm {
+  display: flex; align-items: center; gap: 9px; margin-top: 12px;
+  padding: 11px 13px; border-radius: 14px;
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+  font-size: 13px; color: var(--color-neutral-300);
+}
+.ins-calm ion-icon { font-size: 18px; flex-shrink: 0; }
 ion-toggle {
   --track-background: var(--color-neutral-800);
   --track-background-checked: var(--color-accent);

@@ -4,7 +4,6 @@ import { checkmarkCircle, warning, alertCircle } from 'ionicons/icons';
 import PageHead from '@/ui/PageHead';
 import PageLoading from '@/ui/PageLoading';
 import Insights from '@/ui/Insights';
-import { type InsightKind } from '@/domain/analysis';
 import { useChanges } from '@/settings/changes';
 import { analyzeCached } from '@/domain/analysisCache';
 import { insulinDaily } from '@/domain/treatmentStats';
@@ -23,14 +22,6 @@ import { useHistory, useTreatments } from '@/sources/db';
 
 const ПЕРИОДЫ = [3, 7, 14, 30];
 
-const ГРУППЫ: { key: InsightKind | 'all'; label: string }[] = [
-  { key: 'all', label: 'Все' },
-  { key: 'glucose', label: 'Сахар' },
-  { key: 'device', label: 'Расходники' },
-  { key: 'data', label: 'Данные' },
-  { key: 'habit', label: 'Привычки' },
-];
-
 export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
   const { data } = useStore();
   const [days, setDays] = useState(14);
@@ -42,7 +33,6 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
      историю чаще нечему помогать — только рывки на ровном месте. */
   const { entries: история, loading: читаю } = useHistory(days * 86400e3, { minRefreshMs: 3600e3 });
   const лечение = useTreatments(days * 86400e3, { minRefreshMs: 3600e3 });
-  const [kind, setKind] = useState<InsightKind | 'all'>('all');
   const батарея = data?.device?.uploaderBattery ?? null;
   const changes = useChanges();
 
@@ -66,13 +56,7 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [тик, days, батарея, changes]);
 
-  const отфильтровано = useMemo(
-    () => (kind === 'all' ? analysis : { ...analysis, insights: analysis.insights.filter((i) => i.kind === kind) }),
-    [analysis, kind],
-  );
 
-  const счёт = (k: InsightKind | 'all') =>
-    k === 'all' ? analysis.insights.length : analysis.insights.filter((i) => i.kind === k).length;
 
   const r = analysis.readiness;
   const вид = r.level === 'ready'
@@ -107,16 +91,12 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
         {r.reasons.length > 0 && <div className="rd-why">{r.reasons.join(' · ')}</div>}
       </div>
 
-      <div className="metric-chips chips-scroll">
-        {ГРУППЫ.map((g) => (
-          <button key={g.key} className={'metric-chip' + (kind === g.key ? ' on' : '')} onClick={() => setKind(g.key)}>
-            <span>{g.label}</span>
-            <span className="chip-n">{счёт(g.key)}</span>
-          </button>
-        ))}
-      </div>
-
-      <Insights analysis={отфильтровано} />
+      {/* Ряда фильтров по виду находки здесь больше нет (#149). Он не влезал в
+          ширину — «Привычки» уезжали за край, — и прятал варианты: чего не видно,
+          того для человека не существует. А главное, фильтровать девять пунктов
+          незачем: вид находки виден по её тексту, а разделы по важности показывают
+          всё сразу. */}
+      <Insights analysis={analysis} />
 
       <div className="sheet-note">
         Всё посчитано из ваших же данных — истории CGM и событий Nightscout. Ничего не
