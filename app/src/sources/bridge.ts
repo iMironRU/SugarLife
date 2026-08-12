@@ -92,6 +92,26 @@ export interface DeviceView {
 }
 /** Историческое имя той же сущности — оставлено, чтобы не переписывать экраны. */
 export type DeviceInfo = DeviceView;
+/* Базальный профиль, прочитанный движком (rev ≥ 1.8, SugarLifeCore#7).
+
+   Не голый список сегментов, а контейнер — и оба дополнительных поля появились по
+   нашей просьбе, потому что каждое закрывает свой класс ошибок.
+
+   origin — чьё это. На помпе лежит то, что реально работает сейчас; в Nightscout то,
+   что туда однажды выгрузили. Это разные степени доверия, и расхождение между ними —
+   полезная находка, но только если известно, что с чем сравниваем.
+
+   timezone — на какое время размечены интервалы. У помпы это null, и null здесь НЕ
+   «нет данных», а смысл: у 722 нет понятия зоны, времена — её собственные настенные
+   часы. Считать их локальными для телефона нельзя: у путешественника телефон в одной
+   зоне, помпа в другой, и он правил бы не тот интервал. */
+export interface BasalSegmentView { startMinutes: number; rateUPerHour: number }
+export interface BasalProfileView {
+  segments: BasalSegmentView[];
+  origin: 'Pump' | 'Nightscout';
+  timezone: string | null;
+}
+
 export interface Insights { mode: 'Observe' | 'Advisory' | 'ClosedLoop'; messages: string[]; }
 export interface PendingWrite { id: string; description: string; state: string; needsAttention: boolean; }
 
@@ -130,6 +150,8 @@ export interface UiSnapshot {
   discovered?: Discovered[];
   availableDrivers?: DriverDescriptor[];
   logging?: LoggingState | null;
+  // rev ≥ 1.8: базальный профиль с провенансом. Отсутствует — ещё не прочитан.
+  pumpBasal?: BasalProfileView | null;
 }
 
 // ---- История (rev ≥ 1.1): query(HistoryQuery) → HistoryResult ----

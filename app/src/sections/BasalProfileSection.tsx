@@ -2,6 +2,7 @@ import { IonIcon } from '@ionic/react';
 import { arrowUndoOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '@/sources/store';
+import { useSnapshot } from '@/sources/bridge';
 import {
   type Seg, PARTS, STEP, fmtH, roundRate, toSegs, rateAt, daily,
   partDose, partAvg, segsIn, sameProfile, tzShiftMinutes, tzShiftText,
@@ -47,7 +48,25 @@ function path(segs: Seg[], max: number): string {
 
 export default function BasalProfileSection({ onClose }: { onClose: () => void }) {
   const { data } = useStore();
-  const pump = toSegs(data?.profile?.basalSchedule ?? []);
+  const snap = useSnapshot();
+
+  /* Профиль с помпы важнее облачного. На помпе лежит то, что реально работает сейчас;
+     в Nightscout — то, что туда однажды выгрузили. Это разные степени доверия, и когда
+     доступны оба, показывать надо тот, по которому идёт подача (SugarLifeCore#7). */
+  const сДвижка = snap?.pumpBasal ?? null;
+  /* Приводим к нашей форме через тот же toSegs, что и облачный профиль: он достраивает
+     границы интервалов и закрывает сутки. Дублировать эту логику под второй источник
+     значило бы завести две версии одного правила. */
+  const pump = toSegs(сДвижка
+    ? сДвижка.segments.map((x) => ({ h: x.startMinutes / 60, v: x.rateUPerHour }))
+    : (data?.profile?.basalSchedule ?? []));
+  const источник: 'Pump' | 'Nightscout' = сДвижка?.origin ?? 'Nightscout';
+  /* Зона профиля. У помпы её нет вовсе — и это не «данных нет», а смысл: у 722 нет
+     понятия зоны, времена размечены её собственными настенными часами. Считать их
+     локальными для телефона нельзя: у путешественника телефон в одной зоне, помпа в
+     другой, и он правил бы не тот интервал. */
+  const зонаПрофиля = сДвижка ? сДвижка.timezone : (data?.profile?.timezone ?? null);
+  const зонаНеизвестна = источник === 'Pump' && зонаПрофиля == null;
 
   const [edit, setEdit] = useState(false);
   const [work, setWork] = useState<Seg[]>(pump);
@@ -64,7 +83,7 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
   /* Расхождение с часами телефона. Время интервалов оставляем помповым — значения
      вводят на самой помпе, глядя на её часы, — но молчать о разнице нельзя: иначе
      в поездке человек правит «ночь», которая у помпы вовсе не ночь. */
-  const сдвиг = tzShiftMinutes(data?.profile?.timezone);
+  const сдвиг = tzShiftMinutes(зонаПрофиля ?? undefined);
 
   const apply = (next: Seg[]) => { setUndo((u) => [...u.slice(-19), work]); setWork(next); };
   const undo = () => { if (!undoStack.length) return; setWork(undoStack[undoStack.length - 1]); setUndo((u) => u.slice(0, -1)); };
@@ -111,12 +130,24 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
   return (
     <>
       <div className="sheet stack-body">
-          <PageHead title="Базальный профиль" subtitle={data?.profile?.name ?? 'из Nightscout'} onBack={askClose} />
+          <PageHead title="Базальный профиль" subtitle={источник === 'Pump' ? 'прочитан с помпы' : (data?.profile?.name ?? 'из Nightscout')} onBack={askClose} />
 
-          {сдвиг !== 0 && (
+          {/* Зона неизвестна — говорим об этом прямо, а не молчим и не подставляем
+              местное время. У помпы нет понятия часового пояса: её времена это её
+              настенные часы. Пока телефон и помпа в одной зоне, разницы нет; в поездке
+              человек правил бы не тот интервал, и узнал бы об этом по сахару. */}
+          {зонаНеизвестна && (
+            <div className="lim-kid warn">
+              <b>Часы интервалов — помповые.</b> У помпы нет часового пояса, и совпадают
+              ли её часы с телефоном, приложение не знает. Если вы меняли пояс — сверьте
+              время на самой помпе, прежде чем править интервалы.
+            </div>
+          )}
+
+          {!зонаНеизвестна && сдвиг !== 0 && (
             <div className="lim-kid warn">
               <b>Время помпы отличается от времени телефона {tzShiftText(сдвиг)}.</b> Часы
-              интервалов ниже — помповые ({data?.profile?.timezone}), потому что значения
+              интервалов ниже — помповые ({зонаПрофиля}), потому что значения
               вы будете вводить на самой помпе. С местным временем они не совпадают.
             </div>
           )}
