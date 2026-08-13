@@ -63,9 +63,13 @@ ion-content { --background: var(--color-bg); }
 
    Обе выражены явно, а не измеряются в JS: покой = безопасная зона + 10 (верхний
    отступ) + 30 (строка статуса, высота фиксирована) + 150 (ряд), а сворачивание
-   отнимает ровно 100px = 96 у ряда и 4 у отступа. Пока эти числа совпадают с
+   отнимает ровно 92px = 88 у ряда и 4 у отступа. Пока эти числа совпадают с
    правилами ниже, промахнуться нечем — а измерять было чем: замер попадал на
-   середину анимации и переменная застревала на прошлом значении. */
+   середину анимации и переменная застревала на прошлом значении.
+
+   Сворачивание было 100px, стало 92. Восемь пикселей вернули крылу: в сжатом виде на
+   имя роли и значение приходилось 46px вместе с иконкой, и строки стояли впритык —
+   читалось как слипшийся блок, а не как две разные вещи. */
 /* Объявление типа нужно, чтобы --p умела ПЛАВНО меняться: браузер анимирует
    пользовательское свойство только тогда, когда знает, что это число, а не строка.
    Без объявления переход просто не применяется, и поведение остаётся прежним —
@@ -75,11 +79,20 @@ ion-content { --background: var(--color-bg); }
 :root {
   --p: 0;
   --sl-panel-rest: calc(env(safe-area-inset-top, 0px) + 190px);
-  --sl-panel-h: calc(var(--sl-panel-rest) - 100px * var(--p));
+  --sl-panel-h: calc(var(--sl-panel-rest) - 92px * var(--p));
   /* Высота панели в СЖАТОМ виде — то, во что она приходит внутри раздела. Отдельной
      величиной, потому что от неё считается отступ содержимого раздела, и считаться он
      обязан от постоянного числа, а не от текущей высоты. */
-  --sl-panel-min: calc(var(--sl-panel-rest) - 100px);
+  --sl-panel-min: calc(var(--sl-panel-rest) - 92px);
+  /* Середина — для экранов, которым не хватает содержимого на весь рост.
+
+     Сжимать панель до предела там, где под ней всё равно остаётся пустое место,
+     значит отбирать у сахара размер и ничего не давать взамен. Полшага: панель
+     заметно крупнее, а содержимое по-прежнему помещается целиком.
+
+     Постоянная величина, как и min: отступ содержимого обязан считаться от числа, а
+     не от текущей высоты, иначе содержимое поедет за панелью (SugarLife#162). */
+  --sl-panel-mid: calc(var(--sl-panel-rest) - 46px);
   /* Отступ содержимого от верха — ОДНА величина на все три вида поверхности:
      вкладку, страницу стека и шторку. Раньше их было три: ion-content брал
      --sl-panel-rest, .screen-pad добавлял шесть пикселей (и не у всех), а
@@ -87,6 +100,7 @@ ion-content { --background: var(--color-bg); }
      Боковое поле тоже одно: было 20 у экранов и 18 у разделов и шторок. */
   --sl-content-top: calc(var(--sl-panel-rest) + 6px);
   --sl-content-top-section: calc(var(--sl-panel-min) + 6px);
+  --sl-content-top-mid: calc(var(--sl-panel-mid) + 6px);
   --sl-side: 18px;
 }
 /* Плавно — только на смене экрана, и никогда под пальцем.
@@ -135,11 +149,11 @@ ion-content { --background: var(--color-bg); }
 .hp-batt-item { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; }
 .hp-batt-item ion-icon { font-size: 13px; color: currentColor; }
 
-.hp-row { position: relative; height: calc(150px - 96px * var(--p)); }
+.hp-row { position: relative; height: calc(150px - 88px * var(--p)); }
 
 .hp-rect {
   position: absolute; left: 0; right: 0;
-  top: calc(10px - 6px * var(--p)); height: calc(130px - 84px * var(--p));
+  top: calc(10px - 6px * var(--p)); height: calc(130px - 76px * var(--p));
   display: flex; border-radius: calc(20px - 6px * var(--p)); overflow: hidden;
   border: 1.5px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 14%, transparent), color-mix(in srgb, var(--color-accent) 4%, transparent));
@@ -153,7 +167,7 @@ ion-content { --background: var(--color-bg); }
    поэтому разрыва больше нет — есть одна форма, которая уменьшается. */
 .hp-wing {
   flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
-  gap: calc(3px - 2px * var(--p));
+  gap: calc(3px - 1px * var(--p));
   background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
   color: var(--color-text); transition: background .16s; overflow: hidden;
 }
@@ -300,3 +314,6 @@ ion-content { --padding-top: 0; }
 .screen { padding: var(--sl-content-top) var(--sl-side) 26px; }
 /* Экран со сжатой панелью — отступ от постоянной сжатой высоты, как у разделов. */
 .screen.is-compact { padding-top: var(--sl-content-top-section); }
+/* Содержимого мало — панель стоит на середине, и отступ считается от неё же
+   (ui/Screen.tsx решает, когда так). */
+.screen.is-mid { padding-top: var(--sl-content-top-mid); }

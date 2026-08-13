@@ -99,11 +99,11 @@ function Pager() {
   return (
     <div className="pager-viewport" ref={viewportRef}>
       <div className="pager-track" ref={trackRef} style={{ transform: `translate3d(${-idx * 100}%,0,0)` }}>
-        <div className={'pager-pane' + (idx === 0 ? ' is-active' : '')}><StackHost tab={0}><Metrics /></StackHost></div>
-        <div className={'pager-pane' + (idx === 1 ? ' is-active' : '')}><StackHost tab={1}><Mon /></StackHost></div>
-        <div className={'pager-pane' + (idx === 2 ? ' is-active' : '')}><StackHost tab={2}><Today /></StackHost></div>
-        <div className={'pager-pane' + (idx === 3 ? ' is-active' : '')}><StackHost tab={3}><Ins /></StackHost></div>
-        <div className={'pager-pane' + (idx === 4 ? ' is-active' : '')}><StackHost tab={4}><Profile /></StackHost></div>
+        <div data-tab={0} className={'pager-pane' + (idx === 0 ? ' is-active' : '')}><StackHost tab={0}><Metrics /></StackHost></div>
+        <div data-tab={1} className={'pager-pane' + (idx === 1 ? ' is-active' : '')}><StackHost tab={1}><Mon /></StackHost></div>
+        <div data-tab={2} className={'pager-pane' + (idx === 2 ? ' is-active' : '')}><StackHost tab={2}><Today /></StackHost></div>
+        <div data-tab={3} className={'pager-pane' + (idx === 3 ? ' is-active' : '')}><StackHost tab={3}><Ins /></StackHost></div>
+        <div data-tab={4} className={'pager-pane' + (idx === 4 ? ' is-active' : '')}><StackHost tab={4}><Profile /></StackHost></div>
       </div>
     </div>
   );
