@@ -1,4 +1,4 @@
-import type { ChannelView, DeviceView, UiSnapshot } from '@/sources/bridge';
+import type { ChannelView, DeviceView, RoleView, UiSnapshot } from '@/sources/bridge';
 
 /* Состояние связи устройства — одно правило на всё приложение.
 
@@ -255,8 +255,30 @@ export const СЛОВО_КАНАЛА: Record<ChannelView['kind'], string> = {
 export function устройствоРоли(
   snap: UiSnapshot | null | undefined, роль: 'sensor' | 'pump',
 ): DeviceView | null {
+  /* Если движок отдаёт роли — слушаем его, а не считаем заново.
+
+     Правило у нас с ним одно (SugarLifeCore#34 взял нашу формулировку дословно), но
+     считать по нему в двух местах всё равно нельзя: расходятся не правила, а их
+     реализации, и расхождение будет видно как «экран говорит одно, алгоритм делает
+     другое». Свой расчёт остаётся ровно для того случая, когда ролей в снимке нет:
+     старый мост, Nightscout-шим в браузере. */
+  const изДвижка = рольСнимка(snap, роль);
+  if (изДвижка) {
+    /* Роль есть, источника нет — это ответ, а не пробел: показывать «взято отсюда»,
+       когда движок говорит «неоткуда», значит выдумывать. */
+    if (!изДвижка.activeSourceId) return null;
+    return (snap?.devices ?? []).find((d) => d.id === изДвижка.activeSourceId) ?? null;
+  }
   if (роль === 'sensor') return источникГлюкозы(snap);
   return (snap?.devices ?? []).find((d) => d.kind === 'pump') ?? null;
+}
+
+/** Роль из снимка движка (rev ≥ 1.8). Пусто — движок ролей ещё не отдаёт. */
+export function рольСнимка(
+  snap: UiSnapshot | null | undefined, роль: 'sensor' | 'pump',
+): RoleView | null {
+  const имя = роль === 'sensor' ? 'cgm' : 'insulin';
+  return (snap?.roles ?? []).find((r) => r.role === имя) ?? null;
 }
 
 /* То же самое одним словом — для панели, где на строку приходится треть экрана.
@@ -278,10 +300,13 @@ export function активныйКанал(d: DeviceView | null | undefined): Ch
    и любое слово тут было бы выдумкой. Связи нет — «нет связи по радио» звучит как
    «есть другой путь, попробуйте его», а никакого другого пути нет: движок уже выбрал
    бы лучший канал, если бы тот работал. */
-export function черезЧто(d: DeviceView | null | undefined): string | null {
-  const к = активныйКанал(d);
-  if (!к) return null;
-  return связь(d) === 'off' ? null : СЛОВО_КАНАЛА[к.kind];
+export function черезЧто(d: DeviceView | null | undefined, via?: RoleView['via']): string | null {
+  /* via с роли главнее собственного разбора каналов: движок знает про источник больше,
+     чем видно в устройстве, — например когда роль обслуживается не тем устройством,
+     на которое мы смотрим. Своё вычисление остаётся, пока ролей в снимке нет. */
+  const вид = via ?? активныйКанал(d)?.kind ?? null;
+  if (!вид) return null;
+  return связь(d) === 'off' ? null : СЛОВО_КАНАЛА[вид];
 }
 
 /* Короткое «через что» — но только когда путей действительно несколько.

@@ -110,6 +110,14 @@ export interface DeviceView {
   batteryPct?: number | null;
   firmware?: string | null;
   rssi?: number | null;
+  /* Когда железку последний раз видели в эфире (rev ≥ 1.8, SugarLifeCore#34).
+
+     Ставит движок, когда объявление совпало с записью реестра. Нужно, чтобы показать
+     «рядом — переподключить», не сводя самим discovered[] с devices[]: такое сведение
+     даёт гонку «увидели/потеряли», и кнопка мигает.
+
+     Отсутствие поля — не «далеко», а «не знаем»: старый мост признака не шлёт. */
+  nearbyAtMs?: number | null;
   /* Как источник называет себя сам (rev ≥ 1.8, SugarLifeCore#23). Для облака это
      devicestatus.device из Nightscout — «AndroidAPS-DASH», «Loop». Нужно ровно там,
      где мы собираемся спросить человека «это твоя помпа?»: показать надо реальную
@@ -175,11 +183,49 @@ export interface LoggingState { level: 'Trace' | 'Debug' | 'Info' | 'Warn' | 'Er
 export interface Discovered {
   bleId: string; name: string | null; driverId: string; displayName: string; rssi: number | null;
   needsMoreParams: boolean; isTransport: boolean; transportFor: string[];
+  /* Уже заведённая запись, к которой относится это объявление (rev ≥ 1.8,
+     SugarLifeCore#34). Равно ТОМУ ЖЕ id, что мы рисуем и шлём в connect —
+     проекционному, а не внутреннему (их #35).
+
+     Отличает «известное железо рядом» от «нового, которое можно добавить». Без него
+     заведённый OrangeLink торчал в списке кандидатов на добавление, и человек заводил
+     второй такой же. */
+  knownDeviceId?: string | null;
 }
 // rev ≥ 1.2/1.5: каталог типов драйверов, которые умеет ядро
 export interface DriverDescriptor {
   id: string; displayName: string; kind: 'sensor' | 'pump' | 'service'; roles: string[];
   settings: SettingsSpec; available: boolean; canActivate?: boolean; providesTransportFor?: string[];
+}
+
+/* Роль — то, к чему привязаны экран и алгоритм (rev ≥ 1.8, SugarLifeCore#34).
+
+   До неё интерфейс сводил роль сам: искал среди devices[] сенсор, помпу, «кто
+   основной». Это работало, пока источник был один. С каналами и облаком правило
+   перестало быть очевидным, а алгоритм в движке нуждается в той же привязке — два
+   канона расходятся всегда, и роль переехала в движок ПО НАШЕМУ правилу
+   (domain/deviceState.ts, оно же эталон в их реализации).
+
+   ЧЕГО ЗДЕСЬ НЕТ И ПОЧЕМУ. Расходки и чисел: резервуар, заряд, оба срока сенсора и
+   сама глюкоза читаются с активного источника. Один срок на роли слил бы «день 12 из
+   14» (паспортный) и предупреждение (реальный, у части сенсоров дольше) — а это
+   разные вещи: одно пугает раньше времени, другое обещает больше, чем есть.
+
+   Роль отвечает ровно на «кто сейчас за это отвечает и как мы до него дотягиваемся». */
+export interface RoleView {
+  /** 'cgm' | 'insulin' | 'meter'. Ввод инсулина — ОДНА роль: помпа и ручка это два
+      способа делать одно, и переход МДИ↔помпа не должен терять историю роли. */
+  role: string;
+  /** Активный источник — правило (а): «откуда сейчас берутся цифры», облако тоже
+      законный источник. На вопрос «на связи ли сама железка» отвечает via. */
+  activeSourceId?: string | null;
+  sourceIds?: string[];
+  /** Текущий способ подачи — вид активного источника, только у роли insulin. */
+  method?: 'pump' | 'pen' | null;
+  /** Канал активного источника — из него строится «через что» человеку. */
+  via?: 'direct' | 'bridged' | 'cloud' | null;
+  /** С прямого/локального источника, даже когда активен облачный канал. */
+  serial?: string | null;
 }
 
 export interface UiSnapshot {
@@ -197,6 +243,9 @@ export interface UiSnapshot {
   logging?: LoggingState | null;
   // rev ≥ 1.8: базальный профиль с провенансом. Отсутствует — ещё не прочитан.
   pumpBasal?: BasalProfileView | null;
+  /* rev ≥ 1.8 (SugarLifeCore#34). Пусто или отсутствует — движок ролей ещё не отдаёт,
+     и мы сводим роль сами по тому же правилу (domain/deviceState.ts). */
+  roles?: RoleView[];
 }
 
 // ---- История (rev ≥ 1.1): query(HistoryQuery) → HistoryResult ----

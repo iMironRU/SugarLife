@@ -7,7 +7,7 @@ import { useStore } from '@/sources/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
 import { useSnapshot } from '@/sources/bridge';
-import { устройствоРоли, черезЧто } from '@/domain/deviceState';
+import { устройствоРоли, рольСнимка, черезЧто } from '@/domain/deviceState';
 import type { DeviceCatKey } from './DeviceSection';
 import { useStack } from '@/app/stackCtx';
 import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
@@ -28,8 +28,8 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
      говорила только «настроено», и это отвечало на вопрос про настройку, а не про
      то, работает ли связь и откуда. */
   const снимок = useSnapshot();
-  const каналПомпы = черезЧто(устройствоРоли(снимок, 'pump'));
-  const каналСенсора = черезЧто(устройствоРоли(снимок, 'sensor'));
+  const каналПомпы = черезЧто(устройствоРоли(снимок, 'pump'), рольСнимка(снимок, 'pump')?.via);
+  const каналСенсора = черезЧто(устройствоРоли(снимок, 'sensor'), рольСнимка(снимок, 'sensor')?.via);
 
   /* Деталь-строка честна: показываем только то, что реально знаем. Канал — из
      снимка движка, резервуар и заряд пока из Nightscout-стора (переезд на снимок —
