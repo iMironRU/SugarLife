@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { IonIcon } from '@ionic/react';
 import {
   checkmarkCircle, informationCircle, warning, alertCircle,
@@ -110,7 +110,15 @@ export default function Insights({ analysis }: { analysis: Analysis | null }) {
 
       <div className="period ins-tabs">
         {разделы.map((р) => (
+          /* Цвет вкладки — тот же, что у полосы слева у карточек внутри неё: жёлтый
+             для внимания (красный, если есть срочное), фиолетовый для заметок, зелёный
+             для нормы. Светофор здесь не украшение: он отвечает на вопрос «всё ли
+             плохо» до того, как человек прочтёт хоть одно слово.
+
+             Цвет отдаём стилю переменной, а не классом: у «Внимания» он зависит от
+             содержимого — при срочной находке жёлтый становится красным. */
           <button key={р.key} className={'period-seg' + (р.key === выбрана ? ' on' : '')}
+            style={{ '--сев': р.color } as CSSProperties}
             disabled={!р.items.length} onClick={() => setВкладка(р.key)}>
             {р.label}
             <span className="chip-n">{р.items.length}</span>
