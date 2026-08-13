@@ -106,7 +106,7 @@
 .wz-gate ion-icon { font-size: 19px; flex-shrink: 0; }
 
 .wz-nav { display: flex; gap: 8px; }
-.wz-nav .page-back, .wz-nav .page-next, .wz-nav .hold-btn { flex: 1; }
+.wz-nav .page-back, .wz-nav .page-btn, .wz-nav .page-next, .wz-nav .hold-btn { flex: 1; }
 .page-next {
   min-height: 48px; border-radius: 16px; border: 0; cursor: pointer;
   background: var(--color-accent); color: #fff; font-size: 15px; font-weight: 600; font-family: inherit;

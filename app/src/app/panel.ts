@@ -88,8 +88,22 @@ export function поПрокрутке(px: number): void {
 export function syncToActiveScreen(): void {
   const pane = document.querySelector('.pager-pane.is-active');
   if (!pane) { setCollapse(0); return; }
-  const stack = pane.querySelector('.stack-page.is-top .stack-body') as HTMLElement | null;
-  if (stack) { setCollapse(stack.scrollTop); return; }
+  /* В разделе панель всегда компактная, и прокрутка её не трогает.
+
+     Раздел — рабочая поверхность: список устройств, редактор базала, логи. Человек
+     пришёл туда работать со списком, а не смотреть на сахар, и сто пикселей панели
+     стоят двух-трёх строк, которых ему не хватает. Сахар при этом никуда не девается:
+     в сжатом виде остаются и число, и строка связи — обещание «значение всегда на
+     виду» держится, просто мельче.
+
+     Пинуем именно здесь, а не отдельным флагом: тогда состояние панели по-прежнему
+     выводится из того, что сейчас на экране, а не хранится где-то рядом и не рискует
+     разойтись с ним. */
+  /* Уходящую страницу не считаем: она уже снята со стека и доигрывает уход
+     (app/stack.tsx), а панель обязана возвращаться к состоянию вкладки СРАЗУ —
+     иначе после «назад» она остаётся сжатой, будто раздел ещё открыт. */
+  const stack = pane.querySelector('.stack-page.is-top:not(.is-leaving) .stack-body') as HTMLElement | null;
+  if (stack) { setProgress(1); return; }
   const content = pane.querySelector('ion-content') as (HTMLElement & { getScrollElement?: () => Promise<HTMLElement> }) | null;
   if (content?.getScrollElement) {
     content.getScrollElement().then((el) => setCollapse(el.scrollTop)).catch(() => setCollapse(0));

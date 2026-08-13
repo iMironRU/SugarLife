@@ -91,13 +91,13 @@ export default function BasalSteps({
         <IonFooter className="page-foot">
           {seg && Math.abs(seg.v - segPump) > 1e-6 ? (
             <div className="bas-act-col">
-              <button className="page-back bas-go" onClick={() => setSegRate(segPump)}>
+              <button className="page-btn bas-go" onClick={() => setSegRate(segPump)}>
                 ↺ Вернуть как в помпе {segPump.toFixed(2)}
               </button>
-              <button className="page-back" onClick={() => onClose()}>Всё же оставить {seg.v.toFixed(2)}</button>
+              <button className="page-btn" onClick={() => onClose()}>Всё же оставить {seg.v.toFixed(2)}</button>
             </div>
           ) : (
-            <button className="page-back" onClick={() => onClose()}>Готово</button>
+            <button className="page-btn" onClick={() => onClose()}>Готово</button>
           )}
         </IonFooter>
       </IonModal>
@@ -123,9 +123,9 @@ export default function BasalSteps({
         </IonContent>
         <IonFooter className="page-foot">
           <div className="bas-act-col">
-            <button className="page-back bas-go" disabled={!scalePct}
+            <button className="page-btn bas-go" disabled={!scalePct}
               onClick={() => { apply(scaleAll(work, scalePct)); onClose(); }}>Применить</button>
-            <button className="page-back" onClick={() => onClose()}>Отмена</button>
+            <button className="page-btn" onClick={() => onClose()}>Отмена</button>
           </div>
         </IonFooter>
       </IonModal>
@@ -141,8 +141,8 @@ export default function BasalSteps({
         </IonContent>
         <IonFooter className="page-foot">
           <div className="bas-act-col">
-            <button className="page-back bas-go" onClick={() => { apply(flatten(work)); onClose(); }}>Выровнять</button>
-            <button className="page-back" onClick={() => onClose()}>Отмена</button>
+            <button className="page-btn bas-go" onClick={() => { apply(flatten(work)); onClose(); }}>Выровнять</button>
+            <button className="page-btn" onClick={() => onClose()}>Отмена</button>
           </div>
         </IonFooter>
       </IonModal>
@@ -178,7 +178,7 @@ export default function BasalSteps({
         </IonContent>
         <IonFooter className="page-foot">
           {saved ? (
-            <button className="page-back" onClick={() => onClose()}>Понятно</button>
+            <button className="page-btn" onClick={() => onClose()}>Понятно</button>
           ) : (
             <div className="bas-act-col">
               <HoldButton
@@ -186,7 +186,7 @@ export default function BasalSteps({
                 disabled={done.length !== changedList.length}
                 onComplete={saveToHistory}
               />
-              <button className="page-back" onClick={() => onClose()}>Позже</button>
+              <button className="page-btn" onClick={() => onClose()}>Позже</button>
             </div>
           )}
         </IonFooter>

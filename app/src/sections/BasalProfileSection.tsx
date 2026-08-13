@@ -135,10 +135,10 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
         footer={edit && changedAll ? (
           <div className="page-foot">
             <div className="bas-act">
-              <button className="page-back bas-undo" onClick={undo} disabled={!undoStack.length} aria-label="Отменить">
+              <button className="page-btn bas-undo" onClick={undo} disabled={!undoStack.length} aria-label="Отменить">
                 <IonIcon icon={arrowUndoOutline} />
               </button>
-              <button className="page-back bas-go" onClick={() => { setDone([]); setSaved(false); setInner({ kind: 'transfer' }); }}>
+              <button className="page-btn bas-go" onClick={() => { setDone([]); setSaved(false); setInner({ kind: 'transfer' }); }}>
                 Перенести в помпу
               </button>
             </div>

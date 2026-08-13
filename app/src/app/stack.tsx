@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createGesture } from '@ionic/react';
 import { StackCtx, type StackApi } from './stackCtx';
-import { syncToActiveScreen, плавно, поПрокрутке } from './panel';
+import { syncToActiveScreen, плавно } from './panel';
 import { useGoHome } from './nav';
 import { canStartBack, shouldGoBack } from './backGesture';
 
@@ -155,10 +155,10 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
     return () => жест.destroy();
   }, [pages.length, popПослеЖеста]);
 
-  const наПрокрутку = (e: React.UIEvent<HTMLDivElement>) => {
-    const t = e.target as HTMLElement;
-    if (t?.classList?.contains('stack-body')) поПрокрутке(t.scrollTop);
-  };
+  /* Прокрутка раздела панель не двигает — она там уже сжата (app/panel.ts).
+
+     Иначе получилось бы хуже, чем было: отступ содержимого раздела привязан к текущей
+     высоте панели, и панель, дышащая за прокруткой, таскала бы содержимое за собой. */
 
   return (
     <StackCtx.Provider value={api}>
@@ -182,7 +182,7 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
             /* Пока тянут, страницу под верхней надо ВИДЕТЬ — иначе из-под уходящей
                покажется пустота вместо того, куда возвращаются. */
             + (тянут && i === pages.length - 2 ? ' is-under' : '')}
-          aria-hidden={i !== pages.length - 1} onScrollCapture={наПрокрутку}>
+          aria-hidden={i !== pages.length - 1}>
           {p.node}
         </div>
       ))}
