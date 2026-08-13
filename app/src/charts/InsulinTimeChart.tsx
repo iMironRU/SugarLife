@@ -1,4 +1,5 @@
 import EChart from './Chart';
+import { осьВремени, ширинаГрафика } from './timeAxis';
 import { cssVar } from './cssVar';
 import type { Treatment } from '@/sources/nightscout';
 
@@ -38,7 +39,11 @@ export default function InsulinTimeChart({
     grid: { left: 34, right: hasBolus ? 30 : 10, top: 10, bottom: 20 },
     xAxis: {
       type: 'time', min: t0, max: now,
-      axisLabel: { color: axis, fontSize: 10, formatter: '{HH}:{mm}' },
+      /* Подписи прореживаем и ставим на круглые времена (charts/timeAxis.ts, #157):
+         формат «каждая точка» превращал ось в сплошной ряд чисел. hideOverlap — на
+         случай, когда наша оценка ширины разойдётся с настоящей: лучше пропущенная
+         подпись, чем две наложенные. */
+      axisLabel: { color: axis, fontSize: 10, hideOverlap: true, ...осьВремени(t0, now, ширинаГрафика(64)) },
       axisLine: { lineStyle: { color: grid, opacity: 0.4 } }, axisTick: { show: false },
       splitLine: { show: false },
     },
