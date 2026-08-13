@@ -1,7 +1,7 @@
 import { IonModal, IonIcon, createGesture } from '@ionic/react';
 import { closeOutline, chevronBack } from 'ionicons/icons';
 import { useEffect, useRef, type ReactNode } from 'react';
-import { закрыватьЛи, сдвиг, тянемШторку } from './sheetGesture';
+import { закрыватьЛи, сдвиг, тянемШторку, начинатьЛи } from './sheetGesture';
 
 /* Оболочка шторки — единственное место, где собирается модалка.
 
@@ -91,7 +91,7 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
       canStart: (d) => {
         const цель = d.event.target as HTMLElement | null;
         изШапки = !!(шапка && цель && шапка.contains(цель));
-        return тянемШторку(изШапки, низ.scrollTop);
+        return начинатьЛи(изШапки, низ.scrollTop, d.deltaY);
       },
       onStart: () => { H = кор.clientHeight || 1; кор.style.transition = 'none'; },
       onMove: (d) => {
