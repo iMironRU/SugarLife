@@ -369,9 +369,15 @@ export default function DeviceSection({ onClose, cat, title }: {
                     {activeMeth === 'cloud' && <span className="meth-now">сейчас</span>}
                   </div>
 
-                  {/* Ручной ввод не заменяет остальные способы, а дополняет: показание
-                      с пальца отвечает на вопрос «сенсор не врёт?», и данными самого
-                      сенсора на него не ответить. */}
+                  {/* Только у сенсора (#163). Ручной ввод не заменяет остальные способы, а
+                      дополняет: показание с пальца отвечает на вопрос «сенсор не врёт?», и
+                      данными самого сенсора на него не ответить.
+
+                      На карточке помпы этой строки быть не должно, а она там была: нажатие
+                      затемняло экран и открывало шторку «Показание глюкометра». Снаружи это
+                      читается не как «не туда нажал», а как «приложение сломалось» — и
+                      дальше человек перестаёт трогать соседние кнопки тоже. */}
+                  {cat === 'sensor' && (
                   <button className="list-row meth" onClick={() => setSmbgOpen(true)}>
                     <IonIcon icon={createOutline} className="list-ico" />
                     <span className="pick-main">
@@ -384,6 +390,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                     </span>
                     <IonIcon icon={chevronForward} className="list-chev" />
                   </button>
+                  )}
                 </div>
                 <div className="sheet-note">
                   {needsBridge ? bridgeHint + ' ' : ''}

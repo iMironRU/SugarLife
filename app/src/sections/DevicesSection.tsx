@@ -55,8 +55,15 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
 
         <div className="section-label sec">Глюкометры и петля</div>
         <div className="list">
-          <Row icon={speedometerOutline} title="Глюкометр" value="настроить" onClick={() => openCat('meter')} />
-          <Row icon={repeat} title="Петля" value="настроить" onClick={() => openCat('loop')} />
+          {/* Значение строки обязано совпадать с тем, что человек найдёт внутри (#163).
+              Здесь стояло «настроить» у обоих, а внутри — «в разработке»: у глюкометра
+              настраивать пока нечего (можно только внести показание), у петли нет и
+              этого. Слово, обещающее действие, которого нет, читается как поломка, а
+              не как «ещё не сделали». */}
+          <Row icon={speedometerOutline} title="Глюкометр" value="внести показание"
+            onClick={() => openCat('meter')} />
+          <Row icon={repeat} title="Петля" value="в разработке" valueMuted
+            onClick={() => openCat('loop')} />
         </div>
 
         <div className="list" style={{ marginTop: 12 }}>
