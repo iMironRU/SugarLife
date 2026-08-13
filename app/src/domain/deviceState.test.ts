@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { связь, источникГлюкозы, источникПомпы, связьГлюкозы, предложениеСлияния, серийникИз, своиЖелезки, видКруга } from './deviceState';
+import { связь, источникГлюкозы, источникПомпы, связьГлюкозы, предложениеСлияния, серийникИз, своиЖелезки, видКруга, черезЧто, активныйКанал, черезЧтоСпорное, устройствоРоли } from './deviceState';
 import type { DeviceView, UiSnapshot } from '@/sources/bridge';
 
 /* Правило состояния связи проверяем тестами, потому что именно в нём живёт баг, с
@@ -216,5 +216,75 @@ describe('вид круга глюкозы', () => {
   it('старый мост статуса не присылает — показываем как раньше', () => {
     expect(видКруга(snap([]))).toBe('число');
     expect(видКруга(null)).toBe('число');
+  });
+});
+
+/* «Через что» — половина ответа на вопрос «почему помпа на связи, а мост нет»
+   (SugarLifeCore#34). Ошибка здесь не видна глазами: строка есть, читается складно и
+   врёт — человек идёт менять батарейку в мосте, который ни при чём. */
+describe('через какой канал пришло состояние', () => {
+  const кан = (p: Partial<NonNullable<DeviceView['channels']>[number]>) => ({
+    id: 'c', kind: 'direct' as const, priority: 0, connection: 'Streaming' as const,
+    status: 'Live' as const, live: true, latestAtMs: null, ...p,
+  });
+
+  it('облачный активный канал называем облаком, даже если рядом есть прямой', () => {
+    const d = dev({ status: 'Live', activeChannel: 'ns', channels: [
+      кан({ id: 'ble', kind: 'direct', status: 'Disconnected', live: false, connection: 'Disconnected' }),
+      кан({ id: 'ns', kind: 'cloud' }),
+    ] });
+    expect(черезЧто(d)).toBe('через Nightscout');
+    expect(активныйКанал(d)?.id).toBe('ns');
+  });
+
+  it('прямой канал — «по радио», мост — «через мост»', () => {
+    expect(черезЧто(dev({ status: 'Live', activeChannel: 'ble', channels: [кан({ id: 'ble' })] }))).toBe('по радио');
+    expect(черезЧто(dev({ status: 'Live', activeChannel: 'br', channels: [кан({ id: 'br', kind: 'bridged' })] })))
+      .toBe('через мост');
+  });
+
+  /* Связи нет — путь называть незачем: «нет связи по радио» звучит как «попробуйте
+     другой путь», а другого нет, движок взял бы его сам. */
+  it('нет связи — про канал молчим', () => {
+    expect(черезЧто(dev({ status: 'Disconnected', activeChannel: 'ble', channels: [кан({ id: 'ble' })] }))).toBe(null);
+  });
+
+  it('каналов нет — не выдумываем', () => {
+    expect(черезЧто(dev({ status: 'Live' }))).toBe(null);
+    expect(черезЧто(null)).toBe(null);
+  });
+
+  /* Движок может не проставить activeChannel — берём первый, а не молчим: канал
+     всё равно один из перечисленных, и это ближе к правде, чем пустота. */
+  it('активный не назван — берём первый', () => {
+    expect(черезЧто(dev({ status: 'Live', channels: [кан({ id: 'ns', kind: 'cloud' })] }))).toBe('через Nightscout');
+  });
+
+  /* На панели слово стоит места, и платить им за «радио» у одноканального сенсора
+     нечем: выбора там нет, объяснять нечего. */
+  it('канал один — на панели про него молчим', () => {
+    expect(черезЧтоСпорное(dev({ status: 'Live', activeChannel: 'ble', channels: [кан({ id: 'ble' })] }))).toBe(null);
+  });
+
+  it('каналов два — панель называет активный коротко', () => {
+    const d = dev({ status: 'Live', activeChannel: 'ns', channels: [кан({ id: 'ble' }), кан({ id: 'ns', kind: 'cloud' })] });
+    expect(черезЧтоСпорное(d)).toBe('облако');
+  });
+
+  /* Ровно тот случай, ради которого всё это затевалось: помпу видно только через
+     облако. Точка связи о ней молчит (и правильно — прямой связи нет), но сказать,
+     откуда взялись резервуар и заряд, обязаны. */
+  it('облачную помпу для «через что» берём, хотя для точки связи её нет', () => {
+    const p = dev({ id: 'p', kind: 'pump', status: 'Live', activeChannel: 'ns',
+      channels: [кан({ id: 'ns', kind: 'cloud' })] });
+    const s = snap([p]);
+    expect(источникПомпы(s)).toBe(null);
+    expect(черезЧто(устройствоРоли(s, 'pump'))).toBe('через Nightscout');
+  });
+
+  it('сенсор роли — тот же, что источник глюкозы', () => {
+    const a = dev({ id: 'a', kind: 'sensor' });
+    const b = dev({ id: 'b', kind: 'sensor', primary: true });
+    expect(устройствоРоли(snap([a, b]), 'sensor')?.id).toBe('b');
   });
 });
