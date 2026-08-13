@@ -1,7 +1,7 @@
 import { IonPage, IonContent } from '@ionic/react';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { reportContentScroll } from '@/app/panel';
-import { useTab } from '@/app/nav';
+import { useTab, useGoHome } from '@/app/nav';
 
 /* Оболочка вкладки — единственное место, где вкладка становится страницей.
 
@@ -41,6 +41,31 @@ export default function Screen({ tab, children }: { tab: number; children: React
     if (active === tab) return;
     void ref.current?.scrollToTop(0);
   }, [active, tab]);
+
+  /* Нажал свою вкладку ещё раз — «наверх».
+
+     Это уже привычный жест таб-бара, и у нас для него был готов сигнал: тем же
+     нажатием стек возвращается в корень (nav.pressTab). Логично, что после корня
+     следующее значение того же нажатия — вернуть к покою и сам экран.
+
+     Порядок важен: пока открыт раздел, нажатие закрывает его, а не крутит экран под
+     ним — иначе человек, выходящий из «Аналитики», незаметно потеряет и место на
+     «Метриках». Поэтому проверяем, есть ли открытая страница; закрывает её StackHost
+     тем же сигналом.
+
+     Заодно это ответ на цену прошлого решения: экраны возвращаются к покою при уходе,
+     а теперь есть и способ попасть наверх, не уходя.
+
+     Прокрутка анимированная, и не только ради привычности: панель следует за
+     событиями прокрутки без собственной анимации (app/panel.ts), поэтому мгновенный
+     прыжок наверх раскрыл бы её рывком. Плавная прокрутка даёт панели разворачиваться
+     вместе с содержимым — одно движение вместо двух. */
+  const домой = useGoHome(tab);
+  useEffect(() => {
+    if (!домой || active !== tab) return;
+    if (document.querySelector('.pager-pane.is-active .stack-page')) return;
+    void ref.current?.scrollToTop(250);
+  }, [домой, active, tab]);
 
   return (
     <IonPage>
