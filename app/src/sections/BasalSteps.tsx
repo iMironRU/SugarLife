@@ -1,5 +1,4 @@
-import { IonModal, IonContent, IonFooter, IonIcon } from '@ionic/react';
-import { closeOutline } from 'ionicons/icons';
+import Sheet from '@/ui/Sheet';
 import {
   type Seg, STEP, MIN_RATE, MAX_RATE, fmtH, roundRate, rateAt, daily,
   splitSeg, mergeSeg, scaleAll, flatten,
@@ -48,17 +47,26 @@ export default function BasalSteps({
 
   return (
     <>
-      <IonModal isOpen={inner?.kind === 'seg'} onDidDismiss={() => onClose()} className="sheet-modal">
-        <IonContent className="sheet">
+      <Sheet
+        isOpen={inner?.kind === 'seg'} onClose={() => onClose()}
+        title={seg ? `${fmtH(seg.a)}–${fmtH(seg.b)}` : ''} subtitle="интервал профиля"
+        footer={(
+          <div className="page-foot">
+            {seg && Math.abs(seg.v - segPump) > 1e-6 ? (
+              <div className="bas-act-col">
+                <button className="page-btn bas-go" onClick={() => setSegRate(segPump)}>
+                  ↺ Вернуть как в помпе {segPump.toFixed(2)}
+                </button>
+                <button className="page-btn" onClick={() => onClose()}>Всё же оставить {seg.v.toFixed(2)}</button>
+              </div>
+            ) : (
+              <button className="page-btn" onClick={() => onClose()}>Готово</button>
+            )}
+          </div>
+        )}
+      >
           {seg && (
             <>
-              <div className="sheet-head">
-                <div>
-                  <div className="sheet-title">{fmtH(seg.a)}–{fmtH(seg.b)}</div>
-                  <div className="sheet-subtitle">интервал профиля</div>
-                </div>
-                <button className="sheet-close" onClick={() => onClose()} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-              </div>
               <div className="lim-kid">В помпе <b>{segPump.toFixed(2)} ЕД/ч</b>.</div>
               <div className="bas-stepper">
                 <button className="bas-pm" disabled={seg.v <= MIN_RATE}
@@ -87,27 +95,21 @@ export default function BasalSteps({
               </div>
             </>
           )}
-        </IonContent>
-        <IonFooter className="page-foot">
-          {seg && Math.abs(seg.v - segPump) > 1e-6 ? (
-            <div className="bas-act-col">
-              <button className="page-btn bas-go" onClick={() => setSegRate(segPump)}>
-                ↺ Вернуть как в помпе {segPump.toFixed(2)}
-              </button>
-              <button className="page-btn" onClick={() => onClose()}>Всё же оставить {seg.v.toFixed(2)}</button>
-            </div>
-          ) : (
-            <button className="page-btn" onClick={() => onClose()}>Готово</button>
-          )}
-        </IonFooter>
-      </IonModal>
+      </Sheet>
 
-      <IonModal isOpen={inner?.kind === 'scale'} onDidDismiss={() => onClose()} className="sheet-modal">
-        <IonContent className="sheet">
-          <div className="sheet-head">
-            <div><div className="sheet-title">Весь профиль</div><div className="sheet-subtitle">пропорционально</div></div>
-            <button className="sheet-close" onClick={() => onClose()} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
+      <Sheet
+        isOpen={inner?.kind === 'scale'} onClose={() => onClose()}
+        title="Весь профиль" subtitle="пропорционально"
+        footer={(
+          <div className="page-foot">
+          <div className="bas-act-col">
+            <button className="page-btn bas-go" disabled={!scalePct}
+              onClick={() => { apply(scaleAll(work, scalePct)); onClose(); }}>Применить</button>
+            <button className="page-btn" onClick={() => onClose()}>Отмена</button>
           </div>
+          </div>
+        )}
+      >
           <div className="lim-kid">Меняет <b>весь профиль пропорционально</b>. Форма сохраняется, сдвигается уровень целиком — так поступают при болезни, смене сезона или после заметного изменения веса.</div>
           <div className="bas-stepper">
             <button className="bas-pm" onClick={() => setScalePct((f) => f - 5)}>−</button>
@@ -120,39 +122,44 @@ export default function BasalSteps({
           {Math.abs(scalePct) > 20 && (
             <div className="lim-kid warn"><b>Изменение больше 20 %.</b> Такие сдвиги обычно делят на несколько шагов и проверяют по несколько дней.</div>
           )}
-        </IonContent>
-        <IonFooter className="page-foot">
-          <div className="bas-act-col">
-            <button className="page-btn bas-go" disabled={!scalePct}
-              onClick={() => { apply(scaleAll(work, scalePct)); onClose(); }}>Применить</button>
-            <button className="page-btn" onClick={() => onClose()}>Отмена</button>
-          </div>
-        </IonFooter>
-      </IonModal>
+      </Sheet>
 
-      <IonModal isOpen={inner?.kind === 'flat'} onDidDismiss={() => onClose()} className="sheet-modal">
-        <IonContent className="sheet">
-          <div className="sheet-head">
-            <div><div className="sheet-title">Выровнять</div><div className="sheet-subtitle">один уровень на сутки</div></div>
-            <button className="sheet-close" onClick={() => onClose()} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-          </div>
-          <div className="lim-kid">Все интервалы станут равными <b>{roundRate(daily(work) / 24).toFixed(2)} ЕД/ч</b> — суточная доза не изменится, исчезнет только форма.</div>
-          <div className="sheet-note">Годится как исходная точка, когда профиль строится с нуля и данных о потребности по часам ещё нет.</div>
-        </IonContent>
-        <IonFooter className="page-foot">
+      <Sheet
+        isOpen={inner?.kind === 'flat'} onClose={() => onClose()}
+        title="Выровнять" subtitle="один уровень на сутки"
+        footer={(
+          <div className="page-foot">
           <div className="bas-act-col">
             <button className="page-btn bas-go" onClick={() => { apply(flatten(work)); onClose(); }}>Выровнять</button>
             <button className="page-btn" onClick={() => onClose()}>Отмена</button>
           </div>
-        </IonFooter>
-      </IonModal>
-
-      <IonModal isOpen={inner?.kind === 'transfer'} onDidDismiss={() => onClose()} className="sheet-modal">
-        <IonContent className="sheet">
-          <div className="sheet-head">
-            <div><div className="sheet-title">Перенос в помпу</div><div className="sheet-subtitle">вручную, по интервалам</div></div>
-            <button className="sheet-close" onClick={() => onClose()} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
           </div>
+        )}
+      >
+          <div className="lim-kid">Все интервалы станут равными <b>{roundRate(daily(work) / 24).toFixed(2)} ЕД/ч</b> — суточная доза не изменится, исчезнет только форма.</div>
+          <div className="sheet-note">Годится как исходная точка, когда профиль строится с нуля и данных о потребности по часам ещё нет.</div>
+      </Sheet>
+
+      <Sheet
+        isOpen={inner?.kind === 'transfer'} onClose={() => onClose()}
+        title="Перенос в помпу" subtitle="вручную, по интервалам"
+        footer={(
+          <div className="page-foot">
+          {saved ? (
+            <button className="page-btn" onClick={() => onClose()}>Понятно</button>
+          ) : (
+            <div className="bas-act-col">
+              <HoldButton
+                label={done.length === changedList.length ? 'Удерживайте — записать в историю' : 'Отметьте все интервалы'}
+                disabled={done.length !== changedList.length}
+                onComplete={saveToHistory}
+              />
+              <button className="page-btn" onClick={() => onClose()}>Позже</button>
+            </div>
+          )}
+          </div>
+        )}
+      >
           {saved ? (
             <>
               <div className="lim-kid">Изменение профиля сохранено с датой и временем. При следующем разборе сравнение пойдёт <b>от этой точки</b>, а не от старого профиля.</div>
@@ -175,22 +182,7 @@ export default function BasalSteps({
               <div className="sheet-note">Остальные интервалы не трогайте.</div>
             </>
           )}
-        </IonContent>
-        <IonFooter className="page-foot">
-          {saved ? (
-            <button className="page-btn" onClick={() => onClose()}>Понятно</button>
-          ) : (
-            <div className="bas-act-col">
-              <HoldButton
-                label={done.length === changedList.length ? 'Удерживайте — записать в историю' : 'Отметьте все интервалы'}
-                disabled={done.length !== changedList.length}
-                onComplete={saveToHistory}
-              />
-              <button className="page-btn" onClick={() => onClose()}>Позже</button>
-            </div>
-          )}
-        </IonFooter>
-      </IonModal>
+      </Sheet>
     </>
   );
 }

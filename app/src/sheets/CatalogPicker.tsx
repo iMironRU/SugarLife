@@ -1,6 +1,7 @@
-import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
-import { closeOutline, searchOutline, checkmarkCircle } from 'ionicons/icons';
+import { IonIcon, IonInput } from '@ionic/react';
+import {searchOutline, checkmarkCircle} from 'ionicons/icons';
 import { useState } from 'react';
+import Sheet from '@/ui/Sheet';
 
 export interface PickerItem { id: string; title: string; subtitle?: string; meta?: string; current: boolean; }
 
@@ -23,15 +24,7 @@ export default function CatalogPicker({
   });
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose} initialBreakpoint={0.9} breakpoints={[0, 0.9]} handle>
-      <IonContent className="sheet">
-        <div className="sheet-head">
-          <div>
-            <div className="sheet-title">{title}</div>
-            {subtitle && <div className="sheet-subtitle">{subtitle}</div>}
-          </div>
-          <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-        </div>
+    <Sheet isOpen={isOpen} onClose={onClose} title={title} subtitle={subtitle}>
 
         <div className="field">
           <IonIcon icon={searchOutline} className="field-ico" />
@@ -55,7 +48,6 @@ export default function CatalogPicker({
           ))}
           {!filtered.length && <div className="metric-note">{empty}</div>}
         </div>
-      </IonContent>
-    </IonModal>
+    </Sheet>
   );
 }
