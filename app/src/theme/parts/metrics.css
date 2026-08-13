@@ -31,6 +31,17 @@
 }
 .period-seg.on { background: var(--color-neutral-100); color: var(--color-neutral-900); font-weight: 600; }
 
+/* Вкладки находок (#199). Тот же переключатель, что у периода, — человек уже знает,
+   как он работает, и заводить второй вид ради того же действия незачем.
+
+   Пустая вкладка остаётся на месте и гасится, а не исчезает: пропадающая вкладка
+   меняет раскладку под пальцем, и завтра «В норме» окажется там, где вчера были
+   «Заметки». */
+.ins-tabs { margin-top: 14px; }
+.ins-tabs .period-seg { display: flex; align-items: center; justify-content: center; gap: 5px; }
+.ins-tabs .period-seg:disabled { opacity: 0.4; cursor: default; }
+.ins-tabs .period-seg.on .chip-n { background: color-mix(in srgb, var(--color-neutral-900) 18%, transparent); color: var(--color-neutral-900); }
+
 .metric-chips { display: flex; gap: 6px; margin-top: 18px; }
 .metric-chip {
   flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 8px; border-radius: 15px;
