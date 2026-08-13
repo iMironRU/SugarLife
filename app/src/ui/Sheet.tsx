@@ -1,6 +1,7 @@
-import { IonModal, IonIcon } from '@ionic/react';
+import { IonModal, IonIcon, createGesture } from '@ionic/react';
 import { closeOutline, chevronBack } from 'ionicons/icons';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { закрыватьЛи, сдвиг } from './sheetGesture';
 
 /* Оболочка шторки — единственное место, где собирается модалка.
 
@@ -44,10 +45,50 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
   footer?: ReactNode;
   children: ReactNode;
 }) {
+  const оболочка = useRef<HTMLDivElement>(null);
+  const шапка = useRef<HTMLDivElement>(null);
+
+  /* Смахивание вниз — жест только на шапке. Почему не штатным способом Ionic и почему
+     именно шапка — в ui/sheetGesture.ts; коротко: их смахивание включается вместе с
+     breakpoints, а те забирают вертикальный жест целиком и ломают прокрутку тела. */
+  useEffect(() => {
+    const el = шапка.current;
+    const кор = оболочка.current;
+    if (!isOpen || !el || !кор) return;
+    let H = 1;
+    const жест = createGesture({
+      el,
+      gestureName: 'sheet-dismiss',
+      direction: 'y',
+      threshold: 8,
+      onStart: () => { H = кор.clientHeight || 1; кор.style.transition = 'none'; },
+      onMove: (d) => { кор.style.transform = `translate3d(0,${сдвиг(d.deltaY)}px,0)`; },
+      onEnd: (d) => {
+        const закрыть = закрыватьЛи(d.deltaY, H, d.velocityY);
+        кор.style.transition = 'transform .2s cubic-bezier(.3,.9,.3,1)';
+        кор.style.transform = закрыть ? `translate3d(0,${H}px,0)` : '';
+        /* Закрываем после того, как шторка доехала вниз: снять её посреди движения —
+           значит показать рывок вместо ухода. Ровно как со страницами разделов. */
+        if (закрыть) window.setTimeout(onClose, 180);
+      },
+    });
+    жест.enable();
+    return () => {
+      жест.destroy();
+      /* Сдвиг снимаем при закрытии: шторка живёт в разметке всегда, и в следующий раз
+         она открылась бы уже уехавшей вниз. */
+      кор.style.transition = '';
+      кор.style.transform = '';
+    };
+  }, [isOpen, onClose]);
+
   return (
     <IonModal isOpen={isOpen} onDidDismiss={onClose} className="sheet-modal">
-      <div className="sheet-shell">
-        <div className="sheet-head">
+      <div className="sheet-shell" ref={оболочка}>
+        <div className="sheet-head" ref={шапка}>
+          {/* Полоска-ручка: она же подсказка, что шторку можно смахнуть. Без неё жест
+              знают только те, кто и так пробует его на всём подряд. */}
+          <span className="sheet-grab" aria-hidden />
           {onBack && (
             <button className="sheet-close" onClick={onBack} aria-label="Назад">
               <IonIcon icon={chevronBack} />
