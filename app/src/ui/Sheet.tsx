@@ -1,7 +1,7 @@
 import { IonModal, IonIcon, createGesture } from '@ionic/react';
 import { closeOutline, chevronBack } from 'ionicons/icons';
 import { useEffect, useRef, type ReactNode } from 'react';
-import { закрыватьЛи, сдвиг } from './sheetGesture';
+import { закрыватьЛи, сдвиг, тянемШторку } from './sheetGesture';
 
 /* Оболочка шторки — единственное место, где собирается модалка.
 
@@ -45,47 +45,101 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
   footer?: ReactNode;
   children: ReactNode;
 }) {
+  const модалка = useRef<HTMLIonModalElement>(null);
   const оболочка = useRef<HTMLDivElement>(null);
-  const шапка = useRef<HTMLDivElement>(null);
+  const тело = useRef<HTMLDivElement>(null);
+  const жест = useRef<{ destroy: () => void } | null>(null);
 
-  /* Смахивание вниз — жест только на шапке. Почему не штатным способом Ionic и почему
-     именно шапка — в ui/sheetGesture.ts; коротко: их смахивание включается вместе с
-     breakpoints, а те забирают вертикальный жест целиком и ломают прокрутку тела. */
-  useEffect(() => {
-    const el = шапка.current;
+  /* Закрываем ВСЕГДА через саму модалку, а не сменой состояния снаружи.
+
+     Было видно глазами: крестик закрывал мгновенно, а тап по затемнению — с уходом
+     вниз. Потому что затемнение идёт штатным путём Ionic (dismiss с анимацией), а
+     крестик дёргал состояние родителя, и React снимал шторку без всякого ухода. Одно
+     действие, два разных вида — то же, от чего мы избавлялись у страниц разделов.
+
+     Теперь путь один: dismiss() у модалки, а наружу мы сообщаем в onDidDismiss —
+     когда уход уже случился. */
+  const закрыть = () => { void модалка.current?.dismiss(); };
+
+  /* Смахивание вниз.
+
+     Начинается, только когда тело прокручено в самый верх, — и это не ограничение, а
+     единственный способ не отбирать движение у прокрутки. Палец ведёт вниз: если
+     список прокручен, человек хочет вернуться к его началу, а не закрыть шторку.
+     Дотянул до верха, ведёт дальше — вот теперь это «закрыть».
+
+     На шапке жест работает всегда: она вне прокрутки, спорить не с чем.
+
+     Жест подключается по isOpen, а содержимое держим смонтированным всегда
+     (keepContentsMounted). Иначе узлов внутри модалки до конца показа может не быть —
+     вешать жест не на что, и первая версия по этой причине не срабатывала вовсе.
+     Привязываться к onDidPresent тоже нельзя: если событие не придёт (а в скрытой
+     вкладке оно не приходит), шторка останется без жеста и никто не поймёт почему. */
+  const включитьЖест = () => {
+    if (жест.current) return;
     const кор = оболочка.current;
-    if (!isOpen || !el || !кор) return;
+    const низ = тело.current;
+    const шапка = кор?.querySelector('.sheet-head') as HTMLElement | null;
+    if (!кор || !низ) return;
     let H = 1;
-    const жест = createGesture({
-      el,
+    let изШапки = false;
+    const g = createGesture({
+      el: кор,
       gestureName: 'sheet-dismiss',
       direction: 'y',
-      threshold: 8,
+      threshold: 10,
+      canStart: (d) => {
+        const цель = d.event.target as HTMLElement | null;
+        изШапки = !!(шапка && цель && шапка.contains(цель));
+        return тянемШторку(изШапки, низ.scrollTop);
+      },
       onStart: () => { H = кор.clientHeight || 1; кор.style.transition = 'none'; },
-      onMove: (d) => { кор.style.transform = `translate3d(0,${сдвиг(d.deltaY)}px,0)`; },
+      onMove: (d) => {
+        /* Пересчитываем на каждом кадре: движение могло начаться у верха списка, а
+           продолжиться после того, как список ушёл вниз. Шторка в этот момент должна
+           отпустить движение, иначе она поедет поверх прокрутки. */
+        if (!тянемШторку(изШапки, низ.scrollTop)) { кор.style.transform = ''; return; }
+        кор.style.transform = `translate3d(0,${сдвиг(d.deltaY)}px,0)`;
+      },
       onEnd: (d) => {
-        const закрыть = закрыватьЛи(d.deltaY, H, d.velocityY);
+        const надоЗакрыть = тянемШторку(изШапки, низ.scrollTop)
+          && закрыватьЛи(d.deltaY, H, d.velocityY);
         кор.style.transition = 'transform .2s cubic-bezier(.3,.9,.3,1)';
-        кор.style.transform = закрыть ? `translate3d(0,${H}px,0)` : '';
+        кор.style.transform = надоЗакрыть ? `translate3d(0,${H}px,0)` : '';
         /* Закрываем после того, как шторка доехала вниз: снять её посреди движения —
-           значит показать рывок вместо ухода. Ровно как со страницами разделов. */
-        if (закрыть) window.setTimeout(onClose, 180);
+           значит показать рывок вместо ухода. */
+        if (надоЗакрыть) window.setTimeout(закрыть, 180);
       },
     });
-    жест.enable();
-    return () => {
-      жест.destroy();
-      /* Сдвиг снимаем при закрытии: шторка живёт в разметке всегда, и в следующий раз
-         она открылась бы уже уехавшей вниз. */
-      кор.style.transition = '';
-      кор.style.transform = '';
-    };
-  }, [isOpen, onClose]);
+    g.enable();
+    жест.current = g;
+  };
+
+  /* Сдвиг снимаем при уходе: шторка живёт в разметке всегда, и в следующий раз она
+     открылась бы уже уехавшей вниз. */
+  const выключитьЖест = () => {
+    жест.current?.destroy();
+    жест.current = null;
+    const кор = оболочка.current;
+    if (кор) { кор.style.transition = ''; кор.style.transform = ''; }
+  };
+
+  useEffect(() => {
+    if (isOpen) включитьЖест(); else выключитьЖест();
+    return выключитьЖест;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose} className="sheet-modal">
+    <IonModal
+      ref={модалка}
+      isOpen={isOpen}
+      keepContentsMounted
+      onDidDismiss={onClose}
+      className="sheet-modal"
+    >
       <div className="sheet-shell" ref={оболочка}>
-        <div className="sheet-head" ref={шапка}>
+        <div className="sheet-head">
           {/* Полоска-ручка: она же подсказка, что шторку можно смахнуть. Без неё жест
               знают только те, кто и так пробует его на всём подряд. */}
           <span className="sheet-grab" aria-hidden />
@@ -98,11 +152,11 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
             <div className="sheet-title">{title}</div>
             {subtitle && <div className="sheet-subtitle">{subtitle}</div>}
           </div>
-          <button className="sheet-close" onClick={onClose} aria-label="Закрыть">
+          <button className="sheet-close" onClick={закрыть} aria-label="Закрыть">
             <IonIcon icon={closeOutline} />
           </button>
         </div>
-        <div className="sheet-body">{children}</div>
+        <div className="sheet-body" ref={тело}>{children}</div>
         {footer}
       </div>
     </IonModal>
