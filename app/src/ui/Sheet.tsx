@@ -1,4 +1,4 @@
-import { IonModal, IonContent, IonIcon } from '@ionic/react';
+import { IonModal, IonIcon } from '@ionic/react';
 import { closeOutline, chevronBack } from 'ionicons/icons';
 import type { ReactNode } from 'react';
 
@@ -19,6 +19,16 @@ import type { ReactNode } from 'react';
    ничего. Причина ровно в том, что классов у шторок было несколько и правила писались
    под конкретный. Класс теперь один.
 
+   ПОЧЕМУ ВНУТРИ ОБЫЧНЫЕ DIV, А НЕ IonContent. Высота шторки — по содержимому
+   (--height: auto), а auto-высота меряет то, что внутри. IonContent собственной
+   высоты не имеет: он растягивается по родителю, и в auto-модалке схлопывается в
+   ноль — шторка просто не появляется. Это мы и получили, убрав у шторки еды
+   фиксированную высоту: до того ноль прятался за жёстко заданными 88%.
+
+   Поэтому раскладка своя и явная: колонка из шапки, прокручиваемого тела и подвала.
+   Шапка и подвал не участвуют в прокрутке по построению — липкость не нужна, а
+   крестик и главное действие всегда на месте.
+
    Чем шторка отличается от раздела — и почему у них разные кнопки. В раздел
    возвращаются: у него есть родитель, стек помнит место, поэтому слева вверху
    стрелка «назад». Шторку закрывают: возвращаться некуда, поэтому справа крестик.
@@ -30,13 +40,13 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
   onBack?: () => void;
   title: string;
   subtitle?: string;
-  /** Закреплённый низ: главное действие, которое не должно уезжать с прокруткой. */
+  /** Закреплённый низ: главное действие, которое не уезжает с прокруткой. */
   footer?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <IonModal isOpen={isOpen} onDidDismiss={onClose} className="sheet-modal">
-      <IonContent className="sheet">
+      <div className="sheet-shell">
         <div className="sheet-head">
           {onBack && (
             <button className="sheet-close" onClick={onBack} aria-label="Назад">
@@ -51,9 +61,9 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
             <IonIcon icon={closeOutline} />
           </button>
         </div>
-        {children}
-      </IonContent>
-      {footer}
+        <div className="sheet-body">{children}</div>
+        {footer}
+      </div>
     </IonModal>
   );
 }
