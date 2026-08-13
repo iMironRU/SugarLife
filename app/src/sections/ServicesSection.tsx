@@ -1,6 +1,6 @@
 import { IonIcon } from '@ionic/react';
 import { CloudSection } from '@/sections/lazy';
-import PageHead from '@/ui/PageHead';
+import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import { cloudOutline, addCircleOutline, pulse, flash } from 'ionicons/icons';
 import { useClouds, addCloud, type CloudConfig } from '@/sources/clouds';
@@ -38,8 +38,7 @@ export default function ServicesSection({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="sheet stack-body">
-        <PageHead title="Сервисы" subtitle="Профиль · Сервисы" onBack={onClose} />
+    <Section title="Сервисы" subtitle="Профиль · Сервисы" onBack={onClose}>
         <div className="sheet-note">
           Облако — такой же способ подключения, как мост, только со своими адресом/токеном.
           Можно держать несколько одновременно, у каждого своя роль в «Забираем отсюда».
@@ -56,6 +55,6 @@ export default function ServicesSection({ onClose }: { onClose: () => void }) {
           ))}
           <Row icon={addCircleOutline} title="Добавить облако" chevron={false} onClick={onAdd} />
         </div>
-    </div>
+    </Section>
   );
 }

@@ -1,7 +1,7 @@
 import { IonIcon, IonSpinner } from '@ionic/react';
 import { bluetoothOutline, radioOutline, pauseOutline, playOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
-import PageHead from '@/ui/PageHead';
+import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
@@ -53,8 +53,7 @@ export default function DiscoverySection({ onClose }: { onClose: () => void }) {
   const пусто = discovered.length === 0;
 
   return (
-    <div className="sheet stack-body">
-      <PageHead title="Устройства рядом" subtitle="Подключить новое или вернуть связь" onBack={onClose} />
+    <Section title="Устройства рядом" subtitle="Подключить новое или вернуть связь" onBack={onClose}>
 
       {devices.length > 0 && (
         <>
@@ -135,6 +134,6 @@ export default function DiscoverySection({ onClose }: { onClose: () => void }) {
       )}
 
       <DeviceScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} title="Что рядом" />
-    </div>
+    </Section>
   );
 }

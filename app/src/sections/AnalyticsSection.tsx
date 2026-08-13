@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { IonIcon } from '@ionic/react';
 import { checkmarkCircle, warning, alertCircle } from 'ionicons/icons';
-import PageHead from '@/ui/PageHead';
+import Section from '@/ui/Section';
 import PageLoading from '@/ui/PageLoading';
 import Insights from '@/ui/Insights';
 import { useAnalysis } from '@/domain/useAnalysis';
@@ -49,8 +49,7 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
   if (читаю) return <PageLoading title="Аналитика" />;
 
   return (
-    <div className="sheet stack-body">
-      <PageHead title="Аналитика" subtitle={`Разбор за ${days} дн.`} onBack={onClose} />
+    <Section title="Аналитика" subtitle={`Разбор за ${days} дн.`} onBack={onClose}>
 
       <div className="period">
         {ПЕРИОДЫ.map((d) => (
@@ -82,6 +81,6 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
         додумано: чего в данных нет, того здесь не будет. Это не назначения, а наблюдения,
         по которым удобно готовить вопросы врачу.
       </div>
-    </div>
+    </Section>
   );
 }

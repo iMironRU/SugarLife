@@ -1,4 +1,4 @@
-import PageHead from '@/ui/PageHead';
+import Section from '@/ui/Section';
 import { DeviceSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
 import { hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline } from 'ionicons/icons';
@@ -35,8 +35,7 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
   const openCat = (c: DeviceCatKey) => push(<DeviceSection cat={c} title={titles[c]} onClose={pop} />);
 
   return (
-    <div className="sheet stack-body">
-        <PageHead title="Устройства" subtitle="Профиль · Устройства" onBack={onClose} />
+    <Section title="Устройства" subtitle="Профиль · Устройства" onBack={onClose}>
         <div className="sheet-note">
           Тапни устройство — там все действия (мост, подключение, «забыть»). На плитке ничего не отключишь случайно.
         </div>
@@ -70,6 +69,6 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
           <Row icon={helpCircleOutline} title="Проверить / записать по модели" onClick={() => setReqOpen(true)} />
         </div>
         <RequirementsCatalogSheet isOpen={reqOpen} onClose={() => setReqOpen(false)} />
-    </div>
+    </Section>
   );
 }
