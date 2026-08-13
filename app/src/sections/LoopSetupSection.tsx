@@ -89,10 +89,23 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
               <button className="page-next" onClick={close}>Понятно</button>
             ) : (
               <>
-                <button className="page-back" onClick={step === 0 ? close : () => { setStep((step - 1) as Step); setEditing(null); }}>
-                  <IonIcon icon={chevronBack} />
-                  {step === 0 ? 'Закрыть' : 'Назад'}
-                </button>
+                {/* На первом шаге низа слева нет вовсе.
+
+                    Там стояло «Закрыть» — второй выход на том же экране, при живой
+                    стрелке сверху. Человек учится не правилу, а месту: если в одном
+                    разделе выход внизу, а в остальных вверху, он каждый раз ищет
+                    заново. Хуже другое — со второго шага та же кнопка называется
+                    «Назад» и означает уже другое, то есть одно место меняет смысл
+                    между шагами (#175).
+
+                    Теперь «Назад» внизу значит ровно шаг назад и никогда — выход;
+                    выход один на всё приложение, стрелкой сверху. */}
+                {step > 0 && (
+                  <button className="page-back" onClick={() => { setStep((step - 1) as Step); setEditing(null); }}>
+                    <IonIcon icon={chevronBack} />
+                    Назад
+                  </button>
+                )}
                 {step < 4 ? (
                   <button className="page-next" disabled={!canNext} onClick={() => { setStep((step + 1) as Step); setEditing(null); }}>
                     Далее
