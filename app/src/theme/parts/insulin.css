@@ -65,6 +65,9 @@
 .val-unknown { color: var(--color-neutral-500); font-weight: 600; }
 /* Значение, требующее внимания: связь отстаёт или пропала */
 .val-warn { color: var(--c-danger-2); font-weight: 600; }
+/* Улучшение в записке к приёму. Зелёным — только то, что действительно стало лучше:
+   если красить им «изменилось», человек перестанет отличать хорошее от любого. */
+.val-good { color: var(--c-glu); font-weight: 600; }
 .basal-note { font-size: 11px; color: var(--color-neutral-500); padding: 0 0 4px; }
 .stepper { display: flex; align-items: center; gap: 14px; }
 .stepper button {
