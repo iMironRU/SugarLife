@@ -37,8 +37,21 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
   const [уходит, setУходит] = useState<{ key: number; node: ReactNode } | null>(null);
   const таймерУхода = useRef(0);
 
+  /* Какая страница именно что открыта — ей и играть въезд. Раньше анимация висела на
+     каждой .stack-page, и браузер проигрывал её всякий раз, когда перерисовывал узел
+     заново: вернулся на вкладку с открытым разделом — а он «проявляется», будто ты
+     его только что открыл. */
+  const [въезжает, setВъезжает] = useState(0);
+  const таймерВъезда = useRef(0);
+
   const push = useCallback((node: ReactNode) => {
-    setPages((p) => [...p, { key: (p[p.length - 1]?.key ?? 0) + 1, node }]);
+    setPages((p) => {
+      const key = (p[p.length - 1]?.key ?? 0) + 1;
+      setВъезжает(key);
+      window.clearTimeout(таймерВъезда.current);
+      таймерВъезда.current = window.setTimeout(() => setВъезжает(0), 260);
+      return [...p, { key, node }];
+    });
   }, []);
 
   const pop = useCallback(() => {
@@ -64,7 +77,10 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
      заново значило бы вернуть её на место и увести второй раз. */
   const popПослеЖеста = useCallback(() => setPages((p) => p.slice(0, -1)), []);
 
-  useEffect(() => () => window.clearTimeout(таймерУхода.current), []);
+  useEffect(() => () => {
+    window.clearTimeout(таймерУхода.current);
+    window.clearTimeout(таймерВъезда.current);
+  }, []);
 
   const api = useMemo<StackApi>(() => ({ push, pop, depth: pages.length }), [push, pop, pages.length]);
 
@@ -162,6 +178,7 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
           ref={i === pages.length - 1 ? верх : undefined}
           className={'stack-page'
             + (i === pages.length - 1 ? ' is-top' : '')
+            + (p.key === въезжает ? ' is-entering' : '')
             /* Пока тянут, страницу под верхней надо ВИДЕТЬ — иначе из-под уходящей
                покажется пустота вместо того, куда возвращаются. */
             + (тянут && i === pages.length - 2 ? ' is-under' : '')}
