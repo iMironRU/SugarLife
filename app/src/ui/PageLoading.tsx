@@ -13,23 +13,27 @@ import { IonSpinner } from '@ionic/react';
 export default function PageLoading({ title }: { title?: string }) {
   return (
     <div className="sheet stack-body">
-      <div className="sheet-head">
-        <div className="pl-back" />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {title ? <div className="sheet-title">{title}</div> : <div className="pl-bar pl-bar-title" />}
-          <div className="pl-bar pl-bar-sub" />
+      {/* Та же обёртка, что у раздела (ui/Section.tsx): отступы живут на ней,
+          и без неё каркас загрузки уехал бы под панель. */}
+      <div className="stack-fill">
+        <div className="sheet-head">
+          <div className="pl-back" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {title ? <div className="sheet-title">{title}</div> : <div className="pl-bar pl-bar-title" />}
+            <div className="pl-bar pl-bar-sub" />
+          </div>
         </div>
-      </div>
 
-      <div className="pl-body">
-        <div className="pl-card" />
-        <div className="pl-card pl-card-sm" />
-        <div className="pl-card pl-card-sm" />
-      </div>
+        <div className="pl-body">
+          <div className="pl-card" />
+          <div className="pl-card pl-card-sm" />
+          <div className="pl-card pl-card-sm" />
+        </div>
 
-      <div className="pl-spin">
-        <IonSpinner name="crescent" />
-        <span>Загружаю…</span>
+        <div className="pl-spin">
+          <IonSpinner name="crescent" />
+          <span>Загружаю…</span>
+        </div>
       </div>
     </div>
   );
