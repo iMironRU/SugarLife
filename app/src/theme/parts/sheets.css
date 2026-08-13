@@ -50,7 +50,7 @@
    отличается ionic-скроллер, а не украшение. */
 .stack-body {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-  padding: calc(var(--sl-panel-rest) + 6px) 18px 26px;
+  padding: var(--sl-content-top) var(--sl-side) 26px;
   -webkit-overflow-scrolling: touch;
   will-change: scroll-position;
   transform: translateZ(0);
@@ -61,7 +61,7 @@
 .stack-body::after { content: ''; display: block; height: 1px; }
 .stack-page > .page-foot { flex: 0 0 auto; }
 
-.sheet::part(scroll) { padding: 6px 18px 26px; }
+.sheet::part(scroll) { padding: 6px var(--sl-side) 26px; }
 /* gap — чтобы круглая кнопка не липла к заголовку (на телефоне читалось как одно пятно) */
 .sheet-head { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 8px 0 4px; }
 

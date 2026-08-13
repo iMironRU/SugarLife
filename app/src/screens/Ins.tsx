@@ -1,7 +1,6 @@
-import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { IonIcon } from '@ionic/react';
 import { useTab } from '@/app/nav';
 import { DeviceSection, LoopSetupSection } from '@/sections/lazy';
-import { reportContentScroll } from '@/app/panel';
 import { flash, repeat, chevronForward } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStorePart } from '@/sources/store';
@@ -12,6 +11,7 @@ import { fmt } from '@/domain/units';
 import InsulinTimeChart from '@/charts/InsulinTimeChart';
 import { DataGate } from '@/ui/NotConfigured';
 import { useStack } from '@/app/stackCtx';
+import Screen from '@/ui/Screen';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
@@ -41,9 +41,7 @@ export default function Ins() {
   const baseBasalTxt = dev?.baseBasal != null ? fmt(dev.baseBasal) : profile?.basal != null ? fmt(profile.basal) : '—';
 
   return (
-    <IonPage>
-      <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
-        <div className="screen screen-pad">
+    <Screen tab={3}>
           <DataGate>
           {isPen ? (
             <div className="basal-card">
@@ -91,9 +89,7 @@ export default function Ins() {
             </>
           )}
           </DataGate>
-        </div>
 
-      </IonContent>
-    </IonPage>
+    </Screen>
   );
 }

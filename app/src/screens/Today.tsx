@@ -1,10 +1,9 @@
-import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { IonIcon } from '@ionic/react';
 import { AnalyticsSection, MealsSection } from '@/sections/lazy';
 import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, sparklesOutline, chevronForward } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt, agoText } from '@/domain/units';
-import { reportContentScroll } from '@/app/panel';
 import { activeCarbs } from '@/domain/loopValue';
 import ChangedButton from '@/ui/ChangedButton';
 import ReleaseBle from '@/ui/ReleaseBle';
@@ -32,6 +31,7 @@ import { useStack } from '@/app/stackCtx';
 import { useAnalyticsOn } from '@/settings/analytics';
 import { useAnalysis, непрочитанныеВажные } from '@/domain/useAnalysis';
 import { useSeenInsights } from '@/settings/seenInsights';
+import Screen from '@/ui/Screen';
 
 const DASH = '—';
 
@@ -196,7 +196,6 @@ export default function Today() {
   const бодрыхЧасов = lastCarbT != null ? часыБодрствования(lastCarbT, Date.now()) : null;
   const longNoFood = daytime && !unloggedMeal && бодрыхЧасов != null && бодрыхЧасов >= 7;
 
-
   /* Счётчик важного на плитке разбора (#148). Считаем НЕПРОЧИТАННОЕ: постоянное
      число через неделю означает ноль — человек перестаёт его видеть, и когда там
      появится настоящая беда, он не отличит её от привычной цифры.
@@ -276,9 +275,7 @@ export default function Today() {
   }, [soonEmpty]);
 
   return (
-    <IonPage>
-      <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
-        <div className="screen">
+    <Screen tab={2}>
           <DataGate>
           {/* Панель углеводов: сейчас — сверху, записанное — снизу.
 
@@ -338,7 +335,6 @@ export default function Today() {
               </span>
             </button>
           </div>
-
 
           {/* Разбор — отдельный экран, а не врезка: «Сегодня» про то, что делать
               сейчас, разбор про то, что было. В том же виде, что панель углеводов:
@@ -527,9 +523,7 @@ export default function Today() {
             </div>
           )}
           </DataGate>
-        </div>
         <FoodSheet isOpen={foodOpen} onClose={() => setFoodOpen(false)} />
-      </IonContent>
-    </IonPage>
+    </Screen>
   );
 }

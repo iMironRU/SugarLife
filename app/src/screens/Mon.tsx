@@ -1,7 +1,6 @@
-import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { IonIcon } from '@ionic/react';
 import { useTab } from '@/app/nav';
 import { DeviceSection } from '@/sections/lazy';
-import { reportContentScroll } from '@/app/panel';
 import { useChanges } from '@/settings/changes';
 import { hardwareChipOutline, chevronForward } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
@@ -12,6 +11,7 @@ import { deviceAges } from '@/domain/treatmentStats';
 import GlucoseTimeChart from '@/charts/GlucoseTimeChart';
 import { DataGate } from '@/ui/NotConfigured';
 import { useStack } from '@/app/stackCtx';
+import Screen from '@/ui/Screen';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
@@ -45,9 +45,7 @@ export default function Mon() {
   const readings = entries.slice(-8).reverse();
 
   return (
-    <IonPage>
-      <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
-        <div className="screen screen-pad">
+    <Screen tab={1}>
           <DataGate>
           {/* сахар/тренд/свежесть — в верхней панели; здесь кнопка датчика + график */}
           {ages.sensor && (
@@ -88,8 +86,6 @@ export default function Mon() {
 
           <div className="metric-note">День датчика — из события замены сенсора в Nightscout (Sensor Change). Сахар, тренд и свежесть — вживую.</div>
           </DataGate>
-        </div>
-      </IonContent>
-    </IonPage>
+    </Screen>
   );
 }
