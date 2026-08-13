@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { прочитать, записать } from '@/settings/storage';
 
 type Theme = 'system' | 'light' | 'dark';
 const KEY = 'sl.theme';
@@ -12,9 +13,9 @@ function apply(theme: Theme) {
 }
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem(KEY) as Theme) || 'dark');
+  const [theme, setTheme] = useState<Theme>(() => (прочитать(KEY) as Theme) || 'dark');
 
-  useEffect(() => { apply(theme); localStorage.setItem(KEY, theme); }, [theme]);
+  useEffect(() => { apply(theme); записать(KEY, theme); }, [theme]);
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: light)');
     const onChange = () => { if (theme === 'system') apply('system'); };

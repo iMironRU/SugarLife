@@ -1,15 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IonIcon } from '@ionic/react';
 import { checkmarkCircle, warning, alertCircle } from 'ionicons/icons';
-import PageHead from '@/ui/PageHead';
+import Section from '@/ui/Section';
 import PageLoading from '@/ui/PageLoading';
 import Insights from '@/ui/Insights';
-import { type InsightKind } from '@/domain/analysis';
-import { useChanges } from '@/settings/changes';
-import { analyzeCached } from '@/domain/analysisCache';
-import { insulinDaily } from '@/domain/treatmentStats';
-import { useStore } from '@/sources/store';
-import { useHistory, useTreatments } from '@/sources/db';
+import { useAnalysis } from '@/domain/useAnalysis';
+import { отметитьПрочитанными } from '@/settings/seenInsights';
 
 /* Разбор данных — отдельный раздел, а не врезка на главном экране.
 
@@ -23,56 +19,23 @@ import { useHistory, useTreatments } from '@/sources/db';
 
 const ПЕРИОДЫ = [3, 7, 14, 30];
 
-const ГРУППЫ: { key: InsightKind | 'all'; label: string }[] = [
-  { key: 'all', label: 'Все' },
-  { key: 'glucose', label: 'Сахар' },
-  { key: 'device', label: 'Расходники' },
-  { key: 'data', label: 'Данные' },
-  { key: 'habit', label: 'Привычки' },
-];
-
 export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
-  const { data } = useStore();
   const [days, setDays] = useState(14);
-  /* История берётся из локальной БД, а не из data.entries: стор держит короткое окно
-     для главного экрана, и разбор за две недели по нему показывал «пропусков 98 %» —
-     не потому что данных нет, а потому что я дал ему не тот срез. Ошибка вредная
-     вдвойне: человек пошёл бы чинить выгрузку, с которой всё в порядке. */
-  /* Разбор пересчитывается раз в час (см. domain/analysisCache), и перечитывать
-     историю чаще нечему помогать — только рывки на ровном месте. */
-  const { entries: история, loading: читаю } = useHistory(days * 86400e3, { minRefreshMs: 3600e3 });
-  const лечение = useTreatments(days * 86400e3, { minRefreshMs: 3600e3 });
-  const [kind, setKind] = useState<InsightKind | 'all'>('all');
-  const батарея = data?.device?.uploaderBattery ?? null;
-  const changes = useChanges();
+  /* Расчёт общий с плиткой на «Сегодня» (domain/useAnalysis.ts): счётчик важных
+     находок и содержимое этого экрана обязаны совпадать, а совпадают они надёжно
+     только если считаются одним кодом из одних аргументов. */
+  const { analysis, loading: читаю } = useAnalysis(days);
 
-  /* Результат разбора берём из общей памяти (domain/analysisCache): она переживает
-     закрытие экрана, поэтому возврат и переключение периода туда-обратно уже не
-     стоят ста миллисекунд счёта. Здешний useMemo остаётся ради фильтров — они на
-     сам расчёт не влияют и не должны его дёргать. */
-  const тик = Math.floor((история[история.length - 1]?.t ?? 0) / 60000);
-
-  const analysis = useMemo(() => {
-    const entries = история;
-    const events = лечение;
-    const tb = events.filter((e) => e.type === 'Temp Basal');
-    const bo = events.filter((e) => e.type !== 'Temp Basal' && (e.insulin ?? 0) > 0);
-    const ins = insulinDaily(tb, bo);
-    return analyzeCached(entries, events, days, {
-      basalCoverage: { covered: ins.coveredDays, total: ins.totalDays },
-      uploaderBattery: батарея,
-      changes,
-    });
+  /* Зашли — всё, что сейчас на экране, прочитано. Отсюда и берётся смысл счётчика на
+     плитке: он показывает не «сколько всего важного», а «сколько появилось с прошлого
+     раза» (SugarLife#148). */
+  const ids = analysis.insights.map((i) => i.id).join(',');
+  useEffect(() => {
+    if (!читаю) отметитьПрочитанными(analysis.insights.map((i) => i.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [тик, days, батарея, changes]);
+  }, [ids, читаю]);
 
-  const отфильтровано = useMemo(
-    () => (kind === 'all' ? analysis : { ...analysis, insights: analysis.insights.filter((i) => i.kind === kind) }),
-    [analysis, kind],
-  );
 
-  const счёт = (k: InsightKind | 'all') =>
-    k === 'all' ? analysis.insights.length : analysis.insights.filter((i) => i.kind === k).length;
 
   const r = analysis.readiness;
   const вид = r.level === 'ready'
@@ -86,8 +49,7 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
   if (читаю) return <PageLoading title="Аналитика" />;
 
   return (
-    <div className="sheet stack-body">
-      <PageHead title="Аналитика" subtitle={`Разбор за ${days} дн.`} onBack={onClose} />
+    <Section title="Аналитика" subtitle={`Разбор за ${days} дн.`} onBack={onClose}>
 
       <div className="period">
         {ПЕРИОДЫ.map((d) => (
@@ -107,22 +69,18 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
         {r.reasons.length > 0 && <div className="rd-why">{r.reasons.join(' · ')}</div>}
       </div>
 
-      <div className="metric-chips chips-scroll">
-        {ГРУППЫ.map((g) => (
-          <button key={g.key} className={'metric-chip' + (kind === g.key ? ' on' : '')} onClick={() => setKind(g.key)}>
-            <span>{g.label}</span>
-            <span className="chip-n">{счёт(g.key)}</span>
-          </button>
-        ))}
-      </div>
-
-      <Insights analysis={отфильтровано} />
+      {/* Ряда фильтров по виду находки здесь больше нет (#149). Он не влезал в
+          ширину — «Привычки» уезжали за край, — и прятал варианты: чего не видно,
+          того для человека не существует. А главное, фильтровать девять пунктов
+          незачем: вид находки виден по её тексту, а разделы по важности показывают
+          всё сразу. */}
+      <Insights analysis={analysis} />
 
       <div className="sheet-note">
         Всё посчитано из ваших же данных — истории CGM и событий Nightscout. Ничего не
         додумано: чего в данных нет, того здесь не будет. Это не назначения, а наблюдения,
         по которым удобно готовить вопросы врачу.
       </div>
-    </div>
+    </Section>
   );
 }

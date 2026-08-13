@@ -75,11 +75,6 @@ export async function oldestT(): Promise<number | null> {
   const cur = await d.transaction('entries').store.openCursor(null, 'next');
   return cur ? (cur.key as number) : null;
 }
-export async function countEntries(): Promise<number> {
-  const d = await db();
-  return d.count('entries');
-}
-
 export async function pruneBefore(before: number) {
   const d = await db();
   const tx = d.transaction('entries', 'readwrite');

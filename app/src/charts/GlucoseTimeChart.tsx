@@ -1,4 +1,5 @@
 import EChart from './Chart';
+import { осьВремени, ширинаГрафика } from './timeAxis';
 import { cssVar } from './cssVar';
 import { useUnit, gluValue } from '@/domain/units';
 import type { Entry } from '@/sources/nightscout';
@@ -29,7 +30,11 @@ export default function GlucoseTimeChart({
     grid: { left: 26, right: 8, top: 8, bottom: 20 },
     xAxis: {
       type: 'time', min: t0, max: now,
-      axisLabel: { color: axis, fontSize: 10, formatter: '{HH}:{mm}' },
+      /* Подписи прореживаем и ставим на круглые времена (charts/timeAxis.ts, #157):
+         формат «каждая точка» превращал ось в сплошной ряд чисел. hideOverlap — на
+         случай, когда наша оценка ширины разойдётся с настоящей: лучше пропущенная
+         подпись, чем две наложенные. */
+      axisLabel: { color: axis, fontSize: 10, hideOverlap: true, ...осьВремени(t0, now, ширинаГрафика(34)) },
       axisLine: { lineStyle: { color: grid, opacity: 0.4 } }, axisTick: { show: false },
       splitLine: { show: false },
     },

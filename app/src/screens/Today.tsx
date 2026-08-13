@@ -1,15 +1,17 @@
-import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { IonIcon } from '@ionic/react';
 import { AnalyticsSection, MealsSection } from '@/sections/lazy';
 import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, sparklesOutline, chevronForward } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt, agoText } from '@/domain/units';
-import { reportContentScroll } from '@/app/panel';
 import { activeCarbs } from '@/domain/loopValue';
 import ChangedButton from '@/ui/ChangedButton';
 import ReleaseBle from '@/ui/ReleaseBle';
 import NearbyTile from '@/ui/NearbyTile';
 import ConnectFeed from '@/ui/ConnectFeed';
+import UpdateReady from '@/ui/UpdateReady';
+import SnoozeBtn from '@/ui/SnoozeBtn';
+import { useОтложения, показывать, прибрать } from '@/settings/snooze';
 import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
@@ -27,16 +29,11 @@ import FoodSheet from '@/sheets/FoodSheet';
 import { DataGate } from '@/ui/NotConfigured';
 import { useStack } from '@/app/stackCtx';
 import { useAnalyticsOn } from '@/settings/analytics';
+import { useAnalysis, непрочитанныеВажные } from '@/domain/useAnalysis';
+import { useSeenInsights } from '@/settings/seenInsights';
+import Screen from '@/ui/Screen';
 
 const DASH = '—';
-
-// склонение «приём/приёма/приёмов»
-function mealsWord(n: number): string {
-  const d = n % 10, dd = n % 100;
-  if (d === 1 && dd !== 11) return 'приём';
-  if (d >= 2 && d <= 4 && (dd < 10 || dd >= 20)) return 'приёма';
-  return 'приёмов';
-}
 
 const isPaused = (s?: string | null) => {
   const l = (s || '').toLowerCase();
@@ -199,6 +196,55 @@ export default function Today() {
   const бодрыхЧасов = lastCarbT != null ? часыБодрствования(lastCarbT, Date.now()) : null;
   const longNoFood = daytime && !unloggedMeal && бодрыхЧасов != null && бодрыхЧасов >= 7;
 
+  /* Счётчик важного на плитке разбора (#148). Считаем НЕПРОЧИТАННОЕ: постоянное
+     число через неделю означает ноль — человек перестаёт его видеть, и когда там
+     появится настоящая беда, он не отличит её от привычной цифры.
+
+     Расчёт общий с самим разбором и попадает в те же кэши — второго чтения базы и
+     второго счёта не происходит (domain/useAnalysis.ts). */
+  const { analysis } = useAnalysis(14);
+  const виденные = useSeenInsights();
+  const новых = analyticsOn ? непрочитанныеВажные(analysis, виденные) : 0;
+  /* Красный — только когда среди непрочитанного есть bad. «Данных мало для разбора» и
+     «половина показаний не доехала» не одного веса, и одинаковый красный кружок
+     уравнял бы их. */
+  const срочное = analysis.insights.some(
+    (i) => i.severity === 'bad' && !виденные.includes(i.id),
+  );
+
+  /* Отложенные подсветки (#147). Эпизод отвечает «какой это случай», уровень —
+     «насколько плохо внутри случая». Отложили — молчим до смены эпизода или до
+     ухудшения на шаг; правило и его обоснование в domain/snooze.ts.
+
+     Эпизоды выбраны так, чтобы их смена означала «это уже другой случай»:
+     • батарея и резервуар — по отметке замены: поменял, значит начался новый цикл;
+     • застой резервуара — по часу начала застоя;
+     • подъём сахара — по самому подъёму: другой подъём это другой вопрос;
+     • «давно не ели» — по времени последнего приёма.
+
+     Уровни растут в сторону «хуже»: у батареи это 100 минус процент, у резервуара —
+     минус часы до конца. Шаги подобраны так, чтобы возврат означал заметное
+     изменение, а не дрожание шкалы. */
+  const отложения = useОтложения();
+  const эпБатарея = String(changes.battery ?? 0);
+  const эпРезервуар = String(changes.reservoir ?? 0);
+  const эпЗастой = String(Math.round((Date.now() - rstat.flatHours * 3600e3) / 3600e3));
+  const эпПодъём = String(Math.round((lastCarbT ?? 0) / 60000)) + ':' + Math.round(rise ?? 0);
+  const эпБезЕды = String(lastCarbT ?? 0);
+
+  const виднаБатарея = batteryLow
+    && показывать(отложения, 'battery', эпБатарея, 100 - (battery as number), 1);
+  const виденРезервуар = показывать(отложения, 'reservoir', эпРезервуар, Math.round(-(hoursLeft ?? 0)), 2);
+  const виденЗастой = stuck && показывать(отложения, 'stuck', эпЗастой, Math.round(rstat.flatHours), 6);
+  const виденПодъём = unloggedMeal && показывать(отложения, 'rise', эпПодъём, Math.round(rise ?? 0), 3);
+  const виднаЕда = longNoFood && показывать(отложения, 'nofood', эпБезЕды, Math.round(бодрыхЧасов ?? 0), 4);
+
+  /* Отложения с уже сменившимся эпизодом ни на что не влияют — выбрасываем при
+     заходе, чтобы список не рос вечно. Отдельной уборки по расписанию не нужно. */
+  useEffect(() => {
+    прибрать({ battery: эпБатарея, reservoir: эпРезервуар, stuck: эпЗастой, nofood: эпБезЕды });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [эпБатарея, эпРезервуар, эпЗастой, эпБезЕды]);
 
   // Локальные уведомления — только на переходе false→true (не спамим на каждый опрос).
   const suspendedRef = useRef(false);
@@ -229,9 +275,7 @@ export default function Today() {
   }, [soonEmpty]);
 
   return (
-    <IonPage>
-      <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
-        <div className="screen">
+    <Screen tab={2} panel="full">
           <DataGate>
           {/* Панель углеводов: сейчас — сверху, записанное — снизу.
 
@@ -247,6 +291,14 @@ export default function Today() {
               Число и подпись встали в строку, а не стопкой: «0 г активные углеводы»
               читается как фраза слева направо, а центрированная стопка посреди плитки
               не принадлежала ни одному краю. */}
+          {/* Углеводы и аналитика — в одну строку (#148). Аналитика занимала целую
+              строку ради двух слов, а ниже идут подсветки: чем раньше они попадают в
+              поле зрения, тем выше шанс, что их прочитают, а не пролистают.
+
+              Углеводам три четверти, аналитике четверть: в плитке углеводов живут два
+              числа и действие, а у входа в разбор задача одна — быть заметным и
+              сказать, есть ли там что-то новое. */}
+          <div className="today-row">
           <div className="carb-panel">
             <button className="carb-now" onClick={() => setFoodOpen(true)}>
               <div className={'carb-big' + (ac.known ? '' : ' is-unknown')}>{cob != null ? toCarbs(cob, cu) : DASH}<span>{carbUnitLabel(cu)}</span></div>
@@ -267,42 +319,47 @@ export default function Today() {
                 точное время и не показывать результат — нечестно. */}
             <button className="carb-hist"
               onClick={() => push(<MealsSection onClose={pop} />)}>
+              {/* Коротко, потому что плитка отдала четверть ширины разбору (#148).
+                  «5 ч» вместо «5 ч назад» и цифра вместо «3 приёма»: длинная форма
+                  обрезалась многоточием — и обрезалось на ней как раз число, то
+                  единственное, ради чего строку читают. */}
               <span className="carb-hist-l">
                 {последний
-                  ? <>Последний — <b>{toCarbs(последний.carbs, cu)} {carbUnitLabel(cu)}</b>, {agoText(последний.t)}</>
-                  : 'За сутки приёмов не вносили'}
+                  ? <>Последний <b>{toCarbs(последний.carbs, cu)} {carbUnitLabel(cu)}</b> · {agoText(последний.t).replace(' назад', '')}</>
+                  : 'За сутки не вносили'}
               </span>
               <span className="carb-hist-r">
-                {mealCount > 0 && <>{mealCount} {mealsWord(mealCount)} · {toCarbs(dayCarbs, cu)} {carbUnitLabel(cu)}</>}
+                {mealCount > 0 && <>{mealCount} · {toCarbs(dayCarbs, cu)} {carbUnitLabel(cu)}</>}
                 {mealCount === 0 && 'журнал'}
                 <IonIcon icon={chevronForward} />
               </span>
             </button>
           </div>
 
-
           {/* Разбор — отдельный экран, а не врезка: «Сегодня» про то, что делать
               сейчас, разбор про то, что было. В том же виде, что панель углеводов:
               обе — крупные входы, стоящие рядом, и разнобой в оформлении читался бы
               как разная важность. Выключенный показываем погасшим, а не прячем —
               иначе выключивший однажды уже не вспомнит, что это было. */}
-          {analyticsOn ? (
-            <button className="an-panel" onClick={() => push(<AnalyticsSection onClose={pop} />)}>
-              <div className="an-ico"><IonIcon icon={sparklesOutline} /></div>
-              <div className="an-center">
-                <div className="an-t">Аналитика</div>
-                <div className="an-s">расходники, сахар, пропуски в данных</div>
-              </div>
-              <div className="an-go"><IonIcon icon={chevronForward} /></div>
+          {analyticsOn && (
+            <button className="an-tile" onClick={() => push(<AnalyticsSection onClose={pop} />)}>
+              <IonIcon icon={sparklesOutline} />
+              <span className="an-tile-t">Разбор</span>
+              {/* Значка нет, когда важного нет: пустой счётчик приучает на счётчик не
+                  смотреть. Число — только про непрочитанное, иначе постоянная «12»
+                  через неделю не означает ничего (domain/useAnalysis.ts). */}
+              {новых > 0 && (
+                <span className={'an-badge' + (срочное ? ' is-bad' : '')}>{новых}</span>
+              )}
             </button>
-          ) : (
-            <div className="an-panel is-off">
-              <div className="an-ico"><IonIcon icon={sparklesOutline} /></div>
-              <div className="an-center">
-                <div className="an-t">Аналитика выключена</div>
-                <div className="an-s">включить: Профиль → Настройки → Выводить аналитику</div>
-              </div>
-            </div>
+          )}
+          </div>
+
+          {/* Выключенный разбор — строкой под рядом, а не плиткой в нём: место в ряду
+              стоит дорого, а сообщение «вы это выключили» не стоит ничего. Но и
+              спрятать нельзя — выключивший однажды не вспомнит, что это было. */}
+          {!analyticsOn && (
+            <div className="an-off-note">Разбор данных выключен · Профиль → Настройки</div>
           )}
 
           {/* помпа на паузе — важный статус, не прячем (авторитетно из AAPS) */}
@@ -317,45 +374,49 @@ export default function Today() {
           )}
 
           {/* окончание резервуара придётся на ночь — поменять заранее */}
-          {nightEmpty && (
+          {nightEmpty && виденРезервуар && (
             <div className="today-alert warn">
               <IonIcon icon={moonOutline} />
               <div>
                 <b>Инсулина ≈{Math.round(hoursLeft as number)} ч — закончится ночью (~{emptyTime})</b>
                 <span>Замените резервуар заранее, чтобы подача не прервалась во сне. Оценка по среднему расходу.</span>
+                <SnoozeBtn ключ="reservoir" эпизод={эпРезервуар} уровень={Math.round(-(hoursLeft ?? 0))} />
               </div>
             </div>
           )}
 
           {/* инсулин заканчивается днём — раньше про это не предупреждали вовсе */}
-          {soonEmpty && (
+          {soonEmpty && виденРезервуар && (
             <div className="today-alert warn">
               <IonIcon icon={warningOutline} />
               <div>
                 <b>Инсулина ≈{Math.round(hoursLeft as number)} ч — до ~{emptyAt}</b>
                 <span>Резервуар скоро опустеет, подача прервётся. Оценка по среднему расходу.</span>
+                <SnoozeBtn ключ="reservoir" эпизод={эпРезервуар} уровень={Math.round(-(hoursLeft ?? 0))} />
               </div>
             </div>
           )}
 
           {/* похоже, поел и не внёс — активные углеводы посчитаны неверно */}
-          {unloggedMeal && (
+          {виденПодъём && (
             <div className="today-alert warn">
               <IonIcon icon={restaurantOutline} />
               <div>
                 <b>Сахар вырос на {fmt(rise as number)} — еда записана?</b>
                 <span>За 2 часа поднялся до {toUnits(nowG as number)} {unitLabel()}, а углеводов не внесено. Если поели — добавьте, иначе активные углеводы и подсказки будут врать.</span>
+                <SnoozeBtn ключ="rise" эпизод={эпПодъём} уровень={Math.round(rise ?? 0)} />
               </div>
             </div>
           )}
 
           {/* давно не было еды — спокойное напоминание, без роста сахара */}
-          {longNoFood && (
+          {виднаЕда && (
             <div className="today-alert info">
               <IonIcon icon={restaurantOutline} />
               <div>
                 <b>Еды не вносили {Math.round(бодрыхЧасов as number)} ч</b>
                 <span>Либо давно не ели, либо забыли записать. Внесённая еда нужна для расчёта активных углеводов.</span>
+                <SnoozeBtn ключ="nofood" эпизод={эпБезЕды} уровень={Math.round(бодрыхЧасов ?? 0)} />
               </div>
             </div>
           )}
@@ -364,7 +425,7 @@ export default function Today() {
               ноль вовсе, и «1%» означает не «выключится сейчас». Сколько именно
               осталось, знает только собственная история человека, поэтому если циклов
               мы ещё не видели — так и говорим, а не подставляем чужую цифру. */}
-          {batteryLow && (
+          {виднаБатарея && (
             <div className="today-alert warn">
               <IonIcon icon={batteryDeadOutline} />
               <div>
@@ -382,6 +443,7 @@ export default function Today() {
                 <span className="alert-ask">
                   Поставил новую?
                   <ChangedButton what="battery" label="Поменял батарейку" />
+                  <SnoozeBtn ключ="battery" эпизод={эпБатарея} уровень={100 - (battery as number)} />
                 </span>
               </div>
             </div>
@@ -429,6 +491,12 @@ export default function Today() {
               отвалилась; когда всё работает — тихая строка (ui/NearbyTile.tsx). */}
           <NearbyTile />
 
+          {/* Обновление скачано и ждёт перезапуска. Ниже связи и выше подсветок
+              резервуара намеренно: это не медицинское событие и не должно попадаться
+              раньше них, но и в настройках его никто не найдёт — а не найдя, человек
+              останется на старой сборке навсегда (ui/UpdateReady.tsx, #150). */}
+          <UpdateReady />
+
           {/* Отдать устройства. Рядом с подсветками, а не в настройках: это действие
               нужно в моменте — «дай отсканировать сенсор родным приложением», — и
               искать его по разделам человек не будет. Само появляется, только когда
@@ -436,7 +504,7 @@ export default function Today() {
           <ReleaseBle />
 
           {/* подсветки резервуара */}
-          {stuck && (
+          {виденЗастой && (
             <div className="today-alert warn">
               <IonIcon icon={warningOutline} />
               <div>
@@ -449,14 +517,13 @@ export default function Today() {
                 <span className="alert-ask">
                   Или ты уже поменял, а помпа не заметила?
                   <ChangedButton what="reservoir" label="Поменял резервуар" />
+                  <SnoozeBtn ключ="stuck" эпизод={эпЗастой} уровень={Math.round(rstat.flatHours)} />
                 </span>
               </div>
             </div>
           )}
           </DataGate>
-        </div>
         <FoodSheet isOpen={foodOpen} onClose={() => setFoodOpen(false)} />
-      </IonContent>
-    </IonPage>
+    </Screen>
   );
 }

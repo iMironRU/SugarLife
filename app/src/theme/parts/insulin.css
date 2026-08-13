@@ -1,7 +1,9 @@
 /* Экран «Инсулин» */
 
 /* ===== Экран Инсулин: кнопки Помпа + Петля ===== */
-.pump-row { display: flex; gap: 12px; margin-top: 6px; }
+/* Своего верхнего поля нет: отступ от панели задаёт оболочка экрана (--sl-content-top).
+   Именно из таких «плюс шесть у первого блока» и складывался разъехавшийся зазор. */
+.pump-row { display: flex; gap: 12px; }
 .pump-btn {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 16px;
   border-radius: 20px; cursor: pointer; font-family: var(--font-body); text-align: left;

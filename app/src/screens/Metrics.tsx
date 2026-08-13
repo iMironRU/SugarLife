@@ -1,6 +1,5 @@
-import { IonPage, IonContent, IonIcon, IonSpinner } from '@ionic/react';
+import { IonIcon, IonSpinner } from '@ionic/react';
 import { useTab } from '@/app/nav';
-import { reportContentScroll } from '@/app/panel';
 import { water, nutrition, medkit } from 'ionicons/icons';
 import { useState } from 'react';
 import { useEntries, useTreatments } from '@/sources/db';
@@ -12,6 +11,7 @@ import TirBar from '@/charts/TirBar';
 import AgpChart from '@/charts/AgpChart';
 import { DataGate } from '@/ui/NotConfigured';
 import MetricBars from '@/charts/MetricBars';
+import Screen from '@/ui/Screen';
 
 type MetricKey = 'glucose' | 'carbs' | 'insulin';
 type Cell = [string, string, string];
@@ -21,7 +21,6 @@ const PERIODS: { days: number; label: string }[] = [
   { days: 3, label: '3 дня' }, { days: 7, label: '7 дней' },
   { days: 30, label: '30 дней' }, { days: 90, label: '90 дней' },
 ];
-
 
 export default function Metrics() {
   /* Вкладка видна? Все пять смонтированы разом ради свайпа, но читать базу
@@ -84,9 +83,7 @@ export default function Metrics() {
   ];
 
   return (
-    <IonPage>
-      <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
-        <div className="screen screen-pad">
+    <Screen tab={0}>
           <DataGate>
           {/* Переключатели периода и метрики липнут под панелью: на длинных экранах
               (90 дней, AGP) они уезжали вверх, и чтобы сменить период, надо было
@@ -173,8 +170,6 @@ export default function Metrics() {
             })()
           )}
           </DataGate>
-        </div>
-      </IonContent>
-    </IonPage>
+    </Screen>
   );
 }

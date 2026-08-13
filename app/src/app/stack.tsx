@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createGesture } from '@ionic/react';
 import { StackCtx, type StackApi } from './stackCtx';
-import { syncToActiveScreen, плавно, поПрокрутке } from './panel';
+import { syncToActiveScreen, плавно } from './panel';
 import { useGoHome } from './nav';
 import { canStartBack, shouldGoBack } from './backGesture';
 
@@ -25,10 +25,62 @@ import { canStartBack, shouldGoBack } from './backGesture';
 export function StackHost({ tab, children }: { tab: number; children: ReactNode }) {
   const [pages, setPages] = useState<{ key: number; node: ReactNode }[]>([]);
 
+  /* Уходящая страница живёт ещё четверть секунды после того, как снята со стека.
+
+     Появлялась она выездом справа, а исчезала мгновенно — React просто убирал узел.
+     Асимметрия читается как сбой: то, что въехало, обязано уехать, иначе непонятно,
+     куда оно делось и вернётся ли. Свайпом «назад» уход был плавным, кнопкой — нет,
+     то есть одно и то же действие выглядело двумя разными.
+
+     Держим снятый узел отдельно от стека: он уже не часть навигации (вернуться в него
+     нельзя), он доигрывает. Поэтому и состояние отдельное, а не флаг внутри pages. */
+  const [уходит, setУходит] = useState<{ key: number; node: ReactNode } | null>(null);
+  const таймерУхода = useRef(0);
+
+  /* Какая страница именно что открыта — ей и играть въезд. Раньше анимация висела на
+     каждой .stack-page, и браузер проигрывал её всякий раз, когда перерисовывал узел
+     заново: вернулся на вкладку с открытым разделом — а он «проявляется», будто ты
+     его только что открыл. */
+  const [въезжает, setВъезжает] = useState(0);
+  const таймерВъезда = useRef(0);
+
   const push = useCallback((node: ReactNode) => {
-    setPages((p) => [...p, { key: (p[p.length - 1]?.key ?? 0) + 1, node }]);
+    setPages((p) => {
+      const key = (p[p.length - 1]?.key ?? 0) + 1;
+      setВъезжает(key);
+      window.clearTimeout(таймерВъезда.current);
+      таймерВъезда.current = window.setTimeout(() => setВъезжает(0), 260);
+      return [...p, { key, node }];
+    });
   }, []);
-  const pop = useCallback(() => setPages((p) => p.slice(0, -1)), []);
+
+  const pop = useCallback(() => {
+    setPages((p) => {
+      const верх = p[p.length - 1];
+      if (верх) {
+        setУходит(верх);
+        window.clearTimeout(таймерУхода.current);
+        таймерУхода.current = window.setTimeout(() => setУходит(null), 240);
+      }
+      return p.slice(0, -1);
+    });
+  }, []);
+
+  /* Отдельная функция, а не флаг в pop(), и это не вкусовщина.
+
+     Разделы получают pop как onClose и вешают его прямо обработчиком: onClick={pop}.
+     Обработчик получает первым аргументом событие, поэтому любой необязательный
+     параметр у pop оказывается «истиной» при каждом нажатии кнопки «назад» — что мы
+     тут же и поймали: уход перестал анимироваться именно у кнопки.
+
+     Здесь уход не нужен: свайп уже дотащил страницу до края, и проигрывать анимацию
+     заново значило бы вернуть её на место и увести второй раз. */
+  const popПослеЖеста = useCallback(() => setPages((p) => p.slice(0, -1)), []);
+
+  useEffect(() => () => {
+    window.clearTimeout(таймерУхода.current);
+    window.clearTimeout(таймерВъезда.current);
+  }, []);
 
   const api = useMemo<StackApi>(() => ({ push, pop, depth: pages.length }), [push, pop, pages.length]);
 
@@ -93,7 +145,7 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
         if (закрыть) {
           /* Ждём, пока страница доедет за край, и только потом снимаем её со стека:
              иначе она исчезнет посреди движения, и вместо ухода получится мигание. */
-          window.setTimeout(() => { setТянут(false); pop(); }, 200);
+          window.setTimeout(() => { setТянут(false); popПослеЖеста(); }, 200);
         } else {
           window.setTimeout(() => setТянут(false), 220);
         }
@@ -101,16 +153,23 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
     });
     жест.enable();
     return () => жест.destroy();
-  }, [pages.length, pop]);
+  }, [pages.length, popПослеЖеста]);
 
-  const наПрокрутку = (e: React.UIEvent<HTMLDivElement>) => {
-    const t = e.target as HTMLElement;
-    if (t?.classList?.contains('stack-body')) поПрокрутке(t.scrollTop);
-  };
+  /* Прокрутка раздела панель не двигает — она там уже сжата (app/panel.ts).
+
+     Иначе получилось бы хуже, чем было: отступ содержимого раздела привязан к текущей
+     высоте панели, и панель, дышащая за прокруткой, таскала бы содержимое за собой. */
 
   return (
     <StackCtx.Provider value={api}>
       {children}
+      {/* Уходящая — поверх всех, но уже без событий: нажимать в неё нечего, а перехват
+          касаний на четверть секунды после «назад» ощущается как залипание. */}
+      {уходит && (
+        <div key={'out' + уходит.key} className="stack-page is-top is-leaving" aria-hidden>
+          {уходит.node}
+        </div>
+      )}
       {pages.map((p, i) => (
         /* Ниже верхней страницы всё скрыто: рисовать нижние незачем, а вот держать
            их смонтированными нужно — иначе возврат терял бы состояние (набранный
@@ -119,10 +178,11 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
           ref={i === pages.length - 1 ? верх : undefined}
           className={'stack-page'
             + (i === pages.length - 1 ? ' is-top' : '')
+            + (p.key === въезжает ? ' is-entering' : '')
             /* Пока тянут, страницу под верхней надо ВИДЕТЬ — иначе из-под уходящей
                покажется пустота вместо того, куда возвращаются. */
             + (тянут && i === pages.length - 2 ? ' is-under' : '')}
-          aria-hidden={i !== pages.length - 1} onScrollCapture={наПрокрутку}>
+          aria-hidden={i !== pages.length - 1}>
           {p.node}
         </div>
       ))}

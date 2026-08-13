@@ -22,7 +22,12 @@ ion-content { --background: var(--color-bg); }
 /* ===== Карусель вкладок (свайп между экранами) ===== */
 .pager-viewport { flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; }
 .pager-track { display: flex; height: 100%; will-change: transform; }
-.pager-pane { flex: 0 0 100%; width: 100%; height: 100%; position: relative; overflow: hidden; }
+.pager-pane {
+  flex: 0 0 100%; width: 100%; height: 100%; position: relative; overflow: hidden;
+  /* Свой контекст наложения: содержимое панели не должно смешиваться со соседними
+     панелями карусели при композиции (см. .stack-page в sheets.css). */
+  isolation: isolate;
+}
 /* каждая .pager-pane содержит экран (IonPage absolute inset:0) */
 .pager-pane > .ion-page { position: absolute; inset: 0; }
 .pager-pane .ion-page-invisible { opacity: 1; }
@@ -58,9 +63,13 @@ ion-content { --background: var(--color-bg); }
 
    Обе выражены явно, а не измеряются в JS: покой = безопасная зона + 10 (верхний
    отступ) + 30 (строка статуса, высота фиксирована) + 150 (ряд), а сворачивание
-   отнимает ровно 100px = 96 у ряда и 4 у отступа. Пока эти числа совпадают с
+   отнимает ровно 92px = 88 у ряда и 4 у отступа. Пока эти числа совпадают с
    правилами ниже, промахнуться нечем — а измерять было чем: замер попадал на
-   середину анимации и переменная застревала на прошлом значении. */
+   середину анимации и переменная застревала на прошлом значении.
+
+   Сворачивание было 100px, стало 92. Восемь пикселей вернули крылу: в сжатом виде на
+   имя роли и значение приходилось 46px вместе с иконкой, и строки стояли впритык —
+   читалось как слипшийся блок, а не как две разные вещи. */
 /* Объявление типа нужно, чтобы --p умела ПЛАВНО меняться: браузер анимирует
    пользовательское свойство только тогда, когда знает, что это число, а не строка.
    Без объявления переход просто не применяется, и поведение остаётся прежним —
@@ -70,7 +79,29 @@ ion-content { --background: var(--color-bg); }
 :root {
   --p: 0;
   --sl-panel-rest: calc(env(safe-area-inset-top, 0px) + 190px);
-  --sl-panel-h: calc(var(--sl-panel-rest) - 100px * var(--p));
+  --sl-panel-h: calc(var(--sl-panel-rest) - 92px * var(--p));
+  /* Высота панели в СЖАТОМ виде — то, во что она приходит внутри раздела. Отдельной
+     величиной, потому что от неё считается отступ содержимого раздела, и считаться он
+     обязан от постоянного числа, а не от текущей высоты. */
+  --sl-panel-min: calc(var(--sl-panel-rest) - 92px);
+  /* Середина — для экранов, которым не хватает содержимого на весь рост.
+
+     Сжимать панель до предела там, где под ней всё равно остаётся пустое место,
+     значит отбирать у сахара размер и ничего не давать взамен. Полшага: панель
+     заметно крупнее, а содержимое по-прежнему помещается целиком.
+
+     Постоянная величина, как и min: отступ содержимого обязан считаться от числа, а
+     не от текущей высоты, иначе содержимое поедет за панелью (SugarLife#162). */
+  --sl-panel-mid: calc(var(--sl-panel-rest) - 46px);
+  /* Отступ содержимого от верха — ОДНА величина на все три вида поверхности:
+     вкладку, страницу стека и шторку. Раньше их было три: ion-content брал
+     --sl-panel-rest, .screen-pad добавлял шесть пикселей (и не у всех), а
+     .stack-body считал сумму сам. Отсюда и разъехались зазоры (SugarLife#159).
+     Боковое поле тоже одно: было 20 у экранов и 18 у разделов и шторок. */
+  --sl-content-top: calc(var(--sl-panel-rest) + 6px);
+  --sl-content-top-section: calc(var(--sl-panel-min) + 6px);
+  --sl-content-top-mid: calc(var(--sl-panel-mid) + 6px);
+  --sl-side: 18px;
 }
 /* Плавно — только на смене экрана, и никогда под пальцем.
    За прокруткой панель обязана идти мгновенно: анимация здесь означала бы, что
@@ -118,11 +149,11 @@ ion-content { --background: var(--color-bg); }
 .hp-batt-item { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; }
 .hp-batt-item ion-icon { font-size: 13px; color: currentColor; }
 
-.hp-row { position: relative; height: calc(150px - 96px * var(--p)); }
+.hp-row { position: relative; height: calc(150px - 88px * var(--p)); }
 
 .hp-rect {
   position: absolute; left: 0; right: 0;
-  top: calc(10px - 6px * var(--p)); height: calc(130px - 84px * var(--p));
+  top: calc(10px - 6px * var(--p)); height: calc(130px - 76px * var(--p));
   display: flex; border-radius: calc(20px - 6px * var(--p)); overflow: hidden;
   border: 1.5px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 14%, transparent), color-mix(in srgb, var(--color-accent) 4%, transparent));
@@ -136,7 +167,7 @@ ion-content { --background: var(--color-bg); }
    поэтому разрыва больше нет — есть одна форма, которая уменьшается. */
 .hp-wing {
   flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
-  gap: calc(3px - 2px * var(--p));
+  gap: calc(3px - 1px * var(--p));
   background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
   color: var(--color-text); transition: background .16s; overflow: hidden;
 }
@@ -157,6 +188,13 @@ ion-content { --background: var(--color-bg); }
 .hp-ico { margin-bottom: calc(5px * (1 - var(--p))); }
 .hp-ico ion-icon { color: var(--color-accent); }
 .hp-name { font-size: calc(14px - 2px * var(--p)); line-height: 1.2; font-weight: 600; color: var(--color-text); flex-shrink: 0; }
+/* Через что живёт крыло — «облако» / «мост» (domain/deviceState.ts, черезЧтоСпорное).
+   Приглушённое и мелкое намеренно: это не состояние, а уточнение к точке рядом.
+   Ужимается первым — имя роли важнее пути, по которому она сейчас достаётся. */
+.hp-chan {
+  font-size: 10px; line-height: 1.2; color: var(--color-neutral-400);
+  min-width: 0; overflow: hidden; text-overflow: ellipsis;
+}
 .hp-val { font-size: calc(15px - 4px * var(--p)); font-weight: 600; color: var(--color-text); line-height: 1; margin-top: calc(3px * (1 - var(--p))); }
 /* подписи-детали (обновлено / резервуар / статус) — уходят первыми и по ширине тоже:
    max-height их только сплющивает, место в ряду они продолжают занимать (в отличие от
@@ -212,7 +250,13 @@ ion-content { --background: var(--color-bg); }
 .hp-iob.is-unknown { color: var(--color-neutral-500); }
 /* Часики на месте стрелки тренда: источник ещё не отдаёт свежее, и направление
    относится к старому показанию (domain — SourceStatus в contract 1.7). */
+/* Приглушённое последнее значение: оно было настоящим, но текущим уже не является.
+   Прятать его нечестно — человеку важно знать, от чего он ушёл; важно лишь, чтобы
+   оно не выглядело живым (SugarLifeCore#27). */
+.hp-value.is-stale { color: var(--color-neutral-500); }
 .hp-arrow.hp-wait { color: var(--color-neutral-500); }
+/* Часики вместо числа: занимают его место, поэтому и размер числа. */
+.hp-arrow.hp-wait-big { font-size: calc(38px - 22px * var(--p)); }
 @media (prefers-reduced-motion: no-preference) {
   .hp-arrow.hp-wait { animation: hp-wait-pulse 1.8s ease-in-out infinite; }
 }
@@ -263,4 +307,13 @@ ion-content { --background: var(--color-bg); }
 /* Отступ сверху у всего, что прокручивается: панель висит над контентом, и без
    отступа первый экран начинался бы под ней. Величина — высота в ПОКОЕ, а не
    текущая: иначе сворачивание снова двигало бы содержимое. */
-ion-content { --padding-top: var(--sl-panel-rest); }
+ion-content { --padding-top: 0; }
+
+/* Единственное место, где задаётся геометрия содержимого вкладки. Экран (ui/Screen.tsx)
+   описывает содержимое; отступы — здесь, и они те же, что у разделов и шторок. */
+.screen { padding: var(--sl-content-top) var(--sl-side) 26px; }
+/* Экран со сжатой панелью — отступ от постоянной сжатой высоты, как у разделов. */
+.screen.is-compact { padding-top: var(--sl-content-top-section); }
+/* Содержимого мало — панель стоит на середине, и отступ считается от неё же
+   (ui/Screen.tsx решает, когда так). */
+.screen.is-mid { padding-top: var(--sl-content-top-mid); }

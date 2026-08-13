@@ -1,4 +1,4 @@
-import { IonPage, IonContent, IonIcon, IonToggle } from '@ionic/react';
+import { IonIcon, IonToggle } from '@ionic/react';
 import { DevicesSection, DiagnosticsSection, LoopSetupSection, ServicesSection } from '@/sections/lazy';
 import {
   downloadOutline,
@@ -10,10 +10,7 @@ import { useStore } from '@/sources/store';
 import { resetLocalData } from '@/settings/reset';
 import { useClouds } from '@/sources/clouds';
 import { unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
-import { countEntries } from '@/sources/db';
-import { exportGlucoseCsv } from '@/platform/export';
 import { useTheme } from '../theme/useTheme';
-import { reportContentScroll } from '@/app/panel';
 import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload, ВЫПУСКАЕТСЯ_APK } from '@/platform/appUpdate';
 import { useStack } from '@/app/stackCtx';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
@@ -24,11 +21,12 @@ import Row from '@/ui/Row';
 import { useAnalyticsOn, setAnalyticsOn } from '@/settings/analytics';
 import UnitsModal from '@/sheets/UnitsModal';
 import CarbUnitsModal from '@/sheets/CarbUnitsModal';
+import Screen from '@/ui/Screen';
 
 const DASH = '—';
 
 export default function Profile() {
-  const { status, data } = useStore();
+  const { status } = useStore();
   const { theme, setTheme } = useTheme();
   const unit = useUnit();
   const [unitsOpen, setUnitsOpen] = useState(false);
@@ -36,14 +34,9 @@ export default function Profile() {
   const carbUnit = useCarbUnit();
   const { push, pop } = useStack();
   const analyticsOn = useAnalyticsOn();
-  const [count, setCount] = useState<number | null>(null);
-  const [exporting, setExporting] = useState(false);
-  const [exportMsg, setExportMsg] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
-
-  useEffect(() => { countEntries().then(setCount).catch(() => setCount(null)); }, [data]);
 
   const clouds = useClouds();
   const enabledClouds = clouds.filter((c) => c.enabled);
@@ -102,20 +95,6 @@ export default function Profile() {
     }
   };
 
-  const doExport = async () => {
-    if (exporting) return;
-    setExporting(true);
-    setExportMsg(null);
-    try {
-      const n = await exportGlucoseCsv();
-      setExportMsg(n ? `Файл готов · ${n} записей` : 'Нет данных для экспорта');
-    } catch {
-      setExportMsg('Не удалось выгрузить');
-    }
-    setExporting(false);
-    window.setTimeout(() => setExportMsg(null), 4000);
-  };
-
   /* Состояние обновления веб-версии. Четыре ответа на три вопроса, которые раньше
      оставались без ответа: есть ли обновление, применилось ли, нужна ли перезагрузка. */
   const upd = useUpdateState();
@@ -159,9 +138,7 @@ export default function Profile() {
   ];
 
   return (
-    <IonPage>
-      <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
-        <div className="screen screen-pad">
+    <Screen tab={4}>
           {/* Шапки с именем и тройки показателей здесь больше нет — по трём разным
               причинам, и ни одна не про экономию места.
 
@@ -232,13 +209,10 @@ export default function Profile() {
             <Row icon={sparklesOutline} title="Выводить аналитику"
               sub="разбор данных на «Сегодня» и отдельным экраном"
               right={<IonToggle checked={analyticsOn} onIonChange={(e) => setAnalyticsOn(e.detail.checked)} />} />
-            <Row icon={downloadOutline} title="Экспорт глюкозы в CSV" chevron={false} onClick={doExport} disabled={exporting}
-              value={exporting ? 'выгрузка…' : count != null ? `${count} зап.` : DASH} />
           </div>
-          {exportMsg && <div className="metric-note" style={{ marginTop: 8 }}>{exportMsg}</div>}
-
-          {/* Про хранение — рядом с экспортом: вопрос «а где вообще лежат мои данные»
-              возникает именно здесь. */}
+          {/* Про хранение. Стояло рядом с выгрузкой в CSV и объясняло, почему она
+              вообще есть; выгрузка ушла (данные выносит бэкап движка), а строка
+              осталась — вопрос «где лежат мои данные» от этого не исчез. */}
           <div className="metric-note" style={{ marginTop: 14 }}>
             Данные хранятся только на этом устройстве, без облака и аккаунта.
           </div>
@@ -303,11 +277,9 @@ export default function Profile() {
           </div>
 
           <button className="logout" onClick={reset}>Сбросить настройки</button>
-        </div>
 
         <UnitsModal isOpen={unitsOpen} onClose={() => setUnitsOpen(false)} />
         <CarbUnitsModal isOpen={carbUnitsOpen} onClose={() => setCarbUnitsOpen(false)} />
-      </IonContent>
-    </IonPage>
+    </Screen>
   );
 }

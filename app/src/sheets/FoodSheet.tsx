@@ -1,5 +1,5 @@
-import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
-import { closeOutline, timeOutline, searchOutline, sparklesOutline, warningOutline } from 'ionicons/icons';
+import { IonIcon, IonInput } from '@ionic/react';
+import {timeOutline, searchOutline, sparklesOutline, warningOutline} from 'ionicons/icons';
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS, plural } from '@/domain/units';
@@ -7,6 +7,7 @@ import { addMeal, useMeals } from '@/sources/mealStore';
 import { необъяснённыеПодъёмы, времяМомента, СМЕЩЕНИЯ } from '@/domain/mealMoment';
 import { searchFoods, personalFoods, CAT_LABEL, CAT_ORDER, type Food } from '@/domain/foods';
 import { подсказка, приёмПоЧасу } from '@/domain/foodNow';
+import Sheet from '@/ui/Sheet';
 
 const ПОКАЗЫВАЕМ = 6; // сколько плиток в группе до «ещё N»
 const подтянуть = (el: HTMLElement) =>
@@ -136,20 +137,20 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
     window.setTimeout(onClose, 700); // дать увидеть подтверждение, а не захлопнуть
   };
 
-  /* Шторка без breakpoints и handle намеренно. С ними вертикальный жест уходит в
-     перетаскивание вместо прокрутки содержимого: тянешь список — закрывается вся
-     шторка, и нижние кнопки недостижимы. В других шторках от них уже отказались;
-     здесь они дожили только потому, что содержимого было мало. */
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose} className="sheet-modal sheet-tall">
-      <IonContent className="sheet">
-        <div className="sheet-head">
-          <div>
-            <div className="sheet-title">Еда</div>
-            <div className="sheet-subtitle">Запись приёма пищи</div>
-          </div>
-          <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
+    <Sheet isOpen={isOpen} onClose={onClose} title="Еда" subtitle="Запись приёма пищи"
+      footer={(
+        /* В подвале только действие. «Закрыть» отсюда убрано: выход у шторки один
+           и всегда на одном месте — крестик вверху справа, который теперь не
+           уезжает с прокруткой (шапка липкая). Два выхода на одном экране мы уже
+           убирали в разделах — здесь та же причина. */
+        <div className="sheet-foot">
+          <button className="food-save" disabled={!годно || сохранено} onClick={сохранить}>
+            {сохранено ? 'Записано' : 'Сохранить приём'}
+          </button>
         </div>
+      )}
+    >
 
         {/* Правка прямо на плитке, значение по центру, шаги по краям.
 
@@ -346,22 +347,6 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
           выгрузку сделаем отдельно, запись от этого не потеряется.
         </div>
 
-      </IonContent>
-
-      {/* Кнопка вне прокрутки. Раньше она лежала последней в содержимом, под
-          справочником: чтобы сохранить приём, надо было пролистать каталог. А при
-          открытой клавиатуре её не было видно вовсе — вместе с полем болюса, которое
-          человек в этот момент и заполнял. */}
-      {/* Закрыть — тоже в подвале. Крестик вверху справа на высоком телефоне
-          недостижим большим пальцем, а отказаться от ввода человек решает чаще всего
-          именно тогда, когда уже долистал донизу. Тот же приём, что и с кнопкой
-          «назад» на страницах разделов. */}
-      <div className="sheet-foot">
-        <button className="sheet-cancel" onClick={onClose}>Закрыть</button>
-        <button className="food-save" disabled={!годно || сохранено} onClick={сохранить}>
-          {сохранено ? 'Записано' : 'Сохранить приём'}
-        </button>
-      </div>
-    </IonModal>
+    </Sheet>
   );
 }

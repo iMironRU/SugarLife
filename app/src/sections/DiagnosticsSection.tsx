@@ -1,7 +1,7 @@
 import { IonIcon, IonToggle } from '@ionic/react';
 import { useState } from 'react';
 import { documentTextOutline, shareOutline, warningOutline } from 'ionicons/icons';
-import PageHead from '@/ui/PageHead';
+import Section from '@/ui/Section';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import type { LoggingState } from '@/sources/bridge';
 
@@ -41,8 +41,7 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
      Экран с переключателями, которые ни на что не влияют, хуже его отсутствия. */
   if (!logging) {
     return (
-      <div className="sheet stack-body">
-        <PageHead title="Диагностика" subtitle="Логи работы" onBack={onClose} />
+      <Section title="Диагностика" subtitle="Логи работы" onBack={onClose}>
         <div className="loop-empty">
           <IonIcon icon={documentTextOutline} />
           <div className="loop-empty-t">Логов нет</div>
@@ -51,7 +50,7 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
             приложении на телефоне — там будет и уровень, и выгрузка.
           </div>
         </div>
-      </div>
+      </Section>
     );
   }
 
@@ -62,8 +61,7 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
   };
 
   return (
-    <div className="sheet stack-body">
-      <PageHead title="Диагностика" subtitle="Логи работы приложения" onBack={onClose} />
+    <Section title="Диагностика" subtitle="Логи работы приложения" onBack={onClose}>
 
       <div className="section-label sec">Подробность</div>
       <div className="list">
@@ -116,6 +114,6 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
         В логе твои данные: значения сахара, идентификаторы устройств, при включённом
         сыром обмене — переписка с сенсором. Отправляй только тому, кто разбирает проблему.
       </div>
-    </div>
+    </Section>
   );
 }

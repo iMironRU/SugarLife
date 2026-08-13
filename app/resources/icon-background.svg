@@ -1,0 +1,10 @@
+<!-- Задний слой адаптивной иконки Android — только подложка. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="256" cy="200" r="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22243a"/>
+      <stop offset="1" stop-color="#161826"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+</svg>

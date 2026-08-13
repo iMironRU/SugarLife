@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { прочитать, записать, прочитатьJson, записатьJson } from './storage';
 
 /* Замены расходников, отмеченные в приложении.
 
@@ -26,7 +27,7 @@ export type Changes = Partial<Record<Consumable, number>>;
 
 function load(): Changes {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) || 'null');
+    const v = прочитатьJson<Record<string, number> | null>(KEY, null);
     return v && typeof v === 'object' ? v : {};
   } catch { return {}; }
 }
@@ -34,7 +35,7 @@ function load(): Changes {
 let state = load();
 const subs = new Set<() => void>();
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ignore */ }
+  записатьJson(KEY, state);
   subs.forEach((f) => f());
 }
 
@@ -61,10 +62,10 @@ export function unmarkChanged(what: Consumable): void {
 const KEY_ASKED = 'sl.asked.refill.v1';
 
 export function askedRefill(): number {
-  try { return Number(localStorage.getItem(KEY_ASKED)) || 0; } catch { return 0; }
+  return Number(прочитать(KEY_ASKED)) || 0;
 }
 export function markRefillAsked(at: number): void {
-  try { localStorage.setItem(KEY_ASKED, String(at)); } catch { /* ignore */ }
+  записать(KEY_ASKED, String(at));
   subs.forEach((f) => f());
 }
 

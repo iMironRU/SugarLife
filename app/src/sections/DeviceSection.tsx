@@ -1,14 +1,14 @@
 import { IonIcon, IonToggle } from '@ionic/react';
 import { BasalProfileSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
-import PageHead from '@/ui/PageHead';
+import Section from '@/ui/Section';
 import { chevronForward, batteryHalfOutline, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
-import { связь, меткаСвязи, предложениеСлияния, толькоОблако } from '@/domain/deviceState';
+import { связь, меткаСвязи, предложениеСлияния, своиЖелезки, черезЧто, СЛОВО_КАНАЛА } from '@/domain/deviceState';
 import { useSnapshot, sendIntent, type DeviceView } from '@/sources/bridge';
 
 import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
@@ -33,11 +33,10 @@ import { useSmbg } from '@/settings/smbg';
 import { useStack } from '@/app/stackCtx';
 import { toSegs, daily } from '@/domain/basal';
 
-/* Как назвать канал человеку. Слова движка (direct/bridged/cloud) отвечают на вопрос
-   «откуда я это знаю», и перевод должен отвечать на тот же — не «BLE» и не «NS». */
-const КАНАЛ: Record<'direct' | 'bridged' | 'cloud', string> = {
-  direct: 'Напрямую', bridged: 'Через мост', cloud: 'Через облако',
-};
+/* Заголовок строки канала — тот же словарь, что и везде (domain/deviceState.ts), с
+   заглавной. Свой словарь здесь уже был, и он разошёлся с остальным приложением:
+   в списке каналов писалось «Через облако», а человеку нужно знать, через какое. */
+const сЗаглавной = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export type DeviceCatKey = 'sensor' | 'pump' | 'meter' | 'loop';
 
@@ -145,11 +144,37 @@ export default function DeviceSection({ onClose, cat, title }: {
      у OrangeLink и MiaoMiao пользовательских параметров нет вовсе, а заряд, прошивка и
      RSSI есть. Пока натива нет, единственный реальный источник — Nightscout: AAPS кладёт
      заряд OrangeLink в pump.extended.OrangeLinkBattery. Чего не знаем — не рисуем. */
+  /* Мост как устройство в снимке движка (SugarLifeCore#8, инкремент 1 приехал).
+     Ищем по виду, а не по ролям: движок проецирует его отдельным kind='bridge', и это
+     честнее прежней эвристики по названию роли — роли у транспорта могут быть разные,
+     а вид один. Старый мост вида не присылает, поэтому поиск по ролям оставлен
+     запасным: без него на прежней сборке блок «Мост» исчез бы целиком. */
+  const bleМост = (snap?.devices ?? []).find((d) => d.kind === 'bridge')
+    ?? (snap?.devices ?? []).find((d) => d.roles?.includes('Transport') || d.roles?.includes('Bridge'))
+    ?? null;
+
+  /* Телеметрия: сначала то, что мост рассказал о себе сам, потом то, что дошло через
+     Nightscout. Порядок не вкусовой — прямое чтение живёт своей жизнью и не зависит
+     от того, считал ли цикл; заряд из AAPS приходит только вместе с расчётом и при
+     молчащем цикле пропадает вместе с ним. Чего не знаем — не рисуем: пустая строка
+     «Прошивка —» выглядит как поломка, а не как отсутствие данных. */
   const bridgeTelemetry: { k: string; v: string }[] = [];
-  if (bridge && dev?.mountBattery != null) bridgeTelemetry.push({ k: 'Заряд моста', v: dev.mountBattery + '%' });
-  /* Мост как устройство в снимке движка (SugarLifeCore#8). Пока его там нет, работаем
-     с тем, что даёт Nightscout, — заряд. Появится в снимке: прошивка, сигнал, проверка. */
-  const bleМост = (snap?.devices ?? []).find((d) => d.roles?.includes('Transport') || d.roles?.includes('Bridge')) ?? null;
+  const зарядМоста = bleМост?.batteryPct ?? (bridge ? dev?.mountBattery ?? null : null);
+  if (зарядМоста != null) bridgeTelemetry.push({ k: 'Заряд моста', v: зарядМоста + '%' });
+  if (bleМост?.firmware) bridgeTelemetry.push({ k: 'Прошивка', v: bleМост.firmware });
+  /* RSSI в дБм — отрицательное число, и меньше значит хуже. Человеку это ни о чём не
+     говорит, поэтому рядом со значением пишем словом. Пороги грубые и намеренно
+     такие: точность тут не нужна, нужен ответ «стоит ли переложить телефон ближе». */
+  if (bleМост?.rssi != null) {
+    const r = bleМост.rssi;
+    bridgeTelemetry.push({ k: 'Сигнал', v: `${r} дБм · ${r >= -70 ? 'хороший' : r >= -85 ? 'средний' : 'слабый'}` });
+  }
+  /* Что стоит за мостом — по ссылке от устройства, а не по нашим догадкам. Связь
+     направлена от железки к мосту: мост может обслуживать несколько устройств, и
+     «мост знает свою помпу» было бы неправдой. */
+  const заМостом = bleМост
+    ? (snap?.devices ?? []).filter((d) => d.behindBridgeId === bleМост.id).map((d) => d.name).join(', ')
+    : '';
   const [проверка, setПроверка] = useState<'нет' | 'идёт' | 'принято' | 'ошибка'>('нет');
   const alert = useBridgeAlert();
 
@@ -201,6 +226,9 @@ export default function DeviceSection({ onClose, cat, title }: {
   const слияние = cat === 'pump' && спрашивать ? предложениеСлияния(snap) : null;
 
   const bleStatus = sourceStatusLabel(ble?.status);
+  /* Через что пришло это состояние (SugarLifeCore#34). Без него «на связи» отвечает
+     только на половину вопроса, и вторая половина — та, из-за которой чинят не то. */
+  const bleКанал = черезЧто(ble);
   const bleAge = ble?.latestAtMs != null ? agoText(ble.latestAtMs) : null;
 
   const activeMeth: 'direct' | 'cloud' | null = bleLive ? 'direct' : nsFeed ? 'cloud' : null;
@@ -241,7 +269,7 @@ export default function DeviceSection({ onClose, cat, title }: {
 
   const onForget = async () => {
     if (cat !== 'sensor' && cat !== 'pump') return;
-    const свои = (snap?.devices ?? []).filter((d) => d.kind === cat && !толькоОблако(d));
+    const свои = своиЖелезки(snap, cat);
     const хвост = свои.length > 1 ? ` Записей в движке: ${свои.length} — уберём все.` : '';
     if (!window.confirm(`Забыть ${title.toLowerCase()}? Модель и мост нужно будет выбрать заново.${хвост}`)) return;
 
@@ -260,8 +288,7 @@ export default function DeviceSection({ onClose, cat, title }: {
   };
 
   return (
-    <div className="sheet stack-body">
-        <PageHead title={title} subtitle={status ? deviceStatusLabel(status) : 'Устройство'} onBack={onClose} />
+    <Section title={title} subtitle={status ? deviceStatusLabel(status) : 'Устройство'} onBack={onClose}>
 
         <>
             {/* Вопрос про слияние — до всего остального: пока он не решён, экран ниже
@@ -343,9 +370,15 @@ export default function DeviceSection({ onClose, cat, title }: {
                     {activeMeth === 'cloud' && <span className="meth-now">сейчас</span>}
                   </div>
 
-                  {/* Ручной ввод не заменяет остальные способы, а дополняет: показание
-                      с пальца отвечает на вопрос «сенсор не врёт?», и данными самого
-                      сенсора на него не ответить. */}
+                  {/* Только у сенсора (#163). Ручной ввод не заменяет остальные способы, а
+                      дополняет: показание с пальца отвечает на вопрос «сенсор не врёт?», и
+                      данными самого сенсора на него не ответить.
+
+                      На карточке помпы этой строки быть не должно, а она там была: нажатие
+                      затемняло экран и открывало шторку «Показание глюкометра». Снаружи это
+                      читается не как «не туда нажал», а как «приложение сломалось» — и
+                      дальше человек перестаёт трогать соседние кнопки тоже. */}
+                  {cat === 'sensor' && (
                   <button className="list-row meth" onClick={() => setSmbgOpen(true)}>
                     <IonIcon icon={createOutline} className="list-ico" />
                     <span className="pick-main">
@@ -358,6 +391,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                     </span>
                     <IonIcon icon={chevronForward} className="list-chev" />
                   </button>
+                  )}
                 </div>
                 <div className="sheet-note">
                   {needsBridge ? bridgeHint + ' ' : ''}
@@ -480,7 +514,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                       <div key={c.id} className="list-row" style={{ cursor: 'default' }}>
                         <IonIcon icon={c.kind === 'cloud' ? cloudOutline : bluetoothOutline} className="list-ico" />
                         <span className="pick-main">
-                          <span className="list-title">{КАНАЛ[c.kind]}</span>
+                          <span className="list-title">{сЗаглавной(СЛОВО_КАНАЛА[c.kind])}</span>
                           <span className="pick-sub">
                             {c.label ? c.label + ' · ' : ''}
                             {меткаСвязи[с] ?? 'состояние неизвестно'}
@@ -507,7 +541,9 @@ export default function DeviceSection({ onClose, cat, title }: {
                     {bleStatus && (
                       <div className="basal-row">
                         <span>Состояние</span>
-                        <b className={sourceStatusWarn(ble.status) ? 'val-warn' : undefined}>{bleStatus}</b>
+                        <b className={sourceStatusWarn(ble.status) ? 'val-warn' : undefined}>
+                          {bleStatus}{bleКанал ? ' · ' + bleКанал : ''}
+                        </b>
                       </div>
                     )}
                     {bleAge && <div className="basal-row"><span>Последнее показание</span><b>{bleAge}</b></div>}
@@ -567,8 +603,10 @@ export default function DeviceSection({ onClose, cat, title }: {
 
                 <div className="sheet-note">
                   Настраивать в мосте нечего — это транспорт. Серийник и частота относятся
-                  к помпе за ним. Прошивку и уровень сигнала покажем, когда приложение
-                  начнёт читать мост напрямую.
+                  к помпе за ним{заМостом ? ` (${заМостом})` : ''}.
+                  {!bleМост?.firmware && !bleМост?.rssi
+                    ? ' Прошивку и уровень сигнала покажем, когда приложение начнёт читать мост напрямую.'
+                    : ''}
                 </div>
               </>
             )}
@@ -678,6 +716,6 @@ export default function DeviceSection({ onClose, cat, title }: {
         {hasModel && hasBleDriver && (cat === 'sensor' || cat === 'pump') && (
           <DeviceScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} kind={cat} title={title} />
         )}
-    </div>
+    </Section>
   );
 }

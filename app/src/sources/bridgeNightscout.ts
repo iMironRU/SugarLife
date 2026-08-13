@@ -76,10 +76,22 @@ function buildSnapshot(): UiSnapshot {
     source: cfg?.url ? 'Nightscout' : null,
   };
 
+  /* Устройство и монитор — из ОДНОГО вычисления, как это гарантирует движок после
+     SugarLifeCore#22. Раньше устройство несло только connection (состояние сокета), а
+     статус и живость были лишь у монитора; интерфейсу приходилось знать, что монитор
+     точнее, и держать для этого отдельную ветку.
+
+     Разница не теоретическая: сокет к Nightscout бывает жив, когда показания стоят
+     пятнадцать минут. Устройство с одним линком в таком состоянии выглядело живым. */
   const devices: DeviceView[] = cfg?.url ? [{
     id: 'nightscout', name: 'Nightscout', kind: 'service',
     roles: ['GlucoseSource', 'PumpStateSource', 'DeliveryHistorySource'],
     connection: link, capabilities: { trust: 'Relayed', read: 'true' },
+    live: monitor.live, status: monitor.status, latestAtMs: monitor.latestAtMs,
+    /* Единственный источник глюкозы в браузере — он и основной. Без пометки выбор
+       «кто основной» зависел бы от порядка в списке, а список из одного элемента
+       сегодня и из двух завтра. */
+    primary: true,
     settings: { parameters: [
       { key: 'url', title: 'Адрес Nightscout', type: 'Text', required: true, default: cfg?.url ?? null, options: [] },
       { key: 'token', title: 'Токен (для записи)', type: 'Secret', required: false, default: null, options: [] },

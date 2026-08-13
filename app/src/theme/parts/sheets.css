@@ -12,8 +12,18 @@
    прокрутки, и нижние кнопки становятся недостижимы — мы это уже проходили. */
 .sheet-modal {
   --width: 100%; --height: auto; --max-height: 88%;
-  --border-radius: 20px 20px 0 0;
   align-items: flex-end;
+  /* Подложка модалки прозрачная, красит только .sheet-shell.
+
+     Иначе при закрытии над шторкой оставался чёрный прямоугольник: коробка модалки
+     на время ухода держит высоту, снятую при открытии, а содержимое к этому моменту
+     уже другое (родитель сбросил состояние) или сдвинуто жестом. Крашеная коробка
+     показывала эту разницу сплошной чёрной плитой поверх экрана.
+
+     Красит тот, у кого есть форма и размер, — сама шторка. Тогда любое расхождение
+     коробки и содержимого видно как затемнение, а не как дыра. */
+  --background: transparent;
+  --box-shadow: none;
 }
 
 /* Страница стека внутри вкладки (data/stack.tsx).
@@ -28,10 +38,44 @@
   position: absolute; inset: 0; z-index: 5;
   display: flex; flex-direction: column;
   background: var(--color-bg);
-  animation: stack-in .24s cubic-bezier(.3,.9,.3,1);
+  /* Своим слоем — против сквозного просвечивания на iOS (SugarLife#162).
+
+     С телефона пришли снимки, где список вкладки виден СКВОЗЬ открытый раздел: фон
+     страницы не нарисован, хотя правило выше есть и в проде оно на месте — проверено
+     в собранном файле. Так выглядит непрорисованный слой, а не ошибка стиля.
+
+     Причина в соседстве: карусель вкладок держит постоянный will-change: transform, и
+     WebKit иногда не перерисовывает абсолютные слои внутри такого предка после
+     анимации. Лечится тем, что слой перестаёт быть «внутри чужого» и получает свой.
+
+     Проверить это можно только на устройстве: в браузере просвечивания нет ни разу. */
+  will-change: transform;
+  backface-visibility: hidden;
 }
+/* Въезд справа — только у ТОЛЬКО ЧТО открытой страницы, а не у всякой появившейся.
+
+   Анимация висела на самом .stack-page, то есть проигрывалась в любой момент, когда
+   браузер решал перерисовать узел заново, — например при возврате на вкладку с уже
+   открытым разделом. Человек видел под ним экран и «проявление» раздела поверх,
+   хотя ничего не открывал: он просто вернулся туда, где был (SugarLife#162).
+
+   Класс ставит стек ровно на время анимации и снимает. Появление по возврату теперь
+   ничем не отличается от того, как выглядит вкладка: она просто на месте. */
+.stack-page.is-entering { animation: stack-in .24s cubic-bezier(.3,.9,.3,1); }
 @keyframes stack-in { from { transform: translate3d(28%,0,0) } to { transform: none } }
-@media (prefers-reduced-motion: reduce) { .stack-page { animation: none } }
+
+/* Уход — зеркало появления. Раньше страница исчезала мгновенно, и то, что въехало
+   справа, пропадало без следа: непонятно, куда делось и вернётся ли (SugarLife#162).
+   Полный уход за край, а не на 28%: страница возвращается туда, откуда пришла. */
+.stack-page.is-leaving {
+  z-index: 6; pointer-events: none;
+  animation: stack-out .22s cubic-bezier(.3, .9, .3, 1) forwards;
+}
+@keyframes stack-out { from { transform: none } to { transform: translate3d(100%, 0, 0) } }
+@media (prefers-reduced-motion: reduce) {
+  .stack-page.is-entering { animation: none }
+  .stack-page.is-leaving { animation: none; opacity: 0 }
+}
 /* Нижние страницы стека не рисуем, но и не размонтируем: возврат должен застать
    набранный адрес и раскрытую часть суток на месте. */
 .stack-page:not(.is-top) { visibility: hidden; }
@@ -50,7 +94,16 @@
    отличается ionic-скроллер, а не украшение. */
 .stack-body {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-  padding: calc(var(--sl-panel-rest) + 6px) 18px 26px;
+  /* От ПОСТОЯННОЙ сжатой высоты, а не от текущей.
+
+     Сначала было от текущей (--sl-panel-h) — и содержимое поехало: возвращаясь на
+     вкладку с открытым разделом, панель анимированно сжимается 0→1, а вместе с ней
+     ползли вверх сто пикселей содержимого. Со стороны это и читается как «раздел
+     мигает при возврате».
+
+     Правило то же, что у вкладок, только точка отсчёта другая: содержимое стоит на
+     месте, панель движется над ним. */
+  padding: var(--sl-content-top-section) var(--sl-side) 26px;
   -webkit-overflow-scrolling: touch;
   will-change: scroll-position;
   transform: translateZ(0);
@@ -61,29 +114,84 @@
 .stack-body::after { content: ''; display: block; height: 1px; }
 .stack-page > .page-foot { flex: 0 0 auto; }
 
-.sheet::part(scroll) { padding: 6px 18px 26px; }
+/* Класс .sheet остался на разделах (там это IonContent страницы стека). У шторок
+   своя раскладка — .sheet-shell выше; отдельного правила им не нужно. */
+.sheet::part(scroll) { padding: 6px var(--sl-side) 26px; }
 /* gap — чтобы круглая кнопка не липла к заголовку (на телефоне читалось как одно пятно) */
 .sheet-head { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 8px 0 4px; }
 
-/* Полноэкранные разделы: на высоком телефоне кнопка «назад» вверху недостижима большим
-   пальцем, поэтому дублируем её внизу — в зоне досягаемости. Верхняя остаётся: она
-   привычна и нужна на широком экране. */
-/* подвал теперь ВНЕ прокрутки (IonFooter), запас под него не нужен */
+/* Раскладка шторки: шапка, прокручиваемое тело, подвал — колонкой.
+
+   Явная, а не унаследованная от IonContent: высота шторки считается по содержимому,
+   а IonContent собственной высоты не имеет и в такой модалке схлопывается в ноль
+   (подробности — в ui/Sheet.tsx). Максимум по высоте задан здесь же, поэтому длинная
+   шторка прокручивается телом, а короткая занимает ровно себя. */
+.sheet-shell {
+  display: flex; flex-direction: column; max-height: 88vh;
+  background: var(--color-bg); color: var(--color-text);
+  /* Скругление и прижатие вниз — здесь же, раз коробка модалки больше ничего не
+     красит: форма должна принадлежать тому, что видно. */
+  margin-top: auto; border-radius: 20px 20px 0 0; overflow: hidden;
+}
+.sheet-shell .sheet-head { flex: 0 0 auto; position: relative; padding: 18px var(--sl-side) 6px; touch-action: none; }
+/* Ручка: и подсказка, что шторку можно смахнуть вниз, и зона, за которую тянут. */
+.sheet-grab {
+  position: absolute; top: 7px; left: 50%; transform: translateX(-50%);
+  width: 36px; height: 4px; border-radius: 2px; background: var(--color-neutral-700);
+}
+/* contain здесь не только про соседей: пока тело прокручено не в самый верх, движение
+   вниз принадлежит ему, а не шторке (см. тянемШторку в ui/sheetGesture.ts). С резинкой
+   scrollTop уходил бы в минус на отскоке, и шторка подхватывала бы чужое движение. */
+.sheet-body {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 0 var(--sl-side) 20px; -webkit-overflow-scrolling: touch;
+}
+.sheet-shell > .sheet-foot, .sheet-shell > .page-foot {
+  flex: 0 0 auto; border-top: 1px solid var(--color-neutral-800);
+  padding: 10px var(--sl-side) calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Шапка шторки не прокручивается по построению — она вне тела (см. .sheet-shell).
+   Крестик единственный выход, и он обязан быть на месте всегда; раньше в длинной
+   шторке он уезжал вверх, поэтому выход дублировали кнопкой в подвале. */
+
+/* Правило про «назад» — одно на все разделы (SugarLife#162).
+
+   ВЫХОД из раздела — только стрелка слева вверху, в шапке. Внизу кнопки выхода нет
+   ни в одном разделе: раньше её местами дублировали ради большого пальца, и получалось,
+   что одно действие живёт в двух местах, а человек каждый раз ищет, где оно на этом
+   экране.
+
+   Низ отдан ДЕЙСТВИЯМ раздела — тому, что он делает с данными: перенести профиль в
+   помпу, отменить правку, шагнуть дальше в мастере. Слово «Назад» внизу встречается
+   ровно в одном месте — в мастере, — и означает там шаг назад, а не выход; на первом
+   шаге оно и написано иначе: «Закрыть».
+
+   Отсюда и два класса. .page-back — настоящая кнопка «назад». .page-btn — просто
+   крупная кнопка внизу. Раньше .page-back висел и на «Перенести в помпу», и это не
+   косметика: класс с именем действия на кнопке, которая делает другое, однажды
+   приводит к тому, что её меняют, думая, что правят выход. */
 .stack-body .sheet-note, .stack-body .section-label { padding-left: 2px; }
+/* Безопасную зону снизу подвал НЕ добавляет, и это не экономия.
+
+   Подвал раздела стоит не у края экрана — под ним таб-бар, и запас под домашний
+   индикатор добавляет уже он (.tabbar). Пока это делали оба, на телефоне под
+   кнопками зияли лишние тридцать четыре пикселя: в браузере env() равен нулю,
+   поэтому увидеть это можно было только на устройстве (SugarLife#162). */
 .page-foot {
-  padding: 8px 18px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding: 8px var(--sl-side) 10px;
   background: var(--color-bg);
   border-top: 1px solid var(--color-neutral-800);
 }
 .page-foot::part(native) { background: var(--color-bg); }
-.page-back {
+.page-back, .page-btn {
   width: 100%; min-height: 48px; border-radius: 16px; cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 6px;
   border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
   color: var(--color-text); font-size: 15px; font-weight: 600; font-family: inherit;
 }
-.page-back:active { background: var(--color-neutral-800); }
-.page-back ion-icon { font-size: 18px; }
+.page-back:active, .page-btn:active { background: var(--color-neutral-800); }
+.page-back ion-icon, .page-btn ion-icon { font-size: 18px; }
 .sheet-title { font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
 /* 44px — минимальный удобный размер касания (рекомендация iOS/Android). Сама иконка
    крупнее пропорционально: раньше в круге 36px сидел значок ~16px и терялся. */
@@ -107,7 +215,9 @@
 
 /* Высокая шторка с прокруткой (еда): фиксированная высота вместо auto, иначе контент
    растёт до предела и прокручиваться нечему. */
-.sheet-tall { --height: 88%; }
+/* Класс .sheet-tall убран вместе с разнобоем высот: у всех шторок теперь одна
+   высота — по содержимому, но не выше 88% экрана (--max-height у .sheet-modal).
+   Отдельная «высокая» шторка была ровно тем, из-за чего высоты и разъехались. */
 
 /* Закреплённый подвал шторки: главное действие не должно уезжать за содержимое.
 

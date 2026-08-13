@@ -1,9 +1,10 @@
-import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
-import { closeOutline, waterOutline } from 'ionicons/icons';
+import { IonIcon, IonInput } from '@ionic/react';
+import {waterOutline} from 'ionicons/icons';
 import { useState } from 'react';
 import { addSmbg, SMBG_REASONS, type Smbg } from '@/settings/smbg';
 import { getUnit, unitLabel } from '@/domain/units';
 import { MGDL_PER_MMOL } from '@/domain/types';
+import Sheet from '@/ui/Sheet';
 
 /* Ввод показания глюкометра.
 
@@ -34,15 +35,7 @@ export default function SmbgSheet({ isOpen, onClose }: { isOpen: boolean; onClos
   const сохранить = () => { if (годно && mmol != null) { addSmbg(mmol, reason); закрыть(); } };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={закрыть} className="sheet-modal">
-      <IonContent className="sheet">
-        <div className="sheet-head">
-          <div>
-            <div className="sheet-title">Показание глюкометра</div>
-            <div className="sheet-subtitle">С пальца, сейчас</div>
-          </div>
-          <button className="sheet-close" onClick={закрыть} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-        </div>
+    <Sheet isOpen={isOpen} onClose={закрыть} title="Показание глюкометра" subtitle="С пальца, сейчас">
 
         <div className="field-label">Значение, {unitLabel(u)}</div>
         <div className="field">
@@ -83,7 +76,6 @@ export default function SmbgSheet({ isOpen, onClose }: { isOpen: boolean; onClos
         </div>
 
         <button className="food-save" disabled={!годно} onClick={сохранить}>Сохранить</button>
-      </IonContent>
-    </IonModal>
+    </Sheet>
   );
 }

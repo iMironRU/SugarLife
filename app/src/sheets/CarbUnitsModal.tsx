@@ -1,6 +1,7 @@
-import { IonModal, IonContent, IonIcon } from '@ionic/react';
-import { closeOutline, checkmarkCircle, ellipseOutline } from 'ionicons/icons';
+import { IonIcon } from '@ionic/react';
+import {checkmarkCircle, ellipseOutline} from 'ionicons/icons';
 import { useCarbUnit, setCarbUnit, type CarbUnit } from '@/domain/units';
+import Sheet from '@/ui/Sheet';
 
 const OPTS: { key: CarbUnit; title: string; sub: string; unit: string; ex1: string; ex2: string; ex3: string; scale: string }[] = [
   {
@@ -19,15 +20,7 @@ export default function CarbUnitsModal({ isOpen, onClose }: { isOpen: boolean; o
   const unit = useCarbUnit();
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose} initialBreakpoint={0.85} breakpoints={[0, 0.85]} handle>
-      <IonContent className="sheet">
-        <div className="sheet-head">
-          <div>
-            <div className="sheet-title">Единицы еды</div>
-            <div className="sheet-subtitle">Углеводы во всём приложении</div>
-          </div>
-          <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-        </div>
+    <Sheet isOpen={isOpen} onClose={onClose} title="Единицы еды" subtitle="Углеводы во всём приложении">
 
         <div className="section-label" style={{ marginTop: 6 }}>Углеводы</div>
         <div className="unit-opts">
@@ -67,7 +60,6 @@ export default function CarbUnitsModal({ isOpen, onClose }: { isOpen: boolean; o
         </div>
 
         <div className="sheet-note">Пересчёт: 1 Х.Е. = 12 г. Смена единиц не меняет данные — только то, как они показаны и вводятся.</div>
-      </IonContent>
-    </IonModal>
+    </Sheet>
   );
 }

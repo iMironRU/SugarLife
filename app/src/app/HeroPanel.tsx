@@ -8,8 +8,8 @@ import { arrowChar, getCfg } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
 import { useChanges } from '@/settings/changes';
 import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
-import { syncToActiveScreen, плавно } from '@/app/panel';
-import { связь, связьГлюкозы, источникПомпы, меткаСвязи, type Связь } from '@/domain/deviceState';
+import { syncToActiveScreen, сразу } from '@/app/panel';
+import { связь, связьГлюкозы, источникПомпы, устройствоРоли, меткаСвязи, видКруга, черезЧтоСпорное, type Связь } from '@/domain/deviceState';
 import { activeInsulin } from '@/domain/loopValue';
 import { useSnapshot } from '@/sources/bridge';
 import CircleSparkline from '@/charts/CircleSparkline';
@@ -79,7 +79,7 @@ export default function HeroPanel() {
      прокруткой. Переключились на вкладку, прокрутанную вниз, — панель встаёт в то
      же положение, в каком её там оставили (иначе она разворачивалась бы поверх
      содержимого, которое стоит на месте). */
-  useLayoutEffect(() => { плавно(syncToActiveScreen); }, [tab]);
+  useLayoutEffect(() => { сразу(() => syncToActiveScreen(tab)); }, [tab]);
 
   // панель — владелец загрузки расширенных данных (датчик/резервуар/расход)
   useEffect(() => {
@@ -143,6 +143,28 @@ export default function HeroPanel() {
      подключённый, но молчащий сенсор выглядел как обычный, и человек ждал цифру,
      которой неоткуда взяться. */
   const acquiring = m?.status === 'Acquiring' || m?.status === 'Connecting' || m?.status === 'Delayed';
+
+  /* Что показывать в круге (SugarLifeCore#27).
+
+     С железа: при подключении сенсора цифры в круге «бегут» — это догрузка истории,
+     а читается как живая глюкоза. Круг — самая доверенная цифра в приложении, по ней
+     решают, колоть ли; он не имеет права показывать то, чем нельзя пользоваться.
+
+     Отсюда правило: число в круге бывает ТОЛЬКО у подтверждённо свежих данных.
+
+     • ждём (Connecting/Acquiring) — часиков достаточно, числа нет вовсе. Приглушать
+       здесь нечего: свежего показания ещё не было ни одного, а показать историческое
+       и есть та самая ошибка.
+     • отстало (Delayed) — число было, и оно остаётся, но приглушённым и с возрастом:
+       спрятать последнее известное значение тоже нечестно, человеку важно знать, от
+       чего он ушёл, — важно лишь, чтобы оно не выглядело текущим.
+     • нет связи — прочерк.
+
+     Ничего не анимируем. «Показать один раз, а не листать» у нас выполняется само:
+     число просто перерисовывается новым значением, промежуточных кадров нет. */
+  const круг = видКруга(снимок);
+  const кругЖдёт = круг === 'ждём';
+  const кругОтстал = круг === 'отстало';
   const syncState = !online ? 'offline'
     : (m?.status === 'Delayed' || status === 'stale' || status === 'error') ? 'stale'
     : liveNow ? 'live'
@@ -168,6 +190,11 @@ export default function HeroPanel() {
      domain/deviceState.ts, и та же функция читает карточку устройства. */
   const связьНмг = связьГлюкозы(снимок);
   const связьПомпы = связь(источникПомпы(снимок));
+  /* Через что живёт крыло — но только когда путей несколько (SugarLifeCore#34).
+     Именно здесь человек читал «Помпа на связи» и шёл искать поломку в мосте, хотя
+     состояние всё это время приходило из облака. */
+  const каналНмг = черезЧтоСпорное(устройствоРоли(снимок, 'sensor'));
+  const каналПомпы = черезЧтоСпорное(устройствоРоли(снимок, 'pump'));
 
   // датчик (день N) — слева; запас инсулина (≈N дн) — справа
   const ages = deviceAges(extras.events, changes);
@@ -223,6 +250,7 @@ export default function HeroPanel() {
             <span className="hp-head">
               <span className="hp-name">НМГ</span>
               <ТочкаСвязи что={связьНмг} />
+              {каналНмг && <span className="hp-chan">{каналНмг}</span>}
             </span>
             <span className="hp-sub">{nmgSub}{staleSensor && <IonIcon className="hp-stale" icon={timeOutline} />}</span>
             <span className="hp-val">{nmgVal}</span>
@@ -235,6 +263,7 @@ export default function HeroPanel() {
             <span className="hp-head">
               <span className="hp-name">Помпа</span>
               <ТочкаСвязи что={связьПомпы} />
+              {каналПомпы && <span className="hp-chan">{каналПомпы}</span>}
             </span>
             {/* «Цикл вкл / Пауза» — это режим подачи, а не связь: помпа может стоять
                 на паузе, будучи на связи, и молчать, будучи в замкнутом цикле. Два
@@ -249,18 +278,24 @@ export default function HeroPanel() {
           <CircleSparkline entries={data?.entries || []} />
           <span className="hp-circle-inner">
             <span className="hp-circle-val">
-              <span className="hp-value">{glucose}</span>
+              {/* Пока ждём первого свежего — числа нет. Показать вместо него
+                  историческое значило бы выдать догрузку истории за живой сахар. */}
+              {!кругЖдёт && <span className={'hp-value' + (кругОтстал ? ' is-stale' : '')}>{glucose}</span>}
               {/* Часики вместо стрелки, пока источник не отдаёт свежее. Тренд в этот
                   момент относится к старому показанию, и рисовать его как текущий —
                   то же враньё, что и ноль вместо «неизвестно»: стрелка «вверх» на
                   получасовой давности цифре читается как «растёт прямо сейчас». */}
               {acquiring
-                ? <IonIcon className="hp-arrow hp-wait" icon={timeOutline} />
+                ? <IonIcon className={'hp-arrow hp-wait' + (кругЖдёт ? ' hp-wait-big' : '')} icon={timeOutline} />
                 : arrow && <span className="hp-arrow">{arrow}</span>}
             </span>
-            <span className="hp-unit">{unitLabel()}</span>
+            {/* Единица без числа — подпись к пустому месту, поэтому её тоже нет. */}
+            {!кругЖдёт && <span className="hp-unit">{unitLabel()}</span>}
             <span className={'hp-iob' + (ai.known ? '' : ' is-unknown')} title={ai.reason ?? undefined}>{iobText}</span>
-            <span className="hp-ago">{ago}</span>
+            {/* Возраст показания — единственная строка, которая при ожидании говорит
+                по делу: «догоняю» отвечает на вопрос «почему пусто», а «5 мин назад»
+                на него не отвечает, потому что показания ещё не было. */}
+            <span className="hp-ago">{кругЖдёт ? 'догоняю…' : ago}</span>
           </span>
         </button>
       </div>
