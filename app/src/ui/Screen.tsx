@@ -1,6 +1,6 @@
 import { IonPage, IonContent } from '@ionic/react';
-import { useEffect, useRef, type ReactNode } from 'react';
-import { reportContentScroll } from '@/app/panel';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { reportContentScroll, серединаЛи, полшага, плавно, syncToActiveScreen } from '@/app/panel';
 import { useTab, useGoHome } from '@/app/nav';
 
 /* Оболочка вкладки — единственное место, где вкладка становится страницей.
@@ -42,6 +42,59 @@ export default function Screen({ tab, panel = 'compact', children }: {
 }) {
   const active = useTab();
   const ref = useRef<HTMLIonContentElement>(null);
+  const тело = useRef<HTMLDivElement>(null);
+
+  /* Полупустой экран держит панель на середине, а не в тонкой строке.
+
+     Симптом простой: на «Инсулине» под коротким графиком остаётся половина экрана
+     пустоты, а панель при этом сжата до предела. Сжатие — плата за место, и брать её
+     там, где место всё равно не нужно, не за что: сахар теряет размер, а взамен не
+     появляется ни строки.
+
+     Решает замер, а не список экранов: содержимое одного и того же экрана бывает и
+     коротким, и длинным (график за час и за сутки), и список пришлось бы держать в
+     двух местах — он разошёлся бы с правдой в первый же день.
+
+     Считаем от собственной высоты содержимого: отступ сверху сам зависит от положения
+     панели, и мерить «сколько видно» значило бы спрашивать ответ у самого ответа. */
+  const [середина, setСередина] = useState(false);
+  useEffect(() => {
+    if (panel !== 'compact') return;
+    const el = тело.current;
+    const хост = el?.parentElement;
+    if (!el || !хост) return;
+    const пересчитать = () => {
+      const отступ = parseFloat(getComputedStyle(el).paddingTop) || 0;
+      const своё = el.scrollHeight - отступ;
+      /* Отступ середины: если мы уже в ней — это текущий, иначе сжатый плюс полшага.
+         Так вопрос остаётся одним и тем же в обоих состояниях. */
+      const отступСередины = el.classList.contains('is-mid') ? отступ : отступ + полшага();
+      setСередина(серединаЛи(своё, отступСередины, хост.clientHeight));
+    };
+    пересчитать();
+    const наблюдатель = new ResizeObserver(пересчитать);
+    наблюдатель.observe(el);
+    наблюдатель.observe(хост);
+    return () => наблюдатель.disconnect();
+  }, [panel, children]);
+
+  /* Панель пересинхронизируем ТОЛЬКО когда замер изменил ответ, и только если экран
+     сейчас на виду.
+
+     Не на смене вкладки: там синхронизацию делает панель, и вторая, своя, попадала в
+     кадр, когда карусель ещё не пометила новую страницу активной, — синхронизация
+     читала соседнюю вкладку и пинала панель в её положение. «Сегодня» из-за этого
+     открывался со сжатой панелью поверх содержимого.
+
+     Плавно, а не сразу: замер меняется от данных (догрузился график), человек в этот
+     момент смотрит на экран, и скачок размера читался бы как сбой. */
+  const прошлое = useRef(середина);
+  useEffect(() => {
+    if (прошлое.current === середина) return;
+    прошлое.current = середина;
+    if (active !== tab) return;
+    плавно(() => syncToActiveScreen(tab));
+  }, [середина, active, tab]);
 
   /* Уходя с экрана, возвращаем его к покою.
 
@@ -87,7 +140,9 @@ export default function Screen({ tab, panel = 'compact', children }: {
   return (
     <IonPage>
       <IonContent ref={ref} fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
-        <div className={'screen' + (panel === 'compact' ? ' is-compact' : '')}>{children}</div>
+        <div ref={тело} className={'screen' + (panel === 'compact' ? ' is-compact' : '') + (середина ? ' is-mid' : '')}>
+          {children}
+        </div>
       </IonContent>
     </IonPage>
   );
