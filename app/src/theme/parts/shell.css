@@ -22,7 +22,12 @@ ion-content { --background: var(--color-bg); }
 /* ===== Карусель вкладок (свайп между экранами) ===== */
 .pager-viewport { flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; }
 .pager-track { display: flex; height: 100%; will-change: transform; }
-.pager-pane { flex: 0 0 100%; width: 100%; height: 100%; position: relative; overflow: hidden; }
+.pager-pane {
+  flex: 0 0 100%; width: 100%; height: 100%; position: relative; overflow: hidden;
+  /* Свой контекст наложения: содержимое панели не должно смешиваться со соседними
+     панелями карусели при композиции (см. .stack-page в sheets.css). */
+  isolation: isolate;
+}
 /* каждая .pager-pane содержит экран (IonPage absolute inset:0) */
 .pager-pane > .ion-page { position: absolute; inset: 0; }
 .pager-pane .ion-page-invisible { opacity: 1; }
