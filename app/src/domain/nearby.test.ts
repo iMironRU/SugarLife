@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { рядомЛи, записьВЭфире, новоеВЭфире, наширядом, РЯДОМ_СВЕЖЕСТЬ } from './nearby';
-import type { Discovered, DeviceView } from '@/sources/bridge';
+import { рядомЛи, записьВЭфире, новоеВЭфире, наширядом, железоДиспетчера, РЯДОМ_СВЕЖЕСТЬ } from './nearby';
+import type { Discovered, DeviceView, UiSnapshot } from '@/sources/bridge';
 
 /* Граница «наше/новое» под тестами, потому что ошибка в ней не выглядит ошибкой.
    В одну сторону получается лишняя запись о железке, которая уже заведена, — человек
@@ -62,3 +62,33 @@ describe('рядом ли железка', () => {
     expect([...наширядом([давно, свежий], [слышно], сейчас)].sort()).toEqual(['a', 'b']);
   });
 });
+
+/* Диспетчер: движок отдаёт готовый список железа, и слушать надо его. Наш фильтр по
+   виду — догадка, которая не знает, например, что «pump» в devices[] может оказаться
+   облачной записью (SugarLifeCore#44). */
+describe('что показывать в диспетчере', () => {
+  const снимок = (p: Partial<UiSnapshot>): UiSnapshot => ({
+    bridgeRevision: '1.8', devices: [], insights: null, pendingWrites: [], alerts: [],
+    monitor: {} as UiSnapshot['monitor'], ...p,
+  });
+
+  it('есть hardware[] — берём его целиком, ничего не фильтруя', () => {
+    const s = снимок({
+      hardware: [{ id: 'h1', name: 'OrangeLink', kind: 'bridge', connection: 'Connected' }],
+      devices: [зап({ id: 'd1' }), зап({ id: 'ns', kind: 'service' })],
+    });
+    expect(железоДиспетчера(s).map((h) => h.id)).toEqual(['h1']);
+  });
+
+  /* Пустой hardware[] — это ответ «железа нет», а не повод посчитать самим: движок
+     видит инвентарь целиком, и наш фильтр показал бы то, что он уже исключил. */
+  it('hardware[] пуст — диспетчер пуст, а не собран догадкой', () => {
+    expect(железоДиспетчера(снимок({ hardware: [], devices: [зап({ id: 'd1' })] }))).toEqual([]);
+  });
+
+  it('поля нет вовсе — старый мост, работает прежний фильтр по виду', () => {
+    const s = снимок({ devices: [зап({ id: 'd1' }), зап({ id: 'ns', kind: 'service' })] });
+    expect(железоДиспетчера(s).map((h) => h.id)).toEqual(['d1']);
+  });
+});
+

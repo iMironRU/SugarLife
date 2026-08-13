@@ -228,6 +228,40 @@ export interface RoleView {
   serial?: string | null;
 }
 
+/* Экземпляр ЖЕЛЕЗА (rev ≥ 1.8, SugarLifeCore#42/#44).
+
+   Диспетчер устройств рисуется прямо отсюда, и это главное, что даёт проекция:
+   раньше мы сами фильтровали devices[] по виду и гадали, где железка, где мост, а где
+   облако, притворяющееся помпой. Облаков здесь нет по построению — облако это источник
+   слота, а не железка: у него нет ни «рядом», ни «переподключить», ни батареи.
+
+   Связь видна с обеих сторон: у слота (roles[].activeSourceId) — кто его наполняет, у
+   железа (inSlot) — в каком слоте оно стоит. Одна связка, два конца — и ни одного
+   места, где нам пришлось бы её выводить самим. */
+export interface HardwareView {
+  /** Тот же id, что мы шлём в connect/disconnect. */
+  id: string;
+  name: string;
+  kind: 'sensor' | 'pump' | 'bridge';
+  /** Понятное имя модели; null — модель неизвестна (законное состояние). */
+  model?: string | null;
+  connection: Link | string;
+  status?: SourceStatus;
+  /** Когда железку последний раз видели в эфире. */
+  nearbyAtMs?: number | null;
+  /** В каком слоте стоит СЕЙЧАС; null — ни в каком. */
+  inSlot?: 'cgm' | 'insulin' | null;
+  autoConnect?: boolean;
+  batteryPct?: number | null;
+  rssi?: number | null;
+  firmware?: string | null;
+  /* 'possibly' — связь не встаёт дольше тридцати секунд. Точное «занято телефоном X»
+     ядро отложило (SugarLifeCore#41), и до тех пор это догадка, а не факт: так её и
+     показываем — «возможно», без имени чужого телефона. */
+  busy?: 'possibly' | null;
+  registryState?: 'Recorded' | 'Configured' | 'Linked' | 'Paused';
+}
+
 export interface UiSnapshot {
   bridgeRevision: string;
   coreCommit?: string; // штамп коммита ядра — сверка идентичности сборок Android/iOS
@@ -246,6 +280,10 @@ export interface UiSnapshot {
   /* rev ≥ 1.8 (SugarLifeCore#34). Пусто или отсутствует — движок ролей ещё не отдаёт,
      и мы сводим роль сами по тому же правилу (domain/deviceState.ts). */
   roles?: RoleView[];
+  /* rev ≥ 1.8 (SugarLifeCore#42). Экземпляры железа для диспетчера. Отсутствует —
+     старый мост или браузерный шим: диспетчер тогда собирается прежним способом,
+     фильтром devices[] по виду. */
+  hardware?: HardwareView[];
 }
 
 // ---- История (rev ≥ 1.1): query(HistoryQuery) → HistoryResult ----
