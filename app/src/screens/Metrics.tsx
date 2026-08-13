@@ -12,6 +12,10 @@ import AgpChart from '@/charts/AgpChart';
 import { DataGate } from '@/ui/NotConfigured';
 import MetricBars from '@/charts/MetricBars';
 import Screen from '@/ui/Screen';
+import Row from '@/ui/Row';
+import { documentTextOutline } from 'ionicons/icons';
+import { useStack } from '@/app/stackCtx';
+import { VisitNoteSection } from '@/sections/lazy';
 
 type MetricKey = 'glucose' | 'carbs' | 'insulin';
 type Cell = [string, string, string];
@@ -23,6 +27,7 @@ const PERIODS: { days: number; label: string }[] = [
 ];
 
 export default function Metrics() {
+  const { push, pop } = useStack();
   /* Вкладка видна? Все пять смонтированы разом ради свайпа, но читать базу
      невидимому экрану незачем — это и были рывки на соседних вкладках. */
   const активна = useTab() === 0;
@@ -169,6 +174,14 @@ export default function Metrics() {
               );
             })()
           )}
+          {/* Вход в записку — здесь, а не в профиле: записку собирают из этих же
+              цифр, и человек, который на них смотрит перед приёмом, уже находится в
+              нужном месте (#156). */}
+          <div className="list" style={{ marginTop: 18 }}>
+            <Row icon={documentTextOutline} title="Записка к приёму"
+              sub="что показать врачу и о чём спросить"
+              onClick={() => push(<VisitNoteSection onClose={pop} />)} />
+          </div>
           </DataGate>
     </Screen>
   );
