@@ -2,7 +2,7 @@ import { IonIcon } from '@ionic/react';
 import { bluetoothOutline, chevronForward } from 'ionicons/icons';
 import { useSnapshot } from '@/sources/bridge';
 import { useStack } from '@/app/stackCtx';
-import { DiscoverySection } from '@/sections/lazy';
+import { DiscoverySection, DevicesSection } from '@/sections/lazy';
 
 /* Вход в «устройства рядом» с главного экрана.
 
@@ -28,7 +28,15 @@ export default function NearbyTile() {
   const отвалились = devices.filter((d) => d.connection === 'Error' || d.status === 'Disconnected');
 
   const проблема = devices.length === 0 || отвалились.length > 0 || живые.length === 0;
-  const открыть = () => push(<DiscoverySection onClose={pop} />);
+  /* Куда вести, зависит от того, есть ли уже своё железо.
+
+     Нечего подключать — веди в поиск: там ищут незнакомое. А если железка заведена и
+     отвалилась, поиск бесполезен и даже вреден: своё в нём не показывается вовсе
+     (SugarLifeCore#34), и человек решит, что устройство пропало. Ему нужен диспетчер —
+     список своего с состоянием и «подключить». Он живёт в «Устройствах». */
+  const открыть = () => push(devices.length === 0
+    ? <DiscoverySection onClose={pop} />
+    : <DevicesSection onClose={pop} />);
 
   if (!проблема) {
     return (
