@@ -122,13 +122,18 @@ export default function HealthSection({ onClose }: { onClose: () => void }) {
         ) : undefined}>
         {выбранная && (
           <>
-            <div className="field-label" style={{ marginTop: 4 }}>Дата</div>
-            <div className="field">
-              <IonInput type="date" value={выбранная.когда ? вводДаты(выбранная.когда) : ''}
-                onIonChange={(e) => {
-                  const v = e.detail.value;
-                  if (v) { отметитьПроверку(выбранная.проверка.id, new Date(v + 'T12:00:00').getTime()); }
-                }} />
+            {/* Дата — тем же крупным по центру, что и числа рядом. Мелкая строка в
+                широком поле выглядела подписью, а не главным на экране: ради неё эту
+                шторку и открывают. */}
+            <div className="bas-stepper">
+              <div className="bas-stepval num-field num-date">
+                <IonInput type="date" value={выбранная.когда ? вводДаты(выбранная.когда) : ''}
+                  onIonChange={(e) => {
+                    const v = e.detail.value;
+                    if (v) { отметитьПроверку(выбранная.проверка.id, new Date(v + 'T12:00:00').getTime()); }
+                  }} />
+                <small>{выбранная.когда ? `${месяцевНазад(выбранная.когда, Date.now())} мес назад` : 'дата не указана'}</small>
+              </div>
             </div>
             {/* Цитата — мелким и без выделения: это сноска про то, откуда взялся срок,
                 а не главное на экране. Крупным жирным она перебивала и заголовок, и
