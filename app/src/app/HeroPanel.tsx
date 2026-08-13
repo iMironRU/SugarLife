@@ -8,7 +8,7 @@ import { arrowChar, getCfg } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
 import { useChanges } from '@/settings/changes';
 import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
-import { syncToActiveScreen, плавно } from '@/app/panel';
+import { syncToActiveScreen, сразу } from '@/app/panel';
 import { связь, связьГлюкозы, источникПомпы, меткаСвязи, видКруга, type Связь } from '@/domain/deviceState';
 import { activeInsulin } from '@/domain/loopValue';
 import { useSnapshot } from '@/sources/bridge';
@@ -79,7 +79,7 @@ export default function HeroPanel() {
      прокруткой. Переключились на вкладку, прокрутанную вниз, — панель встаёт в то
      же положение, в каком её там оставили (иначе она разворачивалась бы поверх
      содержимого, которое стоит на месте). */
-  useLayoutEffect(() => { плавно(syncToActiveScreen); }, [tab]);
+  useLayoutEffect(() => { сразу(syncToActiveScreen); }, [tab]);
 
   // панель — владелец загрузки расширенных данных (датчик/резервуар/расход)
   useEffect(() => {
