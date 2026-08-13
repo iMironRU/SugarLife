@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { IonIcon } from '@ionic/react';
-import { checkmarkCircle, warning, alertCircle } from 'ionicons/icons';
+import { warning, alertCircle } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import PageLoading from '@/ui/PageLoading';
 import Insights from '@/ui/Insights';
@@ -42,19 +42,42 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
 
 
 
+  /* Качество данных — в подзаголовок, а не карточкой сверху (#197).
+
+     Эта строка не сообщение, а оговорка ко ВСЕМУ, что ниже: она говорит, насколько
+     верить находкам и процентам. Карточка занимала полтора экрана в начале раздела и
+     отодвигала то, ради чего сюда пришли, — а по смыслу это ровно подзаголовок.
+
+     Когда данных достаточно, не пишем ничего. Постоянная зелёная плашка «данных
+     достаточно» читается первую неделю, потом перестаёт замечаться — и вместе с ней
+     перестаёт замечаться жёлтая, которая важна. */
   const r = analysis.readiness;
   const вид = r.level === 'ready'
-    ? { icon: checkmarkCircle, color: 'var(--c-glu)', title: 'Данных достаточно для разбора' }
+    ? null
     : r.level === 'partial'
-      ? { icon: warning, color: 'var(--c-carb)', title: 'Разбор возможен, но с оговорками' }
-      : { icon: alertCircle, color: 'var(--c-danger)', title: 'Данных пока мало' };
+      ? { icon: warning, color: 'var(--c-carb)', слово: 'с оговорками' }
+      : { icon: alertCircle, color: 'var(--c-danger)', слово: 'данных мало' };
 
   /* Пока история читается — показываем ожидание, а не поспешный вердикт. Разбор по
      ещё не приехавшим данным сказал бы «данных пока мало», и это прочли бы как ответ. */
   if (читаю) return <PageLoading title="Аналитика" />;
 
   return (
-    <Section title="Аналитика" subtitle={`Разбор за ${days} дн.`} onBack={onClose}>
+    <Section title="Аналитика" onBack={onClose}
+      subtitle={(
+        <>
+          Разбор за {days} дн.
+          {вид && (
+            <>
+              {' · '}
+              <span style={{ color: вид.color }}>
+                <IonIcon icon={вид.icon} style={{ fontSize: 11, verticalAlign: '-1px', marginRight: 3 }} />
+                {вид.слово}
+              </span>
+            </>
+          )}
+        </>
+      )}>
 
       <div className="period">
         {ПЕРИОДЫ.map((d) => (
@@ -64,15 +87,12 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
         ))}
       </div>
 
-      {/* Готовность — сверху и всегда: она говорит, насколько вообще стоит верить
-          тому, что ниже. Выводы по дырявым данным хуже отсутствия выводов. */}
-      <div className="rd" style={{ borderLeftColor: вид.color }}>
-        <div className="rd-top">
-          <IonIcon icon={вид.icon} style={{ color: вид.color }} />
-          <span>{вид.title}</span>
-        </div>
-        {r.reasons.length > 0 && <div className="rd-why">{r.reasons.join(' · ')}</div>}
-      </div>
+      {/* Причины остаются, но строкой, а не карточкой: «нет учёта углеводов» — это
+          то, что человек может починить, и выбрасывать его вместе с плашкой нельзя.
+          Показываем только когда есть оговорка: при полных данных объяснять нечего. */}
+      {вид && r.reasons.length > 0 && (
+        <div className="sheet-note warn" style={{ marginTop: 10 }}>{r.reasons.join(' · ')}</div>
+      )}
 
       {/* Что изменилось — до находок, а не после (#195).
 
