@@ -291,3 +291,5 @@ ion-content { --padding-top: 0; }
 /* Единственное место, где задаётся геометрия содержимого вкладки. Экран (ui/Screen.tsx)
    описывает содержимое; отступы — здесь, и они те же, что у разделов и шторок. */
 .screen { padding: var(--sl-content-top) var(--sl-side) 26px; }
+/* Экран со сжатой панелью — отступ от постоянной сжатой высоты, как у разделов. */
+.screen.is-compact { padding-top: var(--sl-content-top-section); }

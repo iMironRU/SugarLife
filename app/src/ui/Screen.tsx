@@ -22,7 +22,24 @@ import { useTab, useGoHome } from '@/app/nav';
    Отступ сверху задаёт CSS одной величиной (--sl-content-top в theme/parts/shell.css),
    общей со страницами стека и шторками. Первые блоки своих margin-top не приносят —
    иначе зазор снова начнёт складываться из чужих полей. */
-export default function Screen({ tab, children }: { tab: number; children: ReactNode }) {
+export default function Screen({ tab, panel = 'compact', children }: {
+  tab: number;
+  /* Насколько велика панель на этом экране.
+
+     'full' — там, где сахар и есть содержимое: «Сегодня». Круг крупный, панель
+     занимает своё место по праву, прокрутка её сворачивает за пальцем.
+
+     'compact' — везде остальном. На «Метриках», «НМГ», «Инсулине» и в «Профиле»
+     круг повторяет то, что и так на экране, или к делу не относится вовсе, а сто
+     пикселей стоят трёх строк списка. Человек всё равно сворачивал панель прокруткой
+     первым же движением — значит она там открыта зря.
+
+     Сахар при этом не исчезает: в сжатом виде остаются число, стрелка и строка
+     связи. Обещание «значение всегда на виду» держится, просто оно перестаёт быть
+     главным там, где главное другое. */
+  panel?: 'full' | 'compact';
+  children: ReactNode;
+}) {
   const active = useTab();
   const ref = useRef<HTMLIonContentElement>(null);
 
@@ -70,7 +87,7 @@ export default function Screen({ tab, children }: { tab: number; children: React
   return (
     <IonPage>
       <IonContent ref={ref} fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
-        <div className="screen">{children}</div>
+        <div className={'screen' + (panel === 'compact' ? ' is-compact' : '')}>{children}</div>
       </IonContent>
     </IonPage>
   );

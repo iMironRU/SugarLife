@@ -43,6 +43,9 @@ export function reportContentScroll(e: { target: EventTarget | null; detail: { s
   if (!el) return;
   const pane = el.closest?.('.pager-pane');
   if (pane && !pane.classList.contains('is-active')) return;
+  /* На экране со сжатой панелью прокрутка её не трогает: она уже сжата, а отступ
+     содержимого там постоянный — дышащая панель таскала бы содержимое за собой. */
+  if (pane?.querySelector('.screen.is-compact')) return;
   поПрокрутке(e.detail.scrollTop);
 }
 
@@ -122,6 +125,10 @@ export function syncToActiveScreen(): void {
      иначе после «назад» она остаётся сжатой, будто раздел ещё открыт. */
   const stack = pane.querySelector('.stack-page.is-top:not(.is-leaving) .stack-body') as HTMLElement | null;
   if (stack) { setProgress(1); return; }
+  /* Экран, которому крупная панель не нужна, держит её сжатой всегда — не только
+     после прокрутки. Признак берём из разметки экрана, а не из списка вкладок:
+     список пришлось бы держать в двух местах и однажды разойтись. */
+  if (pane.querySelector('.screen.is-compact')) { setProgress(1); return; }
   const content = pane.querySelector('ion-content') as (HTMLElement & { getScrollElement?: () => Promise<HTMLElement> }) | null;
   if (content?.getScrollElement) {
     content.getScrollElement().then((el) => setCollapse(el.scrollTop)).catch(() => setCollapse(0));

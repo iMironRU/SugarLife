@@ -275,7 +275,7 @@ export default function Today() {
   }, [soonEmpty]);
 
   return (
-    <Screen tab={2}>
+    <Screen tab={2} panel="full">
           <DataGate>
           {/* Панель углеводов: сейчас — сверху, записанное — снизу.
 
