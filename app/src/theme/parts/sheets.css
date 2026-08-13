@@ -126,6 +126,9 @@
   position: absolute; top: 7px; left: 50%; transform: translateX(-50%);
   width: 36px; height: 4px; border-radius: 2px; background: var(--color-neutral-700);
 }
+/* contain здесь не только про соседей: пока тело прокручено не в самый верх, движение
+   вниз принадлежит ему, а не шторке (см. тянемШторку в ui/sheetGesture.ts). С резинкой
+   scrollTop уходил бы в минус на отскоке, и шторка подхватывала бы чужое движение. */
 .sheet-body {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
   padding: 0 var(--sl-side) 20px; -webkit-overflow-scrolling: touch;
