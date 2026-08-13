@@ -28,8 +28,17 @@
   position: absolute; inset: 0; z-index: 5;
   display: flex; flex-direction: column;
   background: var(--color-bg);
-  animation: stack-in .24s cubic-bezier(.3,.9,.3,1);
 }
+/* Въезд справа — только у ТОЛЬКО ЧТО открытой страницы, а не у всякой появившейся.
+
+   Анимация висела на самом .stack-page, то есть проигрывалась в любой момент, когда
+   браузер решал перерисовать узел заново, — например при возврате на вкладку с уже
+   открытым разделом. Человек видел под ним экран и «проявление» раздела поверх,
+   хотя ничего не открывал: он просто вернулся туда, где был (SugarLife#162).
+
+   Класс ставит стек ровно на время анимации и снимает. Появление по возврату теперь
+   ничем не отличается от того, как выглядит вкладка: она просто на месте. */
+.stack-page.is-entering { animation: stack-in .24s cubic-bezier(.3,.9,.3,1); }
 @keyframes stack-in { from { transform: translate3d(28%,0,0) } to { transform: none } }
 
 /* Уход — зеркало появления. Раньше страница исчезала мгновенно, и то, что въехало
@@ -41,7 +50,7 @@
 }
 @keyframes stack-out { from { transform: none } to { transform: translate3d(100%, 0, 0) } }
 @media (prefers-reduced-motion: reduce) {
-  .stack-page { animation: none }
+  .stack-page.is-entering { animation: none }
   .stack-page.is-leaving { animation: none; opacity: 0 }
 }
 /* Нижние страницы стека не рисуем, но и не размонтируем: возврат должен застать
@@ -82,8 +91,14 @@
    привычна и нужна на широком экране. */
 /* подвал теперь ВНЕ прокрутки (IonFooter), запас под него не нужен */
 .stack-body .sheet-note, .stack-body .section-label { padding-left: 2px; }
+/* Безопасную зону снизу подвал НЕ добавляет, и это не экономия.
+
+   Подвал раздела стоит не у края экрана — под ним таб-бар, и запас под домашний
+   индикатор добавляет уже он (.tabbar). Пока это делали оба, на телефоне под
+   кнопками зияли лишние тридцать четыре пикселя: в браузере env() равен нулю,
+   поэтому увидеть это можно было только на устройстве (SugarLife#162). */
 .page-foot {
-  padding: 8px 18px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding: 8px var(--sl-side) 10px;
   background: var(--color-bg);
   border-top: 1px solid var(--color-neutral-800);
 }
