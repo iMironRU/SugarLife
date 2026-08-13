@@ -71,7 +71,10 @@
    отличается ionic-скроллер, а не украшение. */
 .stack-body {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-  padding: var(--sl-content-top) var(--sl-side) 26px;
+  /* От ТЕКУЩЕЙ высоты панели, а не от высоты в покое: в разделе панель сжата и
+     неподвижна (прокрутка её не трогает), поэтому содержимое не поедет. У вкладок
+     наоборот — там панель дышит за пальцем, и отступ обязан быть постоянным. */
+  padding: calc(var(--sl-panel-h) + 6px) var(--sl-side) 26px;
   -webkit-overflow-scrolling: touch;
   will-change: scroll-position;
   transform: translateZ(0);
@@ -86,10 +89,22 @@
 /* gap — чтобы круглая кнопка не липла к заголовку (на телефоне читалось как одно пятно) */
 .sheet-head { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 8px 0 4px; }
 
-/* Полноэкранные разделы: на высоком телефоне кнопка «назад» вверху недостижима большим
-   пальцем, поэтому дублируем её внизу — в зоне досягаемости. Верхняя остаётся: она
-   привычна и нужна на широком экране. */
-/* подвал теперь ВНЕ прокрутки (IonFooter), запас под него не нужен */
+/* Правило про «назад» — одно на все разделы (SugarLife#162).
+
+   ВЫХОД из раздела — только стрелка слева вверху, в шапке. Внизу кнопки выхода нет
+   ни в одном разделе: раньше её местами дублировали ради большого пальца, и получалось,
+   что одно действие живёт в двух местах, а человек каждый раз ищет, где оно на этом
+   экране.
+
+   Низ отдан ДЕЙСТВИЯМ раздела — тому, что он делает с данными: перенести профиль в
+   помпу, отменить правку, шагнуть дальше в мастере. Слово «Назад» внизу встречается
+   ровно в одном месте — в мастере, — и означает там шаг назад, а не выход; на первом
+   шаге оно и написано иначе: «Закрыть».
+
+   Отсюда и два класса. .page-back — настоящая кнопка «назад». .page-btn — просто
+   крупная кнопка внизу. Раньше .page-back висел и на «Перенести в помпу», и это не
+   косметика: класс с именем действия на кнопке, которая делает другое, однажды
+   приводит к тому, что её меняют, думая, что правят выход. */
 .stack-body .sheet-note, .stack-body .section-label { padding-left: 2px; }
 /* Безопасную зону снизу подвал НЕ добавляет, и это не экономия.
 
@@ -103,14 +118,14 @@
   border-top: 1px solid var(--color-neutral-800);
 }
 .page-foot::part(native) { background: var(--color-bg); }
-.page-back {
+.page-back, .page-btn {
   width: 100%; min-height: 48px; border-radius: 16px; cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 6px;
   border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
   color: var(--color-text); font-size: 15px; font-weight: 600; font-family: inherit;
 }
-.page-back:active { background: var(--color-neutral-800); }
-.page-back ion-icon { font-size: 18px; }
+.page-back:active, .page-btn:active { background: var(--color-neutral-800); }
+.page-back ion-icon, .page-btn ion-icon { font-size: 18px; }
 .sheet-title { font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
 /* 44px — минимальный удобный размер касания (рекомендация iOS/Android). Сама иконка
    крупнее пропорционально: раньше в круге 36px сидел значок ~16px и терялся. */

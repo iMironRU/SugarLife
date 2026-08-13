@@ -88,4 +88,4 @@
 .bas-act-col { display: flex; flex-direction: column; gap: 8px; }
 .bas-undo { flex: 0 0 68px; }
 .bas-go { background: color-mix(in srgb, var(--color-accent) 22%, var(--color-neutral-900)); }
-.page-back:disabled { opacity: .4; cursor: default; }
+.page-back:disabled, .page-btn:disabled { opacity: .4; cursor: default; }
