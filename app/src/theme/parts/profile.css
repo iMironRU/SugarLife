@@ -55,6 +55,9 @@
 .list-roles ion-icon { font-size: 17px; }
 .list-value { font-size: 13px; color: var(--color-neutral-400); }
 .list-value.muted { color: var(--color-accent); }
+/* Строка, которой вышел срок (раздел «Здоровье»). Красим только значение: строку
+   целиком — значит кричать, а тут не авария, а напоминание о календаре. */
+.row-warn .list-value { color: var(--c-danger-2); }
 .list-chev { font-size: 14px; color: var(--color-neutral-600); }
 
 /* пикер справочника (помпы/инсулины) */

@@ -1,9 +1,9 @@
 import { IonIcon, IonToggle } from '@ionic/react';
-import { DevicesSection, DiagnosticsSection, LoopSetupSection, ServicesSection } from '@/sections/lazy';
+import { DevicesSection, DiagnosticsSection, HealthSection, LoopSetupSection, ServicesSection } from '@/sections/lazy';
 import {
   downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
-  hardwareChipOutline, cloudOutline, repeat, sparklesOutline, documentTextOutline,
+  hardwareChipOutline, cloudOutline, repeat, sparklesOutline, documentTextOutline, heartOutline,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '@/sources/store';
@@ -13,6 +13,8 @@ import { unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
 import { useTheme } from '../theme/useTheme';
 import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload, ВЫПУСКАЕТСЯ_APK } from '@/platform/appUpdate';
 import { useStack } from '@/app/stackCtx';
+import { useHealth } from '@/settings/health';
+import { поВажности } from '@/domain/screenings';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
 import { useLoopProfile, LOOP_MODES } from '@/settings/loopProfile';
 import { useDeviceConfig, deviceStatus } from '@/settings/deviceConfig';
@@ -127,6 +129,16 @@ export default function Profile() {
 
   const loop = useLoopProfile();
   const loopMode = LOOP_MODES.find((m) => m.id === loop.mode);
+  /* Подпись у «Здоровья» — то, что требует действия, и ничего больше. Список
+     обследований со сроками длинный, а на строке помещается одно слово: пусть это
+     будет число просроченного, а не бодрое «всё в порядке» (#156). */
+  const здоровье = useHealth();
+  const просрочено = поВажности(здоровье.проверки, Date.now(), здоровье.дебют)
+    .filter((с) => с.состояние === 'просрочено').length;
+  const здоровьеПодпись = просрочено
+    ? `вышел срок: ${просрочено} ${просрочено === 1 ? 'проверка' : просрочено < 5 ? 'проверки' : 'проверок'}`
+    : 'вес, давление, анализы, обследования';
+
   const loopSub = loop.savedAt
     ? `${loopMode?.code} · ${loopMode?.name.toLowerCase()}`
     : 'не настроен';
@@ -199,6 +211,11 @@ export default function Profile() {
             {/* профиль петли: только настройка — подача не включается (решение 0004) */}
             <Row icon={repeat} title="Профиль петли" sub={loopSub}
               onClick={() => push(<LoopSetupSection onClose={pop} />)} />
+            {/* Здоровье — рядом с железом и петлёй по той же причине: это «моё,
+                работающее», просто не про приборы, а про то, что знает сам человек
+                и записывает врач (#156). */}
+            <Row icon={heartOutline} title="Здоровье" sub={здоровьеПодпись}
+              onClick={() => push(<HealthSection onClose={pop} />)} />
           </div>
 
           {/* настройки */}
