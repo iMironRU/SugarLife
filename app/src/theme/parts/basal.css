@@ -70,6 +70,17 @@
 .bas-stepval small { display: block; font-size: 11px; color: var(--color-neutral-400); font-weight: 400; margin-top: 3px; }
 .bas-under { text-align: center; font-size: 11px; color: var(--color-neutral-500); margin-top: 6px; }
 
+/* Число в степпере — поле, а не текст (ui/NumberStepper.tsx, #203): степпером нельзя
+   ввести первое значение, поэтому по цифре можно ткнуть и набрать её целиком.
+   Выглядит при этом ровно как цифра: рамка поля здесь только мешала бы — она обещает
+   ввод там, где чаще правят кнопками. */
+.num-field ion-input {
+  --padding-start: 0; --padding-end: 0; --padding-top: 0; --padding-bottom: 0;
+  --background: transparent; --color: var(--color-text);
+  font-size: 32px; font-weight: 700; text-align: center; min-height: 38px;
+}
+.num-field ion-input input { text-align: center; }
+
 .bas-chk {
   display: flex; gap: 12px; align-items: flex-start; width: 100%; margin-bottom: 8px;
   background: var(--color-neutral-900); border: 0; border-radius: 14px; padding: 13px;

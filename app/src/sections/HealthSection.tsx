@@ -6,6 +6,7 @@ import { useRef, useState } from 'react';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import Sheet from '@/ui/Sheet';
+import NumberStepper from '@/ui/NumberStepper';
 import {
   useHealth, записатьЗдоровье, отметитьПроверку, забытьПроверку, type Здоровье,
 } from '@/settings/health';
@@ -191,29 +192,40 @@ function ЗамерШторка({ что, onClose, h }: {
         </div>
       )}>
       {что === 'давление' ? (
+        /* Давление — два числа, и степперами их не набрать: два ряда кнопок по бокам
+           на телефоне не помещаются, а один общий шаг для верхнего и нижнего врал бы.
+           Поэтому здесь поля, но такие же крупные и по центру. */
         <>
           <div className="field-label">Верхнее и нижнее, мм рт. ст.</div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div className="field" style={{ flex: 1 }}>
+          <div className="bas-stepper">
+            <div className="bas-stepval num-field">
               <IonInput type="text" inputmode="numeric" placeholder="120" value={a}
                 onIonInput={(e) => setA(e.detail.value ?? '')} />
+              <small>верхнее</small>
             </div>
-            <div className="field" style={{ flex: 1 }}>
+            <div className="bas-stepval num-field" style={{ flex: 'none', fontWeight: 400, opacity: 0.4 }}>/</div>
+            <div className="bas-stepval num-field">
               <IonInput type="text" inputmode="numeric" placeholder="80" value={b}
                 onIonInput={(e) => setB(e.detail.value ?? '')} />
+              <small>нижнее</small>
             </div>
           </div>
         </>
       ) : (
         <>
-          <div className="field-label">{что === 'вес' ? 'Килограммы' : 'Проценты'}</div>
-          <div className="field">
-            {/* Тип text и inputmode, а не number: числовое поле молча съедает запятую,
-                а «7,2» человек наберёт именно так (та же причина, что в SmbgSheet). */}
-            <IonInput type="text" inputmode="decimal" placeholder={что === 'вес' ? '72' : '7,2'}
-              value={a} onIonInput={(e) => setA(e.detail.value ?? '')} />
-          </div>
-          {прошлое && <div className="field-hint">Записано {дата(прошлое.когда)}</div>}
+          {/* Шаг разный по смыслу: вес меняется на полкило, а гликированный — на
+              десятую процента; общий шаг сделал бы одну из шторок бесполезной. */}
+          <NumberStepper
+            значение={a}
+            шаг={что === 'вес' ? 0.5 : 0.1}
+            знаков={1}
+            min={что === 'вес' ? 20 : 3}
+            max={что === 'вес' ? 300 : 20}
+            единица={что === 'вес' ? 'кг' : '%'}
+            подсказка={что === 'вес' ? '72' : '7,2'}
+            onChange={setA}
+          />
+          {прошлое && <div className="bas-under">Прошлая запись — {дата(прошлое.когда)}</div>}
         </>
       )}
     </Sheet>
