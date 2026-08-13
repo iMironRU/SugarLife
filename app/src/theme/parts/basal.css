@@ -80,6 +80,9 @@
   font-size: 32px; font-weight: 700; text-align: center; min-height: 38px;
 }
 .num-field ion-input input { text-align: center; }
+/* Дата в том же виде, что число, но чуть мельче: «13 августа 2026 г.» длиннее любого
+   числа и в 32 пункта не помещается на узком телефоне. */
+.num-date ion-input { font-size: 22px; }
 
 .bas-chk {
   display: flex; gap: 12px; align-items: flex-start; width: 100%; margin-bottom: 8px;
