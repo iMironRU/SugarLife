@@ -104,22 +104,35 @@
 .stack-body::after { content: ''; display: block; height: 1px; }
 .stack-page > .page-foot { flex: 0 0 auto; }
 
+/* Класс .sheet остался на разделах (там это IonContent страницы стека). У шторок
+   своя раскладка — .sheet-shell выше; отдельного правила им не нужно. */
 .sheet::part(scroll) { padding: 6px var(--sl-side) 26px; }
 /* gap — чтобы круглая кнопка не липла к заголовку (на телефоне читалось как одно пятно) */
 .sheet-head { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 8px 0 4px; }
 
-/* В шторке шапка липкая: крестик — единственный выход, и он обязан быть на месте
-   всегда. Раньше в длинной шторке (еда) он уезжал вверх с прокруткой, и выход
-   дублировали кнопкой в подвале — два выхода на одном экране. Дубль убран, а чтобы
-   это не стало хуже, шапка теперь остаётся.
+/* Раскладка шторки: шапка, прокручиваемое тело, подвал — колонкой.
 
-   Фон непрозрачный и полем в стороны: содержимое проезжает ПОД шапкой, и без
-   заливки текст наезжал бы на заголовок. */
-.sheet-modal .sheet-head {
-  position: sticky; top: 0; z-index: 2;
-  background: var(--color-bg);
-  margin: 0 calc(-1 * var(--sl-side)); padding: 8px var(--sl-side) 8px;
+   Явная, а не унаследованная от IonContent: высота шторки считается по содержимому,
+   а IonContent собственной высоты не имеет и в такой модалке схлопывается в ноль
+   (подробности — в ui/Sheet.tsx). Максимум по высоте задан здесь же, поэтому длинная
+   шторка прокручивается телом, а короткая занимает ровно себя. */
+.sheet-shell {
+  display: flex; flex-direction: column; max-height: 88vh;
+  background: var(--color-bg); color: var(--color-text);
 }
+.sheet-shell .sheet-head { flex: 0 0 auto; padding: 12px var(--sl-side) 6px; }
+.sheet-body {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 0 var(--sl-side) 20px; -webkit-overflow-scrolling: touch;
+}
+.sheet-shell > .sheet-foot, .sheet-shell > .page-foot {
+  flex: 0 0 auto; border-top: 1px solid var(--color-neutral-800);
+  padding: 10px var(--sl-side) calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Шапка шторки не прокручивается по построению — она вне тела (см. .sheet-shell).
+   Крестик единственный выход, и он обязан быть на месте всегда; раньше в длинной
+   шторке он уезжал вверх, поэтому выход дублировали кнопкой в подвале. */
 
 /* Правило про «назад» — одно на все разделы (SugarLife#162).
 
