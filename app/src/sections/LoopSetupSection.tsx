@@ -5,6 +5,7 @@ import { useStore } from '@/sources/store';
 import { useDeviceConfig, isModelKnown } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
 import HoldButton from '@/ui/HoldButton';
+import Section from '@/ui/Section';
 import {
   LOOP_MODES, limitsFor, outOfRec, anyOutOfRec, fmtLimit,
   useLoopProfile, saveLoopProfile, type LoopModeId, type LoopLimit,
@@ -66,14 +67,49 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
   const canNext = step !== 1 || picked != null;
 
   return (
-    <>
-      <div className="sheet wz stack-body">
-        <div className="wz-top">ШАГ {step + 1} ИЗ 5 · {STEPS[step].toUpperCase()}</div>
-        <div className="wz-prog">
-          {STEPS.map((s, i) => (
-            <span key={s} className={'wz-dot' + (i < step ? ' passed' : i === step ? ' on' : '')} />
-          ))}
+    <Section
+      onBack={close}
+      className="wz"
+      /* Шаги вместо заголовка — это содержимое заголовочной области, а не повод
+         строить свою страницу: иначе следующий мастер построит четвёртую (#162). */
+      head={(
+        <>
+          <div className="wz-top">ШАГ {step + 1} ИЗ 5 · {STEPS[step].toUpperCase()}</div>
+          <div className="wz-prog">
+            {STEPS.map((s, i) => (
+              <span key={s} className={'wz-dot' + (i < step ? ' passed' : i === step ? ' on' : '')} />
+            ))}
+          </div>
+        </>
+      )}
+      footer={(
+        <div className="page-foot">
+          <div className="wz-nav">
+            {done ? (
+              <button className="page-next" onClick={close}>Понятно</button>
+            ) : (
+              <>
+                <button className="page-back" onClick={step === 0 ? close : () => { setStep((step - 1) as Step); setEditing(null); }}>
+                  <IonIcon icon={chevronBack} />
+                  {step === 0 ? 'Закрыть' : 'Назад'}
+                </button>
+                {step < 4 ? (
+                  <button className="page-next" disabled={!canNext} onClick={() => { setStep((step + 1) as Step); setEditing(null); }}>
+                    Далее
+                  </button>
+                ) : (
+                  <HoldButton
+                    label={needDoctor && !profile.doctorOk ? 'Требуется подтверждение' : 'Удерживайте, чтобы применить'}
+                    disabled={needDoctor && !profile.doctorOk}
+                    onComplete={apply}
+                  />
+                )}
+              </>
+            )}
+          </div>
         </div>
+      )}
+    >
 
         <div className="wz-l0">
           <IonIcon icon={lockClosedOutline} />
@@ -282,33 +318,6 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
             )}
           </>
         )}
-      </div>
-
-      <div className="page-foot">
-        <div className="wz-nav">
-          {done ? (
-            <button className="page-next" onClick={close}>Понятно</button>
-          ) : (
-            <>
-              <button className="page-back" onClick={step === 0 ? close : () => { setStep((step - 1) as Step); setEditing(null); }}>
-                <IonIcon icon={chevronBack} />
-                {step === 0 ? 'Закрыть' : 'Назад'}
-              </button>
-              {step < 4 ? (
-                <button className="page-next" disabled={!canNext} onClick={() => { setStep((step + 1) as Step); setEditing(null); }}>
-                  Далее
-                </button>
-              ) : (
-                <HoldButton
-                  label={needDoctor && !profile.doctorOk ? 'Требуется подтверждение' : 'Удерживайте, чтобы применить'}
-                  disabled={needDoctor && !profile.doctorOk}
-                  onComplete={apply}
-                />
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </>
+    </Section>
   );
 }

@@ -1,7 +1,7 @@
 import { IonIcon, IonToggle } from '@ionic/react';
 import { BasalProfileSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
-import PageHead from '@/ui/PageHead';
+import Section from '@/ui/Section';
 import { chevronForward, batteryHalfOutline, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
@@ -286,8 +286,7 @@ export default function DeviceSection({ onClose, cat, title }: {
   };
 
   return (
-    <div className="sheet stack-body">
-        <PageHead title={title} subtitle={status ? deviceStatusLabel(status) : 'Устройство'} onBack={onClose} />
+    <Section title={title} subtitle={status ? deviceStatusLabel(status) : 'Устройство'} onBack={onClose}>
 
         <>
             {/* Вопрос про слияние — до всего остального: пока он не решён, экран ниже
@@ -713,6 +712,6 @@ export default function DeviceSection({ onClose, cat, title }: {
         {hasModel && hasBleDriver && (cat === 'sensor' || cat === 'pump') && (
           <DeviceScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} kind={cat} title={title} />
         )}
-    </div>
+    </Section>
   );
 }

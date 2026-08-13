@@ -1,7 +1,7 @@
 import { IonIcon } from '@ionic/react';
 import { useState } from 'react';
 import { restaurantOutline, cloudOutline, trashOutline } from 'ionicons/icons';
-import PageHead from '@/ui/PageHead';
+import Section from '@/ui/Section';
 import { useTreatments } from '@/sources/db';
 import { useMeals, deleteMeal } from '@/sources/mealStore';
 import { useCarbUnit, toCarbs, carbUnitLabel, plural } from '@/domain/units';
@@ -47,12 +47,11 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
   const сумма = Math.round(все.reduce((s, x) => s + x.carbs, 0));
 
   return (
-    <div className="sheet stack-body">
-      <PageHead title="Приёмы пищи"
+    <Section title="Приёмы пищи"
         subtitle={все.length
           ? `${все.length} ${plural(все.length, 'приём', 'приёма', 'приёмов')} · ${toCarbs(сумма, cu)} ${carbUnitLabel(cu)}`
           : 'Пока пусто'}
-        onBack={onClose} />
+        onBack={onClose}>
 
       <div className="period">
         <button className={'period-seg' + (окно === 24 ? ' on' : '')} onClick={() => setОкно(24)}>Сутки</button>
@@ -94,7 +93,7 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
           ))}
         </div>
       )}
-    </div>
+    </Section>
   );
 }
 

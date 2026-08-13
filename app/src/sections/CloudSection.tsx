@@ -1,6 +1,6 @@
 import { IonInput, IonToggle, IonButton, IonIcon } from '@ionic/react';
 import { DeviceSection } from '@/sections/lazy';
-import PageHead from '@/ui/PageHead';
+import Section from '@/ui/Section';
 import { linkOutline, keyOutline, chevronForward, gitNetworkOutline, copyOutline, checkmarkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useClouds, updateCloud, removeCloud } from '@/sources/clouds';
@@ -132,8 +132,7 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
   const needToken = access === 'needsToken' || tokenShown;
 
   return (
-    <div className="sheet stack-body">
-        <PageHead title={cloud.name} onBack={askClose} />
+    <Section title={cloud.name} onBack={askClose}>
 
         <p className="sheet-desc">Читаем сахар и тренд напрямую из Nightscout. Адрес хранится локально на устройстве.</p>
 
@@ -220,7 +219,7 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
           <IonIcon icon={trashOutline} />
           Удалить облако
         </button>
-    </div>
+    </Section>
   );
 }
 

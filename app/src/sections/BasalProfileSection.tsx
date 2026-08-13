@@ -8,7 +8,7 @@ import {
   partDose, partAvg, segsIn, sameProfile, tzShiftMinutes, tzShiftText,
 } from '@/domain/basal';
 import BasalSteps, { type Inner } from './BasalSteps';
-import PageHead from '@/ui/PageHead';
+import Section from '@/ui/Section';
 
 /* Редактор базального профиля (docs/prototypes/basal-profile.html).
 
@@ -113,8 +113,7 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
 
   if (!pump.length) {
     return (
-      <div className="sheet stack-body">
-          <PageHead title="Базальный профиль" onBack={onClose} />
+      <Section title="Базальный профиль" onBack={onClose}>
           <div className="loop-empty">
             <div className="loop-empty-t">Профиль не получен</div>
             <div className="loop-empty-s">
@@ -123,14 +122,29 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
               профиль, было бы обманом.
             </div>
           </div>
-      </div>
+      </Section>
     );
   }
 
   return (
     <>
-      <div className="sheet stack-body">
-          <PageHead title="Базальный профиль" subtitle={источник === 'Pump' ? 'прочитан с помпы' : (data?.profile?.name ?? 'из Nightscout')} onBack={askClose} />
+      <Section
+        title="Базальный профиль"
+        subtitle={источник === 'Pump' ? 'прочитан с помпы' : (data?.profile?.name ?? 'из Nightscout')}
+        onBack={askClose}
+        footer={edit && changedAll ? (
+          <div className="page-foot">
+            <div className="bas-act">
+              <button className="page-back bas-undo" onClick={undo} disabled={!undoStack.length} aria-label="Отменить">
+                <IonIcon icon={arrowUndoOutline} />
+              </button>
+              <button className="page-back bas-go" onClick={() => { setDone([]); setSaved(false); setInner({ kind: 'transfer' }); }}>
+                Перенести в помпу
+              </button>
+            </div>
+          </div>
+        ) : null}
+      >
 
           {/* Зона неизвестна — говорим об этом прямо, а не молчим и не подставляем
               местное время. У помпы нет понятия часового пояса: её времена это её
@@ -259,28 +273,7 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
               <div className="sheet-note">Значения в ЕД/ч · шаг {STEP.toFixed(2)} · границы кратны 30 минутам — так же, как принимает помпа.</div>
             </>
           )}
-        </div>
-        {/* Подвал появляется, только когда есть что делать.
-
-            «Править профиль» отсюда убрано совсем: ровно то же делает переключатель
-            «Как есть / Правка» вверху, а полоса внизу отнимала место у графика
-            постоянно ради кнопки-дубликата.
-
-            В правке подвал показываем, лишь когда правки есть: заблокированная
-            кнопка «Перенести в помпу» занимала столько же места, сколько рабочая,
-            но ничего не делала. */}
-        {edit && changedAll && (
-          <div className="page-foot">
-            <div className="bas-act">
-              <button className="page-back bas-undo" onClick={undo} disabled={!undoStack.length} aria-label="Отменить">
-                <IonIcon icon={arrowUndoOutline} />
-              </button>
-              <button className="page-back bas-go" onClick={() => { setDone([]); setSaved(false); setInner({ kind: 'transfer' }); }}>
-                Перенести в помпу
-              </button>
-            </div>
-          </div>
-        )}
+      </Section>
 
       {/* Шаги правки — одноразовые подзадачи, им шторка и подходит. Вынесены в
           отдельный файл: пять экранов в одном компоненте не помещались в голову,
