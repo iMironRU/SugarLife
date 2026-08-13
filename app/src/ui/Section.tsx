@@ -31,7 +31,7 @@ import PageHead from './PageHead';
    значит там шаг назад, а не выход; на первом шаге оно и написано иначе: «Закрыть». */
 export default function Section({ title, subtitle, onBack, head, footer, className, children }: {
   title?: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   onBack: () => void;
   /** Своя шапка вместо заголовка — для мастера с шагами. */
   head?: ReactNode;

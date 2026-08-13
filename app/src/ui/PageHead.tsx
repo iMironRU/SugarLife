@@ -1,5 +1,6 @@
 import { IonIcon } from '@ionic/react';
 import { chevronBack } from 'ionicons/icons';
+import type { ReactNode } from 'react';
 
 /* Заголовок страницы стека — один на все разделы.
 
@@ -12,7 +13,12 @@ import { chevronBack } from 'ionicons/icons';
    окна. Отдельным компонентом — чтобы разнобой не завёлся снова при следующем
    добавленном разделе. */
 export default function PageHead({ title, subtitle, onBack }: {
-  title: string; subtitle?: string; onBack: () => void;
+  title: string;
+  /* Не только строка: в подзаголовке живёт то, что уточняет весь раздел, и иногда это
+     уточнение цветное — например, качество данных в разборе (#197). Заводить ради
+     этого второй проп значило бы делить одно место на два. */
+  subtitle?: ReactNode;
+  onBack: () => void;
 }) {
   return (
     <div className="sheet-head">
