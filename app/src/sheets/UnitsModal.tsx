@@ -1,6 +1,7 @@
-import { IonModal, IonContent, IonIcon } from '@ionic/react';
-import { closeOutline, checkmarkCircle, ellipseOutline } from 'ionicons/icons';
+import { IonIcon } from '@ionic/react';
+import {checkmarkCircle, ellipseOutline} from 'ionicons/icons';
 import { useUnit, setUnit, type Unit } from '@/domain/units';
+import Sheet from '@/ui/Sheet';
 
 const OPTS: { key: Unit; title: string; sub: string; unit: string; normal: string; low: string; high: string; scale: string }[] = [
   {
@@ -19,15 +20,7 @@ export default function UnitsModal({ isOpen, onClose }: { isOpen: boolean; onClo
   const unit = useUnit();
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose} initialBreakpoint={0.85} breakpoints={[0, 0.85]} handle>
-      <IonContent className="sheet">
-        <div className="sheet-head">
-          <div>
-            <div className="sheet-title">Единицы измерения</div>
-            <div className="sheet-subtitle">Глюкоза во всём приложении</div>
-          </div>
-          <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-        </div>
+    <Sheet isOpen={isOpen} onClose={onClose} title="Единицы измерения" subtitle="Глюкоза во всём приложении">
 
         <div className="section-label" style={{ marginTop: 6 }}>Глюкоза</div>
         <div className="unit-opts">
@@ -67,7 +60,6 @@ export default function UnitsModal({ isOpen, onClose }: { isOpen: boolean; onClo
         </div>
 
         <div className="sheet-note">Пересчёт: 1 ммоль/л ≈ 18 мг/дл. Смена единиц не меняет историю — только то, как она показана.</div>
-      </IonContent>
-    </IonModal>
+    </Sheet>
   );
 }

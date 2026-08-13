@@ -1,8 +1,9 @@
-import { IonModal, IonContent, IonIcon, IonInput } from '@ionic/react';
+import { IonIcon, IonInput } from '@ionic/react';
 import Row from '@/ui/Row';
-import { closeOutline, searchOutline, chevronBack, lockClosedOutline } from 'ionicons/icons';
+import { searchOutline, lockClosedOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { REQUIREMENTS, VENDOR_CLOUDS, supportLabel, supportMark, categoryLabel, type RequirementEntry } from '@/domain/requirementsCatalog';
+import Sheet from '@/ui/Sheet';
 
 /* Каталог требований (docs/CONNECT-UX.md §7a): для человека, у которого скан ничего не нашёл
    (устройство ещё не в эфире/не активировано) или он просто хочет узнать заранее, что нужно
@@ -20,20 +21,14 @@ export default function RequirementsCatalogSheet({ isOpen, onClose }: {
   const close = () => { onClose(); setPicked(null); setQ(''); };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={close} initialBreakpoint={0.85} breakpoints={[0, 0.85, 1]} handle>
-      <IonContent className="sheet">
-        <div className="sheet-head">
-          {picked && (
-            <button className="sheet-close" onClick={() => setPicked(null)} aria-label="Назад">
-              <IonIcon icon={chevronBack} />
-            </button>
-          )}
-          <div style={{ flex: 1 }}>
-            <div className="sheet-title">{picked ? picked.name : 'Назови своё устройство'}</div>
-            <div className="sheet-subtitle">{picked ? categoryLabel(picked.category) : 'Каталог · что поддерживаем'}</div>
-          </div>
-          <button className="sheet-close" onClick={close} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-        </div>
+    <Sheet
+      isOpen={isOpen} onClose={close}
+      /* «Назад» здесь — шаг ВНУТРИ каталога (карточка → список), а не выход:
+         выход рядом, крестиком. */
+      onBack={picked ? () => setPicked(null) : undefined}
+      title={picked ? picked.name : 'Назови своё устройство'}
+      subtitle={picked ? categoryLabel(picked.category) : 'Каталог · что поддерживаем'}
+    >
 
         {!picked ? (
           <>
@@ -82,7 +77,6 @@ export default function RequirementsCatalogSheet({ isOpen, onClose }: {
             )}
           </>
         )}
-      </IonContent>
-    </IonModal>
+    </Sheet>
   );
 }

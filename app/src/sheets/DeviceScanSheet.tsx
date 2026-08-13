@@ -1,10 +1,11 @@
-import { IonModal, IonContent, IonIcon, IonSpinner } from '@ionic/react';
+import { IonIcon, IonSpinner } from '@ionic/react';
 import Row from '@/ui/Row';
-import { closeOutline, bluetoothOutline, radioOutline, checkmarkCircle } from 'ionicons/icons';
+import {bluetoothOutline, radioOutline, checkmarkCircle} from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import type { Discovered, DriverDescriptor } from '@/sources/bridge';
 import DeviceSettingsForm from './DeviceSettingsForm';
+import Sheet from '@/ui/Sheet';
 
 type Step = { kind: 'list' } | { kind: 'target'; item: Discovered } | { kind: 'params'; item: Discovered; target: DriverDescriptor | null };
 
@@ -63,15 +64,7 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title }: {
   };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onClose} initialBreakpoint={0.75} breakpoints={[0, 0.75, 1]} handle>
-      <IonContent className="sheet">
-        <div className="sheet-head">
-          <div>
-            <div className="sheet-title">Подключение по BLE</div>
-            <div className="sheet-subtitle">{title}</div>
-          </div>
-          <button className="sheet-close" onClick={onClose} aria-label="Закрыть"><IonIcon icon={closeOutline} /></button>
-        </div>
+    <Sheet isOpen={isOpen} onClose={onClose} title="Подключение по BLE" subtitle={title}>
 
         {step.kind === 'list' && (
           <>
@@ -129,7 +122,6 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title }: {
             </button>
           </>
         )}
-      </IonContent>
-    </IonModal>
+    </Sheet>
   );
 }
