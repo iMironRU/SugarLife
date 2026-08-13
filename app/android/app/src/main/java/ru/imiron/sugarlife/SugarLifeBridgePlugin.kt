@@ -70,6 +70,7 @@ class SugarLifeBridgePlugin : Plugin() {
 
     override fun load() {
         Log.i(TAG, "load: attach to engine")
+        telemetrySink = { json -> engine.submitTelemetry(json) }   // натив→движок телеметрия (issue #38)
         // Держим процесс живым в фоне (иначе HyperOS убьёт → потеря сенсора). Стартуем с переднего плана — ОК.
         SugarLifeService.start(context.applicationContext)
         // Снимок из движка-синглтона (переживает пересоздание Activity) → в webview на UI-потоке.
