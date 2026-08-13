@@ -1,4 +1,4 @@
-import { IonPage, IonContent, IonIcon, IonToggle } from '@ionic/react';
+import { IonIcon, IonToggle } from '@ionic/react';
 import { DevicesSection, DiagnosticsSection, LoopSetupSection, ServicesSection } from '@/sections/lazy';
 import {
   downloadOutline,
@@ -11,7 +11,6 @@ import { resetLocalData } from '@/settings/reset';
 import { useClouds } from '@/sources/clouds';
 import { unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
 import { useTheme } from '../theme/useTheme';
-import { reportContentScroll } from '@/app/panel';
 import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload, ВЫПУСКАЕТСЯ_APK } from '@/platform/appUpdate';
 import { useStack } from '@/app/stackCtx';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
@@ -22,6 +21,7 @@ import Row from '@/ui/Row';
 import { useAnalyticsOn, setAnalyticsOn } from '@/settings/analytics';
 import UnitsModal from '@/sheets/UnitsModal';
 import CarbUnitsModal from '@/sheets/CarbUnitsModal';
+import Screen from '@/ui/Screen';
 
 const DASH = '—';
 
@@ -138,9 +138,7 @@ export default function Profile() {
   ];
 
   return (
-    <IonPage>
-      <IonContent fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
-        <div className="screen screen-pad">
+    <Screen tab={4}>
           {/* Шапки с именем и тройки показателей здесь больше нет — по трём разным
               причинам, и ни одна не про экономию места.
 
@@ -279,11 +277,9 @@ export default function Profile() {
           </div>
 
           <button className="logout" onClick={reset}>Сбросить настройки</button>
-        </div>
 
         <UnitsModal isOpen={unitsOpen} onClose={() => setUnitsOpen(false)} />
         <CarbUnitsModal isOpen={carbUnitsOpen} onClose={() => setCarbUnitsOpen(false)} />
-      </IonContent>
-    </IonPage>
+    </Screen>
   );
 }

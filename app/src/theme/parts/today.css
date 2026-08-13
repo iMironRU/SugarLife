@@ -74,7 +74,7 @@
 /* Углеводы и разбор в одной строке (#148). Плитка углеводов растягивается, разбор
    занимает фиксированную четверть: у него одна задача — быть заметным и сказать,
    есть ли новое, а ширина под это не нужна. */
-.today-row { display: flex; gap: 10px; align-items: stretch; margin-top: 6px; }
+.today-row { display: flex; gap: 10px; align-items: stretch; }
 .today-row .carb-panel { flex: 1; min-width: 0; margin-top: 0; }
 
 .an-tile {
