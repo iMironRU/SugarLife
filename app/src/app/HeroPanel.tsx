@@ -9,7 +9,7 @@ import { deviceAges } from '@/domain/treatmentStats';
 import { useChanges } from '@/settings/changes';
 import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
 import { syncToActiveScreen, сразу } from '@/app/panel';
-import { связь, связьГлюкозы, источникПомпы, меткаСвязи, видКруга, type Связь } from '@/domain/deviceState';
+import { связь, связьГлюкозы, источникПомпы, устройствоРоли, меткаСвязи, видКруга, черезЧтоСпорное, type Связь } from '@/domain/deviceState';
 import { activeInsulin } from '@/domain/loopValue';
 import { useSnapshot } from '@/sources/bridge';
 import CircleSparkline from '@/charts/CircleSparkline';
@@ -190,6 +190,11 @@ export default function HeroPanel() {
      domain/deviceState.ts, и та же функция читает карточку устройства. */
   const связьНмг = связьГлюкозы(снимок);
   const связьПомпы = связь(источникПомпы(снимок));
+  /* Через что живёт крыло — но только когда путей несколько (SugarLifeCore#34).
+     Именно здесь человек читал «Помпа на связи» и шёл искать поломку в мосте, хотя
+     состояние всё это время приходило из облака. */
+  const каналНмг = черезЧтоСпорное(устройствоРоли(снимок, 'sensor'));
+  const каналПомпы = черезЧтоСпорное(устройствоРоли(снимок, 'pump'));
 
   // датчик (день N) — слева; запас инсулина (≈N дн) — справа
   const ages = deviceAges(extras.events, changes);
@@ -245,6 +250,7 @@ export default function HeroPanel() {
             <span className="hp-head">
               <span className="hp-name">НМГ</span>
               <ТочкаСвязи что={связьНмг} />
+              {каналНмг && <span className="hp-chan">{каналНмг}</span>}
             </span>
             <span className="hp-sub">{nmgSub}{staleSensor && <IonIcon className="hp-stale" icon={timeOutline} />}</span>
             <span className="hp-val">{nmgVal}</span>
@@ -257,6 +263,7 @@ export default function HeroPanel() {
             <span className="hp-head">
               <span className="hp-name">Помпа</span>
               <ТочкаСвязи что={связьПомпы} />
+              {каналПомпы && <span className="hp-chan">{каналПомпы}</span>}
             </span>
             {/* «Цикл вкл / Пауза» — это режим подачи, а не связь: помпа может стоять
                 на паузе, будучи на связи, и молчать, будучи в замкнутом цикле. Два

@@ -8,7 +8,7 @@ import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusL
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
-import { связь, меткаСвязи, предложениеСлияния, своиЖелезки } from '@/domain/deviceState';
+import { связь, меткаСвязи, предложениеСлияния, своиЖелезки, черезЧто, СЛОВО_КАНАЛА } from '@/domain/deviceState';
 import { useSnapshot, sendIntent, type DeviceView } from '@/sources/bridge';
 
 import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
@@ -33,11 +33,10 @@ import { useSmbg } from '@/settings/smbg';
 import { useStack } from '@/app/stackCtx';
 import { toSegs, daily } from '@/domain/basal';
 
-/* Как назвать канал человеку. Слова движка (direct/bridged/cloud) отвечают на вопрос
-   «откуда я это знаю», и перевод должен отвечать на тот же — не «BLE» и не «NS». */
-const КАНАЛ: Record<'direct' | 'bridged' | 'cloud', string> = {
-  direct: 'Напрямую', bridged: 'Через мост', cloud: 'Через облако',
-};
+/* Заголовок строки канала — тот же словарь, что и везде (domain/deviceState.ts), с
+   заглавной. Свой словарь здесь уже был, и он разошёлся с остальным приложением:
+   в списке каналов писалось «Через облако», а человеку нужно знать, через какое. */
+const сЗаглавной = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export type DeviceCatKey = 'sensor' | 'pump' | 'meter' | 'loop';
 
@@ -227,6 +226,9 @@ export default function DeviceSection({ onClose, cat, title }: {
   const слияние = cat === 'pump' && спрашивать ? предложениеСлияния(snap) : null;
 
   const bleStatus = sourceStatusLabel(ble?.status);
+  /* Через что пришло это состояние (SugarLifeCore#34). Без него «на связи» отвечает
+     только на половину вопроса, и вторая половина — та, из-за которой чинят не то. */
+  const bleКанал = черезЧто(ble);
   const bleAge = ble?.latestAtMs != null ? agoText(ble.latestAtMs) : null;
 
   const activeMeth: 'direct' | 'cloud' | null = bleLive ? 'direct' : nsFeed ? 'cloud' : null;
@@ -512,7 +514,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                       <div key={c.id} className="list-row" style={{ cursor: 'default' }}>
                         <IonIcon icon={c.kind === 'cloud' ? cloudOutline : bluetoothOutline} className="list-ico" />
                         <span className="pick-main">
-                          <span className="list-title">{КАНАЛ[c.kind]}</span>
+                          <span className="list-title">{сЗаглавной(СЛОВО_КАНАЛА[c.kind])}</span>
                           <span className="pick-sub">
                             {c.label ? c.label + ' · ' : ''}
                             {меткаСвязи[с] ?? 'состояние неизвестно'}
@@ -539,7 +541,9 @@ export default function DeviceSection({ onClose, cat, title }: {
                     {bleStatus && (
                       <div className="basal-row">
                         <span>Состояние</span>
-                        <b className={sourceStatusWarn(ble.status) ? 'val-warn' : undefined}>{bleStatus}</b>
+                        <b className={sourceStatusWarn(ble.status) ? 'val-warn' : undefined}>
+                          {bleStatus}{bleКанал ? ' · ' + bleКанал : ''}
+                        </b>
                       </div>
                     )}
                     {bleAge && <div className="basal-row"><span>Последнее показание</span><b>{bleAge}</b></div>}
