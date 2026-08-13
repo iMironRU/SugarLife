@@ -5,6 +5,8 @@ import Section from '@/ui/Section';
 import PageLoading from '@/ui/PageLoading';
 import Insights from '@/ui/Insights';
 import { useAnalysis } from '@/domain/useAnalysis';
+import { useHistory } from '@/sources/db';
+import Dynamics from '@/ui/Dynamics';
 import { отметитьПрочитанными } from '@/settings/seenInsights';
 
 /* Разбор данных — отдельный раздел, а не врезка на главном экране.
@@ -25,6 +27,9 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
      находок и содержимое этого экрана обязаны совпадать, а совпадают они надёжно
      только если считаются одним кодом из одних аргументов. */
   const { analysis, loading: читаю } = useAnalysis(days);
+  /* Для сравнения нужен ещё один такой же период назад. Читаем вдвое шире, а делит
+     историю сам блок: он же решает, можно ли вообще сравнивать (ui/Dynamics.tsx). */
+  const { entries: история } = useHistory(2 * days * 86400e3, { minRefreshMs: 3600e3 });
 
   /* Зашли — всё, что сейчас на экране, прочитано. Отсюда и берётся смысл счётчика на
      плитке: он показывает не «сколько всего важного», а «сколько появилось с прошлого
@@ -68,6 +73,15 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
         </div>
         {r.reasons.length > 0 && <div className="rd-why">{r.reasons.join(' · ')}</div>}
       </div>
+
+      {/* Что изменилось — до находок, а не после (#195).
+
+          Находки отвечают на «что происходит», а этот блок — на «сработало ли то, что
+          я поменял». Второй вопрос человек задаёт себе первым, когда заходит сюда
+          через неделю после смены базала: сначала «стало ли лучше», и только потом
+          «почему». */}
+      <div className="section-label sec">Что изменилось</div>
+      <Dynamics entries={история} дней={days} кому="себе" />
 
       {/* Ряда фильтров по виду находки здесь больше нет (#149). Он не влезал в
           ширину — «Привычки» уезжали за край, — и прятал варианты: чего не видно,
