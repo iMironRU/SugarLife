@@ -16,6 +16,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 import ru.imiron.sugarlife.drivers.medtronic.PumpTransportBridge
@@ -26,6 +27,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 /** Нативный Android BLE — зеркало Swift `SugarLifeBleBridges.swift` (логика из проверенного спайка).
  *  Домен/протоколы (Sibionics AA55, Medtronic) остаются в KMP; здесь только транспорт (CoreBluetooth ↔ BluetoothGatt). */
 
+private const val TAG = "SugarLifeBLE"   // issue #33: adb logcat -s SugarLifeBLE — диагностируемость железо-сессии
 private fun uuid16(v: String): UUID = UUID.fromString("0000$v-0000-1000-8000-00805f9b34fb")
 private val CCCD = uuid16("2902")
 
@@ -83,10 +85,12 @@ class BleLink(
         val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
         val device = adapter.getRemoteDevice(address)
         onState?.invoke("Connecting")
+        Log.d(TAG, "connect $address")
         gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
     }
 
     fun disconnect() {
+        Log.d(TAG, "disconnect $address")
         gatt?.disconnect(); gatt?.close(); gatt = null
     }
 
@@ -109,6 +113,9 @@ class BleLink(
 
     private val callback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
+            // issue #33: status ≠ 0 (напр. 133 GATT_ERROR) — виновник тихих сбоев коннекта; логируем всегда.
+            Log.d(TAG, "connState addr=$address status=$status newState=$newState")
+            if (status != BluetoothGatt.GATT_SUCCESS) Log.w(TAG, "connState НЕ-успех status=$status (133=GATT_ERROR/недоступен) addr=$address")
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     onState?.invoke("Connected")
@@ -121,6 +128,7 @@ class BleLink(
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
+            Log.d(TAG, "servicesDiscovered addr=$address status=$status services=${g.services.size}")
             for (s in g.services) for (c in s.characteristics) {
                 chars[c.uuid] = c
                 if (notifyChars.contains(c.uuid)) {
@@ -218,8 +226,12 @@ class SugarLifeScanner(context: Context, private val onAdvertisement: (String) -
                 .put("name", result.scanRecord?.deviceName)
                 .put("serviceUuids", services)
                 .put("rssi", result.rssi)
+            // issue #33: видно, ЧТО реально приходит в скан (T1: находится ли GS1 после extended-фикса #30).
+            Log.d(TAG, "adv ${dev.address} name=${result.scanRecord?.deviceName} svc=$services rssi=${result.rssi}")
             onAdvertisement(dto.toString())
         }
+
+        override fun onScanFailed(errorCode: Int) { Log.w(TAG, "scan FAILED errorCode=$errorCode") }
     }
 
     fun start() {
@@ -240,6 +252,7 @@ class SugarLifeScanner(context: Context, private val onAdvertisement: (String) -
             }
             .build()
         // Фильтров нет: ищем и сенсор (FF30, extended), и помпу (RileyLink, legacy) — распознаёт каталог в ядре.
+        Log.d(TAG, "scan start: LOW_LATENCY legacy=${Build.VERSION.SDK_INT < Build.VERSION_CODES.O} extended=${Build.VERSION.SDK_INT >= Build.VERSION_CODES.O}")
         scanner.startScan(emptyList<ScanFilter>(), settings, callback)
     }
     fun stop() {
