@@ -21,7 +21,11 @@ import { отметитьПрочитанными } from '@/settings/seenInsight
 
 const ПЕРИОДЫ = [3, 7, 14, 30];
 
-export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
+/* Раздел умеет жить и внутри экрана «Метрики» (SugarLife#255): там он одна из трёх
+   вкладок, и своя шапка ему не нужна — она была бы второй шапкой под настоящей. */
+export default function AnalyticsSection({ onClose, встроенный }: {
+  onClose?: () => void; встроенный?: boolean;
+}) {
   const [days, setDays] = useState(14);
   /* Расчёт общий с плиткой на «Сегодня» (domain/useAnalysis.ts): счётчик важных
      находок и содержимое этого экрана обязаны совпадать, а совпадают они надёжно
@@ -60,11 +64,9 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
 
   /* Пока история читается — показываем ожидание, а не поспешный вердикт. Разбор по
      ещё не приехавшим данным сказал бы «данных пока мало», и это прочли бы как ответ. */
-  if (читаю) return <PageLoading title="Аналитика" />;
+  if (читаю) return встроенный ? <PageLoading /> : <PageLoading title="Аналитика" />;
 
-  return (
-    <Section title="Аналитика" onBack={onClose}
-      subtitle={(
+  const подзаголовок = (
         <>
           Разбор за {days} дн.
           {вид && (
@@ -77,8 +79,11 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
             </>
           )}
         </>
-      )}>
+  );
 
+  const тело = (
+    <>
+      {встроенный && <div className="metric-note" style={{ marginTop: 2 }}>{подзаголовок}</div>}
       <div className="period">
         {ПЕРИОДЫ.map((d) => (
           <button key={d} className={'period-seg' + (days === d ? ' on' : '')} onClick={() => setDays(d)}>
@@ -115,6 +120,9 @@ export default function AnalyticsSection({ onClose }: { onClose: () => void }) {
         додумано: чего в данных нет, того здесь не будет. Это не назначения, а наблюдения,
         по которым удобно готовить вопросы врачу.
       </div>
-    </Section>
+    </>
   );
+
+  if (встроенный) return тело;
+  return <Section title="Аналитика" onBack={onClose ?? (() => {})} subtitle={подзаголовок}>{тело}</Section>;
 }

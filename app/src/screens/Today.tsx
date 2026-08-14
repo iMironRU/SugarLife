@@ -1,6 +1,6 @@
 import { IonIcon } from '@ionic/react';
-import { AnalyticsSection, MealsSection } from '@/sections/lazy';
-import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, sparklesOutline, chevronForward } from 'ionicons/icons';
+import { MealsSection } from '@/sections/lazy';
+import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, chevronForward } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt, agoText } from '@/domain/units';
@@ -28,9 +28,6 @@ import { notify } from '@/platform/notify';
 import FoodSheet from '@/sheets/FoodSheet';
 import { DataGate } from '@/ui/NotConfigured';
 import { useStack } from '@/app/stackCtx';
-import { useAnalyticsOn } from '@/settings/analytics';
-import { useAnalysis, непрочитанныеВажные } from '@/domain/useAnalysis';
-import { useSeenInsights } from '@/settings/seenInsights';
 import Screen from '@/ui/Screen';
 import Notice, { NoticeStack } from '@/ui/Notice';
 
@@ -52,7 +49,6 @@ export default function Today() {
   useCloseOnLeave(2, () => setFoodOpen(false)); // «Сегодня» — закрыть «Еду» при уходе
   const dev = data?.device || null;
   const { push, pop } = useStack();
-  const analyticsOn = useAnalyticsOn();
 
   // общие расширенные данные (грузит панель) — события/резервуар
   const extras = useDeviceExtras();
@@ -197,22 +193,6 @@ export default function Today() {
   const бодрыхЧасов = lastCarbT != null ? часыБодрствования(lastCarbT, Date.now()) : null;
   const longNoFood = daytime && !unloggedMeal && бодрыхЧасов != null && бодрыхЧасов >= 7;
 
-  /* Счётчик важного на плитке разбора (#148). Считаем НЕПРОЧИТАННОЕ: постоянное
-     число через неделю означает ноль — человек перестаёт его видеть, и когда там
-     появится настоящая беда, он не отличит её от привычной цифры.
-
-     Расчёт общий с самим разбором и попадает в те же кэши — второго чтения базы и
-     второго счёта не происходит (domain/useAnalysis.ts). */
-  const { analysis } = useAnalysis(14);
-  const виденные = useSeenInsights();
-  const новых = analyticsOn ? непрочитанныеВажные(analysis, виденные) : 0;
-  /* Красный — только когда среди непрочитанного есть bad. «Данных мало для разбора» и
-     «половина показаний не доехала» не одного веса, и одинаковый красный кружок
-     уравнял бы их. */
-  const срочное = analysis.insights.some(
-    (i) => i.severity === 'bad' && !виденные.includes(i.id),
-  );
-
   /* Отложенные подсветки (#147). Эпизод отвечает «какой это случай», уровень —
      «насколько плохо внутри случая». Отложили — молчим до смены эпизода или до
      ухудшения на шаг; правило и его обоснование в domain/snooze.ts.
@@ -292,14 +272,15 @@ export default function Today() {
               Число и подпись встали в строку, а не стопкой: «0 г активные углеводы»
               читается как фраза слева направо, а центрированная стопка посреди плитки
               не принадлежала ни одному краю. */}
-          {/* Углеводы и аналитика — в одну строку (#148). Аналитика занимала целую
-              строку ради двух слов, а ниже идут подсветки: чем раньше они попадают в
-              поле зрения, тем выше шанс, что их прочитают, а не пролистают.
+          {/* Разбор с этого экрана убран (#255). «Сегодня» — про то, что делать
+              сейчас, разбор — про то, что было; концепция называет это разными
+              режимами, и плитка «Разбор» была единственным местом, где они
+              смешивались. Теперь он живёт разделом в «Метриках», рядом с метриками и
+              запиской к приёму — тремя вопросами об одном и том же прошлом.
 
-              Углеводам три четверти, аналитике четверть: в плитке углеводов живут два
-              числа и действие, а у входа в разбор задача одна — быть заметным и
-              сказать, есть ли там что-то новое. */}
-          <div className="today-row">
+              Плитка углеводов от этого получает всю ширину обратно: строку истории
+              приходилось сокращать до «5 ч» и голой цифры, потому что четверть ширины
+              ушла разбору. */}
           <div className="carb-panel">
             <button className="carb-now" onClick={() => setFoodOpen(true)}>
               <div className={'carb-big' + (ac.known ? '' : ' is-unknown')}>{cob != null ? toCarbs(cob, cu) : DASH}<span>{carbUnitLabel(cu)}</span></div>
@@ -336,32 +317,6 @@ export default function Today() {
               </span>
             </button>
           </div>
-
-          {/* Разбор — отдельный экран, а не врезка: «Сегодня» про то, что делать
-              сейчас, разбор про то, что было. В том же виде, что панель углеводов:
-              обе — крупные входы, стоящие рядом, и разнобой в оформлении читался бы
-              как разная важность. Выключенный показываем погасшим, а не прячем —
-              иначе выключивший однажды уже не вспомнит, что это было. */}
-          {analyticsOn && (
-            <button className="an-tile" onClick={() => push(<AnalyticsSection onClose={pop} />)}>
-              <IonIcon icon={sparklesOutline} />
-              <span className="an-tile-t">Разбор</span>
-              {/* Значка нет, когда важного нет: пустой счётчик приучает на счётчик не
-                  смотреть. Число — только про непрочитанное, иначе постоянная «12»
-                  через неделю не означает ничего (domain/useAnalysis.ts). */}
-              {новых > 0 && (
-                <span className={'an-badge' + (срочное ? ' is-bad' : '')}>{новых}</span>
-              )}
-            </button>
-          )}
-          </div>
-
-          {/* Выключенный разбор — строкой под рядом, а не плиткой в нём: место в ряду
-              стоит дорого, а сообщение «вы это выключили» не стоит ничего. Но и
-              спрятать нельзя — выключивший однажды не вспомнит, что это было. */}
-          {!analyticsOn && (
-            <div className="an-off-note">Разбор данных выключен · Профиль → Настройки</div>
-          )}
 
           {/* Обращения — одной стопкой, с порядком по важности и пределом
               одновременно показанных (ui/Notice.tsx, domain/notices.ts).

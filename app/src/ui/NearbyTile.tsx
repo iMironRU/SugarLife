@@ -2,7 +2,7 @@ import { IonIcon } from '@ionic/react';
 import { bluetoothOutline, chevronForward } from 'ionicons/icons';
 import { useSnapshot } from '@/sources/bridge';
 import Notice from './Notice';
-import { связь } from '@/domain/deviceState';
+import { связь, движокЖивой } from '@/domain/deviceState';
 import { железоДиспетчера, потерянаСвязь, имяЖелезки } from '@/domain/nearby';
 import { useStack } from '@/app/stackCtx';
 import { DiscoverySection, DevicesSection } from '@/sections/lazy';
@@ -23,8 +23,10 @@ export default function NearbyTile() {
   const snap = useSnapshot();
   const { push, pop } = useStack();
 
-  const drivers = snap?.availableDrivers ?? [];
-  if (!drivers.length) return null;
+  /* Признак — драйвер ЖЕЛЕЗА, а не «хоть какой-нибудь драйвер» (#256): Nightscout-шим
+     завёл свой, сервисный, и карточка «Подключить устройство» полезла в браузер, где
+     эфира нет как класса. Правило одно на всех — domain/deviceState.ts. */
+  if (!движокЖивой(snap)) return null;
 
   /* Железо и его состояние — из тех же мест, что у диспетчера, и по тому же правилу
      (#224). Плитка считала «на связи» сама: смотрела на connection и пропускала status.
