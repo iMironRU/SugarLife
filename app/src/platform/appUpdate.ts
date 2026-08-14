@@ -121,6 +121,41 @@ export const ВЫПУСКАЕТСЯ_APK = true;
    Сравнение с бандлом, а не с APK, выбрано намеренно. После OTA внутри установленного
    APK живёт более свежий JS, и мерить надо именно его: иначе человеку, который только
    что обновился по воздуху, снова предложат качать десять мегабайт ради того же кода. */
+/* ЧТО СТОИТ НАТИВНО — отдельный вопрос от «какой у нас JS» (SugarLife#238).
+
+   Сравнивать релиз с бандлом было бы неверно ровно в том случае, ради которого кнопка и
+   нужна. Обычный порядок такой: выкладываем APK и OTA-бандл из одного коммита; человек
+   жмёт «Обновиться», OTA привозит свежий JS — и с этой минуты бандл совпадает с релизом,
+   хотя APK у него старый. Кнопка не появилась бы никогда, а нативные правки (имя
+   приложения, плагины, версия) так и остались бы прошлыми.
+
+   Узнаём через Capgo: пока активен «встроенный» бандл, JS и APK — из одной сборки, и
+   это единственный момент, когда сборку APK вообще можно узнать изнутри. Запоминаем её
+   тогда же; дальше OTA меняет бандл, а запись остаётся. */
+const КЛЮЧ_НАТИВНОЙ = 'sl.native.v1';
+
+export interface НативнаяСборка { build: string; builtAt: string }
+
+export function нативнаяСборка(): НативнаяСборка | null {
+  try {
+    const s = localStorage.getItem(КЛЮЧ_НАТИВНОЙ);
+    if (!s) return null;
+    const о = JSON.parse(s);
+    return typeof о?.build === 'string' && typeof о?.builtAt === 'string' ? о : null;
+  } catch { return null; }
+}
+
+export async function запомнитьНативнуюСборку(): Promise<void> {
+  if (!isNative) return;
+  try {
+    const с = await CapacitorUpdater.current();
+    /* 'builtin' — тот бандл, что приехал внутри APK. Любое другое имя означает, что
+       поверх уже лёг OTA, и текущий JS про APK ничего не говорит. */
+    if (с?.bundle?.version !== 'builtin') return;
+    localStorage.setItem(КЛЮЧ_НАТИВНОЙ, JSON.stringify({ build: APP_BUILD, builtAt: APP_BUILT_AT }));
+  } catch { /* приватный режим, старый плагин — тогда сравним по бандлу, как раньше */ }
+}
+
 export async function checkNativeUpdate(): Promise<NativeUpdateInfo | 'error'> {
   if (!ВЫПУСКАЕТСЯ_APK) return { hasUpdate: false, build: null, apkUrl: null, publishedAt: null };
   try {
@@ -139,8 +174,12 @@ export async function checkNativeUpdate(): Promise<NativeUpdateInfo | 'error'> {
        сборка выглядит июльской. У приложения дата берётся из файла, поэтому и здесь
        спрашиваем файл. */
     const выложено = apk?.updated_at || rel.published_at;
-    const hasUpdate = !!short && APP_BUILD !== 'dev' && short !== APP_BUILD
-      && новееЛи(выложено, APP_BUILT_AT);
+    /* Сравниваем с нативной сборкой, если знаем её. Не знаем — с бандлом: так вело себя
+       приложение раньше, и это честнее, чем молчать. Разойтись эти ответы могут только
+       на телефоне, где APK поставили до появления записи. */
+    const своё = нативнаяСборка() ?? { build: APP_BUILD, builtAt: APP_BUILT_AT };
+    const hasUpdate = !!short && своё.build !== 'dev' && short !== своё.build
+      && новееЛи(выложено, своё.builtAt);
     return {
       hasUpdate,
       build: short,
