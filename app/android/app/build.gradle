@@ -10,7 +10,7 @@ android {
     }
     kotlinOptions { jvmTarget = "21" }   // совпасть с Java-задачами Capacitor (иначе рассинхрон JVM-target)
     defaultConfig {
-        applicationId "ru.imiron.sugarlife"
+        applicationId "ru.imiron.sugarlife.pro"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

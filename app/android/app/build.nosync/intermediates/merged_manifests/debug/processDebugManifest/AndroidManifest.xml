@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="ru.imiron.sugarlife"
+    package="ru.imiron.sugarlife.pro"
     android:versionCode="1"
     android:versionName="1.0" >
 
@@ -26,10 +26,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <permission
-        android:name="ru.imiron.sugarlife.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:name="ru.imiron.sugarlife.pro.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
         android:protectionLevel="signature" />
 
-    <uses-permission android:name="ru.imiron.sugarlife.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+    <uses-permission android:name="ru.imiron.sugarlife.pro.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
 
     <application
         android:allowBackup="true"
@@ -62,7 +62,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="ru.imiron.sugarlife.fileprovider"
+            android:authorities="ru.imiron.sugarlife.pro.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true" >
             <meta-data
@@ -85,7 +85,7 @@
 
         <provider
             android:name="androidx.startup.InitializationProvider"
-            android:authorities="ru.imiron.sugarlife.androidx-startup"
+            android:authorities="ru.imiron.sugarlife.pro.androidx-startup"
             android:exported="false" >
             <meta-data
                 android:name="androidx.emoji2.text.EmojiCompatInitializer"

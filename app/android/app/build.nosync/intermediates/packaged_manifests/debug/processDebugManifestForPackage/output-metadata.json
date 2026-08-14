@@ -4,7 +4,7 @@
     "type": "PACKAGED_MANIFESTS",
     "kind": "Directory"
   },
-  "applicationId": "ru.imiron.sugarlife",
+  "applicationId": "ru.imiron.sugarlife.pro",
   "variantName": "debug",
   "elements": [
     {
