@@ -116,7 +116,7 @@ export const ВЫПУСКАЕТСЯ_APK = true;
 
    Два условия, и второе важнее первого. SHA отвечает только на «тот же или другой» —
    этого хватает, чтобы не предлагать обновление на самого себя. А «новее» знает лишь
-   время: дата публикации релиза против даты сборки бандла.
+   время: когда выложен файл против того, когда собран бандл.
 
    Сравнение с бандлом, а не с APK, выбрано намеренно. После OTA внутри установленного
    APK живёт более свежий JS, и мерить надо именно его: иначе человеку, который только
@@ -129,16 +129,23 @@ export async function checkNativeUpdate(): Promise<NativeUpdateInfo | 'error'> {
     });
     if (!r.ok) return 'error';
     const rel = await r.json();
-    const apk = (rel.assets || []).find((a: { name?: string }) => a.name?.toLowerCase().endsWith('.apk'));
+    const apk = (rel.assets || []).find(
+      (a: { name?: string }) => a.name?.toLowerCase().endsWith('.apk'),
+    ) as { name?: string; browser_download_url?: string; updated_at?: string } | undefined;
     const m = /build:\s*([0-9a-f]{7,40})/i.exec(rel.body || '');
     const short = m ? m[1].slice(0, 7) : null;
+    /* Когда появился ИМЕННО ЭТОТ файл, а не когда завели релиз. Тег android-latest один
+       и живёт вечно: перезалили файл — `published_at` остался прежним, и по нему свежая
+       сборка выглядит июльской. У приложения дата берётся из файла, поэтому и здесь
+       спрашиваем файл. */
+    const выложено = apk?.updated_at || rel.published_at;
     const hasUpdate = !!short && APP_BUILD !== 'dev' && short !== APP_BUILD
-      && новееЛи(rel.published_at, APP_BUILT_AT);
+      && новееЛи(выложено, APP_BUILT_AT);
     return {
       hasUpdate,
       build: short,
       apkUrl: apk?.browser_download_url || null,
-      publishedAt: rel.published_at || null,
+      publishedAt: выложено || null,
     };
   } catch {
     return 'error';
