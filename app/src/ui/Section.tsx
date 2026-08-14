@@ -29,12 +29,17 @@ import PageHead from './PageHead';
    Низ отдан действиям раздела: перенести профиль в помпу, отменить правку, шагнуть
    дальше в мастере. Слово «Назад» внизу есть ровно в одном месте — в мастере, — и
    значит там шаг назад, а не выход; на первом шаге оно и написано иначе: «Закрыть». */
-export default function Section({ title, subtitle, onBack, действие, head, footer, className, children }: {
+export default function Section({ title, subtitle, onBack, действие, подШапкой, head, footer, className, children }: {
   title?: string;
   subtitle?: ReactNode;
   onBack: () => void;
   /** Действие справа в шапке — «Далее» у мастера (см. PageHead). */
   действие?: ReactNode;
+  /* Полоса под заголовком — прогресс мастера. Она отвечает на тот же вопрос, что и
+     заголовок («где я»), и потому обязана стоять там же и никуда не уезжать: полоса,
+     видная только в начале прокрутки, показывает прогресс ровно тогда, когда он и так
+     очевиден. */
+  подШапкой?: ReactNode;
   /** Своя шапка вместо заголовка — для мастера с шагами. */
   head?: ReactNode;
   /** Закреплённый низ: главное действие раздела, которое не уезжает с прокруткой. */
@@ -58,6 +63,7 @@ export default function Section({ title, subtitle, onBack, действие, hea
           которое надо не забыть поправить, когда панель изменится. */}
       <div className="stack-head">
         {head ?? (title ? <PageHead title={title} subtitle={subtitle} onBack={onBack} действие={действие} /> : null)}
+        {подШапкой}
       </div>
       <div className={'sheet stack-body' + (className ? ' ' + className : '')}>
         {/* Внутренняя обёртка нужна ради одного: чтобы короткий раздел ВСЁ РАВНО был
