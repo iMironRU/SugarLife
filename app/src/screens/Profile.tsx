@@ -1,9 +1,9 @@
-import { IonIcon, IonToggle } from '@ionic/react';
+import { IonIcon } from '@ionic/react';
 import { DevicesSection, DiagnosticsSection, HealthSection, LoopSetupSection, ServicesSection } from '@/sections/lazy';
 import {
   downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
-  hardwareChipOutline, cloudOutline, repeat, sparklesOutline, documentTextOutline, heartOutline,
+  hardwareChipOutline, cloudOutline, repeat, documentTextOutline, heartOutline,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '@/sources/store';
@@ -20,7 +20,6 @@ import { useLoopProfile, LOOP_MODES } from '@/settings/loopProfile';
 import { useDeviceConfig, deviceStatus } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
 import Row from '@/ui/Row';
-import { useAnalyticsOn, setAnalyticsOn } from '@/settings/analytics';
 import UnitsModal from '@/sheets/UnitsModal';
 import CarbUnitsModal from '@/sheets/CarbUnitsModal';
 import Screen from '@/ui/Screen';
@@ -35,7 +34,6 @@ export default function Profile() {
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
   const carbUnit = useCarbUnit();
   const { push, pop } = useStack();
-  const analyticsOn = useAnalyticsOn();
   const [updating, setUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
@@ -227,9 +225,6 @@ export default function Profile() {
           <div className="list">
             <Row icon={optionsOutline} title="Единицы глюкозы" value={unitLabel(unit)} onClick={() => setUnitsOpen(true)} />
             <Row icon={nutritionOutline} title="Единицы еды" value={carbUnitLabel(carbUnit)} onClick={() => setCarbUnitsOpen(true)} />
-            <Row icon={sparklesOutline} title="Выводить аналитику"
-              sub="разбор данных на «Сегодня» и отдельным экраном"
-              right={<IonToggle checked={analyticsOn} onIonChange={(e) => setAnalyticsOn(e.detail.checked)} />} />
           </div>
           {/* Про хранение. Стояло рядом с выгрузкой в CSV и объясняло, почему она
               вообще есть; выгрузка ушла (данные выносит бэкап движка), а строка

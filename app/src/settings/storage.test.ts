@@ -45,7 +45,7 @@ describe('таблица ключей хранилища', () => {
       /* sl.native.v1 — не настройка вовсе, а свойство установленного APK: из какой
          сборки он собран. О прежнем человеке не говорит ничего, а сбросом не меняется,
          и стереть её значило бы разучиться отвечать «нужен ли новый APK» (#238). */
-      ['sl.analytics.v1', 'sl.carbunits', 'sl.install.v1', 'sl.native.v1', 'sl.theme', 'sl.units'].sort(),
+      ['sl.carbunits', 'sl.install.v1', 'sl.native.v1', 'sl.theme', 'sl.units'].sort(),
     );
   });
 });

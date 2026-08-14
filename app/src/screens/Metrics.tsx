@@ -13,7 +13,6 @@ import { DataGate } from '@/ui/NotConfigured';
 import MetricBars from '@/charts/MetricBars';
 import Screen from '@/ui/Screen';
 import { AnalyticsSection, VisitNoteSection } from '@/sections/lazy';
-import { useAnalyticsOn } from '@/settings/analytics';
 
 type MetricKey = 'glucose' | 'carbs' | 'insulin';
 type Cell = [string, string, string];
@@ -48,7 +47,6 @@ type Раздел = typeof РАЗДЕЛЫ[number]['key'];
 
 export default function Metrics() {
   const [раздел, setРаздел] = useState<Раздел>('метрики');
-  const analyticsOn = useAnalyticsOn();
   /* Вкладка видна? Все пять смонтированы разом ради свайпа, но читать базу
      невидимому экрану незачем — это и были рывки на соседних вкладках. */
   const активна = useTab() === 0;
@@ -121,12 +119,7 @@ export default function Metrics() {
             ))}
           </div>
 
-          {/* Выключенный разбор — сообщением на своём месте, а не пустотой. Спрятать
-              нельзя: выключивший однажды не вспомнит, что это было, а вкладка при этом
-              останется и будет выглядеть сломанной. */}
-          {раздел === 'анализ' && (analyticsOn
-            ? <AnalyticsSection встроенный />
-            : <div className="an-off-note">Разбор данных выключен · Профиль → Настройки</div>)}
+          {раздел === 'анализ' && <AnalyticsSection встроенный />}
           {раздел === 'записка' && <VisitNoteSection встроенный />}
           {раздел === 'метрики' && (<>
           {/* Переключатели периода и метрики липнут под панелью: на длинных экранах
