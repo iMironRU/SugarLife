@@ -26,13 +26,6 @@ export function setCfg(cfg: NsConfig | null) {
   });
 }
 
-// Стрелка тренда как символ (для крупного значения)
-const ARROW_CHAR: Record<string, string> = {
-  DoubleUp: '⇈', SingleUp: '↑', FortyFiveUp: '↗', Flat: '→',
-  FortyFiveDown: '↘', SingleDown: '↓', DoubleDown: '⇊',
-};
-export function arrowChar(dir: string) { return ARROW_CHAR[dir] || '→'; }
-
 function num(...xs: any[]): number | null {
   for (const x of xs) if (typeof x === 'number' && !isNaN(x)) return x;
   return null;
@@ -193,7 +186,11 @@ async function loadEntries(base: string, token?: string, count = 288): Promise<E
   const raw = await getJSON(base, '/api/v1/entries.json?count=' + count, token);
   return (Array.isArray(raw) ? raw : [])
     .filter((e: any) => e && e.sgv != null)
-    .map((e: any) => ({ t: e.date || Date.parse(e.dateString), mgdl: e.sgv, mmol: e.sgv / MGDL_PER_MMOL, dir: e.direction || 'Flat' }))
+    /* Направление берём как есть, БЕЗ подстановки «Flat». Молчание источника — это
+       «не знаю», а прямая стрелка на его месте читается как «держится ровно», то есть
+       как разрешение не вмешиваться (SugarLife#215). Чего не знаем — считаем сами из
+       истории, и делает это domain/trend.ts. */
+    .map((e: any) => ({ t: e.date || Date.parse(e.dateString), mgdl: e.sgv, mmol: e.sgv / MGDL_PER_MMOL, dir: e.direction || '' }))
     .filter((e: Entry) => !!e.t)
     .sort((a: Entry, b: Entry) => a.t - b.t);
 }
@@ -303,7 +300,7 @@ export function normSgv(s: any): Entry | null {
   const mgdl = num(s.mgdl, s.sgv);
   const t = s.mills || s.date || (s.dateString && Date.parse(s.dateString));
   if (mgdl == null || !t) return null;
-  return { t, mgdl, mmol: mgdl / MGDL_PER_MMOL, dir: s.direction || 'Flat' };
+  return { t, mgdl, mmol: mgdl / MGDL_PER_MMOL, dir: s.direction || '' };
 }
 
 // Нормализация treatment из сокета/REST
