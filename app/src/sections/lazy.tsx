@@ -72,6 +72,9 @@ export const BasalProfileSection = ленивый<{ onClose: () => void }>(
 export const LoopSetupSection = ленивый<{ onClose: () => void }>(
   () => import('./LoopSetupSection'), 'Профиль петли');
 
+export const CloudAccountsSection = ленивый<{ onClose: () => void }>(
+  () => import('./CloudAccountsSection'), 'Облачные учётки');
+
 export const AnalyticsSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
   () => import('./AnalyticsSection'), 'Аналитика');
 
