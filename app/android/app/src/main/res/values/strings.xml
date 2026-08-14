@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">SugarLife</string>
-    <string name="title_activity_main">SugarLife</string>
+    <string name="app_name">SugarLife.Lite</string>
+    <string name="title_activity_main">SugarLife.Lite</string>
     <string name="package_name">ru.imiron.sugarlife</string>
     <string name="custom_url_scheme">ru.imiron.sugarlife</string>
 </resources>
