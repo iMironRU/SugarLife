@@ -31,6 +31,35 @@
 }
 .period-seg.on { background: var(--color-neutral-100); color: var(--color-neutral-900); font-weight: 600; }
 
+/* Вкладки находок (#199). Тот же переключатель, что у периода, — человек уже знает,
+   как он работает, и заводить второй вид ради того же действия незачем.
+
+   Пустая вкладка остаётся на месте и гасится, а не исчезает: пропадающая вкладка
+   меняет раскладку под пальцем, и завтра «В норме» окажется там, где вчера были
+   «Заметки». */
+.ins-tabs { margin-top: 14px; }
+.ins-tabs .period-seg {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  /* Светофор: цвет вкладки совпадает с полосой слева у карточек внутри неё. Отвечает
+     на «всё ли плохо» раньше, чем человек прочтёт первое слово. */
+  color: color-mix(in srgb, var(--сев, var(--color-neutral-400)) 75%, var(--color-neutral-400));
+}
+.ins-tabs .period-seg:disabled { opacity: 0.4; cursor: default; }
+/* Выбранная — заливкой того же цвета, но приглушённой. Белая плашка из переключателя
+   периода тут не годится: она гасит цвет ровно у той вкладки, которую человек и
+   смотрит, — то есть светофор выключается там, где он нужнее всего. */
+.ins-tabs .period-seg.on {
+  background: color-mix(in srgb, var(--сев) 22%, transparent);
+  color: var(--сев); font-weight: 600;
+}
+.ins-tabs .period-seg.on .chip-n {
+  background: color-mix(in srgb, var(--сев) 22%, transparent); color: var(--сев);
+}
+
+/* Воздух между вкладками и первой карточкой. Без него список прилипал к переключателю
+   и читался как его продолжение, а не как содержимое выбранной вкладки. */
+.ins-tabs + .insights { margin-top: 12px; }
+
 .metric-chips { display: flex; gap: 6px; margin-top: 18px; }
 .metric-chip {
   flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 8px; border-radius: 15px;

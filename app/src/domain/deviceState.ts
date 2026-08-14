@@ -1,4 +1,4 @@
-import type { ChannelView, DeviceView, RoleView, UiSnapshot } from '@/sources/bridge';
+import type { ChannelView, DeviceView, Link, RoleView, SourceStatus, UiSnapshot } from '@/sources/bridge';
 
 /* Состояние связи устройства — одно правило на всё приложение.
 
@@ -31,7 +31,16 @@ export type Связь = 'live' | 'wait' | 'off' | 'unknown';
    бывает Connected и при этом Acquiring, то есть связь есть, а показаний нет. Начни
    мы с connection — получили бы зелёную точку у молчащего сенсора, ровно то враньё,
    от которого уходили в круге с активным инсулином. */
-export function связь(d: DeviceView | null | undefined): Связь {
+/* Аргумент описан по форме, а не типом DeviceView: то же состояние приходит теперь и
+   у железа из hardware[] (SugarLifeCore#44), и приводить одно к другому приведением
+   типа значило бы врать компилятору там, где типы просто разные. */
+export type ЧтоСоСвязью = {
+  status?: SourceStatus | null;
+  live?: boolean;
+  connection?: Link | string;
+};
+
+export function связь(d: ЧтоСоСвязью | null | undefined): Связь {
   if (!d) return 'unknown';
   switch (d.status) {
     case 'Live': return 'live';
@@ -63,7 +72,9 @@ export function источникГлюкозы(snap: UiSnapshot | null | undefin
   const все = (snap?.devices ?? []).filter(
     (d) => d.kind === 'sensor' || (d.roles ?? []).includes('GlucoseSource'),
   );
-  return все.find((d) => d.primary) ?? все.find((d) => d.kind === 'sensor') ?? все[0] ?? null;
+  /* Явный выбор человека сильнее любого качества: он для того и явный. Дальше —
+     общее правило «кто реально даёт данные» (SugarLifeCore#43). */
+  return все.find((d) => d.primary) ?? лучшийИсточник(все);
 }
 
 /* Помпа — только сама помпа, и это сложнее, чем kind === 'pump'.
@@ -252,6 +263,34 @@ export const СЛОВО_КАНАЛА: Record<ChannelView['kind'], string> = {
 
    Роль спрашиваем у снимка, а не у вида: сенсор выбирается тем же правилом, что и
    источник глюкозы (primary → сенсор → первый), помпа — первая с ролью подачи. */
+/* Кто из кандидатов РЕАЛЬНО даёт данные (SugarLifeCore#43).
+
+   Прежнее правило — «первый с нужным видом» — молча зависело от порядка регистрации.
+   У ядра это дало живой баг: облако поднимается раньше BLE, и в слоте подачи навсегда
+   оказывалось облако, даже когда железная помпа была на связи. Экран честно повторял
+   за ним: «через Nightscout» рядом с работающей помпой.
+
+   Порядок сравнения: сначала качество статуса (кто отдаёт свежее), при равенстве —
+   железка перед сервисом, потом своё перед облачным каналом. Это не вкусовщина: у
+   железа есть «переподключить» и батарея, а у облачной записи только чужие данные, и
+   при прочих равных полезнее та, с которой человек может что-то сделать.
+
+   Смысл правила (а) при этом не изменился: облако — законный активный источник, если
+   оно единственное, кто отдаёт свежее. Изменилась устойчивость ответа. */
+const КАЧЕСТВО: Record<string, number> = {
+  Live: 0, Acquiring: 1, Connecting: 1, Delayed: 2, Disconnected: 4,
+};
+
+export function лучшийИсточник(кандидаты: DeviceView[]): DeviceView | null {
+  if (!кандидаты.length) return null;
+  const вес = (d: DeviceView) => (d.status ? КАЧЕСТВО[d.status] ?? 3 : (связь(d) === 'live' ? 0 : 3));
+  const сервис = (d: DeviceView) => Number(d.kind === 'service');
+  return [...кандидаты].sort((a, b) =>
+    вес(a) - вес(b)
+    || сервис(a) - сервис(b)
+    || Number(толькоОблако(a)) - Number(толькоОблако(b)))[0] ?? null;
+}
+
 export function устройствоРоли(
   snap: UiSnapshot | null | undefined, роль: 'sensor' | 'pump',
 ): DeviceView | null {
@@ -270,7 +309,7 @@ export function устройствоРоли(
     return (snap?.devices ?? []).find((d) => d.id === изДвижка.activeSourceId) ?? null;
   }
   if (роль === 'sensor') return источникГлюкозы(snap);
-  return (snap?.devices ?? []).find((d) => d.kind === 'pump') ?? null;
+  return лучшийИсточник((snap?.devices ?? []).filter((d) => d.kind === 'pump'));
 }
 
 /** Роль из снимка движка (rev ≥ 1.8). Пусто — движок ролей ещё не отдаёт. */

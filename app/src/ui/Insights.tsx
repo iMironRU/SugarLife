@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { IonIcon } from '@ionic/react';
 import {
   checkmarkCircle, informationCircle, warning, alertCircle,
@@ -36,21 +36,31 @@ function Card({ it, open, onToggle }: { it: Insight; open: boolean; onToggle: ()
   );
 }
 
-/* Находки показываем ВСЕ и сразу, разделами (SugarLife#149).
+/* Находки — вкладками по важности (SugarLife#199).
 
-   Было три вкладки: «Внимание / Заметки / В норме», и в каждый момент видна одна.
-   Сверху к ним прибавлялся ряд фильтров по виду находки, который не влезал в
-   ширину — «Привычки» уезжали за край. Два фильтра над списком из девяти пунктов.
+   ЧТО ИМЕННО МЫ СНИМАЛИ В #149. Ряд фильтров по ВИДУ находки — «глюкоза / железо /
+   привычки / данные». Он не влезал в ширину, «Привычки» уезжали за край, и фильтровать
+   девять пунктов по виду было незачем: вид виден по тексту. Вместе с ним тогда ушли и
+   вкладки по важности, хотя претензия была не к ним.
 
-   Фильтры нужны, когда список не окинуть взглядом. Девять окидываются. А вкладки к
-   тому же прячут: человек видел «Внимание» и не знал, что во второй вкладке лежит
-   объяснение, ради которого он и зашёл.
+   Разделы, которые их заменили, честно показывали всё сразу — и оказались длинными:
+   девять карточек в полную ширину это три экрана прокрутки, где до «В норме» никто не
+   доходит, а «Внимание» приходится искать заново после каждого возврата.
 
-   Разделы решают обе задачи разом: ничего не спрятано, счётчик стоит там же, где
-   заголовок, и прокрутка исчезла вместе с чипами. */
+   Вкладок ровно три, и они по ВАЖНОСТИ, а не по виду: важность — это то, зачем сюда
+   приходят («что-то не так?»), и трёх слов хватает на любой ширине.
+
+   ДВА ПРАВИЛА, ЧТОБЫ ВКЛАДКИ НЕ ПРЯТАЛИ.
+
+   Пустая вкладка остаётся на месте, с нулём. Убирать её значит менять раскладку под
+   человеком: вчера «В норме» было третьим, сегодня второе — и палец жмёт не туда.
+
+   Открывается самая важная НЕПУСТАЯ. Открывать всегда первую значит показывать пустоту
+   тому, у кого всё хорошо, а открывать всегда последнюю — прятать срочное. */
 
 export default function Insights({ analysis }: { analysis: Analysis | null }) {
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const [вкладка, setВкладка] = useState<'attention' | 'notes' | 'ok' | null>(null);
   if (!analysis) {
     return (
       <div className="ins-loading">
@@ -72,11 +82,18 @@ export default function Insights({ analysis }: { analysis: Analysis | null }) {
   const notes = analysis.insights.filter((i) => i.severity === 'info');
   const ok = analysis.insights.filter((i) => i.severity === 'good');
 
-  const разделы: { label: string; items: Insight[]; color: string }[] = [
-    { label: 'Внимание', items: attention, color: attention.some((i) => i.severity === 'bad') ? 'var(--c-danger)' : 'var(--c-carb)' },
-    { label: 'Заметки', items: notes, color: 'var(--color-accent)' },
-    { label: 'В норме', items: ok, color: 'var(--c-glu)' },
+  const разделы = [
+    { key: 'attention' as const, label: 'Внимание', items: attention, color: attention.some((i) => i.severity === 'bad') ? 'var(--c-danger)' : 'var(--c-carb)' },
+    { key: 'notes' as const, label: 'Заметки', items: notes, color: 'var(--color-accent)' },
+    { key: 'ok' as const, label: 'В норме', items: ok, color: 'var(--c-glu)' },
   ];
+
+  /* Выбор вкладки — производная от данных, а не отдельная память. Период меняют прямо
+     на экране, и вкладка, ставшая пустой, показывала бы пустоту вместо находок. */
+  const перваяНепустая = разделы.find((р) => р.items.length)?.key ?? 'attention';
+  const выбрана = вкладка && разделы.find((р) => р.key === вкладка)?.items.length
+    ? вкладка : перваяНепустая;
+  const текущий = разделы.find((р) => р.key === выбрана)!;
 
   return (
     <>
@@ -91,17 +108,33 @@ export default function Insights({ analysis }: { analysis: Analysis | null }) {
         </div>
       )}
 
-      {разделы.filter((р) => р.items.length).map((р) => (
-        <div key={р.label}>
-          <div className="ins-head">
-            <span className="ins-head-l" style={{ color: р.color }}>{р.label}</span>
-            <span className="ins-head-n">{р.items.length}</span>
-          </div>
-          <div className="insights">
-            {р.items.map((it) => <Card key={it.id} it={it} open={openIds.has(it.id)} onToggle={() => toggle(it.id)} />)}
-          </div>
-        </div>
-      ))}
+      <div className="period ins-tabs">
+        {разделы.map((р) => (
+          /* Цвет вкладки — тот же, что у полосы слева у карточек внутри неё: жёлтый
+             для внимания (красный, если есть срочное), фиолетовый для заметок, зелёный
+             для нормы. Светофор здесь не украшение: он отвечает на вопрос «всё ли
+             плохо» до того, как человек прочтёт хоть одно слово.
+
+             Цвет отдаём стилю переменной, а не классом: у «Внимания» он зависит от
+             содержимого — при срочной находке жёлтый становится красным. */
+          <button key={р.key} className={'period-seg' + (р.key === выбрана ? ' on' : '')}
+            style={{ '--сев': р.color } as CSSProperties}
+            disabled={!р.items.length} onClick={() => setВкладка(р.key)}>
+            {р.label}
+            <span className="chip-n">{р.items.length}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="insights">
+        {текущий.items.length
+          ? текущий.items.map((it) => (
+            <Card key={it.id} it={it} open={openIds.has(it.id)} onToggle={() => toggle(it.id)} />
+          ))
+          /* Все три пустые — такое бывает в первые дни. Молчать нельзя: человек решит,
+             что не посчиталось. */
+          : <div className="metric-note">Находок пока нет — данных слишком мало.</div>}
+      </div>
     </>
   );
 }

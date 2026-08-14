@@ -31,7 +31,7 @@ import PageHead from './PageHead';
    значит там шаг назад, а не выход; на первом шаге оно и написано иначе: «Закрыть». */
 export default function Section({ title, subtitle, onBack, head, footer, className, children }: {
   title?: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   onBack: () => void;
   /** Своя шапка вместо заголовка — для мастера с шагами. */
   head?: ReactNode;
@@ -44,8 +44,18 @@ export default function Section({ title, subtitle, onBack, head, footer, classNa
   return (
     <>
       <div className={'sheet stack-body' + (className ? ' ' + className : '')}>
-        {head ?? (title ? <PageHead title={title} subtitle={subtitle} onBack={onBack} /> : null)}
-        {children}
+        {/* Внутренняя обёртка нужна ради одного: чтобы короткий раздел ВСЁ РАВНО был
+            чуть выше экрана. iOS включает пружину только у прокручиваемого, и раздел
+            из трёх строк не пружинил вовсе — палец тянет, а экран стоит, и это
+            читается как «зависло» (#207).
+
+            Отступы живут здесь же, а не на скроллере: min-height считается от
+            содержимого родителя, и с отступами снаружи лишним оказался бы не пиксель,
+            а все двадцать шесть. */}
+        <div className="stack-fill">
+          {head ?? (title ? <PageHead title={title} subtitle={subtitle} onBack={onBack} /> : null)}
+          {children}
+        </div>
       </div>
       {footer}
     </>

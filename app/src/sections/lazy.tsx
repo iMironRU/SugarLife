@@ -52,6 +52,10 @@ function ленивый<P extends object>(
 
 export const DevicesSection = ленивый<{ onClose: () => void }>(
   () => import('./DevicesSection'), 'Устройства');
+export const HealthSection = ленивый<{ onClose: () => void }>(
+  () => import('./HealthSection'), 'Здоровье');
+export const VisitNoteSection = ленивый<{ onClose: () => void }>(
+  () => import('./VisitNoteSection'), 'Записка к приёму');
 
 export const ServicesSection = ленивый<{ onClose: () => void }>(
   () => import('./ServicesSection'), 'Сервисы');
@@ -87,7 +91,7 @@ export const DiagnosticsSection = ленивый<{ onClose: () => void }>(
 
    Прогрев не обязан успеть. Не успел — откроется как раньше, через заглушку. */
 const ОЧЕРЕДЬ: { прогреть: () => Promise<unknown> }[] = [
-  AnalyticsSection, MealsSection, DevicesSection, DeviceSection,
+  AnalyticsSection, MealsSection, DevicesSection, DeviceSection, HealthSection, VisitNoteSection,
   ServicesSection, DiscoverySection, CloudSection,
   BasalProfileSection, LoopSetupSection, DiagnosticsSection,
 ];

@@ -1,4 +1,4 @@
-import type { Discovered, DeviceView } from '@/sources/bridge';
+import type { Discovered, HardwareView, UiSnapshot } from '@/sources/bridge';
 
 /* Что в эфире наше, а что новое (SugarLifeCore#34).
 
@@ -29,13 +29,17 @@ export function рядомЛи(nearbyAtMs: number | null | undefined, сейча
    внутри идентификатора записи. Догадка слабее ответа движка, поэтому и стоит второй:
    ошибиться в сторону «новое» безопасно (лишний экран подключения), в сторону «наше» —
    нет (подключение не к тому). */
-export function записьВЭфире(d: Discovered, devices: DeviceView[]): string | null {
+/* Устройства описаны по форме: сопоставление одинаково для записей из devices[] и для
+   железа из hardware[] — обеим нужен только id. */
+type Запись = { id: string; nearbyAtMs?: number | null };
+
+export function записьВЭфире(d: Discovered, devices: Запись[]): string | null {
   if (d.knownDeviceId !== undefined) return d.knownDeviceId;
   return devices.find((x) => x.id.includes(d.bleId))?.id ?? null;
 }
 
 /** Кандидаты на добавление — только те, кого мы ещё не знаем. */
-export function новоеВЭфире(discovered: Discovered[], devices: DeviceView[]): Discovered[] {
+export function новоеВЭфире(discovered: Discovered[], devices: Запись[]): Discovered[] {
   return discovered.filter((d) => записьВЭфире(d, devices) == null);
 }
 
@@ -44,7 +48,7 @@ export function новоеВЭфире(discovered: Discovered[], devices: Device
    в эту секунду при открытом скане. Первое работает без скана, второе — до того, как
    движок успел проставить отметку. */
 export function наширядом(
-  devices: DeviceView[], discovered: Discovered[], сейчас: number,
+  devices: Запись[], discovered: Discovered[], сейчас: number,
 ): Set<string> {
   const рядом = new Set<string>();
   for (const d of devices) if (рядомЛи(d.nearbyAtMs, сейчас)) рядом.add(d.id);
@@ -54,3 +58,32 @@ export function наширядом(
   }
   return рядом;
 }
+
+/* Что показывать в диспетчере устройств (SugarLifeCore#42/#44).
+
+   Движок отдаёт готовый список экземпляров железа — hardware[]. Это и есть диспетчер:
+   ни фильтровать по виду, ни отличать облако от железки, ни выводить, где мост, больше
+   не нужно. Облаков там нет по построению: облако — источник слота, а не железка, у
+   него нет ни «рядом», ни «переподключить», ни батареи.
+
+   Запасной путь остаётся ровно для тех, кто hardware[] не отдаёт: старого моста и
+   браузерного шима. Там по-прежнему фильтруем devices[] по виду — но это догадка, и
+   отличать её от ответа движка важно: догадка не знает, например, что «pump» в списке
+   может оказаться облачной записью. */
+export function железоДиспетчера(snap: UiSnapshot | null | undefined): HardwareView[] {
+  const своё = snap?.hardware;
+  if (своё) return своё;
+  return (snap?.devices ?? [])
+    .filter((d) => d.kind !== 'service')
+    .map((d) => ({
+      id: d.id, name: d.name, kind: d.kind === 'bridge' ? 'bridge' : d.kind === 'pump' ? 'pump' : 'sensor',
+      connection: d.connection, status: d.status, nearbyAtMs: d.nearbyAtMs,
+      autoConnect: d.autoConnect, batteryPct: d.batteryPct, rssi: d.rssi, firmware: d.firmware,
+      registryState: d.registryState,
+    }));
+}
+
+/** В каком слоте стоит железка — словом для человека. */
+export const СЛОТ: Record<'cgm' | 'insulin', string> = {
+  cgm: 'сахар', insulin: 'подача инсулина',
+};

@@ -11,8 +11,8 @@ import { useStore } from '@/sources/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
-import { наширядом } from '@/domain/nearby';
-import { связь, меткаСвязи, толькоОблако, черезЧто as черезЧтоУстройства } from '@/domain/deviceState';
+import { наширядом, железоДиспетчера, СЛОТ } from '@/domain/nearby';
+import { связь, меткаСвязи } from '@/domain/deviceState';
 import { sourceStatusLabel } from '@/domain/sourceStatus';
 import { DiscoverySection } from '@/sections/lazy';
 import { устройствоРоли, рольСнимка, черезЧто } from '@/domain/deviceState';
@@ -62,9 +62,11 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
      связи. Железо стоит ниже ролей намеренно: заходят сюда чаще посмотреть, чем
      починить.
 
-     Служебные источники (облако) сюда не идут: это не железо, у него нет ни «рядом»,
-     ни «переподключить», а живёт оно в «Облаках». */
-  const железо = (снимок?.devices ?? []).filter((d) => d.kind !== 'service');
+     Список берём готовым у движка (SugarLifeCore#44): hardware[] — это ровно
+     экземпляры железа, без облаков. Раньше мы фильтровали devices[] по виду и на этом
+     ошибались: облачная запись помпы тоже приходит как kind 'pump', и в диспетчере
+     появлялась «железка», которой нет. */
+  const железо = железоДиспетчера(снимок);
   /* Время держим своим счётчиком: «рядом» протухает по часам, а не по приходу снимка,
      и без тика строка «рядом» висела бы, пока движок не пришлёт что-нибудь ещё. */
   const [сейчас, setСейчас] = useState(() => Date.now());
@@ -110,15 +112,20 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
             <div className="section-label sec">Наше железо</div>
             <div className="list">
               {железо.map((d) => {
-                /* «Живой» здесь — про НАШУ связь с железкой, а не про то, доходят ли
-                   о ней сведения. Помпа, о которой мы знаем через облако, тоже несёт
-                   status Live — и «Пауза» на ней обещала бы, что мы можем эту связь
-                   разорвать. Не можем: её держит чужой телефон. */
-                const живой = связь(d) === 'live' && !толькоОблако(d);
+                /* Облако в этот список больше не попадает по построению, поэтому
+                   «живой» здесь — просто наша связь с железкой. */
+                const живой = связь(d) === 'live';
                 const близко = рядом.has(d.id);
                 const строка = [
                   sourceStatusLabel(d.status) ?? меткаСвязи[связь(d)],
-                  черезЧтоУстройства(d),
+                  /* В каком слоте стоит железка — ответ на «а эта штука вообще
+                     работает на что-нибудь». Другой конец той же связки виден у роли
+                     (SugarLifeCore#44), и показывать надо оба: человек приходит сюда
+                     и от роли («откуда сахар»), и от железа («зачем этот прибор»). */
+                  d.inSlot ? `слот: ${СЛОТ[d.inSlot]}` : null,
+                  /* «Возможно занят» — догадка движка, а не факт: точное «занято
+                     телефоном X» он отложил. Так и говорим, без имени чужого телефона. */
+                  d.busy === 'possibly' ? 'возможно, занят другим телефоном' : null,
                   близко && !живой ? 'рядом' : null,
                 ].filter(Boolean).join(' · ');
                 return (
@@ -126,13 +133,16 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
                     <IonIcon icon={d.kind === 'bridge' ? radioOutline : bluetoothOutline}
                       className={'list-ico' + (живой ? '' : ' muted')} />
                     <span className="pick-main">
-                      <span className="list-title">{d.name}</span>
+                      <span className="list-title">{d.model || d.name}</span>
                       <span className="pick-sub">{строка || 'состояние неизвестно'}</span>
                     </span>
                     {/* Переподключить предлагаем только когда железка рядом: кнопка,
                         которая заведомо ничего не даст (устройство в другой комнате),
                         читается как поломка приложения, а не как отсутствие связи. */}
-                    {живой ? (
+                    {/* Пока связь встаёт, кнопок нет вовсе: «Подключить» во время
+                        подключения ничего не ускоряет, а «Пауза» обрывает то, чего
+                        человек как раз ждёт. */}
+                    {связь(d) === 'wait' ? null : живой ? (
                       <button className="changed-btn"
                         onClick={() => sendIntent({ type: 'disconnect', deviceId: d.id })}>
                         <IonIcon icon={pauseOutline} />Пауза
