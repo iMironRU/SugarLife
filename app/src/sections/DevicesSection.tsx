@@ -15,8 +15,7 @@ import { наширядом, железоДиспетчера, СЛОТ } from '
 import { связь, меткаСвязи } from '@/domain/deviceState';
 import { sourceStatusLabel } from '@/domain/sourceStatus';
 import { DiscoverySection } from '@/sections/lazy';
-import { устройствоРоли, рольСнимка, черезЧто } from '@/domain/deviceState';
-import { слотПоСнимку, ПОДПИСЬ_СЛОТА } from '@/domain/slotStatus';
+import { слотПоСнимку, путьСлота, ПОДПИСЬ_СЛОТА } from '@/domain/slotStatus';
 import type { DeviceCatKey } from './DeviceSection';
 import { useStack } from '@/app/stackCtx';
 import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
@@ -37,8 +36,11 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
      говорила только «настроено», и это отвечало на вопрос про настройку, а не про
      то, работает ли связь и откуда. */
   const снимок = useSnapshot();
-  const каналПомпы = черезЧто(устройствоРоли(снимок, 'pump'), рольСнимка(снимок, 'pump')?.via);
-  const каналСенсора = черезЧто(устройствоРоли(снимок, 'sensor'), рольСнимка(снимок, 'sensor')?.via);
+  /* Откуда идут цифры — в строке слота, а не только в карточке. Это другой вопрос,
+     чем «на связи ли»: помпа может молчать по радио, а данные идти из Nightscout, и
+     человеку важно видеть это, не открывая карточку (#224). */
+  const путьПомпы = путьСлота(снимок, 'pump');
+  const путьСенсора = путьСлота(снимок, 'sensor');
 
   /* Состояние слота спрашиваем у движка, а локальную запись держим запасным ответом
      (#224). Из-за двух источников строка сенсора умудрялась показывать «по радио» и
@@ -53,7 +55,7 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
      SugarLifeCore#13/#19). Канал не привязан к выбранной модели: связь есть и тогда,
      когда модель ещё не названа, а «нет данных о резервуаре» без слова о пути к
      помпе — ровно та половина ответа, из-за которой чинят не то. */
-  const pumpDetail = [каналПомпы,
+  const pumpDetail = [путьПомпы,
     dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : null,
     dev?.pumpBattery != null ? dev.pumpBattery + '%' : null]
     .filter(Boolean).join(' · ') || (pump ? 'нет данных о резервуаре/батарее' : null);
@@ -165,7 +167,7 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
 
         <div className="section-label sec">Сенсоры</div>
         <div className="list">
-          <Row icon={hardwareChipOutline} title={sensor?.name ?? 'Сенсор (НМГ)'} sub={каналСенсора ?? undefined}
+          <Row icon={hardwareChipOutline} title={sensor?.name ?? 'Сенсор (НМГ)'} sub={путьСенсора ?? undefined}
             value={состояние('sensor')} onClick={() => openCat('sensor')} />
         </div>
 
