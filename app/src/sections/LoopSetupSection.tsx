@@ -6,6 +6,7 @@ import { useDeviceConfig, isModelKnown } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
 import HoldButton from '@/ui/HoldButton';
 import Section from '@/ui/Section';
+import { useДочитано } from '@/ui/useДочитано';
 import {
   LOOP_MODES, limitsFor, outOfRec, anyOutOfRec, fmtLimit,
   useLoopProfile, saveLoopProfile, type LoopModeId, type LoopLimit,
@@ -64,7 +65,14 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
 
   const apply = () => { saveLoopProfile({ savedAt: Date.now() }); setDone(true); };
 
-  const canNext = step !== 1 || picked != null;
+  /* Шаг «Деградация» — единственный, где «Далее» ждёт прочтения (#261). Настроек там
+     нет ни одной, только последствия: что произойдёт, когда пропадут данные НМГ или
+     разойдутся часы помпы. Пролиставший их за секунду узнает об этом в момент, когда
+     оно случится. На остальных шагах запирать нечего — человек там выбирает, а не
+     читает, и лишний барьер научил бы его проматывать не глядя. */
+  const { конец, дочитано } = useДочитано<HTMLDivElement>(step);
+  const ждётПрочтения = step === 3 && !дочитано;
+  const canNext = (step !== 1 || picked != null) && !ждётПрочтения;
 
   /* Мастер живёт в обычной шапке раздела (SugarLife#259).
 
@@ -88,7 +96,10 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
       onBack={step > 0 ? () => { setStep((step - 1) as Step); setEditing(null); } : close}
       className="wz"
       title={done ? 'Готово' : STEPS[step]}
-      subtitle={done ? 'профиль записан' : `Шаг ${step + 1} из 5`}
+      /* Запертая кнопка обязана объяснять себя: без подписи «Далее» просто не
+         нажимается, и это выглядит поломкой, а не условием. */
+      subtitle={done ? 'профиль записан'
+        : ждётПрочтения ? 'дочитайте до конца' : `Шаг ${step + 1} из 5`}
       действие={!done && step < 4 ? (
         <button className="head-next" disabled={!canNext}
           onClick={() => { setStep((step + 1) as Step); setEditing(null); }}>
@@ -286,6 +297,8 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
                     Полное прекращение подачи опасно так же, как избыток. Крайняя мера — вернуть управление профилю помпы.
                   </div>
                 </div>
+                {/* Метка конца: пока она не показалась на экране, «Далее» заперта. */}
+                <div ref={конец} />
               </>
             )}
 
