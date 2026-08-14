@@ -126,7 +126,12 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
                 const адрес = адресВЭфире(d);
                 return (
                   <div key={d.id} className="list-row">
-                    <IonIcon icon={d.kind === 'bridge' ? radioOutline : bluetoothOutline}
+                    {/* Значок — про то, каким способом железка разговаривает С ТЕЛЕФОНОМ,
+                        и раньше он стоял наоборот (SugarLifeCore#50). Мост — блютусный:
+                        это он подключён к телефону. А до помпы блютус не доходит вовсе,
+                        связь с ней радийная и через мост, и синий значок рядом с
+                        «Medtronic 722» был утверждением о том, чего нет. */}
+                    <IonIcon icon={мост(d) ? radioOutline : bluetoothOutline}
                       className={'list-ico' + (живой ? '' : ' muted')} />
                     <span className="pick-main">
                       <span className="list-title">{d.model || d.name}</span>
@@ -140,9 +145,13 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
                         подключения ничего не ускоряет, а «Пауза» обрывает то, чего
                         человек как раз ждёт. */}
                     {связь(d) === 'wait' ? null : живой ? (
+                      /* У моста действие называется иначе, потому что оно и есть иное.
+                         «Пауза» — про приостановку работы; у моста смысл в том, чтобы
+                         УСТУПИТЬ прибор: блютус держит один центральный, и пока держим
+                         мы, другой телефон к мосту не подключится (SugarLifeCore#50). */
                       <button className="changed-btn"
                         onClick={() => sendIntent({ type: 'disconnect', deviceId: d.id })}>
-                        <IonIcon icon={pauseOutline} />Пауза
+                        <IonIcon icon={pauseOutline} />{d.kind === 'bridge' ? 'Отпустить' : 'Пауза'}
                       </button>
                     ) : близко ? (
                       <button className="changed-btn"
