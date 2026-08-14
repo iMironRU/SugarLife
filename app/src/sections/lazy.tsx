@@ -55,7 +55,7 @@ export const DevicesSection = ленивый<{ onClose: () => void }>(
 export const HealthSection = ленивый<{ onClose: () => void }>(
   () => import('./HealthSection'), 'Здоровье');
 export const VisitNoteSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
-  () => import('./VisitNoteSection'), 'Записка к приёму');
+  () => import('./VisitNoteSection'), 'Отчёт к приёму');
 
 export const ServicesSection = ленивый<{ onClose: () => void }>(
   () => import('./ServicesSection'), 'Сервисы');

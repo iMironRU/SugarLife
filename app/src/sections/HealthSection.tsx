@@ -51,7 +51,7 @@ export default function HealthSection({ onClose }: { onClose: () => void }) {
     <Section title="Здоровье" subtitle="Профиль · Здоровье" onBack={onClose}>
       <div className="sheet-note">
         Это то, что приложение не видит само: вес, давление, анализы и даты обследований.
-        Отсюда они попадут в записку к приёму — и здесь же видно, чему вышел срок.
+        Отсюда они попадут в отчёт к приёму — и здесь же видно, чему вышел срок.
       </div>
 
       <div className="section-label sec">Мои показатели</div>
