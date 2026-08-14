@@ -11,7 +11,9 @@ import { useStore } from '@/sources/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
-import { наширядом, железоДиспетчера, СЛОТ } from '@/domain/nearby';
+import {
+  железоДиспетчера, СЛОТ, рядомЖелезо, мостЖелезки, имяЖелезки, адресВЭфире,
+} from '@/domain/nearby';
 import { связь, меткаСвязи } from '@/domain/deviceState';
 import { sourceStatusLabel } from '@/domain/sourceStatus';
 import { DiscoverySection } from '@/sections/lazy';
@@ -85,7 +87,11 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
     const id = window.setInterval(() => setСейчас(Date.now()), 15_000);
     return () => window.clearInterval(id);
   }, []);
-  const рядом = наширядом(железо, снимок?.discovered ?? [], сейчас);
+  /* «Рядом» считаем с оглядкой на мост (#251): помпа Medtronic по блютусу не вещает
+     вовсе, и пока OrangeLink молчит, «рядом» про неё — утверждение, которого никто не
+     делал. Правило в domain/nearby.ts. */
+  const рядом = рядомЖелезо(снимок, сейчас);
+  const мост = (h: Parameters<typeof имяЖелезки>[0]) => мостЖелезки(h, снимок);
 
   return (
     <Section title="Устройства" subtitle="Профиль · Устройства" onBack={onClose}>
@@ -109,7 +115,15 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
                      телефоном X» он отложил. Так и говорим, без имени чужого телефона. */
                   d.busy === 'possibly' ? 'возможно, занят другим телефоном' : null,
                   близко && !живой ? 'рядом' : null,
+                  /* Молчащий мост — причина, а не соседняя строка. Без него человек
+                     видит две железки «нет связи» и не знает, с какой начинать; а
+                     начинать надо с моста, помпа за ним сама не отзовётся. */
+                  !живой && мост(d) && связь(мост(d)!) !== 'live'
+                    ? `через «${имяЖелезки(мост(d)!)}» — мост не на связи` : null,
                 ].filter(Boolean).join(' · ');
+                /* Адрес в эфире — чтобы различать два одинаковых прибора. Не нашли —
+                   не показываем: выдуманный «серийник» хуже отсутствия. */
+                const адрес = адресВЭфире(d);
                 return (
                   <div key={d.id} className="list-row">
                     <IonIcon icon={d.kind === 'bridge' ? radioOutline : bluetoothOutline}
@@ -117,6 +131,7 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
                     <span className="pick-main">
                       <span className="list-title">{d.model || d.name}</span>
                       <span className="pick-sub">{строка || 'состояние неизвестно'}</span>
+                      {адрес && <span className="dev-addr">{адрес}</span>}
                     </span>
                     {/* Переподключить предлагаем только когда железка рядом: кнопка,
                         которая заведомо ничего не даст (устройство в другой комнате),

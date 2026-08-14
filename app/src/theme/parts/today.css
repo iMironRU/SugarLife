@@ -246,3 +246,12 @@
 .snooze-btn:active { background: var(--color-neutral-800); }
 /* Внутри подсветки без строки ответов кнопка стоит одна — отделяем её от текста. */
 .today-alert > div > .snooze-btn { display: inline-block; }
+
+/* Адрес железки в эфире (#251). Тише подписи намеренно: он нужен, только когда приборов
+   два одинаковых, и в остальное время не должен спорить с именем за внимание. */
+.dev-addr {
+  display: block; margin-top: 2px;
+  font-size: 11px; letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-dim, #6f7285);
+}
