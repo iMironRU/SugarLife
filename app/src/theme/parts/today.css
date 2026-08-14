@@ -107,7 +107,7 @@
 /* Проактивный вопрос внутри подсветки: спросить дешевле, чем заставлять искать,
    где это исправить (принцип «проактивные вопросы вместо ретроактивных правок»). */
 .alert-ask { display: block; margin-top: 8px; }
-.alert-ask .changed-btn { margin-top: 6px; }
+.alert-ask .changed-btn { margin-top: 6px; min-height: 44px; padding: 0 16px; font-size: 13px; }
 
 /* Ответы в строку. Переносятся, а не сжимаются: «Картридж и набор» на узком экране
    должен уехать на вторую строку целиком, а не превратиться в «Картридж и…». */
@@ -210,13 +210,19 @@
 .upd-text b { display: block; font-size: 14px; font-weight: 600; }
 .upd-text i { display: block; margin-top: 3px; font-size: 12px; font-style: normal; color: var(--color-neutral-400); line-height: 1.4; }
 .upd-actions { display: flex; gap: 8px; flex-shrink: 0; }
+/* Кнопки на карточках «Сегодня» — по правилу касания, а не по правилу вёрстки: 44
+   пикселя это ширина подушечки пальца, и всё, что меньше, требует прицеливания. А
+   целятся тут одной рукой, часто на ходу и нередко при плохом самочувствии — то есть
+   ровно тогда, когда промах дороже всего. */
+.upd-actions .changed-btn { min-height: 44px; padding: 0 18px; font-size: 13px; margin-top: 0; }
 
 /* «Потом» у подсветки (#147). Тише соседнего действия намеренно: «Поменял батарейку»
    меняет данные, а «Потом» ничего не меняет — и претендовать на то же внимание не
    должно. Но и не невидимая: человек её ищет, когда карточка мешает. */
 .snooze-btn {
-  margin-top: 6px; padding: 7px 12px; border-radius: 12px; cursor: pointer;
-  font-family: var(--font-body); font-size: 12px;
+  margin-top: 8px; min-height: 44px; padding: 0 18px; border-radius: 14px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-body); font-size: 13px;
   background: transparent; color: var(--color-neutral-400);
   border: 1px solid var(--color-neutral-800);
 }
