@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "title": "Инсулиновые помпы",
-  "count": 69,
+  "count": 68,
   "items": [
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-minimed-flex",
@@ -20,7 +20,10 @@
         "Расходник": "те же резервуары и инфузионные наборы, что у 780G",
         "Пульт / приложение": "управление только через смартфон (на помпе экрана нет)",
         "ОС приложения": "iOS, Android"
-      }
+      },
+      "market": [
+        "США"
+      ]
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-minimed-780g",
@@ -43,7 +46,8 @@
         "Инфузионный набор": "вся линейка Medtronic, включая Extended Infusion Set (до 7 дней)",
         "Пульт / приложение": "MiniMed Mobile (просмотр + базовое управление), CareLink Connect (для близких)",
         "ОС приложения": "iOS, Android"
-      }
+      },
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-minimed-770g",
@@ -54,7 +58,8 @@
       "algorithm": "HCL (SmartGuard)",
       "cgm": "Guardian Sensor 3",
       "status": "вытесняется 780G",
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-minimed-740g",
@@ -65,7 +70,10 @@
       "algorithm": "HCL",
       "cgm": "Guardian Sensor 3",
       "status": "региональная (часть рынков EU)",
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": [
+        "EU"
+      ]
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-minimed-720g",
@@ -76,7 +84,8 @@
       "algorithm": "PLGS",
       "cgm": "Guardian Sensor 3",
       "status": "региональная",
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-minimed-640g",
@@ -98,7 +107,11 @@
         "Инфузионный набор": "вся линейка Medtronic",
         "Пульт / приложение": "нет полноценного приложения управления; CareLink — для выгрузки данных",
         "ОС": "—"
-      }
+      },
+      "market": [
+        "EU",
+        "РФ"
+      ]
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-minimed-630g",
@@ -109,7 +122,10 @@
       "algorithm": "PLGS",
       "cgm": "Guardian Sensor 3",
       "status": "актуальная (США)",
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": [
+        "США"
+      ]
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-minimed-fit",
@@ -120,7 +136,8 @@
       "algorithm": null,
       "cgm": null,
       "status": "прямой конкурент Omnipod 5, FDA-заявка запланирована на осень 2026",
-      "statusClass": "разработка"
+      "statusClass": "разработка",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-vivera",
@@ -131,7 +148,8 @@
       "algorithm": null,
       "cgm": null,
       "status": "FDA разрешила pivotal trial (ноябрь 2025); будет питать Flex и Fit",
-      "statusClass": "разработка"
+      "statusClass": "разработка",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-minimed-670g",
@@ -142,7 +160,8 @@
       "algorithm": "HCL",
       "cgm": null,
       "status": "снята к ~2023",
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-minimed-530g",
@@ -153,7 +172,8 @@
       "algorithm": "LGS",
       "cgm": null,
       "status": "2018",
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-paradigm-veo-554-754",
@@ -165,7 +185,8 @@
       "cgm": null,
       "status": null,
       "statusClass": "снята",
-      "driverKey": "medtronic-554-754"
+      "driverKey": "medtronic-554-754",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-paradigm-revel-523-723",
@@ -177,7 +198,8 @@
       "cgm": null,
       "status": "2018",
       "statusClass": "снята",
-      "driverKey": "medtronic-523-723"
+      "driverKey": "medtronic-523-723",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-paradigm-522-722",
@@ -189,7 +211,8 @@
       "cgm": null,
       "status": null,
       "statusClass": "снята",
-      "driverKey": "medtronic-522-722"
+      "driverKey": "medtronic-522-722",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-paradigm-515-715",
@@ -201,7 +224,8 @@
       "cgm": null,
       "status": null,
       "statusClass": "снята",
-      "driverKey": "medtronic-515-715"
+      "driverKey": "medtronic-515-715",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-paradigm-512-712",
@@ -213,7 +237,8 @@
       "cgm": null,
       "status": null,
       "statusClass": "снята",
-      "driverKey": "medtronic-512-712"
+      "driverKey": "medtronic-512-712",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-paradigm-511",
@@ -224,7 +249,8 @@
       "algorithm": "открытый",
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-minimed-508",
@@ -235,7 +261,8 @@
       "algorithm": "открытый",
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-minimed-507-507c",
@@ -246,7 +273,8 @@
       "algorithm": "открытый",
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "minimed-group-бывшая-medtronic-diabetes-minimed-506",
@@ -257,7 +285,8 @@
       "algorithm": "открытый",
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "insulet-omnipod-omnipod-5",
@@ -280,7 +309,8 @@
         "Расходник": "сам Pod = одноразовый расходник (200U, 3 дня); инфузионного набора нет, канюля встроенная",
         "Пульт / приложение": "Insulet-провайдер Controller или приложение Omnipod 5 на смартфоне (полное управление, включая болюс), Apple Watch для просмотра + bolus с G7",
         "ОС приложения": "iOS, Android"
-      }
+      },
+      "market": null
     },
     {
       "id": "insulet-omnipod-omnipod-dash",
@@ -303,7 +333,8 @@
         "Расходник": "Pod 200U (3 дня)",
         "Пульт / приложение": "обязательный PDM (Locked-down Android-устройство); приложения DISPLAY и VIEW для смартфонов (только просмотр)",
         "ОС приложения": "iOS (DISPLAY / VIEW)"
-      }
+      },
+      "market": null
     },
     {
       "id": "insulet-omnipod-omnipod-go",
@@ -314,7 +345,8 @@
       "algorithm": "базал-only, фиксированные дозы",
       "cgm": "—",
       "status": "для T2D, разворачивается",
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": null
     },
     {
       "id": "insulet-omnipod-omnipod-eros-ust400-classic",
@@ -324,8 +356,9 @@
       "reservoir": "200U",
       "algorithm": "открытый",
       "cgm": "—",
-      "status": "США — 31.12.2023, UK / Canada — 30.06.2026",
-      "statusClass": "актуальная"
+      "status": "снята: США — 31.12.2023, UK и Канада — 30.06.2026",
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "tandem-diabetes-care-t-slim-x2-с-control-iq",
@@ -336,7 +369,8 @@
       "algorithm": "advanced AID (auto-bolus)",
       "cgm": "Dexcom G6 / G7 (15-day)",
       "status": "актуальная",
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": null
     },
     {
       "id": "tandem-diabetes-care-tandem-mobi",
@@ -358,7 +392,10 @@
         "Инфузионный набор": "Tandem-совместимые, плюс адгезивный sleeve для ношения на теле",
         "Пульт / приложение": "управление только через iPhone; на помпе одна физическая кнопка (quick bolus / статус)",
         "ОС приложения": "только iOS (Android в роадмапе)"
-      }
+      },
+      "market": [
+        "США"
+      ]
     },
     {
       "id": "tandem-diabetes-care-t-slim-оригинал",
@@ -369,7 +406,8 @@
       "algorithm": "открытый",
       "cgm": null,
       "status": "июль 2023",
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "tandem-diabetes-care-t-slim-g4",
@@ -380,7 +418,8 @@
       "algorithm": "открытый + Dexcom G4 (on-screen)",
       "cgm": null,
       "status": "июль 2023",
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "tandem-diabetes-care-t-flex",
@@ -391,7 +430,8 @@
       "algorithm": "открытый",
       "cgm": null,
       "status": "июль 2023",
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "tandem-diabetes-care-t-sport",
@@ -402,7 +442,8 @@
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "tandem-diabetes-care-sigi-patch-pump",
@@ -413,7 +454,8 @@
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "разработка"
+      "statusClass": "разработка",
+      "market": null
     },
     {
       "id": "sequel-med-tech-twiist-twiist",
@@ -431,7 +473,10 @@
         "Уникальное": "акустическое измерение объёма каждой микродозы → детекция окклюзий до 9× быстрее",
         "Пульт / приложение": "приложение Sequel + Apple Watch",
         "ОС приложения": "iOS (Apple Watch); Android в роадмапе"
-      }
+      },
+      "market": [
+        "США"
+      ]
     },
     {
       "id": "roche-diabetes-care-accu-chek-accu-chek-insight",
@@ -454,7 +499,10 @@
         "Инфузионный набор": "Accu-Chek Insight",
         "Пульт / приложение": "Accu-Chek Aviva Insight Diabetes Manager (отдельный сенсорный пульт с Bluetooth — полное удалённое управление); приложения mySugr и Accu-Chek Smart Pix",
         "ОС приложения": "iOS, Android (для mySugr)"
-      }
+      },
+      "market": [
+        "EU"
+      ]
     },
     {
       "id": "roche-diabetes-care-accu-chek-accu-chek-spirit-combo",
@@ -477,7 +525,10 @@
         "Инфузионный набор": "Accu-Chek (PVC- и латекс-свободные)",
         "Пульт / приложение": "Aviva Combo BG-метр через Bluetooth (полное удалённое управление, включая болюс)",
         "ОС приложения": "— (управление с проприетарного пульта-глюкометра)"
-      }
+      },
+      "market": [
+        "EU"
+      ]
     },
     {
       "id": "roche-diabetes-care-accu-chek-accu-chek-solo",
@@ -488,7 +539,10 @@
       "algorithm": "открытый",
       "cgm": "—",
       "status": "EU, отдельные рынки",
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": [
+        "EU"
+      ]
     },
     {
       "id": "roche-diabetes-care-accu-chek-accu-chek-combo-старый",
@@ -499,7 +553,8 @@
       "algorithm": null,
       "cgm": null,
       "status": "заменена Insight",
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "roche-diabetes-care-accu-chek-accu-chek-spirit-без-combo",
@@ -510,29 +565,20 @@
       "algorithm": null,
       "cgm": null,
       "status": "первая Accu-Chek-брендированная (2006)",
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "roche-diabetes-care-accu-chek-accu-chek-d-tron-plus",
       "manufacturer": "Roche Diabetes Care (Accu-Chek)",
-      "model": "Accu-Chek D-Tron Plus",
+      "model": "Accu-Chek D-Tron / D-Tron Plus",
       "type": null,
       "reservoir": "315U",
       "algorithm": null,
       "cgm": null,
-      "status": "наследие Disetronic",
-      "statusClass": "снята"
-    },
-    {
-      "id": "disetronic-наследие-roche-и-ypsomed-d-tron-d-tron-plus",
-      "manufacturer": "Disetronic (наследие → Roche и Ypsomed)",
-      "model": "D-Tron / D-Tron Plus",
-      "type": null,
-      "reservoir": "315U",
-      "algorithm": null,
-      "cgm": null,
-      "status": "продавался под Accu-Chek после 2003",
-      "statusClass": "снята"
+      "status": "снята: помпа Disetronic, после покупки Roche в 2003 продавалась под маркой Accu-Chek",
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "disetronic-наследие-roche-и-ypsomed-h-tron-plus",
@@ -543,7 +589,8 @@
       "algorithm": null,
       "cgm": null,
       "status": "наследие Disetronic; линия закрыта после перехода к Roche",
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "disetronic-наследие-roche-и-ypsomed-h-tron-v100",
@@ -554,7 +601,8 @@
       "algorithm": null,
       "cgm": null,
       "status": "наследие Disetronic; линия закрыта после перехода к Roche",
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "disetronic-наследие-roche-и-ypsomed-dahedi-25",
@@ -565,7 +613,8 @@
       "algorithm": null,
       "cgm": null,
       "status": "наследие Disetronic; линия закрыта после перехода к Roche",
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "ypsomed-mylife-mylife-ypsopump",
@@ -587,7 +636,10 @@
         "Инфузионный набор": "mylife Orbit (поворотный 360° коннектор), soft / steel cannula",
         "Пульт / приложение": "mylife App (просмотр данных, bolus с телефона через mylife Dose), YpsoPump Explorer (демо)",
         "ОС приложения": "iOS, Android"
-      }
+      },
+      "market": [
+        "EU"
+      ]
     },
     {
       "id": "sooil-development-dana-i",
@@ -610,7 +662,8 @@
         "Инфузионный набор": "DANA-совместимые",
         "Пульт / приложение": "AnyDana-i (просмотр + bolus); открытый Bluetooth API → совместима с CamAPS FX и AndroidAPS",
         "ОС приложения": "iOS, Android"
-      }
+      },
+      "market": null
     },
     {
       "id": "sooil-development-dana-diabecare-rs",
@@ -630,7 +683,8 @@
         "Расходник": "резервуар 3 мл (300U)",
         "Пульт / приложение": "AnyDana (просмотр + bolus); открытый Bluetooth API → CamAPS FX, AndroidAPS",
         "ОС приложения": "iOS, Android"
-      }
+      },
+      "market": null
     },
     {
       "id": "sooil-development-dana-diabecare-iis",
@@ -641,7 +695,8 @@
       "algorithm": "открытый",
       "cgm": "—",
       "status": "США",
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": null
     },
     {
       "id": "beta-bionics-ilet-bionic-pancreas",
@@ -662,7 +717,10 @@
         "Инфузионный набор": "проприетарный iLet infusion set",
         "Пульт / приложение": "управление с экрана помпы; iLet App для просмотра",
         "ОС приложения": "iOS, Android"
-      }
+      },
+      "market": [
+        "США"
+      ]
     },
     {
       "id": "medtrum-a7-touchcare-nano",
@@ -673,7 +731,11 @@
       "algorithm": "PLGS / HCL",
       "cgm": "Medtrum CGM",
       "status": "EU, Азия, не США",
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": [
+        "EU",
+        "Азия"
+      ]
     },
     {
       "id": "medtrum-a6-touchcare",
@@ -684,7 +746,11 @@
       "algorithm": "LGS",
       "cgm": "Medtrum CGM",
       "status": "EU, Азия",
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": [
+        "EU",
+        "Азия"
+      ]
     },
     {
       "id": "vicentra-kaleido-kaleido-dblg1",
@@ -704,7 +770,10 @@
         "Расходник": "картриджи 200U; алюминиевые сменные корпуса в 10 цветах",
         "Пульт / приложение": "проприетарный handset; в новом поколении — смартфон (Kaleido + DBLG2)",
         "ОС приложения": "iOS, Android (для новой версии)"
-      }
+      },
+      "market": [
+        "EU"
+      ]
     },
     {
       "id": "vicentra-kaleido-kaleido-dblg2-dexcom-g7",
@@ -715,7 +784,10 @@
       "algorithm": "HCL через Diabeloop DBLG2",
       "cgm": "Dexcom G7",
       "status": "коммерческий запуск 2026 (EU)",
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": [
+        "EU"
+      ]
     },
     {
       "id": "microtech-medical-equil",
@@ -726,7 +798,11 @@
       "algorithm": "открытый",
       "cgm": "—",
       "status": "Китай, EU (ограниченно)",
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": [
+        "EU",
+        "Азия"
+      ]
     },
     {
       "id": "eoflow-eopatch",
@@ -737,183 +813,204 @@
       "algorithm": "открытый",
       "cgm": "—",
       "status": "Корея, EU, ОАЭ, Индонезия",
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": [
+        "EU",
+        "Азия",
+        "прочие"
+      ]
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-animas-vibe",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "Animas (Johnson & Johnson, закрыта в 2017)",
       "model": "Animas Vibe",
       "type": null,
       "reservoir": "200U",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-onetouch-ping",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "Animas (Johnson & Johnson, закрыта в 2017)",
       "model": "OneTouch Ping",
       "type": null,
       "reservoir": "200U",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-animas-2020",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "Animas (Johnson & Johnson, закрыта в 2017)",
       "model": "Animas 2020",
       "type": null,
       "reservoir": "200U",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-animas-ir1250",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "Animas (Johnson & Johnson, закрыта в 2017)",
       "model": "Animas IR1250",
       "type": null,
       "reservoir": "200U",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-animas-ir1200",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "Animas (Johnson & Johnson, закрыта в 2017)",
       "model": "Animas IR1200",
       "type": null,
       "reservoir": "200U",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-animas-ir1100",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "Animas (Johnson & Johnson, закрыта в 2017)",
       "model": "Animas IR1100",
       "type": null,
       "reservoir": "200U",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-animas-ir1000",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "Animas (Johnson & Johnson, закрыта в 2017)",
       "model": "Animas IR1000",
       "type": null,
       "reservoir": "200U",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-animas-r1000",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "Animas (Johnson & Johnson, закрыта в 2017)",
       "model": "Animas R1000",
       "type": null,
       "reservoir": "200U",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-cozmo",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "Smiths Medical (Deltec, ушла с рынка помп в 2009)",
       "model": "Cozmo",
       "type": null,
       "reservoir": "300U",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-cozmore",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "Smiths Medical (Deltec, ушла с рынка помп в 2009)",
       "model": "CozMore",
       "type": null,
       "reservoir": "300U",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-asante-snap",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "Asante Solutions (закрыта в 2015)",
       "model": "Asante Snap",
       "type": null,
       "reservoir": "300U (prefilled-картридж Lilly)",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-cellnovo-system",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "Cellnovo (закрыта в 2019)",
       "model": "Cellnovo System",
       "type": "патч с короткой трубкой",
       "reservoir": "150U",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-v-go",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "MannKind (ранее Valeritas)",
       "model": "V-Go",
       "type": "патч",
       "reservoir": "до 76U/день",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-cequr-simplicity",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "CeQur",
       "model": "CeQur Simplicity",
       "type": "патч",
       "reservoir": "200U",
       "algorithm": null,
       "cgm": null,
       "status": "актуальная: только болюс для T2D",
-      "statusClass": "актуальная"
+      "statusClass": "актуальная",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-paq-paq-total",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "CeQur",
       "model": "PaQ / PaQ Total",
       "type": "патч",
       "reservoir": "330U / 3 дня",
       "algorithm": null,
       "cgm": null,
       "status": "свёрнута",
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     },
     {
       "id": "закрытые-компании-помпы-ушедшие-с-рынка-amigo-amigo-ii",
-      "manufacturer": "Закрытые компании / помпы, ушедшие с рынка",
+      "manufacturer": "Nipro Diabetes Systems",
       "model": "Amigo / Amigo II",
       "type": null,
       "reservoir": "300U",
       "algorithm": null,
       "cgm": null,
       "status": null,
-      "statusClass": "снята"
+      "statusClass": "снята",
+      "market": null
     }
   ]
 }
