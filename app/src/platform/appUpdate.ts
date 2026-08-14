@@ -22,6 +22,18 @@ import { CapacitorUpdater } from '@capgo/capacitor-updater';
 export const APP_EDITION = 'SugarLife.Lite';
 export const APP_VERSION = __APP_VERSION__;
 export const APP_BUILD = __APP_BUILD__;
+export const APP_BUILT_AT = __APP_BUILT_AT__;
+
+/* Новее ли релиз того, что установлено. Вынесено отдельно и с тестом, потому что
+   ошибиться здесь легко и незаметно: `new Date(undefined)` даёт NaN, а любое сравнение
+   с NaN — false. При молчащем API это и есть правильный ответ («не предлагать»), но
+   получиться он должен намеренно, а не по случайности приведения типов. */
+export function новееЛи(релиз?: string | null, собрано?: string | null): boolean {
+  if (!релиз || !собрано) return false;
+  const а = Date.parse(релиз); const б = Date.parse(собрано);
+  if (Number.isNaN(а) || Number.isNaN(б)) return false;
+  return а > б;
+}
 export const isNative = Capacitor.isNativePlatform();
 export const platform = Capacitor.getPlatform(); // 'web' | 'android' | 'ios'
 
@@ -86,21 +98,29 @@ export interface NativeUpdateInfo {
   publishedAt: string | null;
 }
 
-/* Выпускается ли сейчас APK. Пока false — автосборка выключена (SugarLife#133):
-   движок подключается composite-сборкой по локальному пути, и на раннере она падает.
+/* Выпускается ли сейчас APK (SugarLife#238).
 
-   Проверка обновления держится на инварианте «релиз android-latest = последний main»,
-   поэтому «SHA отличается» и означало «новее». Инвариант сломался вместе со сборкой:
-   релиз замер на 30 июля, и любая установленная сборка новее его. Кнопка «Скачать
-   APK» предлагала бы откат — то есть ровно то, чего человек от неё не ждёт.
+   Было false, пока APK не выпускался вовсе: автосборка выключена (#133 — движок
+   подключается composite-сборкой по локальному пути, и на раннере она падает), релиз
+   замер на 30 июля, и кнопка предлагала бы откат на сборку старше установленной.
 
-   Прячем целиком, а не подписываем дату: подпись под кнопкой читают не все, а
-   устанавливают её нажатием. Вернуть — одной строкой, когда закроется #133. */
-export const ВЫПУСКАЕТСЯ_APK = false;
+   Теперь APK собирается руками и выкладывается в тот же релиз, поэтому кнопка нужна.
+   Но вернуть один флаг было мало: старая проверка сравнивала SHA на «не равно», а это
+   утверждение «другой», а не «новее». Пока релиз шёл из CI следом за main, разницы не
+   было; при ручной выкладке релиз отстаёт от main регулярно — и предложение обновиться
+   означало бы откат. Поэтому ниже сравнивается ещё и время. */
+export const ВЫПУСКАЕТСЯ_APK = true;
 
-// Проверить нативный слой (Android): есть ли в релизе android-latest более
-// свежий APK, чем установленный. Релиз всегда отражает последний main, поэтому
-// «SHA отличается» == «новее» (история движется только вперёд).
+/* Проверить нативный слой (Android): есть ли в релизе android-latest сборка НОВЕЕ
+   установленной.
+
+   Два условия, и второе важнее первого. SHA отвечает только на «тот же или другой» —
+   этого хватает, чтобы не предлагать обновление на самого себя. А «новее» знает лишь
+   время: дата публикации релиза против даты сборки бандла.
+
+   Сравнение с бандлом, а не с APK, выбрано намеренно. После OTA внутри установленного
+   APK живёт более свежий JS, и мерить надо именно его: иначе человеку, который только
+   что обновился по воздуху, снова предложат качать десять мегабайт ради того же кода. */
 export async function checkNativeUpdate(): Promise<NativeUpdateInfo | 'error'> {
   if (!ВЫПУСКАЕТСЯ_APK) return { hasUpdate: false, build: null, apkUrl: null, publishedAt: null };
   try {
@@ -112,7 +132,8 @@ export async function checkNativeUpdate(): Promise<NativeUpdateInfo | 'error'> {
     const apk = (rel.assets || []).find((a: { name?: string }) => a.name?.toLowerCase().endsWith('.apk'));
     const m = /build:\s*([0-9a-f]{7,40})/i.exec(rel.body || '');
     const short = m ? m[1].slice(0, 7) : null;
-    const hasUpdate = !!short && APP_BUILD !== 'dev' && short !== APP_BUILD;
+    const hasUpdate = !!short && APP_BUILD !== 'dev' && short !== APP_BUILD
+      && новееЛи(rel.published_at, APP_BUILT_AT);
     return {
       hasUpdate,
       build: short,
