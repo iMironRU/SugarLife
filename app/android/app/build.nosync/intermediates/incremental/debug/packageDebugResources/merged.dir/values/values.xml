@@ -4,7 +4,7 @@
     <string name="app_name">SugarLife.Pro</string>
     <string name="custom_url_scheme">ru.imiron.sugarlife.pro</string>
     <string name="package_name">ru.imiron.sugarlife.pro</string>
-    <string name="title_activity_main">SugarLife</string>
+    <string name="title_activity_main">SugarLife.Pro</string>
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
         
         <item name="colorPrimary">@color/colorPrimary</item>

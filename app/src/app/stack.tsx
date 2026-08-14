@@ -54,7 +54,13 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
     });
   }, []);
 
-  const pop = useCallback(() => {
+  /* Уход верхней страницы — один на все способы выйти.
+
+     Способов три: кнопка «назад», свайп и нажатие своей вкладки в таб-баре. Первый и
+     третий обязаны выглядеть одинаково: человек не различает «как» он вышел, он видит
+     только результат, и страница, то уезжающая, то исчезающая мгновенно, читается как
+     сбой (#220). */
+  const увестиВерх = useCallback((всё: boolean) => {
     setPages((p) => {
       const верх = p[p.length - 1];
       if (верх) {
@@ -62,9 +68,13 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
         window.clearTimeout(таймерУхода.current);
         таймерУхода.current = window.setTimeout(() => setУходит(null), 240);
       }
-      return p.slice(0, -1);
+      /* «Домой» снимает весь стек, но уезжает только верхняя: нижние человек не видит,
+         и анимировать их — работа впустую. */
+      return всё ? [] : p.slice(0, -1);
     });
   }, []);
+
+  const pop = useCallback(() => увестиВерх(false), [увестиВерх]);
 
   /* Отдельная функция, а не флаг в pop(), и это не вкусовщина.
 
@@ -101,10 +111,13 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
     плавно(syncToActiveScreen);
   }, [pages.length]);
 
-  // нажали свою вкладку в таб-баре — выходим в корень раздела (см. nav.pressTab)
+  /* Нажали свою вкладку в таб-баре — выходим в корень раздела (см. nav.pressTab).
+     Тем же уходом, что и кнопка «назад»: раньше здесь стоял мгновенный сброс стека, и
+     раздел просто исчезал — то же действие выглядело двумя разными (#220). */
   const домой = useGoHome(tab);
   useEffect(() => {
-    if (домой) setPages((p) => (p.length ? [] : p));
+    if (домой) увестиВерх(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [домой]);
 
   /* Свайп «назад». Пороги и правила — в app/backGesture.ts, там же тесты: само

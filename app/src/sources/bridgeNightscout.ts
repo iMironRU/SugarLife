@@ -2,24 +2,13 @@
    Когда появится нативный мост (оболочка/релей) — UI не меняется, просто
    getBridge() вернёт его вместо шима. Пока: живой монитор + alerts из Nightscout.
    Гэпы честно: один IOB (→ conservative), нет истории/транзакций/wiring/insights. */
-import type { SugarLifeBridge, UiSnapshot, Monitor, Trend, Link, DeviceView, Alert, Intent, DriverDescriptor, HistoryQuery, HistoryResult, SourceStatus } from './bridge';
+import type { SugarLifeBridge, UiSnapshot, Monitor, Link, DeviceView, Alert, Intent, DriverDescriptor, HistoryQuery, HistoryResult, SourceStatus } from './bridge';
 import { getSince, getTreatmentsSince } from './db';
 import { subscribeStore, getStoreState, refresh } from './store';
 import { getUnit, subscribeUnit, toUnits } from '@/domain/units';
+import { направление } from '@/domain/trend';
+import type { Entry } from './nightscout';
 import { getCfg, setCfg } from './nightscout';
-
-function trendOf(dir: string): Trend {
-  switch (dir) {
-    case 'DoubleUp': return 'RisingRapidly';
-    case 'SingleUp': return 'Rising';
-    case 'FortyFiveUp': return 'RisingSlowly';
-    case 'Flat': return 'Stable';
-    case 'FortyFiveDown': return 'FallingSlowly';
-    case 'SingleDown': return 'Falling';
-    case 'DoubleDown': return 'FallingRapidly';
-    default: return 'Unknown';
-  }
-}
 
 function linkOf(live: boolean, status: string): Link {
   if (live) return 'Streaming';
@@ -57,7 +46,10 @@ function buildSnapshot(): UiSnapshot {
   const monitor: Monitor = {
     glucose: latest ? toUnits(latest.mmol, u) : '—',
     glucoseMmol: latest ? latest.mmol : null,
-    trend: latest ? trendOf(latest.dir) : '—',
+    /* Направление: слово источника, а если он промолчал — наш расчёт по истории
+       (domain/trend.ts). Раньше на этом месте была подстановка «ровно», то есть
+       утверждение, которого никто не делал (SugarLife#215). */
+    trend: направление((st.data?.entries ?? []) as Entry[]),
     link,
     reservoir: d?.reservoir != null ? Math.round(d.reservoir) + ' ед' : '—',
     battery: d?.pumpBattery != null ? d.pumpBattery + '%' : '—',

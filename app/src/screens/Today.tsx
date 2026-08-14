@@ -10,7 +10,7 @@ import ReleaseBle from '@/ui/ReleaseBle';
 import NearbyTile from '@/ui/NearbyTile';
 import ConnectFeed from '@/ui/ConnectFeed';
 import UpdateReady from '@/ui/UpdateReady';
-import SnoozeBtn from '@/ui/SnoozeBtn';
+import { отложить } from '@/settings/snooze';
 import { useОтложения, показывать, прибрать } from '@/settings/snooze';
 import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
@@ -32,6 +32,7 @@ import { useAnalyticsOn } from '@/settings/analytics';
 import { useAnalysis, непрочитанныеВажные } from '@/domain/useAnalysis';
 import { useSeenInsights } from '@/settings/seenInsights';
 import Screen from '@/ui/Screen';
+import Notice, { NoticeStack } from '@/ui/Notice';
 
 const DASH = '—';
 
@@ -362,63 +363,56 @@ export default function Today() {
             <div className="an-off-note">Разбор данных выключен · Профиль → Настройки</div>
           )}
 
+          {/* Обращения — одной стопкой, с порядком по важности и пределом
+              одновременно показанных (ui/Notice.tsx, domain/notices.ts).
+
+              Ниже стопки — то, что решает про свой показ само: лента подключения,
+              плитка устройств, обновление и «отдать BLE». У них своя редкость и
+              свой повод, и втягивать их в стопку значило бы либо дублировать их
+              условия здесь, либо считать занятым место, где нарисуется null. */}
+          <NoticeStack>
           {/* помпа на паузе — важный статус, не прячем (авторитетно из AAPS) */}
           {dev?.suspended === true && (
-            <div className="today-alert info">
-              <IonIcon icon={pauseCircleOutline} />
-              <div>
-                <b>Помпа на паузе</b>
-                <span>Подача инсулина остановлена.</span>
-              </div>
-            </div>
+            <Notice id="suspended" вид="сообщение" значок={pauseCircleOutline} заголовок="Помпа на паузе">
+              Подача инсулина остановлена.
+            </Notice>
           )}
 
           {/* окончание резервуара придётся на ночь — поменять заранее */}
           {nightEmpty && виденРезервуар && (
-            <div className="today-alert warn">
-              <IonIcon icon={moonOutline} />
-              <div>
-                <b>Инсулина ≈{Math.round(hoursLeft as number)} ч — закончится ночью (~{emptyTime})</b>
-                <span>Замените резервуар заранее, чтобы подача не прервалась во сне. Оценка по среднему расходу.</span>
-                <SnoozeBtn ключ="reservoir" эпизод={эпРезервуар} уровень={Math.round(-(hoursLeft ?? 0))} />
-              </div>
-            </div>
+            <Notice id="reservoir-night" вид="предупреждение" значок={moonOutline}
+              заголовок={`Инсулина ≈${Math.round(hoursLeft as number)} ч — закончится ночью (~${emptyTime})`}
+              отложить={() => отложить('reservoir', эпРезервуар, Math.round(-(hoursLeft ?? 0)))}>
+              Замените резервуар заранее, чтобы подача не прервалась во сне. Оценка по среднему расходу.
+            </Notice>
           )}
 
           {/* инсулин заканчивается днём — раньше про это не предупреждали вовсе */}
           {soonEmpty && виденРезервуар && (
-            <div className="today-alert warn">
-              <IonIcon icon={warningOutline} />
-              <div>
-                <b>Инсулина ≈{Math.round(hoursLeft as number)} ч — до ~{emptyAt}</b>
-                <span>Резервуар скоро опустеет, подача прервётся. Оценка по среднему расходу.</span>
-                <SnoozeBtn ключ="reservoir" эпизод={эпРезервуар} уровень={Math.round(-(hoursLeft ?? 0))} />
-              </div>
-            </div>
+            <Notice id="reservoir-soon" вид="предупреждение" значок={warningOutline}
+              заголовок={`Инсулина ≈${Math.round(hoursLeft as number)} ч — до ~${emptyAt}`}
+              отложить={() => отложить('reservoir', эпРезервуар, Math.round(-(hoursLeft ?? 0)))}>
+              Резервуар скоро опустеет, подача прервётся. Оценка по среднему расходу.
+            </Notice>
           )}
 
           {/* похоже, поел и не внёс — активные углеводы посчитаны неверно */}
           {виденПодъём && (
-            <div className="today-alert warn">
-              <IonIcon icon={restaurantOutline} />
-              <div>
-                <b>Сахар вырос на {fmt(rise as number)} — еда записана?</b>
-                <span>За 2 часа поднялся до {toUnits(nowG as number)} {unitLabel()}, а углеводов не внесено. Если поели — добавьте, иначе активные углеводы и подсказки будут врать.</span>
-                <SnoozeBtn ключ="rise" эпизод={эпПодъём} уровень={Math.round(rise ?? 0)} />
-              </div>
-            </div>
+            <Notice id="rise" вид="предупреждение" значок={restaurantOutline}
+              заголовок={`Сахар вырос на ${fmt(rise as number)} — еда записана?`}
+              отложить={() => отложить('rise', эпПодъём, Math.round(rise ?? 0))}>
+              За 2 часа поднялся до {toUnits(nowG as number)} {unitLabel()}, а углеводов не внесено.
+              Если поели — добавьте, иначе активные углеводы и подсказки будут врать.
+            </Notice>
           )}
 
           {/* давно не было еды — спокойное напоминание, без роста сахара */}
           {виднаЕда && (
-            <div className="today-alert info">
-              <IonIcon icon={restaurantOutline} />
-              <div>
-                <b>Еды не вносили {Math.round(бодрыхЧасов as number)} ч</b>
-                <span>Либо давно не ели, либо забыли записать. Внесённая еда нужна для расчёта активных углеводов.</span>
-                <SnoozeBtn ключ="nofood" эпизод={эпБезЕды} уровень={Math.round(бодрыхЧасов ?? 0)} />
-              </div>
-            </div>
+            <Notice id="nofood" вид="сообщение" значок={restaurantOutline}
+              заголовок={`Еды не вносили ${Math.round(бодрыхЧасов as number)} ч`}
+              отложить={() => отложить('nofood', эпБезЕды, Math.round(бодрыхЧасов ?? 0))}>
+              Либо давно не ели, либо забыли записать. Внесённая еда нужна для расчёта активных углеводов.
+            </Notice>
           )}
 
           {/* Батарея на дне. Главное здесь — не пугать процентом: помпа не показывает
@@ -426,49 +420,34 @@ export default function Today() {
               осталось, знает только собственная история человека, поэтому если циклов
               мы ещё не видели — так и говорим, а не подставляем чужую цифру. */}
           {виднаБатарея && (
-            <div className="today-alert warn">
-              <IonIcon icon={batteryDeadOutline} />
-              <div>
-                <b>Батарея помпы {battery}%</b>
-                <span>
-                  {bstat.floorPct != null
-                    ? `Помпа не показывает ноль: ниже ${bstat.floorPct}% она не опускается. `
-                    : 'Помпа не показывает ноль, поэтому процент занижает запас. '}
-                  {bstat.medianHours != null
-                    ? `После ${bstat.floorPct}% в прошлые разы протягивала ${часы(bstat.medianHours)} — медиана по ${bstat.cycles} ${замен(bstat.cycles)}.`
-                    : 'Сколько ещё протянет, пока сказать не можем: замен с полной историей не набралось. Носи запасную.'}
-                  {kindNote && ` ${kindNote}`}
-
-                </span>
-                <span className="alert-ask">
-                  Поставил новую?
-                  <ChangedButton what="battery" label="Поменял батарейку" />
-                  <SnoozeBtn ключ="battery" эпизод={эпБатарея} уровень={100 - (battery as number)} />
-                </span>
-              </div>
-            </div>
+            <Notice id="battery" вид="предупреждение" значок={batteryDeadOutline}
+              заголовок={`Батарея помпы ${battery}%`}
+              действия={<ChangedButton what="battery" label="Поменял батарейку" />}
+              отложить={() => отложить('battery', эпБатарея, 100 - (battery as number))}>
+              {bstat.floorPct != null
+                ? `Помпа не показывает ноль: ниже ${bstat.floorPct}% она не опускается. `
+                : 'Помпа не показывает ноль, поэтому процент занижает запас. '}
+              {bstat.medianHours != null
+                ? `После ${bstat.floorPct}% в прошлые разы протягивала ${часы(bstat.medianHours)} — медиана по ${bstat.cycles} ${замен(bstat.cycles)}.`
+                : 'Сколько ещё протянет, пока сказать не можем: замен с полной историей не набралось. Носи запасную.'}
+              {kindNote && ` ${kindNote}`}
+            </Notice>
           )}
 
           {/* Вопрос о заправке. Идёт выше прочих подсветок: остальные сообщают, а этот
               просит подтвердить — и пока не подтвердили, возраст резервуара неверен. */}
           {спроситьЗаправку && заправка && (
-            <div className="today-alert">
-              <IonIcon icon={waterOutline} />
-              <div>
-                <b>Похоже, ты заправил картридж</b>
-                <span>
-                  Остаток поднялся с {Math.round(заправка.from)} до {Math.round(заправка.to)} ед {agoText(заправка.at)}.
-                  В Nightscout события об этом нет, поэтому спрашиваем.
-                </span>
-                {/* Один вопрос, три ответа, а не два вопроса подряд.
+            <Notice id="refill" вид="предложение" значок={waterOutline} заголовок="Похоже, ты заправил картридж"
+              действия={(
+                /* Один вопрос, три ответа, а не два вопроса подряд.
 
-                    Сначала я спрашивал отдельно про картридж и отдельно про набор —
-                    формально честно (скачок остатка говорит только про картридж), а на
-                    деле человек отвечал дважды про одно решение. В жизни картридж и
-                    набор чаще меняют вместе: помпа сама ведёт через перемотку, замену и
-                    заполнение. Значит «оба» — обычный случай, а «только картридж» —
-                    отдельный, и это выбор, а не два допроса. */}
-                <span className="alert-ask alert-ask-row">
+                   Сначала я спрашивал отдельно про картридж и отдельно про набор —
+                   формально честно (скачок остатка говорит только про картридж), а на
+                   деле человек отвечал дважды про одно решение. В жизни картридж и
+                   набор чаще меняют вместе: помпа сама ведёт через перемотку, замену и
+                   заполнение. Значит «оба» — обычный случай, а «только картридж» —
+                   отдельный, и это выбор, а не два допроса. */
+                <>
                   <button className="changed-btn is-undo"
                     onClick={() => { markChanged('reservoir', заправка.at); markChanged('site', заправка.at); markRefillAsked(заправка.at); }}>
                     Картридж и набор
@@ -478,10 +457,28 @@ export default function Today() {
                     Только картридж
                   </button>
                   <button className="changed-btn" onClick={() => markRefillAsked(заправка.at)}>Нет</button>
-                </span>
-              </div>
-            </div>
+                </>
+              )}>
+              Остаток поднялся с {Math.round(заправка.from)} до {Math.round(заправка.to)} ед {agoText(заправка.at)}.
+              В Nightscout события об этом нет, поэтому спрашиваем.
+            </Notice>
           )}
+
+          {/* подсветки резервуара */}
+          {виденЗастой && (
+            <Notice id="reservoir-stuck" вид="предупреждение" значок={warningOutline}
+              заголовок={`Резервуар не меняется ${Math.round(rstat.flatHours)} ч`}
+              /* Проактивный вопрос вместо ретроактивной правки: у этого залипания есть
+                 вторая, гораздо более частая причина — картридж поменяли, а помпа этого
+                 не показала. Спросить дешевле, чем заставлять человека искать, где это
+                 исправить. */
+              действия={<ChangedButton what="reservoir" label="Поменял резервуар" />}
+              отложить={() => отложить('stuck', эпЗастой, Math.round(rstat.flatHours))}>
+              А помпа не на паузе — инсулин должен расходоваться. Проверь подачу
+              (окклюзия, катетер, датчик резервуара).
+            </Notice>
+          )}
+          </NoticeStack>
 
           {/* Лента подключения: «сейчас поднимается вот что». Живёт минуты, потом
               исчезает сама — подключение это событие, а не состояние (ui/ConnectFeed). */}
@@ -503,25 +500,6 @@ export default function Today() {
               есть что отпускать. */}
           <ReleaseBle />
 
-          {/* подсветки резервуара */}
-          {виденЗастой && (
-            <div className="today-alert warn">
-              <IonIcon icon={warningOutline} />
-              <div>
-                <b>Резервуар не меняется {Math.round(rstat.flatHours)} ч</b>
-                <span>А помпа не на паузе — инсулин должен расходоваться. Проверь подачу (окклюзия, катетер, датчик резервуара).</span>
-                {/* Проактивный вопрос вместо ретроактивной правки: у этого залипания
-                    есть вторая, гораздо более частая причина — картридж поменяли, а
-                    помпа этого не показала. Спросить дешевле, чем заставлять человека
-                    искать, где это исправить. */}
-                <span className="alert-ask">
-                  Или ты уже поменял, а помпа не заметила?
-                  <ChangedButton what="reservoir" label="Поменял резервуар" />
-                  <SnoozeBtn ключ="stuck" эпизод={эпЗастой} уровень={Math.round(rstat.flatHours)} />
-                </span>
-              </div>
-            </div>
-          )}
           </DataGate>
         <FoodSheet isOpen={foodOpen} onClose={() => setFoodOpen(false)} />
     </Screen>

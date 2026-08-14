@@ -1,1 +1,0 @@
-function e(e){switch(e){case`Live`:return`на связи`;case`Acquiring`:return`связь есть, показаний ещё нет`;case`Connecting`:return`подключается`;case`Delayed`:return`отстаёт`;case`Disconnected`:return`нет связи`;default:return null}}function t(e){return e===`Delayed`||e===`Disconnected`}export{t as n,e as t};

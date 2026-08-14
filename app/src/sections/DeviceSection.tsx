@@ -9,6 +9,8 @@ import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
 import { связь, меткаСвязи, предложениеСлияния, своиЖелезки, черезЧто, СЛОВО_КАНАЛА } from '@/domain/deviceState';
+import { мостСлота } from '@/domain/slotStatus';
+import { устройствоДляПараметров, значенияПараметров } from '@/domain/deviceParams';
 import { useSnapshot, sendIntent, type DeviceView } from '@/sources/bridge';
 
 import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
@@ -137,7 +139,16 @@ export default function DeviceSection({ onClose, cat, title }: {
      (см. ui/ParamsForm.tsx). Пустая спека = блока просто нет, и это нормальное состояние:
      у современных помп и у всех мостов настраивать нечего. */
   const spec = cat === 'pump' ? pumpSpec(pump) : null;
-  const params = cfg.deviceParams[cat] ?? {};
+  /* Параметры драйвера: спрашиваем движок, пишем движку — и только в браузере себе
+     (#224, domain/deviceParams.ts). Серийник нужен драйверу, а не нам: осевший в
+     localStorage, он не поможет прочитать помпу по радио, но человек будет уверен,
+     что ввёл его. */
+  const адресат = устройствоДляПараметров(snap, cat);
+  const params = значенияПараметров(адресат, cfg.deviceParams[cat] ?? {});
+  const записатьПараметр = (k: string, v: string) => {
+    if (адресат) void sendIntent({ type: 'setParams', deviceId: адресат.id, params: { ...params, [k]: v } });
+    else setParam(cat, k, v);
+  };
   const paramsMissing = missingParams(spec, params);
 
   /* Телеметрия моста — то, что мост рассказывает о себе сам. Это НЕ настройки:
@@ -145,11 +156,14 @@ export default function DeviceSection({ onClose, cat, title }: {
      RSSI есть. Пока натива нет, единственный реальный источник — Nightscout: AAPS кладёт
      заряд OrangeLink в pump.extended.OrangeLinkBattery. Чего не знаем — не рисуем. */
   /* Мост как устройство в снимке движка (SugarLifeCore#8, инкремент 1 приехал).
-     Ищем по виду, а не по ролям: движок проецирует его отдельным kind='bridge', и это
-     честнее прежней эвристики по названию роли — роли у транспорта могут быть разные,
-     а вид один. Старый мост вида не присылает, поэтому поиск по ролям оставлен
-     запасным: без него на прежней сборке блок «Мост» исчез бы целиком. */
-  const bleМост = (snap?.devices ?? []).find((d) => d.kind === 'bridge')
+     Берём мост ЭТОГО слота (domain/slotStatus.ts): у железки есть ссылка behindBridgeId,
+     и по ней видно, кто её обслуживает. Прежде брали первый мост из снимка — пока мост
+     один, разницы нет, а с двумя карточка сенсора показала бы заряд помпиного моста, и
+     человек менял бы батарейку не в том приборе (#224).
+
+     Поиск по ролям оставлен запасным для старых сборок: без него на прежней сборке блок
+     «Мост» исчез бы целиком. */
+  const bleМост = (cat === 'pump' || cat === 'sensor' ? мостСлота(snap, cat) : null)
     ?? (snap?.devices ?? []).find((d) => d.roles?.includes('Transport') || d.roles?.includes('Bridge'))
     ?? null;
 
@@ -450,7 +464,7 @@ export default function DeviceSection({ onClose, cat, title }: {
             {spec && modelKnown && (
               <>
                 <ParamsForm title="Параметры помпы" spec={spec} values={params}
-                  onChange={(k, v) => setParam(cat, k, v)} />
+                  onChange={записатьПараметр} />
                 <div className="sheet-note">
                   {paramsMissing.length
                     ? 'Без этого прямое чтение по радио не заработает: ' + paramsMissing.map((p) => p.title.toLowerCase()).join(', ') + '.'

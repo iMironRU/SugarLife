@@ -1,6 +1,6 @@
 {
-  "name": "СладкаяЖизнь",
-  "short_name": "СладкаяЖизнь",
+  "name": "SugarLife.Lite",
+  "short_name": "SugarLife.Lite",
   "description": "Мониторинг, болюсы и управление диабетом 1 типа в одном приложении.",
   "lang": "ru",
   "start_url": "./",

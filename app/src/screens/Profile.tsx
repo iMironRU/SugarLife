@@ -11,7 +11,7 @@ import { resetLocalData } from '@/settings/reset';
 import { useClouds } from '@/sources/clouds';
 import { unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
 import { useTheme } from '../theme/useTheme';
-import { APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload, ВЫПУСКАЕТСЯ_APK } from '@/platform/appUpdate';
+import { APP_EDITION, APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload, ВЫПУСКАЕТСЯ_APK } from '@/platform/appUpdate';
 import { useStack } from '@/app/stackCtx';
 import { useHealth } from '@/settings/health';
 import { поВажности } from '@/domain/screenings';
@@ -253,7 +253,7 @@ export default function Profile() {
           <div className="section-label sec">О приложении</div>
           <div className="about">
             <div className="about-info">
-              <div className="about-ver">Версия {APP_VERSION}</div>
+              <div className="about-ver">{APP_EDITION} {APP_VERSION}</div>
               <div className="about-build">сборка {APP_BUILD}{isNative ? ' · нативное' : ' · PWA'}</div>
             </div>
             {apkUrl ? (

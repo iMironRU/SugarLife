@@ -6,7 +6,8 @@ import { hardwareChipOutline, chevronForward } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useEntries } from '@/sources/db';
 import { toUnits, useUnit } from '@/domain/units';
-import { arrowChar, getCfg, loadEventsRange, type Treatment } from '@/sources/nightscout';
+import { getCfg, loadEventsRange, type Treatment } from '@/sources/nightscout';
+import { СТРЕЛКА, изНаправленияNS } from '@/domain/trend';
 import { deviceAges } from '@/domain/treatmentStats';
 import GlucoseTimeChart from '@/charts/GlucoseTimeChart';
 import { DataGate } from '@/ui/NotConfigured';
@@ -78,7 +79,11 @@ export default function Mon() {
                   {new Date(e.t).getHours().toString().padStart(2, '0')}:{new Date(e.t).getMinutes().toString().padStart(2, '0')}
                 </span>
                 <span className="reading-val" style={{ fontWeight: i === 0 ? 600 : 400 }}>{toUnits(e.mmol)}</span>
-                <span className="reading-arrow">{arrowChar(e.dir)}</span>
+                {/* В ленте показаний стрелка — свойство ЭТОЙ записи, а не «сейчас»:
+                    считать по ней направление из соседних точек значило бы показывать
+                    у прошлогоднего показания сегодняшний расчёт. Нет направления —
+                    нет стрелки. */}
+                <span className="reading-arrow">{СТРЕЛКА[изНаправленияNS(e.dir)]}</span>
               </div>
             ))}
             {!readings.length && <div className="mon-empty">Нет данных.</div>}

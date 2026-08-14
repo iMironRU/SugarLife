@@ -61,6 +61,16 @@
 .today-alert.warn { border-left-color: var(--c-carb); background: color-mix(in srgb, var(--c-carb) 8%, var(--color-neutral-900)); }
 .today-alert.info { border-left-color: var(--color-accent); }
 .today-alert > ion-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+/* Крестик «пока не до этого» (ui/Notice.tsx). Сорок четыре пикселя касания при
+   маленьком значке: попадать в него человек будет одной рукой и не глядя, а вот
+   выглядеть он должен тише содержимого — это не действие карточки, а отказ от неё. */
+.notice-close {
+  flex: 0 0 auto; align-self: flex-start; margin: -6px -6px 0 0;
+  width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; cursor: pointer; color: var(--color-neutral-500);
+}
+.notice-close ion-icon { font-size: 18px; }
+.notice-close:active { color: var(--color-text); }
 .today-alert.warn > ion-icon { color: var(--c-carb); }
 .today-alert.info > ion-icon { color: var(--color-accent-300); }
 .today-alert b { display: block; font-size: 14px; font-weight: 600; }
@@ -107,7 +117,7 @@
 /* Проактивный вопрос внутри подсветки: спросить дешевле, чем заставлять искать,
    где это исправить (принцип «проактивные вопросы вместо ретроактивных правок»). */
 .alert-ask { display: block; margin-top: 8px; }
-.alert-ask .changed-btn { margin-top: 6px; }
+.alert-ask .changed-btn { margin-top: 6px; min-height: 44px; padding: 0 16px; font-size: 13px; }
 
 /* Ответы в строку. Переносятся, а не сжимаются: «Картридж и набор» на узком экране
    должен уехать на вторую строку целиком, а не превратиться в «Картридж и…». */
@@ -209,14 +219,27 @@
 .upd-text { flex: 1; min-width: 200px; }
 .upd-text b { display: block; font-size: 14px; font-weight: 600; }
 .upd-text i { display: block; margin-top: 3px; font-size: 12px; font-style: normal; color: var(--color-neutral-400); line-height: 1.4; }
-.upd-actions { display: flex; gap: 8px; flex-shrink: 0; }
+/* Перенеслись на свою строку — занимают её целиком, а не жмутся к левому краю.
+
+   Ряд из двух кнопок, начинающийся под текстом и обрывающийся на середине карточки,
+   выглядит недовёрстанным: справа пустота, слева отступ от иконки, и глазу не за что
+   зацепиться. Растянутые кнопки читаются как действия карточки, а не как остаток
+   строки — и попасть в них проще, что здесь и требовалось. */
+.upd-actions { display: flex; gap: 8px; flex: 1 0 100%; }
+.upd-actions .changed-btn { flex: 1; }
+/* Кнопки на карточках «Сегодня» — по правилу касания, а не по правилу вёрстки: 44
+   пикселя это ширина подушечки пальца, и всё, что меньше, требует прицеливания. А
+   целятся тут одной рукой, часто на ходу и нередко при плохом самочувствии — то есть
+   ровно тогда, когда промах дороже всего. */
+.upd-actions .changed-btn { min-height: 44px; padding: 0 18px; font-size: 13px; margin-top: 0; }
 
 /* «Потом» у подсветки (#147). Тише соседнего действия намеренно: «Поменял батарейку»
    меняет данные, а «Потом» ничего не меняет — и претендовать на то же внимание не
    должно. Но и не невидимая: человек её ищет, когда карточка мешает. */
 .snooze-btn {
-  margin-top: 6px; padding: 7px 12px; border-radius: 12px; cursor: pointer;
-  font-family: var(--font-body); font-size: 12px;
+  margin-top: 8px; min-height: 44px; padding: 0 18px; border-radius: 14px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-body); font-size: 13px;
   background: transparent; color: var(--color-neutral-400);
   border: 1px solid var(--color-neutral-800);
 }

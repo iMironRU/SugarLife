@@ -44,6 +44,14 @@ export type SourceStatus = 'Disconnected' | 'Connecting' | 'Acquiring' | 'Live' 
 export type ParamType = 'Text' | 'Secret' | 'Number' | 'Bool' | 'Enum';
 export interface Param {
   key: string; title: string; type: ParamType; required: boolean; default: string | null; options: string[];
+  /* НАШЕ расширение, а не поле контракта: какую клавиатуру открыть. Ядро его не
+     присылает, и без него всё работает как прежде — но серийник помпы это шесть цифр,
+     и открывать под него буквенную клавиатуру значит заставлять человека переключать
+     раскладку в момент, когда он смотрит на наклейку сзади помпы.
+
+     Именно расширение, а не тип 'Number': числовое поле нормализует ведущие нули, а
+     серийник с нулём впереди существует. */
+  keyboard?: 'numeric' | 'decimal';
   scan?: 'qr' | null; // rev ≥ 1.5+: поле сканируется камерой (кнопка «Сканировать QR»)
   /* Короткая подсказка под полем: «где взять токен с правом записи», «где искать
      серийник на помпе». Текст пишет тот, кто знает железку, — ядро; у нас ноль
@@ -118,6 +126,12 @@ export interface DeviceView {
 
      Отсутствие поля — не «далеко», а «не знаем»: старый мост признака не шлёт. */
   nearbyAtMs?: number | null;
+  /* Параметры драйвера: серийник, частота радио и прочее, что человек вводит руками
+     (rev ≥ 1.8, SugarLifeCore#34 ответ 5). Приходят с ПРЯМОГО источника, даже когда
+     активен облачный канал: иначе серийник терялся при слиянии и показывался как «не
+     задано». Секретов здесь нет — Param.type 'Secret' пишется только внутрь и обратно
+     не отдаётся. */
+  params?: Record<string, string>;
   /* Как источник называет себя сам (rev ≥ 1.8, SugarLifeCore#23). Для облака это
      devicestatus.device из Nightscout — «AndroidAPS-DASH», «Loop». Нужно ровно там,
      где мы собираемся спросить человека «это твоя помпа?»: показать надо реальную
@@ -192,10 +206,31 @@ export interface Discovered {
      второй такой же. */
   knownDeviceId?: string | null;
 }
+/* Модель, которую драйвер реально читает (rev ≥ 1.8, SugarLifeCore#37).
+
+   Ключ важнее названия и потому первый: названия производители меняют и локализуют, а
+   привязку каталога надо держать за стабильное.
+
+   Список ведёт ядро — драйверы его, и список моделей меняется вместе с ними. Наша копия
+   этой таблицы устарела бы в первый же их релиз, причём молча: человек видел бы
+   «читаем напрямую» там, где драйвер уже не тянет эту ревизию прошивки. */
+export interface SupportedModelView {
+  key: string;
+  title: string;
+  vendor: string;
+  /** Нужен ли аппаратный посредник (OrangeLink и подобные). */
+  needsBridge?: boolean;
+  /** Что человек обязан ввести руками: серийник, частота. */
+  needsParams?: string[];
+}
+
 // rev ≥ 1.2/1.5: каталог типов драйверов, которые умеет ядро
 export interface DriverDescriptor {
   id: string; displayName: string; kind: 'sensor' | 'pump' | 'service'; roles: string[];
   settings: SettingsSpec; available: boolean; canActivate?: boolean; providesTransportFor?: string[];
+  /* rev ≥ 1.8: какие модели этот драйвер читает. Отсутствует — старая сборка движка;
+     тогда каталог не делит список на группы вовсе (domain/catalogSupport.ts). */
+  supports?: SupportedModelView[];
 }
 
 /* Роль — то, к чему привязаны экран и алгоритм (rev ≥ 1.8, SugarLifeCore#34).

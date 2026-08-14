@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'ru.imiron.sugarlife.pro',
-  appName: 'SugarLife',
+  appName: 'SugarLife.Pro',
   webDir: 'dist',
   backgroundColor: '#161826',
   ios: {

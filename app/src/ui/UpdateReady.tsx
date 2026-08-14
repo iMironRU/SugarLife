@@ -1,5 +1,5 @@
-import { IonIcon } from '@ionic/react';
 import { refreshOutline } from 'ionicons/icons';
+import Notice from './Notice';
 import { useState } from 'react';
 import { useUpdateState, applyUpdate } from '@/platform/swUpdate';
 import { APP_BUILD } from '@/platform/appUpdate';
@@ -49,19 +49,21 @@ export default function UpdateReady() {
 
   const потом = () => { записать(КЛЮЧ, APP_BUILD); setСкрыто(true); };
 
+  /* Тем же элементом, что и остальные обращения (#225). Своя вёрстка тут была ровно
+     тем, из-за чего кнопки пришлось увеличивать отдельно, а «Потом» вести себя иначе,
+     чем у подсветок. Вид — «сообщение»: обновление не про диабет и тревожным быть не
+     должно, но и молчать о нём нельзя (#150). */
   return (
-    <div className="upd-row">
-      <IonIcon icon={refreshOutline} className={upd.applying ? 'spin' : ''} />
-      <span className="upd-text">
-        <b>Обновление скачано</b>
-        <i>Перезапустит приложение — пара секунд.</i>
-      </span>
-      <span className="upd-actions">
-        <button className="changed-btn is-undo" onClick={applyUpdate} disabled={upd.applying}>
-          {upd.applying ? 'Обновляю…' : 'Обновить'}
-        </button>
-        <button className="changed-btn" onClick={потом} disabled={upd.applying}>Потом</button>
-      </span>
-    </div>
+    <Notice вид="сообщение" значок={refreshOutline} заголовок="Обновление скачано"
+      действия={(
+        <>
+          <button className="changed-btn is-undo" onClick={applyUpdate} disabled={upd.applying}>
+            {upd.applying ? 'Обновляю…' : 'Обновить'}
+          </button>
+          <button className="changed-btn" onClick={потом} disabled={upd.applying}>Потом</button>
+        </>
+      )}>
+      Перезапустит приложение — пара секунд.
+    </Notice>
   );
 }

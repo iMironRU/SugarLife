@@ -24,6 +24,10 @@ export default defineConfig(({ command }) => ({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __APP_BUILD__: JSON.stringify(build),
+    /* Когда собран этот бандл. Нужен, чтобы отличить «релиз новее меня» от «релиз просто
+       другой»: SHA умеет отвечать только «совпадает или нет», и по нему одинаково
+       выглядят свежая сборка и позавчерашняя (SugarLife#238). */
+    __APP_BUILT_AT__: JSON.stringify(new Date().toISOString()),
   },
   plugins: [
     react(),

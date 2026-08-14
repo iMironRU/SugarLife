@@ -162,13 +162,17 @@
 /* «Поменял» прямо в плитке расходника: замена случается руками в расходниках, и
    отдельный экран подтверждения — ровно та причина, по которой человек перестаёт
    логировать замены вообще. Защита от промаха не спереди (вопрос), а сзади (отмена). */
+/* Тридцать пикселей высоты — это меньше, чем подушечка пальца: в такую кнопку надо
+   целиться, а целятся в приложении, которым пользуются на ходу и одной рукой. Подняли
+   до 38; там, где кнопка главная (обновление, «потом» у подсветки), она ещё крупнее —
+   см. .upd-actions и .snooze-btn. */
 .changed-btn {
-  margin-top: 6px; display: inline-flex; align-items: center; gap: 4px;
-  padding: 5px 9px; min-height: 30px; border-radius: 9px; cursor: pointer;
+  margin-top: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 8px 13px; min-height: 38px; border-radius: 11px; cursor: pointer;
   border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
-  color: var(--color-neutral-300); font-size: 11px; font-weight: 600; font-family: inherit;
+  color: var(--color-neutral-300); font-size: 12px; font-weight: 600; font-family: inherit;
 }
-.changed-btn ion-icon { font-size: 13px; }
+.changed-btn ion-icon { font-size: 15px; }
 .changed-btn:active { background: var(--color-neutral-800); }
 .changed-btn.is-undo { color: var(--c-glu); border-color: color-mix(in srgb, var(--c-glu) 40%, transparent); }
 
