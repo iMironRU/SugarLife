@@ -4,12 +4,13 @@ import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortr
 import { useTab, setTab } from '@/app/nav';
 import { useStore } from '@/sources/store';
 import { toUnits, agoText, unitLabel, useUnit, fmt, daysHoursText } from '@/domain/units';
-import { arrowChar, getCfg } from '@/sources/nightscout';
+import { getCfg } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
 import { useChanges } from '@/settings/changes';
 import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
 import { syncToActiveScreen, сразу } from '@/app/panel';
 import { связь, связьГлюкозы, источникПомпы, устройствоРоли, меткаСвязи, видКруга, черезЧтоСпорное, type Связь } from '@/domain/deviceState';
+import { СТРЕЛКА, направление } from '@/domain/trend';
 import { activeInsulin } from '@/domain/loopValue';
 import { useSnapshot } from '@/sources/bridge';
 import CircleSparkline from '@/charts/CircleSparkline';
@@ -17,11 +18,6 @@ import CircleSparkline from '@/charts/CircleSparkline';
 const DASH = '—';
 
 // Тренд из контракта → символ стрелки
-const TREND_CHAR: Record<string, string> = {
-  RisingRapidly: '⇈', Rising: '↑', RisingSlowly: '↗', Stable: '→',
-  FallingSlowly: '↘', Falling: '↓', FallingRapidly: '⇊',
-};
-
 // Короткий статус помпы для крыла
 function shortStatus(s?: string | null): string {
   if (!s) return DASH;
@@ -107,7 +103,10 @@ export default function HeroPanel() {
   // нативного скелета) — для отображения в круге используем короткое число из glucoseMmol,
   // единицу показывает соседний .hp-unit.
   const glucose = m ? (m.glucoseMmol != null ? toUnits(m.glucoseMmol) : m.glucose) : latest ? toUnits(latest.mmol) : DASH;
-  const arrow = m ? (TREND_CHAR[m.trend] ?? '') : latest ? arrowChar(latest.dir) : '';
+  /* Одна таблица стрелок на всё приложение (domain/trend.ts). Их было две — по словам
+     контракта здесь и по кодам Nightscout в сторе, — и при неизвестном направлении они
+     вели себя по-разному: одна молчала, вторая рисовала «ровно» (#215). */
+  const arrow = СТРЕЛКА[m ? m.trend : направление(latest?.dir, data?.entries ?? [])] ?? '';
   const ago = latestAt != null ? agoText(latestAt) : DASH;
   const minsAgo = latestAt != null ? Math.round((Date.now() - latestAt) / 60000) : null;
   const fresh = minsAgo == null ? DASH : minsAgo < 1 ? 'сейчас' : minsAgo + ' мин';
