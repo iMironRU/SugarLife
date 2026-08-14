@@ -78,38 +78,9 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
 
   return (
     <Section title="Устройства" subtitle="Профиль · Устройства" onBack={onClose}>
-        <div className="sheet-note">
-          Тапни устройство — там все действия (мост, подключение, «забыть»). На плитке ничего не отключишь случайно.
-        </div>
-
-        <div className="section-label sec">Помпа</div>
-        <div className="list">
-          <Row icon={flash} title={pump?.model ?? 'Ввод инсулина'} sub={pumpDetail || undefined}
-            value={deviceStatusLabel(deviceStatus('pump', devCfg))} onClick={() => openCat('pump')} />
-        </div>
-
-        <div className="section-label sec">Сенсоры</div>
-        <div className="list">
-          <Row icon={hardwareChipOutline} title={sensor?.name ?? 'Сенсор (НМГ)'} sub={каналСенсора ?? undefined}
-            value={deviceStatusLabel(deviceStatus('sensor', devCfg))} onClick={() => openCat('sensor')} />
-        </div>
-
-        <div className="section-label sec">Глюкометры и петля</div>
-        <div className="list">
-          {/* Значение строки обязано совпадать с тем, что человек найдёт внутри (#163).
-              Здесь стояло «настроить» у обоих, а внутри — «в разработке»: у глюкометра
-              настраивать пока нечего (можно только внести показание), у петли нет и
-              этого. Слово, обещающее действие, которого нет, читается как поломка, а
-              не как «ещё не сделали». */}
-          <Row icon={speedometerOutline} title="Глюкометр" value="внести показание"
-            onClick={() => openCat('meter')} />
-          <Row icon={repeat} title="Петля" value="в разработке" valueMuted
-            onClick={() => openCat('loop')} />
-        </div>
-
         {железо.length > 0 && (
           <>
-            <div className="section-label sec">Наше железо</div>
+            <div className="section-label sec первый">Мои устройства</div>
             <div className="list">
               {железо.map((d) => {
                 /* Облако в этот список больше не попадает по построению, поэтому
@@ -160,13 +131,49 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
           </>
         )}
 
-        <div className="list" style={{ marginTop: 12 }}>
-          {/* Поиск — только про НОВОЕ. Известное железо живёт выше со своим состоянием,
-              и показывать его ещё раз среди кандидатов на добавление значит предлагать
-              завести второй такой же (SugarLifeCore#34). */}
+        {/* Поиск стоит рядом со списком железа, а не внизу раздела: это продолжение
+            того же вопроса «что у меня есть», только про то, чего ещё нет. И только
+            про НОВОЕ — известное лежит списком выше, и показывать его среди кандидатов
+            на добавление значит предлагать завести второй такой же (SugarLifeCore#34). */}
+        <div className="list" style={{ marginTop: железо.length ? 10 : 0 }}>
           <Row icon={searchOutline} title="Найти новое устройство"
             sub="поиск в эфире — только то, чего мы ещё не знаем"
             onClick={() => push(<DiscoverySection onClose={pop} />)} />
+        </div>
+
+        {/* Ниже — слоты: кто чем занят. Это ответ на другой вопрос, и потому он второй:
+            «что у меня есть» человек проверяет чаще, чем «куда это назначено», а
+            заходя сюда с проблемой связи, он ищет прибор, а не роль. */}
+        <div className="sheet-note">
+          Тапни устройство — там все действия (мост, подключение, «забыть»). На плитке ничего не отключишь случайно.
+        </div>
+
+        <div className="section-label sec">Помпа</div>
+        <div className="list">
+          <Row icon={flash} title={pump?.model ?? 'Ввод инсулина'} sub={pumpDetail || undefined}
+            value={deviceStatusLabel(deviceStatus('pump', devCfg))} onClick={() => openCat('pump')} />
+        </div>
+
+        <div className="section-label sec">Сенсоры</div>
+        <div className="list">
+          <Row icon={hardwareChipOutline} title={sensor?.name ?? 'Сенсор (НМГ)'} sub={каналСенсора ?? undefined}
+            value={deviceStatusLabel(deviceStatus('sensor', devCfg))} onClick={() => openCat('sensor')} />
+        </div>
+
+        <div className="section-label sec">Глюкометры и петля</div>
+        <div className="list">
+          {/* Значение строки обязано совпадать с тем, что человек найдёт внутри (#163).
+              Здесь стояло «настроить» у обоих, а внутри — «в разработке»: у глюкометра
+              настраивать пока нечего (можно только внести показание), у петли нет и
+              этого. Слово, обещающее действие, которого нет, читается как поломка, а
+              не как «ещё не сделали». */}
+          <Row icon={speedometerOutline} title="Глюкометр" value="внести показание"
+            onClick={() => openCat('meter')} />
+          <Row icon={repeat} title="Петля" value="в разработке" valueMuted
+            onClick={() => openCat('loop')} />
+        </div>
+
+        <div className="list" style={{ marginTop: 12 }}>
           <Row icon={helpCircleOutline} title="Проверить / записать по модели" onClick={() => setReqOpen(true)} />
         </div>
         <RequirementsCatalogSheet isOpen={reqOpen} onClose={() => setReqOpen(false)} />
