@@ -13,6 +13,7 @@ import { pumpById, sensorById } from '@/domain/catalog';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import {
   железоДиспетчера, СЛОТ, рядомЖелезо, мостЖелезки, имяЖелезки, адресВЭфире,
+  заМостомЛи, звеноЦепочки, словоЦепочки,
 } from '@/domain/nearby';
 import { связь, меткаСвязи } from '@/domain/deviceState';
 import { sourceStatusLabel } from '@/domain/sourceStatus';
@@ -104,8 +105,14 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
                    «живой» здесь — просто наша связь с железкой. */
                 const живой = связь(d) === 'live';
                 const близко = рядом.has(d.id);
+                const звено = звеноЦепочки(d, снимок);
+                const мостИмя = мост(d) ? имяЖелезки(мост(d)!) : null;
                 const строка = [
-                  sourceStatusLabel(d.status) ?? меткаСвязи[связь(d)],
+                  /* У железки за мостом состояние описывает цепочка, а не одна метка:
+                     иначе строка сказала бы «нет связи · OrangeLink не на связи» — то же
+                     самое дважды, причём первое без подсказки, что делать. */
+                  звено ? словоЦепочки(звено, мостИмя)
+                    : sourceStatusLabel(d.status) ?? меткаСвязи[связь(d)],
                   /* В каком слоте стоит железка — ответ на «а эта штука вообще
                      работает на что-нибудь». Другой конец той же связки виден у роли
                      (SugarLifeCore#44), и показывать надо оба: человек приходит сюда
@@ -115,11 +122,6 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
                      телефоном X» он отложил. Так и говорим, без имени чужого телефона. */
                   d.busy === 'possibly' ? 'возможно, занят другим телефоном' : null,
                   близко && !живой ? 'рядом' : null,
-                  /* Молчащий мост — причина, а не соседняя строка. Без него человек
-                     видит две железки «нет связи» и не знает, с какой начинать; а
-                     начинать надо с моста, помпа за ним сама не отзовётся. */
-                  !живой && мост(d) && связь(мост(d)!) !== 'live'
-                    ? `через «${имяЖелезки(мост(d)!)}» — мост не на связи` : null,
                 ].filter(Boolean).join(' · ');
                 /* Адрес в эфире — чтобы различать два одинаковых прибора. Не нашли —
                    не показываем: выдуманный «серийник» хуже отсутствия. */
@@ -131,7 +133,7 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
                         это он подключён к телефону. А до помпы блютус не доходит вовсе,
                         связь с ней радийная и через мост, и синий значок рядом с
                         «Medtronic 722» был утверждением о том, чего нет. */}
-                    <IonIcon icon={мост(d) ? radioOutline : bluetoothOutline}
+                    <IonIcon icon={заМостомЛи(d, снимок) ? radioOutline : bluetoothOutline}
                       className={'list-ico' + (живой ? '' : ' muted')} />
                     <span className="pick-main">
                       <span className="list-title">{d.model || d.name}</span>

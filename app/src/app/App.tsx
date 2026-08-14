@@ -19,7 +19,6 @@ import { useStore } from '@/sources/store';
 import { useSnapshot } from '@/sources/bridge';
 import { useAnalysis, непрочитанныеВажные } from '@/domain/useAnalysis';
 import { useSeenInsights } from '@/settings/seenInsights';
-import { useAnalyticsOn } from '@/settings/analytics';
 import { diffBleActivity } from '@/sources/bleActivity';
 import { checkBridgeBattery } from '@/settings/bridgeAlerts';
 import { detectTherapy } from '@/domain/therapy';
@@ -193,7 +192,7 @@ export default function App() {
      происходит (domain/useAnalysis.ts). */
   const { analysis } = useAnalysis(14);
   const виденные = useSeenInsights();
-  const новыхНаходок = useAnalyticsOn() ? непрочитанныеВажные(analysis, виденные) : 0;
+  const новыхНаходок = непрочитанныеВажные(analysis, виденные);
 
   // Онбординг — главный путь, но не стена (CONNECT-UX §7): показываем, пока ничего не
   // подключено И человек его ещё не прошёл/не пропустил. Пропустил → приложение с прочерками.
