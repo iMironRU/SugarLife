@@ -334,6 +334,60 @@ export interface UiSnapshot {
      старый мост или браузерный шим: диспетчер тогда собирается прежним способом,
      фильтром devices[] по виду. */
   hardware?: HardwareView[];
+  /* rev ≥ 1.10 (SugarLifeCore#51/#52): облачные учётки и их провайдеры. Отсутствуют —
+     движок каркаса ещё не отдаёт, экран учёток тогда не рисуется вовсе. */
+  cloudProviders?: CloudProviderView[];
+  accounts?: AccountView[];
+}
+
+/* Облачные учётки (rev ≥ 1.10, SugarLifeCore#52).
+
+   Облако вендора — не «ещё один Nightscout». Различий, которые видит человек, три, и
+   каждое пришло из разбора настоящих облаков (LibreLinkUp, Dexcom Share, Sibionics,
+   CareLink).
+
+   РЕГИОН — обязательное поле, и ошибка в нём НЕ ошибка пароля. LibreLinkUp живёт в
+   двенадцати регионах и на вход не в тот отвечает указанием «учётка в регионе EU2».
+   Показать это как «неверный пароль» значит отправить человека менять верный пароль.
+   Поэтому у нас правило: `problem.remediation` показывается как есть, своим текстом не
+   подменяется (domain/cloudAccounts.ts).
+
+   СУБЪЕКТЫ. Под одной учёткой LibreLinkUp видно подопечных — данные другого человека;
+   под учёткой Sibionics — несколько сенсоров. Значит после входа бывает шаг «чьи данные
+   читаем». Единственный субъект движок выбирает сам, и отдельного случая «облако без
+   субъектов» у нас нет.
+
+   ТОЛЬКО ЧТЕНИЕ сказано словом, а не выведено из отсутствия кнопки: в вендор-облако мы
+   не пишем, и человек не должен догадываться, почему записи нет. */
+export interface SubjectView {
+  id: string;
+  displayName: string;
+  kind: 'patient' | 'device';
+  serial?: string | null;
+  startedAtMs?: number | null;
+}
+
+export interface CloudProviderView {
+  id: string;
+  displayName: string;
+  /** Форма входа рисуется по спеке — тем же рендерером, что и параметры драйверов. */
+  settings: SettingsSpec;
+  available: boolean;
+  /** Будет ли после входа шаг выбора субъекта. */
+  hasSubjects?: boolean;
+  /** Чужое облако: читаем, но не пишем. */
+  readOnly?: boolean;
+}
+
+export interface AccountView {
+  id: string;
+  providerId: string;
+  displayName: string;
+  state: 'Linked' | 'Linking' | 'Error' | string;
+  /** Структурная ошибка входа — с готовым текстом, что делать. */
+  problem?: Problem | null;
+  subjects?: SubjectView[];
+  activeSubjectId?: string | null;
 }
 
 // ---- История (rev ≥ 1.1): query(HistoryQuery) → HistoryResult ----
@@ -400,7 +454,12 @@ export type Intent =
      значит не вводили, а не «посчитайте сами». */
   | { type: 'logMeal'; id: string; atMs: number; carbs: number;
       insulin?: number | null; kind?: string | null; note?: string | null }  // rev ≥ 1.8
-  | { type: 'releaseBle' };                                              // rev ≥ 1.7
+  | { type: 'releaseBle' }                                              // rev ≥ 1.7
+  /* Вход в облако (rev ≥ 1.10). Пароль уходит ТОЛЬКО здесь и в снимок не возвращается
+     никогда — в снимке видно лишь state и problem. Ответ интента подтверждает приём, а
+     не успех входа: вход асинхронный, результат читается из accounts[]. */
+  | { type: 'linkAccount'; providerId: string; params: Record<string, string> }
+  | { type: 'selectAccountSubject'; accountId: string; subjectId: string };
 
 export interface SugarLifeBridge {
   bridgeRevision: string;
