@@ -1,22 +1,31 @@
 name: Android APK
 
-# АВТОЗАПУСК ВЫКЛЮЧЕН — см. issue #133 (там же условия возврата).
+# АВТОСБОРКА ВЕРНУЛАСЬ, НО ДЕРЖИТСЯ НА СЕКРЕТЕ (#133).
 #
-# Почему. С коммита 82e2f69 (реинтеграция движка) app/android/settings.gradle
-# подключает KMP-движок composite-сборкой по АБСОЛЮТНОМУ пути к локальному клону
-# приватного SugarLifeCore. На раннере такого пути нет и быть не может: исходников
-# движка в этом репозитории никогда не было, а зависимость ru.imiron.sugarlife:engine
-# объявлена без версии и разрешается только этой подстановкой. Сборка падает на
-# конфигурации, за семь секунд, не дойдя до компиляции.
+# Что мешало. app/android/settings.gradle подключает KMP-движок composite-сборкой по
+# пути к клону ПРИВАТНОГО SugarLifeCore. Исходников движка в этом репозитории нет и не
+# будет, а зависимость ru.imiron.sugarlife:engine объявлена без версии и разрешается
+# только этой подстановкой — на раннере сборка падала на конфигурации за семь секунд.
 #
-# Зачем выключать, а не оставить красным. Красный CI на каждый мерж перестают читать —
-# и вместе с ним перестают читать настоящие падения. Работаем сейчас в PWA; Pages
-# (/v2/, /v2-preview/, OTA-бандл) собираются отдельным workflow, движок им не нужен.
+# Что изменилось. Ядро чекается сюда же, в core/, по токену из секрета CORE_REPO_TOKEN,
+# и путь передаётся через SUGARLIFE_CORE_DIR — ровно тот способ, который settings.gradle
+# и предусматривает.
 #
-# Ручной запуск оставлен намеренно: когда движок станет доступен раннеру (публикация
-# AAR либо чекаут ядра по токену), проверить это можно будет одной кнопкой, не трогая
-# файл. Пока он будет падать так же — это ожидаемо.
+# ПОЧЕМУ БЕЗ СЕКРЕТА МЫ НЕ ПАДАЕМ, А ПРОПУСКАЕМ. Красный CI на каждом merge перестают
+# читать, а вместе с ним перестают читать настоящие падения — ровно поэтому автозапуск
+# когда-то и выключили целиком. Пропущенный шаг честнее: он не врёт про поломку и не
+# приучает игнорировать красное.
+#
+# Подпись берётся из репозитория (android/sugarlife-debug.keystore), поэтому APK из CI
+# и собранный руками подписаны одинаково — обновление ставится поверх, не стирая записи
+# человека. Это не мелочь: данные в MVP живут только на телефоне.
+#
+# Долгосрочно правильнее публикация AAR (SugarLifeCore#24): тогда токен и чекаут чужого
+# репозитория не нужны вовсе, а наша сборка перестаёт зависеть от того, что прямо сейчас
+# лежит в main у соседей.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:        # запуск вручную (Actions → Android APK → Run workflow)
 
 concurrency:                # не копить параллельные сборки — оставляем последнюю
@@ -29,19 +38,43 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Секрет в `if` шага напрямую не читается, поэтому кладём его в env один раз.
+      ЕСТЬ_ТОКЕН: ${{ secrets.CORE_REPO_TOKEN != '' && 'да' || 'нет' }}
     steps:
+      - name: Есть ли доступ к ядру
+        run: |
+          if [ "$ЕСТЬ_ТОКЕН" = "нет" ]; then
+            echo "::notice::Секрета CORE_REPO_TOKEN нет — APK не собирается. Движок лежит в приватном SugarLifeCore, без доступа к нему сборка невозможна (#133)."
+          fi
+
       - uses: actions/checkout@v4
+        if: env.ЕСТЬ_ТОКЕН == 'да'
+
+      # Ядро кладём рядом; settings.gradle читает путь из SUGARLIFE_CORE_DIR.
+      # Чекаутим ветку по умолчанию: пока AAR не публикуется (SugarLifeCore#24), наша
+      # сборка зависит от того, что у соседей лежит в main прямо сейчас.
+      - name: Checkout SugarLifeCore
+        if: env.ЕСТЬ_ТОКЕН == 'да'
+        uses: actions/checkout@v4
+        with:
+          repository: iMironRU/SugarLifeCore
+          token: ${{ secrets.CORE_REPO_TOKEN }}
+          path: core
 
       - uses: actions/setup-java@v4
+        if: env.ЕСТЬ_ТОКЕН == 'да'
         with:
           distribution: temurin
           java-version: '21'
 
       - uses: actions/setup-node@v4
+        if: env.ЕСТЬ_ТОКЕН == 'да'
         with:
           node-version: '22'
 
       - name: Build web (relative base for native)
+        if: env.ЕСТЬ_ТОКЕН == 'да'
         working-directory: app
         env:
           CAP: '1'
@@ -50,41 +83,54 @@ jobs:
           npm run build
 
       - name: Capacitor sync (android)
+        if: env.ЕСТЬ_ТОКЕН == 'да'
         working-directory: app
         run: npx cap sync android
 
       - name: Setup Android SDK
+        if: env.ЕСТЬ_ТОКЕН == 'да'
         uses: android-actions/setup-android@v3
 
       - name: Install SDK packages
+        if: env.ЕСТЬ_ТОКЕН == 'да'
         run: yes | sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || true
 
       - name: Build debug APK
+        if: env.ЕСТЬ_ТОКЕН == 'да'
         working-directory: app/android
+        env:
+          # Путь к чекауту ядра: ровно та переменная, которую ищет settings.gradle.
+          SUGARLIFE_CORE_DIR: ${{ github.workspace }}/core
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Rename APK
+        if: env.ЕСТЬ_ТОКЕН == 'да'
         run: cp app/android/app/build/outputs/apk/debug/app-debug.apk sugarlife-debug.apk
 
       - name: Upload artifact
+        if: env.ЕСТЬ_ТОКЕН == 'да'
         uses: actions/upload-artifact@v4
         with:
           name: sugarlife-debug-apk
           path: sugarlife-debug.apk
 
+      # Строка «build:» — не украшение: по ней приложение решает, предлагать ли
+      # «Скачать APK» (src/platform/appUpdate.ts, #238). Формат менять нельзя.
       - name: Publish to Releases
+        if: env.ЕСТЬ_ТОКЕН == 'да'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'android-latest' }}
-          name: SugarLife Android (debug)
+          name: SugarLife.Lite (debug)
           prerelease: true
           files: sugarlife-debug.apk
           body: |
-            Debug-сборка «СладкаяЖизнь» для тестов на Android.
+            Debug-сборка «SugarLife.Lite» для тестов на Android.
 
             build: ${{ github.sha }}
 
             Установка: скачай `sugarlife-debug.apk` → на телефоне разреши установку
-            из неизвестных источников → открой файл. Не для продакшена.
+            из неизвестных источников → открой файл. Записи и настройки при обновлении
+            поверх остаются: подпись та же, что у сборок с руки. Не для продакшена.
