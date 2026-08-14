@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { слотПоСнимку, каналСлота, ПОДПИСЬ_СЛОТА } from './slotStatus';
+import { слотПоСнимку, каналСлота, мостСлота, ПОДПИСЬ_СЛОТА } from './slotStatus';
 import type { DeviceView, UiSnapshot, HardwareView, RoleView } from '@/sources/bridge';
 
 /* Состояние слота человек читает как ответ на «работает ли у меня это». Ошибка здесь
@@ -91,3 +91,38 @@ describe('через что идут данные слота', () => {
     expect(каналСлота(snap([]), 'sensor')).toBe(null);
   });
 });
+
+/* Мост слота. Пока мост один, ошибка невидима — и именно поэтому проверяем случай с
+   двумя: карточка сенсора, показывающая заряд помпиного моста, отправляет человека
+   менять батарейку не в том приборе. */
+describe('чей мост показывать', () => {
+  const мостП = dev({ id: 'orange', name: 'OrangeLink', kind: 'bridge', batteryPct: 60 });
+  const мостС = dev({ id: 'miao', name: 'MiaoMiao', kind: 'bridge', batteryPct: 20 });
+  const помпа = dev({ id: 'p', kind: 'pump', behindBridgeId: 'orange' });
+  const сенсор = dev({ id: 's', kind: 'sensor', behindBridgeId: 'miao' });
+  const роли: RoleView[] = [{ role: 'insulin', activeSourceId: 'p' }, { role: 'cgm', activeSourceId: 's' }];
+
+  it('берём тот, за которым стоит устройство слота', () => {
+    const s = snap([мостП, мостС, помпа, сенсор], роли);
+    expect(мостСлота(s, 'pump')?.id).toBe('orange');
+    expect(мостСлота(s, 'sensor')?.id).toBe('miao');
+  });
+
+  /* Ссылка есть, а моста в снимке нет — молчим. Показать чужой значит соврать про
+     заряд конкретного прибора. */
+  it('ссылка ведёт в никуда — не подставляем соседний', () => {
+    expect(мостСлота(snap([мостС, помпа], роли), 'pump')).toBe(null);
+  });
+
+  /* Старая сборка ссылок не даёт. Тогда работает догадка «первый мост» — она верна,
+     пока мост один, и это записано как её граница. */
+  it('ссылки нет — берём первый, и это осознанная догадка', () => {
+    const безСсылки = dev({ id: 'p', kind: 'pump' });
+    expect(мостСлота(snap([мостП, безСсылки], [{ role: 'insulin', activeSourceId: 'p' }]), 'pump')?.id).toBe('orange');
+  });
+
+  it('мостов нет вовсе — null', () => {
+    expect(мостСлота(snap([помпа], роли), 'pump')).toBe(null);
+  });
+});
+
