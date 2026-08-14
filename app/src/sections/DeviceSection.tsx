@@ -9,6 +9,7 @@ import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
 import { связь, меткаСвязи, предложениеСлияния, своиЖелезки, черезЧто, СЛОВО_КАНАЛА } from '@/domain/deviceState';
+import { мостСлота } from '@/domain/slotStatus';
 import { useSnapshot, sendIntent, type DeviceView } from '@/sources/bridge';
 
 import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
@@ -145,11 +146,14 @@ export default function DeviceSection({ onClose, cat, title }: {
      RSSI есть. Пока натива нет, единственный реальный источник — Nightscout: AAPS кладёт
      заряд OrangeLink в pump.extended.OrangeLinkBattery. Чего не знаем — не рисуем. */
   /* Мост как устройство в снимке движка (SugarLifeCore#8, инкремент 1 приехал).
-     Ищем по виду, а не по ролям: движок проецирует его отдельным kind='bridge', и это
-     честнее прежней эвристики по названию роли — роли у транспорта могут быть разные,
-     а вид один. Старый мост вида не присылает, поэтому поиск по ролям оставлен
-     запасным: без него на прежней сборке блок «Мост» исчез бы целиком. */
-  const bleМост = (snap?.devices ?? []).find((d) => d.kind === 'bridge')
+     Берём мост ЭТОГО слота (domain/slotStatus.ts): у железки есть ссылка behindBridgeId,
+     и по ней видно, кто её обслуживает. Прежде брали первый мост из снимка — пока мост
+     один, разницы нет, а с двумя карточка сенсора показала бы заряд помпиного моста, и
+     человек менял бы батарейку не в том приборе (#224).
+
+     Поиск по ролям оставлен запасным для старых сборок: без него на прежней сборке блок
+     «Мост» исчез бы целиком. */
+  const bleМост = (cat === 'pump' || cat === 'sensor' ? мостСлота(snap, cat) : null)
     ?? (snap?.devices ?? []).find((d) => d.roles?.includes('Transport') || d.roles?.includes('Bridge'))
     ?? null;
 
