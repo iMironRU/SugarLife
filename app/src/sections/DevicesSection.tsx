@@ -16,6 +16,7 @@ import { связь, меткаСвязи } from '@/domain/deviceState';
 import { sourceStatusLabel } from '@/domain/sourceStatus';
 import { DiscoverySection } from '@/sections/lazy';
 import { устройствоРоли, рольСнимка, черезЧто } from '@/domain/deviceState';
+import { слотПоСнимку, ПОДПИСЬ_СЛОТА } from '@/domain/slotStatus';
 import type { DeviceCatKey } from './DeviceSection';
 import { useStack } from '@/app/stackCtx';
 import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
@@ -38,6 +39,14 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
   const снимок = useSnapshot();
   const каналПомпы = черезЧто(устройствоРоли(снимок, 'pump'), рольСнимка(снимок, 'pump')?.via);
   const каналСенсора = черезЧто(устройствоРоли(снимок, 'sensor'), рольСнимка(снимок, 'sensor')?.via);
+
+  /* Состояние слота спрашиваем у движка, а локальную запись держим запасным ответом
+     (#224). Из-за двух источников строка сенсора умудрялась показывать «по радио» и
+     «только через облако» одновременно — про одно и то же устройство. */
+  const состояние = (роль: 'sensor' | 'pump') => {
+    const изДвижка = слотПоСнимку(снимок, роль);
+    return изДвижка ? ПОДПИСЬ_СЛОТА[изДвижка] : deviceStatusLabel(deviceStatus(роль, devCfg));
+  };
 
   /* Деталь-строка честна: показываем только то, что реально знаем. Канал — из
      снимка движка, резервуар и заряд пока из Nightscout-стора (переезд на снимок —
@@ -151,13 +160,13 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
         <div className="section-label sec">Помпа</div>
         <div className="list">
           <Row icon={flash} title={pump?.model ?? 'Ввод инсулина'} sub={pumpDetail || undefined}
-            value={deviceStatusLabel(deviceStatus('pump', devCfg))} onClick={() => openCat('pump')} />
+            value={состояние('pump')} onClick={() => openCat('pump')} />
         </div>
 
         <div className="section-label sec">Сенсоры</div>
         <div className="list">
           <Row icon={hardwareChipOutline} title={sensor?.name ?? 'Сенсор (НМГ)'} sub={каналСенсора ?? undefined}
-            value={deviceStatusLabel(deviceStatus('sensor', devCfg))} onClick={() => openCat('sensor')} />
+            value={состояние('sensor')} onClick={() => openCat('sensor')} />
         </div>
 
         <div className="section-label sec">Глюкометры и петля</div>
