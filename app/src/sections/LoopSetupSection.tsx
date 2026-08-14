@@ -100,6 +100,13 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
          нажимается, и это выглядит поломкой, а не условием. */
       subtitle={done ? 'профиль записан'
         : ждётПрочтения ? 'дочитайте до конца' : `Шаг ${step + 1} из 5`}
+      подШапкой={!done ? (
+        <div className="wz-prog">
+          {STEPS.map((s, i) => (
+            <span key={s} className={'wz-dot' + (i < step ? ' passed' : i === step ? ' on' : '')} />
+          ))}
+        </div>
+      ) : undefined}
       действие={!done && step < 4 ? (
         <button className="head-next" disabled={!canNext}
           onClick={() => { setStep((step + 1) as Step); setEditing(null); }}>
@@ -109,18 +116,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
         <button className="head-next" onClick={close}>Понятно</button>
       ) : undefined}
     >
-        {!done && (
-          <div className="wz-prog">
-            {STEPS.map((s, i) => (
-              <span key={s} className={'wz-dot' + (i < step ? ' passed' : i === step ? ' on' : '')} />
-            ))}
-          </div>
-        )}
 
-        <div className="wz-l0">
-          <IonIcon icon={lockClosedOutline} />
-          <span>Сейчас L0: команды в помпу не отправляются. Это настройка профиля, не включение подачи.</span>
-        </div>
 
         {done ? (
           <>
@@ -322,9 +318,17 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
                     <span>Часть значений вне рекомендованного диапазона. Подтверждаю согласование с лечащим врачом.</span>
                   </button>
                 )}
-                {/* Применение стоит под тем, что применяется, а не в шапке и не в
-                    закреплённом низу: человек должен дочитать сводку до кнопки, а не
-                    видеть её всё время рядом с пальцем. */}
+                {/* «Ничего не уйдёт в помпу» сказано один раз и здесь.
+
+                    Раньше эта плашка висела на каждом из пяти шагов и первой занимала
+                    экран. Повторённое пять раз перестаёт читаться к третьему, а место
+                    отнимает на всех. Но и выбросить совсем нельзя: единственное место,
+                    где человек может решить, что сейчас включит подачу, — кнопка
+                    удержания, и предупреждение должно стоять ровно над ней. */}
+                <div className="wz-l0">
+                  <IonIcon icon={lockClosedOutline} />
+                  <span>Приложение на L0: команды в помпу не отправляются. Это запись профиля, не включение подачи.</span>
+                </div>
                 <div className="wz-apply">
                   <HoldButton
                     label={needDoctor && !profile.doctorOk ? 'Требуется подтверждение' : 'Удерживайте, чтобы применить'}

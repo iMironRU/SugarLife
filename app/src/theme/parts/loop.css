@@ -7,7 +7,7 @@
 /* Полоса шагов переехала под шапку раздела (#259): «где я сейчас» — уточнение к
    заголовку, а не замена ему. Собственная строка «ШАГ 5 ИЗ 5 · ПРОВЕРКА» больше не
    нужна: то же самое теперь говорят заголовок и подзаголовок раздела. */
-.wz-prog { display: flex; gap: 5px; margin: 2px 0 14px; }
+.wz-prog { display: flex; gap: 5px; margin: 10px 0 0; }
 .wz-dot { flex: 1; height: 3px; border-radius: 2px; background: var(--color-neutral-800); }
 .wz-dot.passed { background: var(--c-glu); }
 .wz-dot.on { background: var(--color-accent); }
@@ -114,7 +114,7 @@
 .wz-gate ion-icon { font-size: 19px; flex-shrink: 0; }
 
 /* Применение в теле последнего шага: под сводкой, а не в закреплённом низу. */
-.wz-apply { margin-top: 18px; }
+.wz-apply { margin-top: 12px; }
 .wz-apply .hold-btn { width: 100%; }
 
 /* «Далее» в шапке. Тише главного действия и того же роста, что круглая стрелка слева:
