@@ -10,6 +10,7 @@ import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
 import { связь, меткаСвязи, предложениеСлияния, своиЖелезки, черезЧто, СЛОВО_КАНАЛА } from '@/domain/deviceState';
 import { мостСлота } from '@/domain/slotStatus';
+import { устройствоДляПараметров, значенияПараметров } from '@/domain/deviceParams';
 import { useSnapshot, sendIntent, type DeviceView } from '@/sources/bridge';
 
 import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
@@ -138,7 +139,16 @@ export default function DeviceSection({ onClose, cat, title }: {
      (см. ui/ParamsForm.tsx). Пустая спека = блока просто нет, и это нормальное состояние:
      у современных помп и у всех мостов настраивать нечего. */
   const spec = cat === 'pump' ? pumpSpec(pump) : null;
-  const params = cfg.deviceParams[cat] ?? {};
+  /* Параметры драйвера: спрашиваем движок, пишем движку — и только в браузере себе
+     (#224, domain/deviceParams.ts). Серийник нужен драйверу, а не нам: осевший в
+     localStorage, он не поможет прочитать помпу по радио, но человек будет уверен,
+     что ввёл его. */
+  const адресат = устройствоДляПараметров(snap, cat);
+  const params = значенияПараметров(адресат, cfg.deviceParams[cat] ?? {});
+  const записатьПараметр = (k: string, v: string) => {
+    if (адресат) void sendIntent({ type: 'setParams', deviceId: адресат.id, params: { ...params, [k]: v } });
+    else setParam(cat, k, v);
+  };
   const paramsMissing = missingParams(spec, params);
 
   /* Телеметрия моста — то, что мост рассказывает о себе сам. Это НЕ настройки:
@@ -454,7 +464,7 @@ export default function DeviceSection({ onClose, cat, title }: {
             {spec && modelKnown && (
               <>
                 <ParamsForm title="Параметры помпы" spec={spec} values={params}
-                  onChange={(k, v) => setParam(cat, k, v)} />
+                  onChange={записатьПараметр} />
                 <div className="sheet-note">
                   {paramsMissing.length
                     ? 'Без этого прямое чтение по радио не заработает: ' + paramsMissing.map((p) => p.title.toLowerCase()).join(', ') + '.'
