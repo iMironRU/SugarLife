@@ -192,10 +192,31 @@ export interface Discovered {
      второй такой же. */
   knownDeviceId?: string | null;
 }
+/* Модель, которую драйвер реально читает (rev ≥ 1.8, SugarLifeCore#37).
+
+   Ключ важнее названия и потому первый: названия производители меняют и локализуют, а
+   привязку каталога надо держать за стабильное.
+
+   Список ведёт ядро — драйверы его, и список моделей меняется вместе с ними. Наша копия
+   этой таблицы устарела бы в первый же их релиз, причём молча: человек видел бы
+   «читаем напрямую» там, где драйвер уже не тянет эту ревизию прошивки. */
+export interface SupportedModelView {
+  key: string;
+  title: string;
+  vendor: string;
+  /** Нужен ли аппаратный посредник (OrangeLink и подобные). */
+  needsBridge?: boolean;
+  /** Что человек обязан ввести руками: серийник, частота. */
+  needsParams?: string[];
+}
+
 // rev ≥ 1.2/1.5: каталог типов драйверов, которые умеет ядро
 export interface DriverDescriptor {
   id: string; displayName: string; kind: 'sensor' | 'pump' | 'service'; roles: string[];
   settings: SettingsSpec; available: boolean; canActivate?: boolean; providesTransportFor?: string[];
+  /* rev ≥ 1.8: какие модели этот драйвер читает. Отсутствует — старая сборка движка;
+     тогда каталог не делит список на группы вовсе (domain/catalogSupport.ts). */
+  supports?: SupportedModelView[];
 }
 
 /* Роль — то, к чему привязаны экран и алгоритм (rev ≥ 1.8, SugarLifeCore#34).

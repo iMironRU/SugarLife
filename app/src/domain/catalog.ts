@@ -14,6 +14,10 @@ export interface Pump {
   id: string; manufacturer: string; model: string; type?: string | null;
   reservoir?: string | null; algorithm?: string | null; cgm?: string | null;
   status?: string | null; statusClass: string; specs?: Record<string, string>;
+  /* Ключ модели у ядра (SugarLifeCore#37). Нужен, чтобы спросить снимок, читает ли
+     движок эту модель напрямую. Своей таблицы поддержки у нас нет: она устарела бы в
+     первый же релиз движка (domain/catalogSupport.ts). */
+  driverKey?: string;
 }
 
 export const INSULINS = (insulinsData as { items: Insulin[] }).items;
@@ -51,9 +55,13 @@ export const bridgeById = (id: string | null | undefined): Bridge | null =>
 
 /* --- Сенсоры НМГ (минимальный список; полного справочника пока нет) ---
    needsBridge — сенсор сам не вещает BLE, нужен посредник (Libre 1). */
-export interface Sensor { id: string; name: string; brand: string; needsBridge: boolean; current: boolean; }
+export interface Sensor {
+  id: string; name: string; brand: string; needsBridge: boolean; current: boolean;
+  /** Ключ модели у ядра — см. Pump.driverKey. */
+  driverKey?: string;
+}
 export const SENSORS: Sensor[] = [
-  { id: 'sibionics-gs1', name: 'Sibionics GS1', brand: 'Sibionics', needsBridge: false, current: true },
+  { id: 'sibionics-gs1', name: 'Sibionics GS1', brand: 'Sibionics', needsBridge: false, current: true, driverKey: 'sibionics-gs1' },
   { id: 'dexcom-g7', name: 'Dexcom G7', brand: 'Dexcom', needsBridge: false, current: true },
   { id: 'dexcom-g6', name: 'Dexcom G6', brand: 'Dexcom', needsBridge: false, current: true },
   { id: 'libre-3', name: 'FreeStyle Libre 3', brand: 'Abbott', needsBridge: false, current: true },

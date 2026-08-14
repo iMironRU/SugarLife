@@ -76,6 +76,16 @@
 .pick-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .pick-main .list-title { flex: none; }
 .pick-sub { font-size: 11px; color: var(--color-neutral-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Правая колонка справочника не отбирает ширину у названия.
+
+   Без ограничения «200U (1.8 мл стеклянный картридж)» съедало строку целиком, и
+   «iLet Bionic Pancreas» рассыпался по одной букве в строке — выглядело как поломка
+   вёрстки, а не как длинная подпись (#190). Название важнее: по нему человек ищет
+   свою помпу, спецификацию он читает уже найдя. */
+.pick-meta {
+  flex: 0 1 auto; max-width: 38%; text-align: right;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .pick-check { font-size: 18px; color: var(--color-accent); flex-shrink: 0; }
 
 /* сегмент вкладок внутри шторки устройства (Устройство / Мост) */

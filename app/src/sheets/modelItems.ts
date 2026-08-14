@@ -19,11 +19,17 @@ const unknownModelItem: PickerItem = {
 };
 
 export const pumpItems: PickerItem[] = [unknownModelItem, ...PUMPS
-  .map((p) => ({ id: p.id, title: p.model, subtitle: pumpBrand(p), meta: p.reservoir || '', current: isCurrentPump(p) }))
+  .map((p) => ({
+    id: p.id, title: p.model, subtitle: pumpBrand(p), meta: p.reservoir || '',
+    current: isCurrentPump(p), driverKey: p.driverKey,
+  }))
   .sort((a, b) => Number(b.current) - Number(a.current) || a.subtitle.localeCompare(b.subtitle) || a.title.localeCompare(b.title))];
 
 export const sensorItems: PickerItem[] = [unknownModelItem, ...SENSORS
-  .map((s) => ({ id: s.id, title: s.name, subtitle: s.brand, meta: s.needsBridge ? 'нужен мост' : '', current: s.current }))
+  .map((s) => ({
+    id: s.id, title: s.name, subtitle: s.brand, meta: s.needsBridge ? 'нужен мост' : '',
+    current: s.current, driverKey: s.driverKey,
+  }))
   .sort((a, b) => Number(b.current) - Number(a.current) || a.title.localeCompare(b.title))];
 
 export const bridgeItems: PickerItem[] = BRIDGES.map((b) => ({ id: b.id, title: b.name, subtitle: b.forWhat, current: true }));
