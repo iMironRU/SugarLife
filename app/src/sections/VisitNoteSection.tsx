@@ -1,5 +1,5 @@
-import { IonIcon, IonInput } from '@ionic/react';
-import { checkmarkCircle, ellipseOutline, addOutline } from 'ionicons/icons';
+import { IonIcon, IonInput, IonToggle } from '@ionic/react';
+import { checkmarkCircle, ellipseOutline, addOutline, helpCircleOutline } from 'ionicons/icons';
 import { useMemo, useState } from 'react';
 import Section from '@/ui/Section';
 import { useHistory, useTreatments } from '@/sources/db';
@@ -11,7 +11,8 @@ import { useHealth, записатьЗдоровье } from '@/settings/health';
 import { поВажности, месяцевНазад } from '@/domain/screenings';
 import { ЦЕЛИ, строкиНМГ, полнота, вопросыДляВрача, МИН_ДНЕЙ, МИН_ДОЛЯ, type НаборЦелей } from '@/domain/visitNote';
 import Dynamics from '@/ui/Dynamics';
-import { useVisitQuestions, переключитьВопрос, добавитьВопрос, убратьСвой } from '@/settings/visitQuestions';
+import { useVisitQuestions, переключитьВопрос, добавитьВопрос, убратьСвой, нужныЛиВопросы } from '@/settings/visitQuestions';
+import Row from '@/ui/Row';
 
 /* Отчёт к приёму (SugarLife#156).
 
@@ -201,9 +202,23 @@ export default function VisitNoteSection({ onClose, встроенный }: {
 
       {/* Вопросы — вторая половина ценности приёма. Предлагаем черновик, но в отчёт
           идёт только отмеченное: список, который человек не правил, — это наш список,
-          а в кабинет он идёт со своим. */}
+          а в кабинет он идёт со своим.
+
+          Раздел включается переключателем и по умолчанию свёрнут (#267). Он нужен не
+          всем и не всегда: у одного приём через месяц, другой идёт к врачу с готовым
+          списком в голове. Четыре предложенных вопроса — это половина экрана отчёта,
+          которую иначе листают каждый раз.
+
+          Переключатель остаётся на виду и выключенным: спрятать его совсем значило бы
+          спрятать саму возможность, а о ней узнают, только увидев. */}
       <div className="section-label sec">Вопросы врачу</div>
       <div className="list">
+        <Row icon={helpCircleOutline} title="Готовить вопросы к приёму"
+          sub={вопросы.нужны ? 'список копится между приёмами' : 'предложим по вашим данным и дадим дописать своё'}
+          right={<IonToggle checked={!!вопросы.нужны} onIonChange={(e) => нужныЛиВопросы(e.detail.checked)} />} />
+      </div>
+      {вопросы.нужны && (<>
+      <div className="list" style={{ marginTop: 10 }}>
         {предложенные.map((в) => {
           const выбран = вопросы.выбранные.includes(в.id);
           return (
@@ -245,6 +260,7 @@ export default function VisitNoteSection({ onClose, встроенный }: {
           Добавить вопрос
         </button>
       )}
+      </>)}
 
       <div className="sheet-note">
         Данные с телефона никуда не уходят сами. Показать отчёт врачу можно с экрана;
