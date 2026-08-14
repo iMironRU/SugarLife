@@ -61,6 +61,16 @@
 .today-alert.warn { border-left-color: var(--c-carb); background: color-mix(in srgb, var(--c-carb) 8%, var(--color-neutral-900)); }
 .today-alert.info { border-left-color: var(--color-accent); }
 .today-alert > ion-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+/* Крестик «пока не до этого» (ui/Notice.tsx). Сорок четыре пикселя касания при
+   маленьком значке: попадать в него человек будет одной рукой и не глядя, а вот
+   выглядеть он должен тише содержимого — это не действие карточки, а отказ от неё. */
+.notice-close {
+  flex: 0 0 auto; align-self: flex-start; margin: -6px -6px 0 0;
+  width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; cursor: pointer; color: var(--color-neutral-500);
+}
+.notice-close ion-icon { font-size: 18px; }
+.notice-close:active { color: var(--color-text); }
 .today-alert.warn > ion-icon { color: var(--c-carb); }
 .today-alert.info > ion-icon { color: var(--color-accent-300); }
 .today-alert b { display: block; font-size: 14px; font-weight: 600; }
