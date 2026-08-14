@@ -10,7 +10,7 @@ import ReleaseBle from '@/ui/ReleaseBle';
 import NearbyTile from '@/ui/NearbyTile';
 import ConnectFeed from '@/ui/ConnectFeed';
 import UpdateReady from '@/ui/UpdateReady';
-import SnoozeBtn from '@/ui/SnoozeBtn';
+import { отложить } from '@/settings/snooze';
 import { useОтложения, показывать, прибрать } from '@/settings/snooze';
 import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
@@ -382,7 +382,7 @@ export default function Today() {
           {nightEmpty && виденРезервуар && (
             <Notice id="reservoir-night" вид="предупреждение" значок={moonOutline}
               заголовок={`Инсулина ≈${Math.round(hoursLeft as number)} ч — закончится ночью (~${emptyTime})`}
-              действия={<SnoozeBtn ключ="reservoir" эпизод={эпРезервуар} уровень={Math.round(-(hoursLeft ?? 0))} />}>
+              отложить={() => отложить('reservoir', эпРезервуар, Math.round(-(hoursLeft ?? 0)))}>
               Замените резервуар заранее, чтобы подача не прервалась во сне. Оценка по среднему расходу.
             </Notice>
           )}
@@ -391,7 +391,7 @@ export default function Today() {
           {soonEmpty && виденРезервуар && (
             <Notice id="reservoir-soon" вид="предупреждение" значок={warningOutline}
               заголовок={`Инсулина ≈${Math.round(hoursLeft as number)} ч — до ~${emptyAt}`}
-              действия={<SnoozeBtn ключ="reservoir" эпизод={эпРезервуар} уровень={Math.round(-(hoursLeft ?? 0))} />}>
+              отложить={() => отложить('reservoir', эпРезервуар, Math.round(-(hoursLeft ?? 0)))}>
               Резервуар скоро опустеет, подача прервётся. Оценка по среднему расходу.
             </Notice>
           )}
@@ -400,7 +400,7 @@ export default function Today() {
           {виденПодъём && (
             <Notice id="rise" вид="предупреждение" значок={restaurantOutline}
               заголовок={`Сахар вырос на ${fmt(rise as number)} — еда записана?`}
-              действия={<SnoozeBtn ключ="rise" эпизод={эпПодъём} уровень={Math.round(rise ?? 0)} />}>
+              отложить={() => отложить('rise', эпПодъём, Math.round(rise ?? 0))}>
               За 2 часа поднялся до {toUnits(nowG as number)} {unitLabel()}, а углеводов не внесено.
               Если поели — добавьте, иначе активные углеводы и подсказки будут врать.
             </Notice>
@@ -410,7 +410,7 @@ export default function Today() {
           {виднаЕда && (
             <Notice id="nofood" вид="сообщение" значок={restaurantOutline}
               заголовок={`Еды не вносили ${Math.round(бодрыхЧасов as number)} ч`}
-              действия={<SnoozeBtn ключ="nofood" эпизод={эпБезЕды} уровень={Math.round(бодрыхЧасов ?? 0)} />}>
+              отложить={() => отложить('nofood', эпБезЕды, Math.round(бодрыхЧасов ?? 0))}>
               Либо давно не ели, либо забыли записать. Внесённая еда нужна для расчёта активных углеводов.
             </Notice>
           )}
@@ -422,12 +422,8 @@ export default function Today() {
           {виднаБатарея && (
             <Notice id="battery" вид="предупреждение" значок={batteryDeadOutline}
               заголовок={`Батарея помпы ${battery}%`}
-              действия={(
-                <>
-                  <ChangedButton what="battery" label="Поменял батарейку" />
-                  <SnoozeBtn ключ="battery" эпизод={эпБатарея} уровень={100 - (battery as number)} />
-                </>
-              )}>
+              действия={<ChangedButton what="battery" label="Поменял батарейку" />}
+              отложить={() => отложить('battery', эпБатарея, 100 - (battery as number))}>
               {bstat.floorPct != null
                 ? `Помпа не показывает ноль: ниже ${bstat.floorPct}% она не опускается. `
                 : 'Помпа не показывает ноль, поэтому процент занижает запас. '}
@@ -472,16 +468,12 @@ export default function Today() {
           {виденЗастой && (
             <Notice id="reservoir-stuck" вид="предупреждение" значок={warningOutline}
               заголовок={`Резервуар не меняется ${Math.round(rstat.flatHours)} ч`}
-              действия={(
-                /* Проактивный вопрос вместо ретроактивной правки: у этого залипания
-                   есть вторая, гораздо более частая причина — картридж поменяли, а
-                   помпа этого не показала. Спросить дешевле, чем заставлять человека
-                   искать, где это исправить. */
-                <>
-                  <ChangedButton what="reservoir" label="Поменял резервуар" />
-                  <SnoozeBtn ключ="stuck" эпизод={эпЗастой} уровень={Math.round(rstat.flatHours)} />
-                </>
-              )}>
+              /* Проактивный вопрос вместо ретроактивной правки: у этого залипания есть
+                 вторая, гораздо более частая причина — картридж поменяли, а помпа этого
+                 не показала. Спросить дешевле, чем заставлять человека искать, где это
+                 исправить. */
+              действия={<ChangedButton what="reservoir" label="Поменял резервуар" />}
+              отложить={() => отложить('stuck', эпЗастой, Math.round(rstat.flatHours))}>
               А помпа не на паузе — инсулин должен расходоваться. Проверь подачу
               (окклюзия, катетер, датчик резервуара).
             </Notice>

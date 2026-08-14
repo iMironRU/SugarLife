@@ -1,4 +1,5 @@
 import { IonIcon } from '@ionic/react';
+import { closeOutline } from 'ionicons/icons';
 import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import { поВажности } from '@/domain/notices';
 
@@ -31,7 +32,7 @@ const КЛАСС: Record<ВидОбращения, string> = {
   сообщение: 'today-alert info',
 };
 
-export default function Notice({ вид, значок, заголовок, children, действия }: {
+export default function Notice({ вид, значок, заголовок, children, действия, отложить }: {
   /** Кто это обращение: по нему считается порядок (domain/notices.ts). */
   id?: string;
   вид: ВидОбращения;
@@ -40,8 +41,20 @@ export default function Notice({ вид, значок, заголовок, child
   заголовок: ReactNode;
   /** Почему это важно и что будет, если не трогать. */
   children?: ReactNode;
-  /** Ряд действий: главное, второстепенное, «Потом». */
+  /** Ряд действий: главное и второстепенное. «Потом» живёт крестиком, см. ниже. */
   действия?: ReactNode;
+  /* Крестик справа вверху — «пока не до этого».
+
+     Раньше это была кнопка «Потом» в ряду действий, и она соседствовала с «Поменял
+     батарейку». Два действия рядом, из которых одно меняет данные, а второе прячет
+     карточку, — постоянный риск нажать не то, особенно на ходу.
+
+     Крестик не значит «сделал» и не значит «навсегда»: обращение вернётся, когда
+     станет хуже (правило эпизода и уровня — settings/snooze.ts). Поэтому он есть
+     только там, где такое возвращение предусмотрено. У состояний вроде «помпа на
+     паузе» крестика нет вовсе: это не сообщение, которое можно принять к сведению, а
+     факт, который перестанет быть правдой сам. */
+  отложить?: () => void;
 }) {
   return (
     <div className={КЛАСС[вид]}>
@@ -51,6 +64,11 @@ export default function Notice({ вид, значок, заголовок, child
         {children && <span>{children}</span>}
         {действия && <span className="alert-ask alert-ask-row">{действия}</span>}
       </div>
+      {отложить && (
+        <button className="notice-close" onClick={отложить} aria-label="Пока не до этого">
+          <IonIcon icon={closeOutline} />
+        </button>
+      )}
     </div>
   );
 }
