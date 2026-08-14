@@ -117,9 +117,16 @@
 
    Отступы переехали сюда со скроллера намеренно: min-height считается от содержимого
    родителя, и с отступами снаружи лишним стал бы не пиксель, а все двадцать шесть. */
+/* Шапка стоит этажом выше прокрутки (#261) и потому забирает себе отступ под панелью:
+   раньше его держало содержимое, а теперь под панелью оказывается именно она. */
+.stack-head {
+  flex: 0 0 auto;
+  padding: var(--sl-content-top-section) var(--sl-side) 0;
+  background: var(--color-bg);
+}
 .stack-fill {
   min-height: calc(100% + 1px);
-  padding: var(--sl-content-top-section) var(--sl-side) 26px;
+  padding: 6px var(--sl-side) 26px;
 }
 .stack-page > .page-foot { flex: 0 0 auto; }
 
