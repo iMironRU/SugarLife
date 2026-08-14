@@ -12,10 +12,8 @@ import AgpChart from '@/charts/AgpChart';
 import { DataGate } from '@/ui/NotConfigured';
 import MetricBars from '@/charts/MetricBars';
 import Screen from '@/ui/Screen';
-import Row from '@/ui/Row';
-import { documentTextOutline } from 'ionicons/icons';
-import { useStack } from '@/app/stackCtx';
-import { VisitNoteSection } from '@/sections/lazy';
+import { AnalyticsSection, VisitNoteSection } from '@/sections/lazy';
+import { useAnalyticsOn } from '@/settings/analytics';
 
 type MetricKey = 'glucose' | 'carbs' | 'insulin';
 type Cell = [string, string, string];
@@ -26,8 +24,31 @@ const PERIODS: { days: number; label: string }[] = [
   { days: 30, label: '30 дней' }, { days: 90, label: '90 дней' },
 ];
 
+/* Три раздела на одном экране (SugarLife#255).
+
+   Они отвечают на три разных вопроса об одном и том же прошлом: «что происходит»
+   (разбор), «как у меня дела» (метрики), «что показать врачу» (записка). Раньше разбор
+   висел плиткой на «Сегодня», а записка строкой в конце метрик — то есть три части
+   одного размышления лежали в трёх местах, и найти их можно было только зная, где
+   искать.
+
+   «Сегодня» от этого выигрывает дважды: экран действия перестаёт звать в анализ. По
+   концепции это разные режимы, и плитка «Разбор» была единственным местом, где они
+   смешивались.
+
+   Порядок неслучаен. Разбор первым, потому что он отвечает на вопрос, с которым сюда
+   заходят («что не так»); метрики вторыми — это то, чем разбор подтверждают; записка
+   последней, к ней приходят раз в несколько месяцев, но приходят целенаправленно. */
+const РАЗДЕЛЫ = [
+  { key: 'анализ', label: 'Анализ' },
+  { key: 'метрики', label: 'Метрики' },
+  { key: 'записка', label: 'Записка' },
+] as const;
+type Раздел = typeof РАЗДЕЛЫ[number]['key'];
+
 export default function Metrics() {
-  const { push, pop } = useStack();
+  const [раздел, setРаздел] = useState<Раздел>('метрики');
+  const analyticsOn = useAnalyticsOn();
   /* Вкладка видна? Все пять смонтированы разом ради свайпа, но читать базу
      невидимому экрану незачем — это и были рывки на соседних вкладках. */
   const активна = useTab() === 0;
@@ -90,6 +111,24 @@ export default function Metrics() {
   return (
     <Screen tab={0}>
           <DataGate>
+          {/* Переключатель разделов — первым и всегда на виду. Он же отвечает на
+              вопрос «а где теперь разбор», который возникнет у всех, кто привык к
+              плитке на «Сегодня». */}
+          <div className="period sec-switch">
+            {РАЗДЕЛЫ.map((р) => (
+              <button key={р.key} className={'period-seg' + (раздел === р.key ? ' on' : '')}
+                onClick={() => setРаздел(р.key)}>{р.label}</button>
+            ))}
+          </div>
+
+          {/* Выключенный разбор — сообщением на своём месте, а не пустотой. Спрятать
+              нельзя: выключивший однажды не вспомнит, что это было, а вкладка при этом
+              останется и будет выглядеть сломанной. */}
+          {раздел === 'анализ' && (analyticsOn
+            ? <AnalyticsSection встроенный />
+            : <div className="an-off-note">Разбор данных выключен · Профиль → Настройки</div>)}
+          {раздел === 'записка' && <VisitNoteSection встроенный />}
+          {раздел === 'метрики' && (<>
           {/* Переключатели периода и метрики липнут под панелью: на длинных экранах
               (90 дней, AGP) они уезжали вверх, и чтобы сменить период, надо было
               прокрутить обратно. Панель контент не накрывает — она обычный флекс-элемент
@@ -174,14 +213,7 @@ export default function Metrics() {
               );
             })()
           )}
-          {/* Вход в записку — здесь, а не в профиле: записку собирают из этих же
-              цифр, и человек, который на них смотрит перед приёмом, уже находится в
-              нужном месте (#156). */}
-          <div className="list" style={{ marginTop: 18 }}>
-            <Row icon={documentTextOutline} title="Записка к приёму"
-              sub="что показать врачу и о чём спросить"
-              onClick={() => push(<VisitNoteSection onClose={pop} />)} />
-          </div>
+          </>)}
           </DataGate>
     </Screen>
   );

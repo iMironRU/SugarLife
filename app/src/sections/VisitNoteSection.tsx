@@ -33,7 +33,11 @@ import { useVisitQuestions, переключитьВопрос, добавить
 const ДЕНЬ = 86_400_000;
 const пц = (v: number) => `${Math.round(v)} %`;
 
-export default function VisitNoteSection({ onClose }: { onClose: () => void }) {
+/* Раздел живёт и вкладкой внутри «Метрик» (SugarLife#255): своя шапка там не нужна —
+   она стала бы второй под настоящей. */
+export default function VisitNoteSection({ onClose, встроенный }: {
+  onClose?: () => void; встроенный?: boolean;
+}) {
   const h = useHealth();
   useUnit(); // перерисовка при смене единиц: сахар в записке — в тех же, что везде
   const вопросы = useVisitQuestions();
@@ -68,8 +72,8 @@ export default function VisitNoteSection({ onClose }: { onClose: () => void }) {
 
   const дата = (t: number) => new Date(t).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
 
-  return (
-    <Section title="Записка к приёму" subtitle="Что показать и о чём спросить" onBack={onClose}>
+  const тело = (
+    <>
       <div className="sheet-note">
         Это подготовил пациент, а не медицинская организация: наблюдения приложения и
         вопросы человека. Не заключение и не выписка.
@@ -247,6 +251,13 @@ export default function VisitNoteSection({ onClose }: { onClose: () => void }) {
         файл для отправки появится позже — сначала посмотрим, что из этого пригодится
         на приёме.
       </div>
+    </>
+  );
+
+  if (встроенный) return тело;
+  return (
+    <Section title="Записка к приёму" subtitle="Что показать и о чём спросить" onBack={onClose ?? (() => {})}>
+      {тело}
     </Section>
   );
 }

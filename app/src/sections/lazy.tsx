@@ -54,7 +54,7 @@ export const DevicesSection = ленивый<{ onClose: () => void }>(
   () => import('./DevicesSection'), 'Устройства');
 export const HealthSection = ленивый<{ onClose: () => void }>(
   () => import('./HealthSection'), 'Здоровье');
-export const VisitNoteSection = ленивый<{ onClose: () => void }>(
+export const VisitNoteSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
   () => import('./VisitNoteSection'), 'Записка к приёму');
 
 export const ServicesSection = ленивый<{ onClose: () => void }>(
@@ -72,7 +72,7 @@ export const BasalProfileSection = ленивый<{ onClose: () => void }>(
 export const LoopSetupSection = ленивый<{ onClose: () => void }>(
   () => import('./LoopSetupSection'), 'Профиль петли');
 
-export const AnalyticsSection = ленивый<{ onClose: () => void }>(
+export const AnalyticsSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
   () => import('./AnalyticsSection'), 'Аналитика');
 
 export const DiscoverySection = ленивый<{ onClose: () => void }>(
