@@ -19,21 +19,21 @@ describe('пора суток', () => {
 
 describe('гипо прямо сейчас', () => {
   it('ниже порога — да, независимо от тренда', () => {
-    expect(гипоСейчас(3.4, 'Flat')).toBe(true);
+    expect(гипоСейчас(3.4, false)).toBe(true);
   });
   it('ещё в норме, но падает — тоже да: через двадцать минут будет гипо', () => {
-    expect(гипоСейчас(4.8, 'SingleDown')).toBe(true);
-    expect(гипоСейчас(4.8, 'Flat')).toBe(false);
-    expect(гипоСейчас(6.5, 'DoubleDown')).toBe(false);
+    expect(гипоСейчас(4.8, true)).toBe(true);
+    expect(гипоСейчас(4.8, false)).toBe(false);
+    expect(гипоСейчас(6.5, true)).toBe(false);
   });
   it('без данных не выдумываем', () => {
-    expect(гипоСейчас(null, 'SingleDown')).toBe(false);
+    expect(гипоСейчас(null, true)).toBe(false);
   });
 });
 
 describe('что показать первым', () => {
   it('низкий сахар вытесняет всё: только купирование, целиком', () => {
-    const p = подсказка({ hour: 3, mmol: 3.2, dir: 'Flat', своё: [своё('Ужин', 50, 20)] })!;
+    const p = подсказка({ hour: 3, mmol: 3.2, падает: false, своё: [своё('Ужин', 50, 20)] })!;
     expect(p.гипо).toBe(true);
     expect(p.свои).toHaveLength(0);
     expect(p.из_справочника.every((f) => f.cat === 'hypo')).toBe(true);
@@ -42,7 +42,7 @@ describe('что показать первым', () => {
   });
 
   it('падение с нормального сахара — тоже купирование', () => {
-    expect(подсказка({ hour: 14, mmol: 4.7, dir: 'SingleDown' })!.гипо).toBe(true);
+    expect(подсказка({ hour: 14, mmol: 4.7, падает: true })!.гипо).toBe(true);
   });
 
   it('явный выбор приёма сильнее часа суток', () => {

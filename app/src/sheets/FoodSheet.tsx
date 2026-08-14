@@ -8,6 +8,8 @@ import { необъяснённыеПодъёмы, времяМомента, С�
 import { searchFoods, personalFoods, CAT_LABEL, CAT_ORDER, type Food } from '@/domain/foods';
 import { подсказка, приёмПоЧасу } from '@/domain/foodNow';
 import Sheet from '@/ui/Sheet';
+import { падает } from '@/domain/trend';
+import { useEntries } from '@/sources/db';
 
 const ПОКАЗЫВАЕМ = 6; // сколько плиток в группе до «ещё N»
 const подтянуть = (el: HTMLElement) =>
@@ -83,11 +85,17 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
     [isOpen, meals.length, data?.treatments?.length],
   );
 
+  /* «Падает ли сейчас» — по нашей истории, а не по строке направления от источника:
+     решение про быстрые углеводы не должно зависеть от того, чей загрузчик сегодня
+     пишет в базу (#215). */
+  const историяЧаса = useEntries(3600e3, { minRefreshMs: 20e3 });
+  const падаетСейчас = падает(историяЧаса);
+
   const сейчас = useMemo(
     () => (isOpen ? подсказка({
       hour: new Date().getHours(),
       mmol: data?.latest?.mmol ?? null,
-      dir: data?.latest?.dir,
+      падает: падаетСейчас,
 
       своё,
       историяЧасов: meals,
