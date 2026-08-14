@@ -22,6 +22,10 @@ out/
 # Gradle files
 .gradle/
 build/
+# Android Studio на macOS кладёт вывод сборки в build.nosync (исключение из синхронизации
+# iCloud), и правило build/ его не ловит: каталог называется иначе. Один локальный запуск
+# gradle — и 633 файла вывода уезжают в коммит.
+build.nosync/
 
 # Local configuration file (sdk path, etc)
 local.properties

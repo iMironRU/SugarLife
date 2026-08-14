@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Слои рисуются с запасом под маску прямо в исходнике (resources/icon-foreground.svg):
-     капля держится внутри центральных 66 % холста. Inset здесь стоял поверх этого и
-     ужимал её ещё на шестую часть — иконка выглядела мельче соседних (SugarLife#160). -->
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@mipmap/ic_launcher_background" />
-    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
-</adaptive-icon>
