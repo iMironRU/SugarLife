@@ -37,16 +37,23 @@ draw() { # <svg> <размер> <куда>
 src() { draw "$1" 1024 "$TMP/$2.png"; }
 size() { magick "$TMP/$1.png" -resize "$2x$2" -strip "$3"; }
 
-src resources/icon.svg base
-src resources/icon-maskable.svg mask
-src resources/icon-foreground.svg fg
-src resources/icon-background.svg bg
-src resources/icon-dark.svg dark
-src resources/icon-tinted.svg tint
+# MONO=1 — чёрно-белый набор для сборки SugarLife.Pro: наш билд стоит на телефоне рядом с
+# фронтовым, и различать их приходится глазами. Формы те же, отличается только палитра
+# (resources/mono-*.svg). Цветной набор при этом не трогается.
+PREFIX=""
+[ "${MONO:-0}" = "1" ] && PREFIX="mono-"
+
+src "resources/${PREFIX}icon.svg" base
+src "resources/${PREFIX}icon-maskable.svg" mask
+src "resources/${PREFIX}icon-foreground.svg" fg
+src "resources/${PREFIX}icon-background.svg" bg
+src "resources/${PREFIX}icon-dark.svg" dark
+src "resources/${PREFIX}icon-tinted.svg" tint
 
 # Исходник для @capacitor/assets: им перегенерируют иконки те, кто не знает про этот
 # скрипт, и он обязан показывать то же самое.
-size base 1024 resources/icon.png
+# В mono-режиме общий исходник для @capacitor/assets НЕ перезаписываем: он цветной и общий с фронтом.
+[ "${MONO:-0}" = "1" ] || size base 1024 resources/icon.png
 
 # --- PWA и браузер -----------------------------------------------------------
 size base 512 public/icon-512.png
