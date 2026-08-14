@@ -25,7 +25,7 @@ import { pumpNeedsBridge, type Pump } from '@/domain/catalog';
    обязателен, регион — 868 или 916, по умолчанию 868. */
 const MEDTRONIC_RF: SettingsSpec = {
   parameters: [
-    { key: 'serial', title: 'Серийный номер помпы', type: 'Text', required: true, default: null, options: [],
+    { key: 'serial', title: 'Серийный номер помпы', type: 'Text', required: true, default: null, options: [], keyboard: 'numeric',
       hint: 'Шесть цифр. На помпе: Utilities → Connect Devices, либо на наклейке сзади.' },
     { key: 'region', title: 'Регион / частота, МГц', type: 'Enum', required: true, default: '868', options: ['868', '916'],
       hint: 'Европейские помпы работают на 868, американские на 916. Ошибётесь — связи просто не будет.' },

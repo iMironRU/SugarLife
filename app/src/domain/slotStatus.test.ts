@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { слотПоСнимку, каналСлота, мостСлота, ПОДПИСЬ_СЛОТА } from './slotStatus';
+import { слотПоСнимку, каналСлота, мостСлота, путьСлота, ПОДПИСЬ_СЛОТА } from './slotStatus';
 import type { DeviceView, UiSnapshot, HardwareView, RoleView } from '@/sources/bridge';
 
 /* Состояние слота человек читает как ответ на «работает ли у меня это». Ошибка здесь
@@ -126,3 +126,29 @@ describe('чей мост показывать', () => {
   });
 });
 
+/* Откуда идут цифры — вопрос не тот же, что «работает ли связь». Помпа может молчать по
+   радио, а данные идти из Nightscout, и в списке это должно быть видно без открытия
+   карточки. */
+describe('откуда идут данные слота', () => {
+  it('канал известен — называем его', () => {
+    const s = snap([dev({ id: 'p', kind: 'pump' })], [{ role: 'insulin', activeSourceId: 'p', via: 'bridged' }]);
+    expect(путьСлота(s, 'pump')).toBe('через мост');
+  });
+
+  /* В браузере движка нет вовсе, и единственный источник — Nightscout. Это утверждение
+     по построению, а не заглушка. */
+  it('движка нет — всё пришло облаком', () => {
+    expect(путьСлота(snap([]), 'pump')).toBe('через облако');
+    expect(путьСлота(null, 'sensor')).toBe('через облако');
+  });
+
+  /* А вот когда движок есть и молчит про канал — молчим и мы: выдумывать «облако» там,
+     где движок просто не ответил, значит утверждать за него. */
+  it('движок есть, но про канал молчит — не выдумываем', () => {
+    const s: UiSnapshot = {
+      ...snap([dev({ id: 'p', kind: 'pump' })], [{ role: 'insulin', activeSourceId: 'p' }]),
+      availableDrivers: [{ id: 'x', displayName: 'x', kind: 'pump', roles: [], settings: { parameters: [] }, available: true }],
+    };
+    expect(путьСлота(s, 'pump')).toBe(null);
+  });
+});

@@ -78,7 +78,10 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
               <IonInput
                 value={value}
                 type={secret ? 'password' : p.type === 'Number' ? 'number' : 'text'}
-                inputmode={p.type === 'Number' ? 'numeric' : undefined}
+                /* Клавиатуру выбираем отдельно от типа: серийник помпы — текст (ведущие
+                   нули существуют), но набирают его цифрами, и буквенная раскладка тут
+                   лишний шаг у человека, который смотрит на наклейку сзади помпы. */
+                inputmode={p.keyboard ?? (p.type === 'Number' ? 'numeric' : undefined)}
                 autocapitalize="off"
                 placeholder={p.default ?? (secret ? '' : 'не задано')}
                 onIonInput={(e) => onChange(p.key, e.detail.value ?? '')}
