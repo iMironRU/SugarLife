@@ -1,6 +1,7 @@
 import { IonIcon } from '@ionic/react';
 import { bluetoothOutline, chevronForward } from 'ionicons/icons';
 import { useSnapshot } from '@/sources/bridge';
+import Notice from './Notice';
 import { связь } from '@/domain/deviceState';
 import { железоДиспетчера } from '@/domain/nearby';
 import { useStack } from '@/app/stackCtx';
@@ -58,18 +59,21 @@ export default function NearbyTile() {
     );
   }
 
+  /* Тревожное состояние — обычное обращение, тем же элементом, что и остальные (#225).
+     Своя вёрстка была ровно тем, из-за чего плитка обзавелась и собственным правилом
+     связи, и собственным размером кнопок (#230). Вид — «предложение»: человеку есть
+     что сделать прямо сейчас, и действие одно. */
   return (
-    <button className="nearby-tile" onClick={открыть}>
-      <IonIcon icon={bluetoothOutline} />
-      <div>
-        <b>{железо.length === 0 ? 'Подключить устройство' : 'Связь с устройством потеряна'}</b>
-        <span>
-          {железо.length === 0
-            ? 'Посмотреть, что рядом в эфире. Модель заранее указывать не нужно.'
-            : 'Открыть поиск и переподключить — или отдать устройство другому телефону.'}
-        </span>
-      </div>
-      <IonIcon icon={chevronForward} className="nearby-chev" />
-    </button>
+    <Notice вид="предложение" значок={bluetoothOutline}
+      заголовок={железо.length === 0 ? 'Подключить устройство' : 'Связь с устройством потеряна'}
+      действия={(
+        <button className="changed-btn is-undo" onClick={открыть}>
+          {железо.length === 0 ? 'Посмотреть, что рядом' : 'Открыть устройства'}
+        </button>
+      )}>
+      {железо.length === 0
+        ? 'Посмотреть, что рядом в эфире. Модель заранее указывать не нужно.'
+        : 'Открыть поиск и переподключить — или отдать устройство другому телефону.'}
+    </Notice>
   );
 }
