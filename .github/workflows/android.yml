@@ -40,22 +40,24 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Секрет в `if` шага напрямую не читается, поэтому кладём его в env один раз.
-      ЕСТЬ_ТОКЕН: ${{ secrets.CORE_REPO_TOKEN != '' && 'да' || 'нет' }}
+      # Имя латиницей вынужденно: GitHub Actions допускает в именах переменных только
+      # ASCII, и на кириллическом файл не парсится вовсе — падает весь workflow, без задач.
+      HAS_CORE_TOKEN: ${{ secrets.CORE_REPO_TOKEN != '' && 'да' || 'нет' }}
     steps:
       - name: Есть ли доступ к ядру
         run: |
-          if [ "$ЕСТЬ_ТОКЕН" = "нет" ]; then
+          if [ "$HAS_CORE_TOKEN" = "нет" ]; then
             echo "::notice::Секрета CORE_REPO_TOKEN нет — APK не собирается. Движок лежит в приватном SugarLifeCore, без доступа к нему сборка невозможна (#133)."
           fi
 
       - uses: actions/checkout@v4
-        if: env.ЕСТЬ_ТОКЕН == 'да'
+        if: env.HAS_CORE_TOKEN == 'да'
 
       # Ядро кладём рядом; settings.gradle читает путь из SUGARLIFE_CORE_DIR.
       # Чекаутим ветку по умолчанию: пока AAR не публикуется (SugarLifeCore#24), наша
       # сборка зависит от того, что у соседей лежит в main прямо сейчас.
       - name: Checkout SugarLifeCore
-        if: env.ЕСТЬ_ТОКЕН == 'да'
+        if: env.HAS_CORE_TOKEN == 'да'
         uses: actions/checkout@v4
         with:
           repository: iMironRU/SugarLifeCore
@@ -63,18 +65,18 @@ jobs:
           path: core
 
       - uses: actions/setup-java@v4
-        if: env.ЕСТЬ_ТОКЕН == 'да'
+        if: env.HAS_CORE_TOKEN == 'да'
         with:
           distribution: temurin
           java-version: '21'
 
       - uses: actions/setup-node@v4
-        if: env.ЕСТЬ_ТОКЕН == 'да'
+        if: env.HAS_CORE_TOKEN == 'да'
         with:
           node-version: '22'
 
       - name: Build web (relative base for native)
-        if: env.ЕСТЬ_ТОКЕН == 'да'
+        if: env.HAS_CORE_TOKEN == 'да'
         working-directory: app
         env:
           CAP: '1'
@@ -83,20 +85,20 @@ jobs:
           npm run build
 
       - name: Capacitor sync (android)
-        if: env.ЕСТЬ_ТОКЕН == 'да'
+        if: env.HAS_CORE_TOKEN == 'да'
         working-directory: app
         run: npx cap sync android
 
       - name: Setup Android SDK
-        if: env.ЕСТЬ_ТОКЕН == 'да'
+        if: env.HAS_CORE_TOKEN == 'да'
         uses: android-actions/setup-android@v3
 
       - name: Install SDK packages
-        if: env.ЕСТЬ_ТОКЕН == 'да'
+        if: env.HAS_CORE_TOKEN == 'да'
         run: yes | sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || true
 
       - name: Build debug APK
-        if: env.ЕСТЬ_ТОКЕН == 'да'
+        if: env.HAS_CORE_TOKEN == 'да'
         working-directory: app/android
         env:
           # Путь к чекауту ядра: ровно та переменная, которую ищет settings.gradle.
@@ -106,11 +108,11 @@ jobs:
           ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Rename APK
-        if: env.ЕСТЬ_ТОКЕН == 'да'
+        if: env.HAS_CORE_TOKEN == 'да'
         run: cp app/android/app/build/outputs/apk/debug/app-debug.apk sugarlife-debug.apk
 
       - name: Upload artifact
-        if: env.ЕСТЬ_ТОКЕН == 'да'
+        if: env.HAS_CORE_TOKEN == 'да'
         uses: actions/upload-artifact@v4
         with:
           name: sugarlife-debug-apk
@@ -119,7 +121,7 @@ jobs:
       # Строка «build:» — не украшение: по ней приложение решает, предлагать ли
       # «Скачать APK» (src/platform/appUpdate.ts, #238). Формат менять нельзя.
       - name: Publish to Releases
-        if: env.ЕСТЬ_ТОКЕН == 'да'
+        if: env.HAS_CORE_TOKEN == 'да'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'android-latest' }}
