@@ -11,6 +11,7 @@ import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
 import { syncToActiveScreen, сразу } from '@/app/panel';
 import { связь, связьГлюкозы, источникПомпы, устройствоРоли, меткаСвязи, видКруга, черезЧтоСпорное, type Связь } from '@/domain/deviceState';
 import { СТРЕЛКА, направление } from '@/domain/trend';
+import { useEntries } from '@/sources/db';
 import { activeInsulin } from '@/domain/loopValue';
 import { useSnapshot } from '@/sources/bridge';
 import CircleSparkline from '@/charts/CircleSparkline';
@@ -85,6 +86,9 @@ export default function HeroPanel() {
   }, [cfg?.url, cfg?.enabled]);
 
   const latest = data?.latest || null;
+  /* Час истории — с запасом: направление считается по пятнадцати минутам, но точки
+     приходят неровно, и на дырявом потоке окно должно быть из чего набрать. */
+  const историяЧаса = useEntries(3600e3, { minRefreshMs: 20e3 });
   const dev = data?.device || null;
 
   /* Возраст показания — из монитора моста, а не из стора.
@@ -106,7 +110,11 @@ export default function HeroPanel() {
   /* Одна таблица стрелок на всё приложение (domain/trend.ts). Их было две — по словам
      контракта здесь и по кодам Nightscout в сторе, — и при неизвестном направлении они
      вели себя по-разному: одна молчала, вторая рисовала «ровно» (#215). */
-  const arrow = СТРЕЛКА[m ? m.trend : направление(latest?.dir, data?.entries ?? [])] ?? '';
+  /* Направление считаем сами и только сами (#215). Историю берём из своей базы, а не
+     из ленты Nightscout-стора: с нативным движком стор пуст, а база наполняется из
+     любого моста (sources/historySync.ts) — иначе стрелка пропала бы ровно тогда,
+     когда сенсор читается напрямую. */
+  const arrow = СТРЕЛКА[направление(историяЧаса)] ?? '';
   const ago = latestAt != null ? agoText(latestAt) : DASH;
   const minsAgo = latestAt != null ? Math.round((Date.now() - latestAt) / 60000) : null;
   const fresh = minsAgo == null ? DASH : minsAgo < 1 ? 'сейчас' : minsAgo + ' мин';

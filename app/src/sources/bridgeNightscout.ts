@@ -49,7 +49,7 @@ function buildSnapshot(): UiSnapshot {
     /* Направление: слово источника, а если он промолчал — наш расчёт по истории
        (domain/trend.ts). Раньше на этом месте была подстановка «ровно», то есть
        утверждение, которого никто не делал (SugarLife#215). */
-    trend: направление(latest?.dir, st.data?.entries ?? [] as Entry[]),
+    trend: направление((st.data?.entries ?? []) as Entry[]),
     link,
     reservoir: d?.reservoir != null ? Math.round(d.reservoir) + ' ед' : '—',
     battery: d?.pumpBattery != null ? d.pumpBattery + '%' : '—',
