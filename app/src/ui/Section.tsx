@@ -29,10 +29,12 @@ import PageHead from './PageHead';
    Низ отдан действиям раздела: перенести профиль в помпу, отменить правку, шагнуть
    дальше в мастере. Слово «Назад» внизу есть ровно в одном месте — в мастере, — и
    значит там шаг назад, а не выход; на первом шаге оно и написано иначе: «Закрыть». */
-export default function Section({ title, subtitle, onBack, head, footer, className, children }: {
+export default function Section({ title, subtitle, onBack, действие, head, footer, className, children }: {
   title?: string;
   subtitle?: ReactNode;
   onBack: () => void;
+  /** Действие справа в шапке — «Далее» у мастера (см. PageHead). */
+  действие?: ReactNode;
   /** Своя шапка вместо заголовка — для мастера с шагами. */
   head?: ReactNode;
   /** Закреплённый низ: главное действие раздела, которое не уезжает с прокруткой. */
@@ -53,7 +55,7 @@ export default function Section({ title, subtitle, onBack, head, footer, classNa
             содержимого родителя, и с отступами снаружи лишним оказался бы не пиксель,
             а все двадцать шесть. */}
         <div className="stack-fill">
-          {head ?? (title ? <PageHead title={title} subtitle={subtitle} onBack={onBack} /> : null)}
+          {head ?? (title ? <PageHead title={title} subtitle={subtitle} onBack={onBack} действие={действие} /> : null)}
           {children}
         </div>
       </div>

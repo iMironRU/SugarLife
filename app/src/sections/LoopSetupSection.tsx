@@ -1,5 +1,5 @@
 import { IonIcon } from '@ionic/react';
-import { chevronBack, checkmarkCircle, closeCircle, alertCircle, lockClosedOutline, createOutline } from 'ionicons/icons';
+import { checkmarkCircle, closeCircle, alertCircle, lockClosedOutline, createOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useDeviceConfig, isModelKnown } from '@/settings/deviceConfig';
@@ -66,63 +66,45 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
 
   const canNext = step !== 1 || picked != null;
 
+  /* Мастер живёт в обычной шапке раздела (SugarLife#259).
+
+     Раньше у него была своя: шаги вместо заголовка сверху и закреплённый низ с «Назад»
+     и «Далее». Низ съедал полосу экрана на каждом шаге ради двух кнопок — при том что
+     содержимого на шаге часто было в половину экрана, а на «Проверке» под сводкой
+     оставалось пусто.
+
+     Теперь навигация симметрична и вся в шапке: слева шаг назад, справа шаг вперёд.
+     Стрелка слева на первом шаге означает выход — то же, что и во всех разделах, и
+     ровно то, что человек от неё ждёт; отдельной кнопки «Закрыть» больше нет нигде.
+
+     Шаги переехали под заголовок, где у разделов живёт подзаголовок: они и есть
+     уточнение «где я сейчас», а полоса прогресса — то же самое картинкой.
+
+     Применение осталось в теле последнего шага, а не уехало в шапку: оно весомее
+     навигации, требует удержания и должно стоять там, где человек читает, что именно
+     применяет. */
   return (
     <Section
-      onBack={close}
+      onBack={step > 0 ? () => { setStep((step - 1) as Step); setEditing(null); } : close}
       className="wz"
-      /* Шаги вместо заголовка — это содержимое заголовочной области, а не повод
-         строить свою страницу: иначе следующий мастер построит четвёртую (#162). */
-      head={(
-        <>
-          <div className="wz-top">ШАГ {step + 1} ИЗ 5 · {STEPS[step].toUpperCase()}</div>
+      title={done ? 'Готово' : STEPS[step]}
+      subtitle={done ? 'профиль записан' : `Шаг ${step + 1} из 5`}
+      действие={!done && step < 4 ? (
+        <button className="head-next" disabled={!canNext}
+          onClick={() => { setStep((step + 1) as Step); setEditing(null); }}>
+          Далее
+        </button>
+      ) : done ? (
+        <button className="head-next" onClick={close}>Понятно</button>
+      ) : undefined}
+    >
+        {!done && (
           <div className="wz-prog">
             {STEPS.map((s, i) => (
               <span key={s} className={'wz-dot' + (i < step ? ' passed' : i === step ? ' on' : '')} />
             ))}
           </div>
-        </>
-      )}
-      footer={(
-        <div className="page-foot">
-          <div className="wz-nav">
-            {done ? (
-              <button className="page-next" onClick={close}>Понятно</button>
-            ) : (
-              <>
-                {/* На первом шаге низа слева нет вовсе.
-
-                    Там стояло «Закрыть» — второй выход на том же экране, при живой
-                    стрелке сверху. Человек учится не правилу, а месту: если в одном
-                    разделе выход внизу, а в остальных вверху, он каждый раз ищет
-                    заново. Хуже другое — со второго шага та же кнопка называется
-                    «Назад» и означает уже другое, то есть одно место меняет смысл
-                    между шагами (#175).
-
-                    Теперь «Назад» внизу значит ровно шаг назад и никогда — выход;
-                    выход один на всё приложение, стрелкой сверху. */}
-                {step > 0 && (
-                  <button className="page-back" onClick={() => { setStep((step - 1) as Step); setEditing(null); }}>
-                    <IonIcon icon={chevronBack} />
-                    Назад
-                  </button>
-                )}
-                {step < 4 ? (
-                  <button className="page-next" disabled={!canNext} onClick={() => { setStep((step + 1) as Step); setEditing(null); }}>
-                    Далее
-                  </button>
-                ) : (
-                  <HoldButton
-                    label={needDoctor && !profile.doctorOk ? 'Требуется подтверждение' : 'Удерживайте, чтобы применить'}
-                    disabled={needDoctor && !profile.doctorOk}
-                    onComplete={apply}
-                  />
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      )}
-    >
+        )}
 
         <div className="wz-l0">
           <IonIcon icon={lockClosedOutline} />
@@ -327,6 +309,16 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
                     <span>Часть значений вне рекомендованного диапазона. Подтверждаю согласование с лечащим врачом.</span>
                   </button>
                 )}
+                {/* Применение стоит под тем, что применяется, а не в шапке и не в
+                    закреплённом низу: человек должен дочитать сводку до кнопки, а не
+                    видеть её всё время рядом с пальцем. */}
+                <div className="wz-apply">
+                  <HoldButton
+                    label={needDoctor && !profile.doctorOk ? 'Требуется подтверждение' : 'Удерживайте, чтобы применить'}
+                    disabled={needDoctor && !profile.doctorOk}
+                    onComplete={apply}
+                  />
+                </div>
               </>
             )}
           </>

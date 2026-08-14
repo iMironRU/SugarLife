@@ -4,8 +4,10 @@
    Оформление перенесено из прототипа inbox/loop.zip: крупные значения моноширинным,
    блок «Станет так», удержание для применения. Палитра наша (акцент фиолетовый).
    Только интерфейс: команд в помпу отсюда не уходит (docs/decisions/0004). */
-.wz-top { font-size: 11px; letter-spacing: .14em; color: var(--color-neutral-500); font-family: ui-monospace, monospace; padding-top: 4px; }
-.wz-prog { display: flex; gap: 5px; margin: 8px 0 14px; }
+/* Полоса шагов переехала под шапку раздела (#259): «где я сейчас» — уточнение к
+   заголовку, а не замена ему. Собственная строка «ШАГ 5 ИЗ 5 · ПРОВЕРКА» больше не
+   нужна: то же самое теперь говорят заголовок и подзаголовок раздела. */
+.wz-prog { display: flex; gap: 5px; margin: 2px 0 14px; }
 .wz-dot { flex: 1; height: 3px; border-radius: 2px; background: var(--color-neutral-800); }
 .wz-dot.passed { background: var(--c-glu); }
 .wz-dot.on { background: var(--color-accent); }
@@ -93,7 +95,13 @@
 .wz-srow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--color-neutral-800); }
 .wz-srow:last-child { border-bottom: 0; }
 .wz-srow span { font-size: 14px; color: var(--color-neutral-400); }
-.wz-srow b { font-size: 15px; font-family: ui-monospace, monospace; white-space: nowrap; }
+/* Значение переносится, а не уезжает за край. «L1 · Остановка при низкой · PLGS» не
+   влезает в строку ни на одном телефоне, и с nowrap хвост просто обрезался — вместе с
+   названием алгоритма, то есть с половиной ответа на вопрос «что я включаю». */
+.wz-srow { flex-wrap: wrap; }
+.wz-srow b { font-size: 15px; font-family: ui-monospace, monospace; text-align: right; }
+.wz-srow > span { flex: 0 0 auto; }
+.wz-srow > b { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .wz-srow b.warn { color: var(--c-carb); }
 
 .wz-gate {
@@ -105,8 +113,18 @@
 .wz-gate.on { border-color: var(--c-glu); color: var(--color-text); }
 .wz-gate ion-icon { font-size: 19px; flex-shrink: 0; }
 
-.wz-nav { display: flex; gap: 8px; }
-.wz-nav .page-back, .wz-nav .page-btn, .wz-nav .page-next, .wz-nav .hold-btn { flex: 1; }
+/* Применение в теле последнего шага: под сводкой, а не в закреплённом низу. */
+.wz-apply { margin-top: 18px; }
+.wz-apply .hold-btn { width: 100%; }
+
+/* «Далее» в шапке. Тише главного действия и того же роста, что круглая стрелка слева:
+   это навигация, а не поступок. */
+.head-next {
+  flex: 0 0 auto; min-height: 40px; padding: 0 16px; border-radius: 14px; border: 0;
+  cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 600;
+  background: var(--color-accent); color: #fff;
+}
+.head-next:disabled { opacity: .4; cursor: default; }
 .page-next {
   min-height: 48px; border-radius: 16px; border: 0; cursor: pointer;
   background: var(--color-accent); color: #fff; font-size: 15px; font-weight: 600; font-family: inherit;
