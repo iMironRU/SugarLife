@@ -1,9 +1,9 @@
 import { IonIcon } from '@ionic/react';
-import { DevicesSection, DiagnosticsSection, HealthSection, LoopSetupSection, ServicesSection } from '@/sections/lazy';
+import { DevicesSection, DiagnosticsSection, HealthSection, LoopSetupSection, ServicesSection, SourcesSection } from '@/sections/lazy';
 import {
   downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
-  hardwareChipOutline, cloudOutline, repeat, documentTextOutline, heartOutline,
+  hardwareChipOutline, cloudOutline, repeat, documentTextOutline, heartOutline, pulseOutline,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
 import { useStore } from '@/sources/store';
@@ -202,6 +202,11 @@ export default function Profile() {
                 внутри раздела, и на вопрос «а что у меня подключено» не отвечал: за
                 ответом надо было открывать. Самый быстрый взгляд — тот, ради которого
                 никуда не переходят. */}
+            {/* Источники — первым в хозяйстве (#277): сюда приходят с вопросом «почему
+                цифры такие», и он возникает чаще, чем «что у меня есть». */}
+            <Row icon={pulseOutline} title="Откуда берутся данные"
+              sub="сахар, инсулин, углеводы — кто их наполняет"
+              onClick={() => push(<SourcesSection onClose={pop} />)} />
             <Row icon={hardwareChipOutline} title="Помпа, сенсоры, глюкометр, петля"
               sub={устройства} value={нуженМост ? 'нужен мост' : undefined}
               onClick={() => push(<DevicesSection onClose={pop} />)} />
