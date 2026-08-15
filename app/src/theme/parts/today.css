@@ -297,3 +297,13 @@
   background: none; color: var(--color-text); font-weight: 600;
   border-bottom-color: var(--color-accent);
 }
+
+/* Счётчик непрочитанного на вкладке раздела (#275). Тот же смысл, что и у значка в
+   нижней панели, поэтому и вид тот же — иначе человек не свяжет одно с другим и решит,
+   что это разные новости. */
+.sec-badge {
+  margin-left: 6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600; line-height: 1;
+  background: var(--color-accent); color: var(--color-neutral-950, #12131c);
+}

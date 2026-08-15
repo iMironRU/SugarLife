@@ -13,6 +13,8 @@ import { DataGate } from '@/ui/NotConfigured';
 import MetricBars from '@/charts/MetricBars';
 import Screen from '@/ui/Screen';
 import { AnalyticsSection, VisitNoteSection } from '@/sections/lazy';
+import { useAnalysis, непрочитанныеВажные } from '@/domain/useAnalysis';
+import { useSeenInsights } from '@/settings/seenInsights';
 
 type MetricKey = 'glucose' | 'carbs' | 'insulin';
 type Cell = [string, string, string];
@@ -50,6 +52,17 @@ type Раздел = typeof РАЗДЕЛЫ[number]['key'];
 
 export default function Metrics() {
   const [раздел, setРаздел] = useState<Раздел>('метрики');
+  /* Счётчик — и на вкладке в панели, и здесь (SugarLife#275).
+
+     Цифра внизу говорит «есть непрочитанное», но не говорит где: человек открывает
+     «Метрики» и оказывается перед тремя разделами, из которых цифра относилась к
+     одному. Показать её только в панели значит поставить вопрос и не ответить.
+
+     Считается тем же кодом и из тех же кэшей, что и в панели: два числа про одно и то
+     же обязаны совпадать, а совпадают они надёжно, только если считаются одинаково. */
+  const { analysis } = useAnalysis(14);
+  const виденные = useSeenInsights();
+  const новых = непрочитанныеВажные(analysis, виденные);
   /* Вкладка видна? Все пять смонтированы разом ради свайпа, но читать базу
      невидимому экрану незачем — это и были рывки на соседних вкладках. */
   const активна = useTab() === 0;
@@ -118,7 +131,10 @@ export default function Metrics() {
           <div className="period sec-switch">
             {РАЗДЕЛЫ.map((р) => (
               <button key={р.key} className={'period-seg' + (раздел === р.key ? ' on' : '')}
-                onClick={() => setРаздел(р.key)}>{р.label}</button>
+                onClick={() => setРаздел(р.key)}>
+                {р.label}
+                {р.key === 'анализ' && новых > 0 && <span className="sec-badge">{новых}</span>}
+              </button>
             ))}
           </div>
 
