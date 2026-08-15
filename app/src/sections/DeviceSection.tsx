@@ -227,10 +227,11 @@ export default function DeviceSection({ onClose, cat, title }: {
       kind: cat,
       driverType: модель?.driverKey ?? null,
       params: {
-        /* Ключ без нашего префикса хранилища намеренно: `sl.` у нас зарезервирован за
-           localStorage, и барьер полноты ключей (settings/reset.test.ts) справедливо
-           принял бы его за забытую запись. Это параметр драйвера, а не наша память. */
-        clientModel: id,
+        /* Штатное место для модели по нашему справочнику (rev ≥ 1.14): ключ
+           `deviceModel`. Свой ключ мы придумывали, пока места не было, — и едва не
+           налетели на их служебный `model`, в котором лежал driverType. Они его
+           переименовали, мы перешли на штатный: чужих ключей больше не трогаем. */
+        deviceModel: id,
         name: (cat === 'pump' ? pumpById(id)?.model : sensorById(id)?.name) ?? '',
       },
     });

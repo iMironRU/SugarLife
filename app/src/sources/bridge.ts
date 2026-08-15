@@ -120,6 +120,21 @@ export interface DeviceView {
 
      Три различимых состояния вместо одного «нет связи» (domain/nearby.ts). */
   bridgeConnection?: Link | string | null;
+  /* Модель по справочнику ПРИЛОЖЕНИЯ (rev ≥ 1.14, SugarLifeCore#55): «Paradigm 522/722»,
+     «MiniMed 640G». driverId — драйвер, один на семейство; модель уточняет ёмкость
+     резервуара и шаг базала, которых драйвер не знает.
+
+     Кладётся в params под ключом `deviceModel`. Совпало со `supports[].key` — движок
+     понимает семантику; не совпало — просто хранит и отдаёт нам. Тот же гибрид, что в
+     конфиге: структура там, где движок интерпретирует, свободное поле там, где нет. */
+  deviceModel?: string | null;
+  /* Чьё это железо (rev ≥ 1.14). Прибор подопечного в LibreLinkUp — не «неизвестный
+     прибор», а железо ДРУГОГО ЧЕЛОВЕКА: оно существует, просто подключиться к нему
+     нельзя, и путь к нему только облачный. null — прибор свой.
+
+     Без имени владельца два подопечных с одной моделью сенсора неразличимы, и человек
+     не поймёт, чьи данные читает. */
+  ownerName?: string | null;
   /* Расходка ЭТОЙ помпы (rev ≥ 1.11, SugarLifeCore#53). Числом — по нему считают, на
      сколько хватит; monitor.reservoir остаётся плашкой и одной на всё приложение. */
   reservoirU?: number | null;
@@ -327,6 +342,8 @@ export interface HardwareView {
   reservoirU?: number | null;
   batteryV?: number | null;
   reservoirAtMs?: number | null;
+  /** Модель по справочнику приложения (rev ≥ 1.14) — то же, что у DeviceView. */
+  deviceModel?: string | null;
   /* Стабильная личность прибора: серийник помпы, код сенсора (rev ≥ 1.11). Именно она
      различает два одинаковых прибора — то, что мы просили, доставая адрес регуляркой из
      id. Регулярка была догадкой о формате ключа; id проекционный и может смениться. */
@@ -491,7 +508,7 @@ export type Intent =
      Семантически не «подключить сейчас»: прибор существует, даже когда его не слышно —
      он на теле, а данные идут облаком. Этим интентом закрывается наш локальный реестр:
      модель и серийник переезжают в движок (#224). */
-  | { type: 'recordDevice'; kind: 'sensor' | 'pump'; driverType?: string | null; params?: Record<string, string> }
+  | { type: 'recordDevice'; kind: 'sensor' | 'pump' | 'bridge' | 'meter'; driverType?: string | null; params?: Record<string, string> }
   | { type: 'linkAccount'; providerId: string; params: Record<string, string> }
   | { type: 'selectAccountSubject'; accountId: string; subjectId: string };
 
