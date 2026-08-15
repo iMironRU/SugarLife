@@ -3,8 +3,6 @@ import { checkmarkCircle, ellipseOutline, chevronForward } from 'ionicons/icons'
 import { useState } from 'react';
 import Section from '@/ui/Section';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
-import { связь } from '@/domain/deviceState';
-import { имяЖелезки, железоДиспетчера, звеноЦепочки, словоЦепочки, мостЖелезки } from '@/domain/nearby';
 import {
   источникиСлота, причинаСлота, откудаСейчас, наполненЛи, ИМЯ_СЛОТА, type Слот,
 } from '@/domain/sources';
@@ -90,33 +88,9 @@ export default function SourcesSection({ onClose, встроенный }: {
         данные придут прежним путём.
       </div>
 
-      {/* Хозяйство. Здесь прибор отвечает за себя: на связи ли он и что с ним делать. */}
-      <div className="section-label sec">Что у меня есть</div>
-      <div className="list">
-        {железоДиспетчера(snap).map((h) => {
-          const звено = звеноЦепочки(h, snap);
-          const мост = мостЖелезки(h, snap);
-          return (
-            <div key={h.id} className="list-row">
-              <span className={'slot-dot' + (связь(h) === 'live' ? ' ok' : ' off')} />
-              <span className="pick-main">
-                <span className="list-title">{имяЖелезки(h)}</span>
-                <span className="pick-sub">
-                  {звено ? словоЦепочки(звено, мост ? имяЖелезки(мост) : null)
-                    : связь(h) === 'live' ? 'на связи' : 'нет связи'}
-                </span>
-              </span>
-            </div>
-          );
-        })}
-        {!железоДиспетчера(snap).length && (
-          <div className="metric-note">Приборы не заведены — только облако.</div>
-        )}
-      </div>
-      <div className="metric-note">
-        Здесь заряд, прошивка и «отпустить». Отвечает на «работает ли прибор», а не на
-        «откуда цифры»: это разные вопросы.
-      </div>
+      {/* Списка приборов здесь больше нет (#279): он живёт в соседней вкладке
+          «Приборы». Один список в двух местах — ровно то, от чего мы уходили, заводя
+          общую дверь. */}
     </>
   );
 

@@ -28,8 +28,13 @@ const ВКЛАДКИ = [
 ] as const;
 type Вкладка = typeof ВКЛАДКИ[number]['key'];
 
-export default function DataDevicesSection({ onClose }: { onClose: () => void }) {
-  const [вкладка, setВкладка] = useState<Вкладка>('данные');
+export default function DataDevicesSection({ onClose, вкладка: начальная }: {
+  onClose: () => void;
+  /* С какой вкладки открыть. Обращение «связь потеряна» ведёт сюда с вопросом «почему
+     нет данных», и встречать его списком железа значит отвечать не на то (#279). */
+  вкладка?: Вкладка;
+}) {
+  const [вкладка, setВкладка] = useState<Вкладка>(начальная ?? 'данные');
 
   return (
     <Section title="Устройства и данные" subtitle="Профиль · Хозяйство" onBack={onClose}

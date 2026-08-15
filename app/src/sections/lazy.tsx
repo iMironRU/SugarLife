@@ -75,7 +75,7 @@ export const LoopSection = ленивый<{ onClose: () => void }>(
 export const LoopSetupSection = ленивый<{ onClose: () => void }>(
   () => import('./LoopSetupSection'), 'Профиль петли');
 
-export const DataDevicesSection = ленивый<{ onClose: () => void }>(
+export const DataDevicesSection = ленивый<{ onClose: () => void; вкладка?: 'данные' | 'приборы' | 'облака' }>(
   () => import('./DataDevicesSection'), 'Устройства и данные');
 
 export const SourcesSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
