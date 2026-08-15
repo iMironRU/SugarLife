@@ -33,28 +33,48 @@ export function useДочитано<T extends HTMLElement>(ключ: unknown) {
     setВКонце(false);
     setДочитано(false);
     const узел = конец.current;
-    const скроллер = узел?.closest('.stack-body') as HTMLElement | null;
-    if (!скроллер) return;
+    if (!узел) return;
+    /* Скроллер ищем по устройству страницы, а не по одному классу: у раздела это
+       `.stack-body`, у вкладки — скроллер внутри IonContent, и он лежит в теневом
+       дереве, куда `closest` не заглядывает. Спрашиваем сам ion-content — он умеет
+       отдать свой элемент прокрутки. */
+    let живой = true;
+    let отписаться: (() => void) | null = null;
 
-    const пересчитать = () => {
-      const дно = скроллер.scrollTop + скроллер.clientHeight >= скроллер.scrollHeight - ПОРОГ_ДНА;
-      setВКонце(дно);
-      if (дно) setДочитано(true);   // только вверх: дочитанное дочитано до смены ключа
+    const начать = (скроллер: HTMLElement) => {
+      if (!живой) return;
+
+      const пересчитать = () => {
+        const дно = скроллер.scrollTop + скроллер.clientHeight >= скроллер.scrollHeight - ПОРОГ_ДНА;
+        setВКонце(дно);
+        if (дно) setДочитано(true);  // только вверх: дочитанное дочитано до смены ключа
+      };
+
+      пересчитать();
+      скроллер.addEventListener('scroll', пересчитать, { passive: true });
+      /* Содержимое приезжает не сразу — список устройств, история, разбор. Пока его нет,
+         конец «виден» просто потому, что показывать нечего; пересчитываем при изменении
+         высоты, иначе затемнение не появится над уже приехавшим списком. */
+      const наблюдатель = new ResizeObserver(пересчитать);
+      наблюдатель.observe(скроллер);
+      if (узел.parentElement) наблюдатель.observe(узел.parentElement);
+
+      отписаться = () => {
+        скроллер.removeEventListener('scroll', пересчитать);
+        наблюдатель.disconnect();
+      };
     };
 
-    пересчитать();
-    скроллер.addEventListener('scroll', пересчитать, { passive: true });
-    /* Содержимое приезжает не сразу — список устройств, история, разбор. Пока его нет,
-       конец «виден» просто потому, что показывать нечего; пересчитываем при изменении
-       высоты, иначе затемнение не появится над уже приехавшим списком. */
-    const наблюдатель = new ResizeObserver(пересчитать);
-    наблюдатель.observe(скроллер);
-    if (узел?.parentElement) наблюдатель.observe(узел.parentElement);
+    const свой = узел.closest('.stack-body') as HTMLElement | null;
+    if (свой) начать(свой);
+    else {
+      const контент = узел.closest('ion-content') as HTMLIonContentElement | null;
+      /* Скроллер у ion-content появляется не мгновенно — обещание разрешается после
+         гидратации компонента. Отсюда и флаг «живой»: раздел могли закрыть раньше. */
+      void контент?.getScrollElement().then((э) => начать(э));
+    }
 
-    return () => {
-      скроллер.removeEventListener('scroll', пересчитать);
-      наблюдатель.disconnect();
-    };
+    return () => { живой = false; отписаться?.(); };
   }, [ключ]);
 
   return { конец, вКонце, дочитано };
