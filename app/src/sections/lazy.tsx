@@ -50,14 +50,14 @@ function ленивый<P extends object>(
   return Обёртка;
 }
 
-export const DevicesSection = ленивый<{ onClose: () => void }>(
+export const DevicesSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
   () => import('./DevicesSection'), 'Устройства');
 export const HealthSection = ленивый<{ onClose: () => void }>(
   () => import('./HealthSection'), 'Здоровье');
 export const VisitNoteSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
   () => import('./VisitNoteSection'), 'Отчёт к приёму');
 
-export const ServicesSection = ленивый<{ onClose: () => void }>(
+export const ServicesSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
   () => import('./ServicesSection'), 'Сервисы');
 
 export const DeviceSection = ленивый<{ onClose: () => void; cat: 'sensor' | 'pump' | 'meter' | 'loop'; title: string }>(
@@ -69,8 +69,17 @@ export const CloudSection = ленивый<{ cloudId: string; onClose: () => voi
 export const BasalProfileSection = ленивый<{ onClose: () => void }>(
   () => import('./BasalProfileSection'), 'Базальный профиль');
 
+export const LoopSection = ленивый<{ onClose: () => void }>(
+  () => import('./LoopSection'), 'Петля');
+
 export const LoopSetupSection = ленивый<{ onClose: () => void }>(
   () => import('./LoopSetupSection'), 'Профиль петли');
+
+export const DataDevicesSection = ленивый<{ onClose: () => void; вкладка?: 'данные' | 'приборы' | 'облака' }>(
+  () => import('./DataDevicesSection'), 'Устройства и данные');
+
+export const SourcesSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
+  () => import('./SourcesSection'), 'Откуда берутся данные');
 
 export const CloudAccountsSection = ленивый<{ onClose: () => void }>(
   () => import('./CloudAccountsSection'), 'Облачные учётки');

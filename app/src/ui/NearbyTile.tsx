@@ -5,7 +5,7 @@ import Notice from './Notice';
 import { связь, движокЖивой } from '@/domain/deviceState';
 import { железоДиспетчера, потерянаСвязь, имяЖелезки } from '@/domain/nearby';
 import { useStack } from '@/app/stackCtx';
-import { DiscoverySection, DevicesSection } from '@/sections/lazy';
+import { DiscoverySection, DataDevicesSection } from '@/sections/lazy';
 
 /* Вход в «устройства рядом» с главного экрана.
 
@@ -49,10 +49,13 @@ export default function NearbyTile() {
      Нечего подключать — веди в поиск: там ищут незнакомое. А если железка заведена и
      отвалилась, поиск бесполезен и даже вреден: своё в нём не показывается вовсе
      (SugarLifeCore#34), и человек решит, что устройство пропало. Ему нужен диспетчер —
-     список своего с состоянием и «подключить». Он живёт в «Устройствах». */
+     список своего с состоянием и «подключить». Он живёт в «Устройствах».
+
+     Ведём на вкладку «Откуда данные», а не в список приборов: человек нажимает эту
+     кнопку с вопросом «почему нет данных», и там написана причина (#279). */
   const открыть = () => push(железо.length === 0
     ? <DiscoverySection onClose={pop} />
-    : <DevicesSection onClose={pop} />);
+    : <DataDevicesSection onClose={pop} вкладка="данные" />);
 
   if (!проблема) {
     /* Живых может не быть вовсе при исправных слотах: данные идут облаком, радио молчит.

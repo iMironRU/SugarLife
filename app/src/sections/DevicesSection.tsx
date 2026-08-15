@@ -3,7 +3,7 @@ import Section from '@/ui/Section';
 import { DeviceSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
 import {
-  hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline,
+  hardwareChipOutline, flash, speedometerOutline, helpCircleOutline,
   bluetoothOutline, radioOutline, searchOutline, playOutline, pauseOutline,
 } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
@@ -26,7 +26,10 @@ import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
 /* Профиль → «Устройства» — отдельный полноэкранный раздел (не вложенная секция), как в
    docs/CONNECT-UX.md §10 «Карта интерфейса». Группировка по классу устройства (§2a: реестр).
    Детали (резервуар/батарея и т.п.) показываем только когда данные реально есть — честно. */
-export default function DevicesSection({ onClose }: { onClose: () => void }) {
+/* Раздел живёт вкладкой внутри «Устройств и данных» (SugarLife#279). */
+export default function DevicesSection({ onClose, встроенный }: {
+  onClose?: () => void; встроенный?: boolean;
+}) {
   const { push, pop } = useStack();
   const { data } = useStore();
   const devCfg = useDeviceConfig();
@@ -94,8 +97,8 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
   const рядом = рядомЖелезо(снимок, сейчас);
   const мост = (h: Parameters<typeof имяЖелезки>[0]) => мостЖелезки(h, снимок);
 
-  return (
-    <Section title="Устройства" subtitle="Профиль · Устройства" onBack={onClose}>
+  const тело = (
+    <>
         {железо.length > 0 && (
           <>
             <div className="section-label sec первый">Мои устройства</div>
@@ -197,7 +200,10 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
             value={состояние('sensor')} onClick={() => openCat('sensor')} />
         </div>
 
-        <div className="section-label sec">Глюкометры и петля</div>
+        {/* Петли здесь больше нет (#279). Она не прибор, а режим управления подачей:
+            у неё нет ни связи, ни батареи, ни «забыть». Её место — рядом с профилем
+            петли, где задают полномочия, а не среди железа. */}
+        <div className="section-label sec">Глюкометр</div>
         <div className="list">
           {/* Значение строки обязано совпадать с тем, что человек найдёт внутри (#163).
               Здесь стояло «настроить» у обоих, а внутри — «в разработке»: у глюкометра
@@ -206,14 +212,19 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
               не как «ещё не сделали». */}
           <Row icon={speedometerOutline} title="Глюкометр" value="внести показание"
             onClick={() => openCat('meter')} />
-          <Row icon={repeat} title="Петля" value="в разработке" valueMuted
-            onClick={() => openCat('loop')} />
         </div>
 
         <div className="list" style={{ marginTop: 12 }}>
           <Row icon={helpCircleOutline} title="Проверить / записать по модели" onClick={() => setReqOpen(true)} />
         </div>
         <RequirementsCatalogSheet isOpen={reqOpen} onClose={() => setReqOpen(false)} />
+    </>
+  );
+
+  if (встроенный) return тело;
+  return (
+    <Section title="Устройства" subtitle="Профиль · Устройства" onBack={onClose ?? (() => {})}>
+      {тело}
     </Section>
   );
 }
