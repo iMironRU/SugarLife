@@ -85,8 +85,19 @@ export default function DeviceSection({ onClose, cat, title }: {
     : cat === 'pump' ? pump?.model : cat === 'sensor' ? sensor?.name : null;
 
   // выбранный мост
+  /* Мост спрашиваем у снимка, локальный выбор оставляем запасным (#281, шаг 2).
+
+     Движок знает, за каким мостом стоит железка, — он это видит, а не помнит с наших
+     слов. Наш `bridgePumpId` был нужен, пока спросить было некого; теперь он отвечает
+     только там, где движка нет вовсе (браузер) или он ещё не опознал прибор.
+
+     Показываем при этом РАЗНОЕ по смыслу: движок отдаёт экземпляр моста, который реально
+     обслуживает прибор, а локальный выбор — модель моста из справочника, которую человек
+     назвал. Совпадать они обязаны, но первый вернее. */
+  const мостИзСнимка = (cat === 'pump' || cat === 'sensor') ? мостСлота(snap, cat) : null;
   const bridgeId = cat === 'pump' ? cfg.bridgePumpId : cat === 'sensor' ? cfg.bridgeSensorId : null;
   const bridge = bridgeById(bridgeId);
+  const имяМоста = мостИзСнимка?.name || bridge?.name || null;
 
   // подсказка про мост
   const bridgeHint = cat === 'pump'
@@ -283,13 +294,13 @@ export default function DeviceSection({ onClose, cat, title }: {
   const directSub =
     recordedNoModel ? 'сначала укажите модель — иначе неизвестно, как читать'
     : !isNative ? 'только в приложении для телефона — браузер не умеет BLE'
-    : needsBridge && !bridge ? 'нужен мост — выбрать'
+    : needsBridge && !имяМоста ? 'нужен мост — выбрать'
     : !hasBleDriver ? 'драйвер этого устройства ещё в разработке'
     : bleLive ? 'подключено' : 'подключить';
   const directTap =
     recordedNoModel ? () => setPick('model')
     : !isNative ? undefined
-    : needsBridge && !bridge ? () => setPick('bridge')
+    : needsBridge && !имяМоста ? () => setPick('bridge')
     : hasBleDriver ? () => setScanOpen(true)
     : undefined;
 
@@ -397,7 +408,10 @@ export default function DeviceSection({ onClose, cat, title }: {
                       <IonIcon icon={gitNetworkOutline} className="list-ico" />
                       <span className="pick-main">
                         <span className="list-title">Мост / трансмиттер</span>
-                        <span className="pick-sub">{bridge ? bridge.name : 'не выбран'}</span>
+                        {/* Имя из снимка вернее выбранного: движок видит, какой мост
+                            реально обслуживает прибор, а справочник помнит, какой
+                            назвали (#281). */}
+                        <span className="pick-sub">{имяМоста ?? 'не выбран'}</span>
                       </span>
                       <IonIcon icon={chevronForward} className="list-chev" />
                     </button>
