@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Источники данных — прототип</title>
+<style>
+  /* Токены продублированы, а не подключены файлом: прототип открывают по прямой ссылке
+     и присылают в переписке — он обязан выглядеть одинаково без соседних файлов. */
+  :root {
+    --color-base: #0a0e14; --color-surface: #141a23; --color-border: #2a3340;
+    --color-border-strong: #3d4856; --color-text: #e8edf2;
+    --color-text-secondary: #98a2b3; --color-text-muted: #6c7689;
+    --color-in-range: #5fb37c; --color-high: #d9a44c; --color-info: #6b9fcf;
+  }
+  /* Прототип одного экрана. Данные — настоящие, снятые с телефона 15.08.2026:
+     Sibionics GS1 и Medtronic 722 за OrangeLink молчат, слоты наполняет Nightscout. */
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: var(--color-base); color: var(--color-text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px; line-height: 1.4; padding: 0 0 40px;
+  }
+  .wrap { max-width: 420px; margin: 0 auto; padding: 0 18px; }
+  .head { padding: 18px 0 4px; }
+  .head h1 { font-size: 24px; font-weight: 700; margin: 0; letter-spacing: -.01em; }
+  .head p { margin: 4px 0 0; font-size: 13px; color: var(--color-text-secondary); }
+
+  .lbl { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase;
+         color: var(--color-text-muted); margin: 22px 0 8px; }
+
+  .slot { background: var(--color-surface); border: 1px solid var(--color-border);
+          border-radius: 16px; overflow: hidden; margin-bottom: 10px; }
+  .slot-top { display: flex; align-items: center; gap: 12px; padding: 14px 15px; cursor: pointer; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+  .dot.ok { background: var(--color-in-range); }
+  .dot.cloud { background: var(--color-info); }
+  .dot.off { background: var(--color-text-muted); }
+  .slot-name { flex: 1; min-width: 0; }
+  .slot-name b { display: block; font-size: 15.5px; font-weight: 600; }
+  .slot-name span { display: block; font-size: 12.5px; color: var(--color-text-secondary); margin-top: 2px; }
+  .chev { color: var(--color-text-muted); font-size: 13px; transition: transform .18s; }
+  .slot.open .chev { transform: rotate(90deg); }
+
+  /* Причина — не мелким шрифтом внизу, а прямо под ответом: она и есть ответ на
+     «почему из облака, а не с прибора». */
+  .why { margin: 0 15px 12px; padding: 9px 11px; border-radius: 11px; font-size: 12.5px;
+         line-height: 1.45; color: var(--color-text-secondary);
+         background: color-mix(in srgb, var(--color-high) 9%, transparent);
+         border: 1px solid color-mix(in srgb, var(--color-high) 26%, transparent); }
+  .why b { color: var(--color-text); font-weight: 600; }
+
+  .src { display: none; border-top: 1px solid var(--color-border); }
+  .slot.open .src { display: block; }
+  .row { display: flex; align-items: center; gap: 11px; padding: 12px 15px;
+         border-bottom: 1px solid var(--color-border); }
+  .row:last-child { border-bottom: 0; }
+  .mark { width: 18px; flex: 0 0 auto; text-align: center; font-size: 13px; }
+  .mark.on { color: var(--color-in-range); }
+  .mark.off { color: var(--color-text-muted); }
+  .row-t { flex: 1; min-width: 0; }
+  .row-t b { display: block; font-size: 14px; font-weight: 500; }
+  .row-t span { display: block; font-size: 11.5px; color: var(--color-text-muted); margin-top: 2px; }
+  .tag { flex: 0 0 auto; font-size: 10.5px; padding: 3px 7px; border-radius: 7px;
+         color: var(--color-text-secondary); border: 1px solid var(--color-border-strong); }
+  .tag.now { color: var(--color-in-range); border-color: color-mix(in srgb, var(--color-in-range) 45%, transparent); }
+
+  .note { font-size: 12px; color: var(--color-text-muted); line-height: 1.5; margin: 14px 0 0; }
+  .cmp { margin-top: 26px; padding: 14px 15px; border-radius: 14px;
+         background: var(--color-surface); border: 1px dashed var(--color-border-strong); }
+  .cmp h2 { font-size: 13px; margin: 0 0 8px; letter-spacing: .04em; text-transform: uppercase;
+            color: var(--color-text-muted); }
+  .cmp p { margin: 0 0 8px; font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; }
+  .cmp p:last-child { margin-bottom: 0; }
+  .cmp b { color: var(--color-text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>Откуда берутся данные</h1>
+    <p>По этим источникам считается всё: активный инсулин, углеводы, прогноз, разбор.</p>
+  </div>
+
+  <!-- САХАР: наполняется облаком, потому что сенсор молчит -->
+  <div class="slot open" onclick="this.classList.toggle('open')">
+    <div class="slot-top">
+      <span class="dot cloud"></span>
+      <span class="slot-name">
+        <b>Сахар</b>
+        <span>сейчас из облака · Nightscout · 2 мин назад</span>
+      </span>
+      <span class="chev">›</span>
+    </div>
+    <div class="why">
+      Прямое чтение недоступно: <b>Sibionics GS1</b> не на связи. Цифры приходят из
+      Nightscout — они могут отставать.
+    </div>
+    <div class="src">
+      <div class="row">
+        <span class="mark on">●</span>
+        <span class="row-t"><b>Nightscout</b><span>облако · последняя точка 2 мин назад</span></span>
+        <span class="tag now">сейчас</span>
+      </div>
+      <div class="row">
+        <span class="mark off">○</span>
+        <span class="row-t"><b>Sibionics GS1</b><span>напрямую по блютусу · нет связи · день 13</span></span>
+        <span class="tag">предпочесть</span>
+      </div>
+      <div class="row">
+        <span class="mark off">○</span>
+        <span class="row-t"><b>Глюкометр</b><span>ручной ввод · последнее значение вчера</span></span>
+        <span class="tag">внести</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ИНСУЛИН: цепочка через мост -->
+  <div class="slot" onclick="this.classList.toggle('open')">
+    <div class="slot-top">
+      <span class="dot cloud"></span>
+      <span class="slot-name">
+        <b>Инсулин</b>
+        <span>сейчас из облака · Nightscout · 37 ед в резервуаре</span>
+      </span>
+      <span class="chev">›</span>
+    </div>
+    <div class="why">
+      До помпы не дозвониться: <b>OrangeLink</b> не на связи, а <b>Medtronic 722</b>
+      слышно только через него.
+    </div>
+    <div class="src">
+      <div class="row">
+        <span class="mark on">●</span>
+        <span class="row-t"><b>Nightscout</b><span>облако · подачи и резервуар</span></span>
+        <span class="tag now">сейчас</span>
+      </div>
+      <div class="row">
+        <span class="mark off">○</span>
+        <span class="row-t"><b>Medtronic 722</b><span>через мост OrangeLink · мост не на связи · серийник 923109</span></span>
+        <span class="tag">предпочесть</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- УГЛЕВОДЫ: слот, которого сегодня нет -->
+  <div class="slot" onclick="this.classList.toggle('open')">
+    <div class="slot-top">
+      <span class="dot ok"></span>
+      <span class="slot-name">
+        <b>Углеводы</b>
+        <span>вношу сам · последняя запись 1 ч назад</span>
+      </span>
+      <span class="chev">›</span>
+    </div>
+    <div class="src">
+      <div class="row">
+        <span class="mark on">●</span>
+        <span class="row-t"><b>Ручной ввод</b><span>всегда доступен</span></span>
+        <span class="tag now">сейчас</span>
+      </div>
+      <div class="row">
+        <span class="mark off">○</span>
+        <span class="row-t"><b>Весы</b><span>не подключены</span></span>
+        <span class="tag">подключить</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">
+    Приложение выбирает источник само: живое прежде отставшего, прибор прежде облака.
+    «Предпочесть» — просьба движку, а не переключатель: если выбранный источник замолчит,
+    данные не пропадут, а придут прежним путём.
+  </p>
+
+  <div class="lbl">Что у меня есть</div>
+  <div class="slot">
+    <div class="slot-top">
+      <span class="dot off"></span>
+      <span class="slot-name"><b>Sibionics GS1</b><span>сенсор · нет связи · E2:38:B4:63:51:59</span></span>
+      <span class="chev">›</span>
+    </div>
+  </div>
+  <div class="slot">
+    <div class="slot-top">
+      <span class="dot off"></span>
+      <span class="slot-name"><b>OrangeLink</b><span>мост к помпе · нет связи · E8:E6:C9:69:AB:6D</span></span>
+      <span class="chev">›</span>
+    </div>
+  </div>
+  <div class="slot">
+    <div class="slot-top">
+      <span class="dot off"></span>
+      <span class="slot-name"><b>Medtronic 722</b><span>помпа · через OrangeLink · мост не на связи</span></span>
+      <span class="chev">›</span>
+    </div>
+  </div>
+  <p class="note">
+    Здесь хозяйство: заряд, прошивка, «отпустить», «забыть». Отвечает на «работает ли
+    прибор», а не на «откуда цифры» — это разные вопросы, и мы уже дважды получали
+    неправду, отвечая на них одним местом.
+  </p>
+
+  <div class="cmp">
+    <h2>Что изменилось против нынешнего экрана</h2>
+    <p><b>Сверху — вопрос, а не инвентарь.</b> Сейчас первым идёт список приборов, и
+      человек начинает с «что у меня есть», хотя пришёл с «почему цифры старые».</p>
+    <p><b>Причина рядом с ответом.</b> Было «через облако» мелким шрифтом; стало
+      «из облака, потому что сенсор не на связи».</p>
+    <p><b>Один прибор — одно имя.</b> «Medtronic 722» и «Paradigm 522/722» больше не
+      живут в двух списках порознь.</p>
+    <p><b>Углеводы стали слотом.</b> Видно, что их наполняет человек, — значит видно и
+      то, когда их не наполняли: «сахар вырос, а еды нет» перестаёт быть загадкой.</p>
+    <p><b>Глюкометр внутри сахара.</b> Он источник того же числа, просто дискретный.</p>
+  </div>
+
+</div>
+</body>
+</html>
