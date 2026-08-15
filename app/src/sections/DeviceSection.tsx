@@ -193,7 +193,37 @@ export default function DeviceSection({ onClose, cat, title }: {
   const alert = useBridgeAlert();
 
   const modelIcon = cat === 'pump' ? flash : hardwareChipOutline;
-  const setModel = (id: string) => setDeviceConfig(cat === 'pump' ? { pumpId: id } : { sensorId: id });
+  /* Выбор модели уходит и в движок (SugarLife#281, шаг 2).
+
+     Пока пишем в оба места: локально — как было, и в инвентарь движка интентом
+     recordDevice. Это переходное состояние и оно намеренное: сначала запись должна
+     появиться у них и пережить перезапуск, и только потом можно убирать нашу. Убрать
+     раньше значит на один релиз остаться вообще без реестра, если что-то не сойдётся.
+
+     driverType — ключ ДРАЙВЕРА из нашего справочника (`driverKey`), а не id модели: у
+     движка драйвер один на семейство («medtronic»), а моделей в семействе десяток.
+     Модель кладём в params под своим ключом — она нужна нам для резервуара и
+     спецификаций, движку она безразлична.
+
+     Модели без драйвера (только облако) записываются с driverType = null: прибор всё
+     равно существует, просто читать его напрямую нечем. */
+  const setModel = (id: string) => {
+    setDeviceConfig(cat === 'pump' ? { pumpId: id } : { sensorId: id });
+    if (cat !== 'pump' && cat !== 'sensor') return;
+    const модель = cat === 'pump' ? pumpById(id) : sensorById(id);
+    void sendIntent({
+      type: 'recordDevice',
+      kind: cat,
+      driverType: модель?.driverKey ?? null,
+      params: {
+        /* Ключ без нашего префикса хранилища намеренно: `sl.` у нас зарезервирован за
+           localStorage, и барьер полноты ключей (settings/reset.test.ts) справедливо
+           принял бы его за забытую запись. Это параметр драйвера, а не наша память. */
+        clientModel: id,
+        name: (cat === 'pump' ? pumpById(id)?.model : sensorById(id)?.name) ?? '',
+      },
+    });
+  };
   const setBridge = (id: string) => setDeviceConfig(cat === 'pump' ? { bridgePumpId: id } : { bridgeSensorId: id });
   const pickerItems = hasModel ? modelItems(cat as 'pump' | 'sensor') : [];
 
