@@ -44,21 +44,23 @@ export default function ServicesSection({ onClose, встроенный }: {
 
   const тело = (
     <>
-        <div className="sheet-note">
-          Облако — такой же способ подключения, как мост, только со своими адресом/токеном.
-          Можно держать несколько одновременно, у каждого своя роль в «Забираем отсюда».
-        </div>
+        {/* Два вида облаков названы по владельцу, а не одним словом (#279).
 
-        <div className="section-label sec">Облака</div>
+            «Облако» у нас значило две разные вещи, и человек честно путался: в слотах
+            это ПУТЬ к прибору, а здесь — учётная запись. Плюс в одном списке лежали
+            свой сервер (адрес и токен, туда пишут) и чужой сервис (логин с паролем,
+            только чтение, данные могут быть другого человека). Разделили по владельцу:
+            вопрос «моё или чужое» человек решает раньше всех остальных. */}
+        <div className="section-label sec">Мой сервер</div>
         <div className="list">
           {clouds.length === 0 && (
-            <Row title="Нет ни одного облака" titleMuted />
+            <Row title="Своего сервера нет" titleMuted />
           )}
           {clouds.map((c) => (
             <Row key={c.id} icon={cloudOutline} title={c.name || 'Nightscout'} oneLine
               value={roleIcons(c)} onClick={() => openCloud(c.id)} />
           ))}
-          <Row icon={addCircleOutline} title="Добавить облако" chevron={false} onClick={onAdd} />
+          <Row icon={addCircleOutline} title="Добавить свой сервер" chevron={false} onClick={onAdd} />
         </div>
 
         {/* Учётки вендоров — отдельным входом, а не в том же списке (SugarLifeCore#52).
@@ -70,12 +72,17 @@ export default function ServicesSection({ onClose, встроенный }: {
 
             Вход виден, только когда движок отдал каталог: без адаптеров это была бы
             дверь в пустую комнату. */}
+        <div className="metric-note">
+          Nightscout — ваш сервер: адрес и токен, туда же можно писать. Дальше — сервисы
+          производителей: вход по учётной записи, чтение чужого сервера.
+        </div>
+
         {(снимок?.cloudProviders?.length ?? 0) > 0 && (
           <>
-            <div className="section-label sec">Учётные записи</div>
+            <div className="section-label sec">Сервисы производителей</div>
             <div className="list">
-              <Row icon={personCircleOutline} title="Облачные учётки"
-                sub="LibreLinkUp, Dexcom Share и другие сервисы производителей"
+              <Row icon={personCircleOutline} title="Учётные записи"
+                sub="LibreLinkUp, Dexcom Share и другие"
                 onClick={() => push(<CloudAccountsSection onClose={pop} />)} />
             </div>
           </>
