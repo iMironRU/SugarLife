@@ -191,6 +191,28 @@ export async function checkNativeUpdate(): Promise<NativeUpdateInfo | 'error'> {
   }
 }
 
+/* Установка обновления в одно нажатие (SugarLife#269).
+
+   Нативный плагин качает файл сам и отдаёт его системному установщику. Человеку
+   остаётся одно подтверждение вместо четырёх шагов: открылся браузер, скачалось, найди
+   в «Загрузках», открой.
+
+   Тихой установки это не даёт и дать не может: право заменить пакет без диалога Android
+   выдаёт только владельцу устройства. Поэтому и в тексте кнопки ничего про «само» не
+   обещаем.
+
+   Плагина нет — падаем на прежний путь через браузер: старая сборка, которую как раз и
+   обновляют, о новом плагине не знает. */
+export async function installApk(url: string): Promise<'начали' | 'нет плагина' | 'ошибка'> {
+  const плагин = (Capacitor as unknown as {
+    Plugins?: { ApkUpdater?: { install(o: { url: string }): Promise<void> } };
+  }).Plugins?.ApkUpdater ?? (window as unknown as {
+    Capacitor?: { Plugins?: { ApkUpdater?: { install(o: { url: string }): Promise<void> } } };
+  }).Capacitor?.Plugins?.ApkUpdater;
+  if (!плагин) return 'нет плагина';
+  try { await плагин.install({ url }); return 'начали'; } catch { return 'ошибка'; }
+}
+
 // Открыть скачивание APK во внешнем браузере — Android скачает файл, дальше
 // пользователь подтверждает установку системным установщиком пакетов.
 export function openApkDownload(url: string): void {
