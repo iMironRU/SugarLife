@@ -38,6 +38,10 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Установка обновления из приложения (#269). Тихой установки это НЕ даёт: система
+         всё равно спросит подтверждение. Даёт одно нажатие вместо четырёх шагов через
+         браузер и «Загрузки». -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Foreground-сервис фонового мониторинга + его уведомление (Android 13+). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />

@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { resetLocalData } from '@/settings/reset';
 import { unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
 import { useTheme } from '../theme/useTheme';
-import { APP_EDITION, APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload, ВЫПУСКАЕТСЯ_APK } from '@/platform/appUpdate';
+import { APP_EDITION, APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload, installApk, ВЫПУСКАЕТСЯ_APK } from '@/platform/appUpdate';
 import { useStack } from '@/app/stackCtx';
 import { useHealth } from '@/settings/health';
 import { поВажности } from '@/domain/screenings';
@@ -238,7 +238,13 @@ export default function Profile() {
               <div className="about-build">сборка {APP_BUILD}{isNative ? ' · нативное' : ' · PWA'}</div>
             </div>
             {apkUrl ? (
-              <button className="about-update accent" onClick={() => openApkDownload(apkUrl)}>
+              <button className="about-update accent" onClick={async () => {
+                /* Сначала пробуем поставить сами (#269), и только если плагина нет —
+                   открываем браузер. Порядок именно такой: браузерный путь работает
+                   всегда, но требует от человека найти файл в «Загрузках». */
+                const итог = await installApk(apkUrl);
+                if (итог !== 'начали') openApkDownload(apkUrl);
+              }}>
                 <IonIcon icon={downloadOutline} />
                 Скачать APK
               </button>
