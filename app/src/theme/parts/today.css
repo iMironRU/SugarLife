@@ -336,6 +336,9 @@
   border: 1px solid color-mix(in srgb, var(--c-carb) 26%, transparent);
 }
 .slot-src { border-top: 1px solid var(--color-neutral-800); }
+/* Пояснение внутри карточки живёт по её отступам, а не по общим: без этого «источников
+   нет» уезжало к самому краю и выглядело вывалившимся из карточки. */
+.slot-src .metric-note { margin: 0; padding: 12px 14px; }
 .src-tag {
   flex: 0 0 auto; font-size: 10.5px; padding: 3px 7px; border-radius: 7px;
   color: var(--color-neutral-400); border: 1px solid var(--color-neutral-700);
