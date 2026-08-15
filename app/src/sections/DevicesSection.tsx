@@ -26,7 +26,10 @@ import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
 /* Профиль → «Устройства» — отдельный полноэкранный раздел (не вложенная секция), как в
    docs/CONNECT-UX.md §10 «Карта интерфейса». Группировка по классу устройства (§2a: реестр).
    Детали (резервуар/батарея и т.п.) показываем только когда данные реально есть — честно. */
-export default function DevicesSection({ onClose }: { onClose: () => void }) {
+/* Раздел живёт вкладкой внутри «Устройств и данных» (SugarLife#279). */
+export default function DevicesSection({ onClose, встроенный }: {
+  onClose?: () => void; встроенный?: boolean;
+}) {
   const { push, pop } = useStack();
   const { data } = useStore();
   const devCfg = useDeviceConfig();
@@ -94,8 +97,8 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
   const рядом = рядомЖелезо(снимок, сейчас);
   const мост = (h: Parameters<typeof имяЖелезки>[0]) => мостЖелезки(h, снимок);
 
-  return (
-    <Section title="Устройства" subtitle="Профиль · Устройства" onBack={onClose}>
+  const тело = (
+    <>
         {железо.length > 0 && (
           <>
             <div className="section-label sec первый">Мои устройства</div>
@@ -214,6 +217,13 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
           <Row icon={helpCircleOutline} title="Проверить / записать по модели" onClick={() => setReqOpen(true)} />
         </div>
         <RequirementsCatalogSheet isOpen={reqOpen} onClose={() => setReqOpen(false)} />
+    </>
+  );
+
+  if (встроенный) return тело;
+  return (
+    <Section title="Устройства" subtitle="Профиль · Устройства" onBack={onClose ?? (() => {})}>
+      {тело}
     </Section>
   );
 }

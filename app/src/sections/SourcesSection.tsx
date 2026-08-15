@@ -21,12 +21,16 @@ import {
    оба одним местом (#230, #247). */
 const СЛОТЫ: Слот[] = ['сахар', 'инсулин', 'углеводы'];
 
-export default function SourcesSection({ onClose }: { onClose: () => void }) {
+/* Раздел живёт вкладкой внутри «Устройств и данных» (SugarLife#279): своя шапка там не
+   нужна — она стала бы второй под настоящей. */
+export default function SourcesSection({ onClose, встроенный }: {
+  onClose?: () => void; встроенный?: boolean;
+}) {
   const snap = useSnapshot();
   const [раскрыт, setРаскрыт] = useState<Слот | null>('сахар');
 
-  return (
-    <Section title="Откуда берутся данные" subtitle="Профиль · Источники" onBack={onClose}>
+  const тело = (
+    <>
       <div className="sheet-note">
         По этим источникам считается всё: активный инсулин, активные углеводы, прогноз и
         разбор.
@@ -113,6 +117,13 @@ export default function SourcesSection({ onClose }: { onClose: () => void }) {
         Здесь заряд, прошивка и «отпустить». Отвечает на «работает ли прибор», а не на
         «откуда цифры»: это разные вопросы.
       </div>
+    </>
+  );
+
+  if (встроенный) return тело;
+  return (
+    <Section title="Откуда берутся данные" subtitle="Профиль · Источники" onBack={onClose ?? (() => {})}>
+      {тело}
     </Section>
   );
 }

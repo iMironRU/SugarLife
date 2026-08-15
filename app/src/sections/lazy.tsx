@@ -50,7 +50,7 @@ function ленивый<P extends object>(
   return Обёртка;
 }
 
-export const DevicesSection = ленивый<{ onClose: () => void }>(
+export const DevicesSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
   () => import('./DevicesSection'), 'Устройства');
 export const HealthSection = ленивый<{ onClose: () => void }>(
   () => import('./HealthSection'), 'Здоровье');
@@ -72,7 +72,10 @@ export const BasalProfileSection = ленивый<{ onClose: () => void }>(
 export const LoopSetupSection = ленивый<{ onClose: () => void }>(
   () => import('./LoopSetupSection'), 'Профиль петли');
 
-export const SourcesSection = ленивый<{ onClose: () => void }>(
+export const DataDevicesSection = ленивый<{ onClose: () => void }>(
+  () => import('./DataDevicesSection'), 'Устройства и данные');
+
+export const SourcesSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
   () => import('./SourcesSection'), 'Откуда берутся данные');
 
 export const CloudAccountsSection = ленивый<{ onClose: () => void }>(

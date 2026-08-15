@@ -1,14 +1,12 @@
 import { IonIcon } from '@ionic/react';
-import { DevicesSection, DiagnosticsSection, HealthSection, LoopSetupSection, ServicesSection, SourcesSection } from '@/sections/lazy';
+import { DiagnosticsSection, HealthSection, LoopSetupSection, DataDevicesSection } from '@/sections/lazy';
 import {
   downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
-  hardwareChipOutline, cloudOutline, repeat, documentTextOutline, heartOutline, pulseOutline,
+  hardwareChipOutline, repeat, documentTextOutline, heartOutline,
 } from 'ionicons/icons';
 import { useState, useEffect } from 'react';
-import { useStore } from '@/sources/store';
 import { resetLocalData } from '@/settings/reset';
-import { useClouds } from '@/sources/clouds';
 import { unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
 import { useTheme } from '../theme/useTheme';
 import { APP_EDITION, APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload, ВЫПУСКАЕТСЯ_APK } from '@/platform/appUpdate';
@@ -24,10 +22,7 @@ import UnitsModal from '@/sheets/UnitsModal';
 import CarbUnitsModal from '@/sheets/CarbUnitsModal';
 import Screen from '@/ui/Screen';
 
-const DASH = '—';
-
 export default function Profile() {
-  const { status } = useStore();
   const { theme, setTheme } = useTheme();
   const unit = useUnit();
   const [unitsOpen, setUnitsOpen] = useState(false);
@@ -38,13 +33,6 @@ export default function Profile() {
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
 
-  const clouds = useClouds();
-  const enabledClouds = clouds.filter((c) => c.enabled);
-  const cloudsValue = clouds.length === 0 ? 'нет облаков'
-    : enabledClouds.length === 0 ? 'выкл'
-    : status === 'ok' ? (enabledClouds.length > 1 ? `${enabledClouds.length} подключено` : 'подключено')
-    : status === 'loading' ? 'подключение…'
-    : (status === 'error' || status === 'stale') ? 'нет связи' : DASH;
 
   const reset = () => {
     if (!window.confirm('Сбросить настройки? С этого устройства будут удалены облака, записанные устройства и локальная история глюкозы.')) return;
@@ -202,19 +190,12 @@ export default function Profile() {
                 внутри раздела, и на вопрос «а что у меня подключено» не отвечал: за
                 ответом надо было открывать. Самый быстрый взгляд — тот, ради которого
                 никуда не переходят. */}
-            {/* Источники — первым в хозяйстве (#277): сюда приходят с вопросом «почему
-                цифры такие», и он возникает чаще, чем «что у меня есть». */}
-            <Row icon={pulseOutline} title="Откуда берутся данные"
-              sub="сахар, инсулин, углеводы — кто их наполняет"
-              onClick={() => push(<SourcesSection onClose={pop} />)} />
-            <Row icon={hardwareChipOutline} title="Помпа, сенсоры, глюкометр, петля"
+            {/* Одна дверь в хозяйство вместо трёх (#279): источники, приборы и облака
+                лежали порознь, и человеку приходилось выбирать дверь до того, как он
+                понял, что ищет. Внутри — две вкладки, потому что вопросы разные. */}
+            <Row icon={hardwareChipOutline} title="Устройства и данные"
               sub={устройства} value={нуженМост ? 'нужен мост' : undefined}
-              onClick={() => push(<DevicesSection onClose={pop} />)} />
-            {/* облако — такой же транспорт, как мост, только со своими настройками
-                (URL/токен) и статусом (доступность/связь) вместо сигнала и батареи */}
-            <Row icon={cloudOutline} title="Облака" sub="Nightscout и другие источники"
-              value={cloudsValue}
-              onClick={() => push(<ServicesSection onClose={pop} />)} />
+              onClick={() => push(<DataDevicesSection onClose={pop} />)} />
             {/* профиль петли: только настройка — подача не включается (решение 0004) */}
             <Row icon={repeat} title="Профиль петли" sub={loopSub}
               onClick={() => push(<LoopSetupSection onClose={pop} />)} />
