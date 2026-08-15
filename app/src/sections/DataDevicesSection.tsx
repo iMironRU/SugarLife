@@ -1,9 +1,6 @@
 import { useState } from 'react';
 import Section from '@/ui/Section';
-import Row from '@/ui/Row';
-import { cloudOutline } from 'ionicons/icons';
-import { useStack } from '@/app/stackCtx';
-import { ServicesSection } from '@/sections/lazy';
+import ServicesSection from './ServicesSection';
 import SourcesSection from './SourcesSection';
 import DevicesSection from './DevicesSection';
 
@@ -22,13 +19,17 @@ import DevicesSection from './DevicesSection';
    Поэтому вкладки, а не общий список: дверь одна, комнаты две. */
 const ВКЛАДКИ = [
   { key: 'данные', label: 'Откуда данные' },
-  { key: 'приборы', label: 'Мои приборы' },
+  { key: 'приборы', label: 'Приборы' },
+  /* Облака третьей вкладкой, а не подвалом «Приборов». Работа с ними другая: адрес,
+     токен, учётная запись, «что отсюда забираем» — ни одного действия из тех, что
+     делают с железкой. Внизу списка приборов они выглядели придатком, хотя у многих
+     людей облако — единственный источник вообще. */
+  { key: 'облака', label: 'Облака' },
 ] as const;
 type Вкладка = typeof ВКЛАДКИ[number]['key'];
 
 export default function DataDevicesSection({ onClose }: { onClose: () => void }) {
   const [вкладка, setВкладка] = useState<Вкладка>('данные');
-  const { push, pop } = useStack();
 
   return (
     <Section title="Устройства и данные" subtitle="Профиль · Хозяйство" onBack={onClose}
@@ -41,20 +42,8 @@ export default function DataDevicesSection({ onClose }: { onClose: () => void })
         </div>
       )}>
       {вкладка === 'данные' && <SourcesSection встроенный />}
-      {вкладка === 'приборы' && (
-        <>
-          <DevicesSection встроенный />
-          {/* Облака здесь же: это такой же источник, просто без батареи и без эфира.
-              Отдельной дверью в Профиле они были ровно потому, что раньше «источник»
-              и «прибор» лежали в разных местах. */}
-          <div className="section-label sec">Облака</div>
-          <div className="list">
-            <Row icon={cloudOutline} title="Nightscout и другие"
-              sub="адрес, токен, что из них забираем"
-              onClick={() => push(<ServicesSection onClose={pop} />)} />
-          </div>
-        </>
-      )}
+      {вкладка === 'приборы' && <DevicesSection встроенный />}
+      {вкладка === 'облака' && <ServicesSection встроенный />}
     </Section>
   );
 }

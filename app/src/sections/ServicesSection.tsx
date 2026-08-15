@@ -10,7 +10,10 @@ import { useStack } from '@/app/stackCtx';
 /* Профиль → «Сервисы» — отдельный полноэкранный раздел (docs/CONNECT-UX.md §10,
    §2b). Список облаков, а не одно поле: можно держать несколько Nightscout одновременно
    (свой + партнёра), у каждого — своя роль («забираем» глюкозу и/или статус помпы). */
-export default function ServicesSection({ onClose }: { onClose: () => void }) {
+/* Раздел живёт вкладкой внутри «Устройств и данных» (SugarLife#279). */
+export default function ServicesSection({ onClose, встроенный }: {
+  onClose?: () => void; встроенный?: boolean;
+}) {
   const clouds = useClouds();
   const { push, pop } = useStack();
   const снимок = useSnapshot();
@@ -39,8 +42,8 @@ export default function ServicesSection({ onClose }: { onClose: () => void }) {
     );
   };
 
-  return (
-    <Section title="Сервисы" subtitle="Профиль · Сервисы" onBack={onClose}>
+  const тело = (
+    <>
         <div className="sheet-note">
           Облако — такой же способ подключения, как мост, только со своими адресом/токеном.
           Можно держать несколько одновременно, у каждого своя роль в «Забираем отсюда».
@@ -77,6 +80,13 @@ export default function ServicesSection({ onClose }: { onClose: () => void }) {
             </div>
           </>
         )}
+    </>
+  );
+
+  if (встроенный) return тело;
+  return (
+    <Section title="Сервисы" subtitle="Профиль · Сервисы" onBack={onClose ?? (() => {})}>
+      {тело}
     </Section>
   );
 }

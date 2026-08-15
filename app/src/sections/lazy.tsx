@@ -57,7 +57,7 @@ export const HealthSection = ленивый<{ onClose: () => void }>(
 export const VisitNoteSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
   () => import('./VisitNoteSection'), 'Отчёт к приёму');
 
-export const ServicesSection = ленивый<{ onClose: () => void }>(
+export const ServicesSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
   () => import('./ServicesSection'), 'Сервисы');
 
 export const DeviceSection = ленивый<{ onClose: () => void; cat: 'sensor' | 'pump' | 'meter' | 'loop'; title: string }>(
