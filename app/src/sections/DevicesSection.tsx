@@ -3,7 +3,7 @@ import Section from '@/ui/Section';
 import { DeviceSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
 import {
-  hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline,
+  hardwareChipOutline, flash, speedometerOutline, helpCircleOutline,
   bluetoothOutline, radioOutline, searchOutline, playOutline, pauseOutline,
 } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
@@ -200,7 +200,10 @@ export default function DevicesSection({ onClose, встроенный }: {
             value={состояние('sensor')} onClick={() => openCat('sensor')} />
         </div>
 
-        <div className="section-label sec">Глюкометры и петля</div>
+        {/* Петли здесь больше нет (#279). Она не прибор, а режим управления подачей:
+            у неё нет ни связи, ни батареи, ни «забыть». Её место — рядом с профилем
+            петли, где задают полномочия, а не среди железа. */}
+        <div className="section-label sec">Глюкометр</div>
         <div className="list">
           {/* Значение строки обязано совпадать с тем, что человек найдёт внутри (#163).
               Здесь стояло «настроить» у обоих, а внутри — «в разработке»: у глюкометра
@@ -209,8 +212,6 @@ export default function DevicesSection({ onClose, встроенный }: {
               не как «ещё не сделали». */}
           <Row icon={speedometerOutline} title="Глюкометр" value="внести показание"
             onClick={() => openCat('meter')} />
-          <Row icon={repeat} title="Петля" value="в разработке" valueMuted
-            onClick={() => openCat('loop')} />
         </div>
 
         <div className="list" style={{ marginTop: 12 }}>
