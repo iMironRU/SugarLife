@@ -69,6 +69,9 @@ export const CloudSection = ленивый<{ cloudId: string; onClose: () => voi
 export const BasalProfileSection = ленивый<{ onClose: () => void }>(
   () => import('./BasalProfileSection'), 'Базальный профиль');
 
+export const LoopSection = ленивый<{ onClose: () => void }>(
+  () => import('./LoopSection'), 'Петля');
+
 export const LoopSetupSection = ленивый<{ onClose: () => void }>(
   () => import('./LoopSetupSection'), 'Профиль петли');
 

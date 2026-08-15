@@ -1,5 +1,5 @@
 import { IonIcon } from '@ionic/react';
-import { DiagnosticsSection, HealthSection, LoopSetupSection, DataDevicesSection } from '@/sections/lazy';
+import { DiagnosticsSection, HealthSection, LoopSection, DataDevicesSection } from '@/sections/lazy';
 import {
   downloadOutline,
   optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
@@ -197,8 +197,8 @@ export default function Profile() {
               sub={устройства} value={нуженМост ? 'нужен мост' : undefined}
               onClick={() => push(<DataDevicesSection onClose={pop} />)} />
             {/* профиль петли: только настройка — подача не включается (решение 0004) */}
-            <Row icon={repeat} title="Профиль петли" sub={loopSub}
-              onClick={() => push(<LoopSetupSection onClose={pop} />)} />
+            <Row icon={repeat} title="Петля" sub={loopSub}
+              onClick={() => push(<LoopSection onClose={pop} />)} />
             {/* Здоровье — рядом с железом и петлёй по той же причине: это «моё,
                 работающее», просто не про приборы, а про то, что знает сам человек
                 и записывает врач (#156). */}
