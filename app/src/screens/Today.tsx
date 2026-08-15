@@ -15,6 +15,12 @@ import { useОтложения, показывать, прибрать } from '@
 import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
+import { useSnapshot } from '@/sources/bridge';
+import { useHealth } from '@/settings/health';
+import { устройствоРоли } from '@/domain/deviceState';
+import { хватитЛи } from '@/domain/reservoirForecast';
+import { toSegs } from '@/domain/basal';
+import { deviceAges } from '@/domain/treatmentStats';
 import { reservoirStats } from '@/domain/treatmentStats';
 import { batteryRuntime, BATTERY_KINDS } from '@/domain/battery';
 import { detectRefill } from '@/domain/refill';
@@ -56,6 +62,8 @@ export default function Today() {
   const changes = useChanges();
   const meals = useMeals();
   const rstat = reservoirStats(extras.devHist);
+  const снимок = useSnapshot();
+  const здоровье = useHealth();
   /* История заряда копится в своей базе: в облаке за один запрос доступны последние
      часы, а один цикл разряда занимает недели (sources/db.ts, putBatteryPoints). */
   const [bhist, setBhist] = useState<Plateau[]>([]);
@@ -127,6 +135,34 @@ export default function Today() {
   // рекомендуем заменить заранее, чтобы подача не прервалась во сне. Оценка (≈).
   const reservoir = dev?.reservoir ?? rstat.current ?? null;
   const hoursLeft = reservoir != null && extras.tdd ? reservoir / (extras.tdd / 24) : null;
+
+  /* Прогноз «хватит ли до утра» (#280) — вместо счёта по средней скорости.
+
+     Средняя не знает ни базала именно этих часов, ни коррекций при высоком сахаре, ни
+     стоимости заправки. Считаем пессимистично и отвечаем не часами, а состоянием: часы
+     скачут на каждом болюсе, а «до утра не хватит» — решение, которое принимают один раз.
+
+     Остаток берём из снимка числом (rev 1.11) вместе со временем чтения: помпа могла
+     молчать час, и за этот час она подавала. Числа нет — падаем на прежнюю оценку по
+     средней: она хуже, но лучше молчания. */
+  const помпаСнимка = устройствоРоли(снимок, 'pump');
+  const сегментыБазала = снимок?.pumpBasal?.segments
+    ?? toSegs(data?.profile?.basalSchedule ?? [])
+      .map((с) => ({ startMinutes: Math.round(с.a * 60), rateUPerHour: с.v }));
+  const возрасты = deviceAges(extras.events, changes);
+  const прогнозРезервуара = хватитЛи({
+    остаток: помпаСнимка?.reservoirU ?? reservoir,
+    прочитаноМс: помпаСнимка?.reservoirAtMs ?? null,
+    сейчасМс: Date.now(),
+    сегменты: сегментыБазала,
+    подъём: здоровье.режим?.подъём ?? null,
+    /* Коррекции ждём, когда сахар высокий: именно этого средняя и не видела — ночь на
+       двенадцати с ростом стоит нескольких единиц сверх базала. */
+    ждёмКоррекций: (data?.latest?.mmol ?? 0) >= 10,
+    /* Заправка: канюле третий день — значит смена случится ночью или утром, и её
+       пятнадцать единиц надо иметь заранее. */
+    ждёмЗаправку: (возрасты.site?.days ?? 0) >= 2,
+  });
   let nightEmpty: Date | null = null;
   if (hoursLeft != null && hoursLeft > 0 && hoursLeft < 14) {
     const e = new Date(Date.now() + hoursLeft * 3600e3);
@@ -333,12 +369,32 @@ export default function Today() {
             </Notice>
           )}
 
-          {/* окончание резервуара придётся на ночь — поменять заранее */}
-          {nightEmpty && виденРезервуар && (
+          {/* Не хватит до утра (#280).
+
+              Раньше здесь стояла оценка по средней скорости и фраза «закончится ночью
+              (~03:40)». Точное время в такой оценке — обещание, которого она не может
+              выполнить: средняя не знает ни базала этих часов, ни коррекций, ни
+              заправки. Теперь считается пессимистичная сумма до подъёма, а сказано то,
+              что человеку и нужно решить: менять сейчас или нет.
+
+              Прежний расчёт остался запасным — для случая, когда времени подъёма мы не
+              знаем: молчать там нельзя, а сказать точнее нечем. */}
+          {прогнозРезервуара.прогноз === 'не хватит до утра' && виденРезервуар && (
+            <Notice id="reservoir-night" вид="предупреждение" значок={moonOutline}
+              заголовок="До утра инсулина не хватит"
+              отложить={() => отложить('reservoir', эпРезервуар, Math.round(-(hoursLeft ?? 0)))}>
+              До подъёма нужно ≈{Math.round(прогнозРезервуара.нужно ?? 0)} ед — с запасом на
+              коррекции и заправку. Замените резервуар сейчас, чтобы подача не прервалась во сне.
+            </Notice>
+          )}
+
+          {/* Запасной путь: времени подъёма не знаем — считаем как раньше, по средней. */}
+          {прогнозРезервуара.прогноз === 'неизвестно' && nightEmpty && виденРезервуар && (
             <Notice id="reservoir-night" вид="предупреждение" значок={moonOutline}
               заголовок={`Инсулина ≈${Math.round(hoursLeft as number)} ч — закончится ночью (~${emptyTime})`}
               отложить={() => отложить('reservoir', эпРезервуар, Math.round(-(hoursLeft ?? 0)))}>
-              Замените резервуар заранее, чтобы подача не прервалась во сне. Оценка по среднему расходу.
+              Замените резервуар заранее, чтобы подача не прервалась во сне. Оценка по среднему
+              расходу — укажите время подъёма в «Здоровье», и счёт станет точнее.
             </Notice>
           )}
 
