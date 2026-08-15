@@ -1,11 +1,12 @@
 import { IonIcon } from '@ionic/react';
-import { chevronBack, checkmarkCircle, closeCircle, alertCircle, lockClosedOutline, createOutline } from 'ionicons/icons';
+import { checkmarkCircle, closeCircle, alertCircle, lockClosedOutline, createOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useDeviceConfig, isModelKnown } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
 import HoldButton from '@/ui/HoldButton';
 import Section from '@/ui/Section';
+import { useДочитано } from '@/ui/useДочитано';
 import {
   LOOP_MODES, limitsFor, outOfRec, anyOutOfRec, fmtLimit,
   useLoopProfile, saveLoopProfile, type LoopModeId, type LoopLimit,
@@ -64,70 +65,58 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
 
   const apply = () => { saveLoopProfile({ savedAt: Date.now() }); setDone(true); };
 
-  const canNext = step !== 1 || picked != null;
+  /* Шаг «Деградация» — единственный, где «Далее» ждёт прочтения (#261). Настроек там
+     нет ни одной, только последствия: что произойдёт, когда пропадут данные НМГ или
+     разойдутся часы помпы. Пролиставший их за секунду узнает об этом в момент, когда
+     оно случится. На остальных шагах запирать нечего — человек там выбирает, а не
+     читает, и лишний барьер научил бы его проматывать не глядя. */
+  const { конец, дочитано } = useДочитано<HTMLDivElement>(step);
+  const ждётПрочтения = step === 3 && !дочитано;
+  const canNext = (step !== 1 || picked != null) && !ждётПрочтения;
 
+  /* Мастер живёт в обычной шапке раздела (SugarLife#259).
+
+     Раньше у него была своя: шаги вместо заголовка сверху и закреплённый низ с «Назад»
+     и «Далее». Низ съедал полосу экрана на каждом шаге ради двух кнопок — при том что
+     содержимого на шаге часто было в половину экрана, а на «Проверке» под сводкой
+     оставалось пусто.
+
+     Теперь навигация симметрична и вся в шапке: слева шаг назад, справа шаг вперёд.
+     Стрелка слева на первом шаге означает выход — то же, что и во всех разделах, и
+     ровно то, что человек от неё ждёт; отдельной кнопки «Закрыть» больше нет нигде.
+
+     Шаги переехали под заголовок, где у разделов живёт подзаголовок: они и есть
+     уточнение «где я сейчас», а полоса прогресса — то же самое картинкой.
+
+     Применение осталось в теле последнего шага, а не уехало в шапку: оно весомее
+     навигации, требует удержания и должно стоять там, где человек читает, что именно
+     применяет. */
   return (
     <Section
-      onBack={close}
+      onBack={step > 0 ? () => { setStep((step - 1) as Step); setEditing(null); } : close}
       className="wz"
-      /* Шаги вместо заголовка — это содержимое заголовочной области, а не повод
-         строить свою страницу: иначе следующий мастер построит четвёртую (#162). */
-      head={(
-        <>
-          <div className="wz-top">ШАГ {step + 1} ИЗ 5 · {STEPS[step].toUpperCase()}</div>
-          <div className="wz-prog">
-            {STEPS.map((s, i) => (
-              <span key={s} className={'wz-dot' + (i < step ? ' passed' : i === step ? ' on' : '')} />
-            ))}
-          </div>
-        </>
-      )}
-      footer={(
-        <div className="page-foot">
-          <div className="wz-nav">
-            {done ? (
-              <button className="page-next" onClick={close}>Понятно</button>
-            ) : (
-              <>
-                {/* На первом шаге низа слева нет вовсе.
-
-                    Там стояло «Закрыть» — второй выход на том же экране, при живой
-                    стрелке сверху. Человек учится не правилу, а месту: если в одном
-                    разделе выход внизу, а в остальных вверху, он каждый раз ищет
-                    заново. Хуже другое — со второго шага та же кнопка называется
-                    «Назад» и означает уже другое, то есть одно место меняет смысл
-                    между шагами (#175).
-
-                    Теперь «Назад» внизу значит ровно шаг назад и никогда — выход;
-                    выход один на всё приложение, стрелкой сверху. */}
-                {step > 0 && (
-                  <button className="page-back" onClick={() => { setStep((step - 1) as Step); setEditing(null); }}>
-                    <IonIcon icon={chevronBack} />
-                    Назад
-                  </button>
-                )}
-                {step < 4 ? (
-                  <button className="page-next" disabled={!canNext} onClick={() => { setStep((step + 1) as Step); setEditing(null); }}>
-                    Далее
-                  </button>
-                ) : (
-                  <HoldButton
-                    label={needDoctor && !profile.doctorOk ? 'Требуется подтверждение' : 'Удерживайте, чтобы применить'}
-                    disabled={needDoctor && !profile.doctorOk}
-                    onComplete={apply}
-                  />
-                )}
-              </>
-            )}
-          </div>
+      title={done ? 'Готово' : STEPS[step]}
+      /* Запертая кнопка обязана объяснять себя: без подписи «Далее» просто не
+         нажимается, и это выглядит поломкой, а не условием. */
+      subtitle={done ? 'профиль записан'
+        : ждётПрочтения ? 'дочитайте до конца' : `Шаг ${step + 1} из 5`}
+      подШапкой={!done ? (
+        <div className="wz-prog">
+          {STEPS.map((s, i) => (
+            <span key={s} className={'wz-dot' + (i < step ? ' passed' : i === step ? ' on' : '')} />
+          ))}
         </div>
-      )}
+      ) : undefined}
+      действие={!done && step < 4 ? (
+        <button className="head-next" disabled={!canNext}
+          onClick={() => { setStep((step + 1) as Step); setEditing(null); }}>
+          Далее
+        </button>
+      ) : done ? (
+        <button className="head-next" onClick={close}>Понятно</button>
+      ) : undefined}
     >
 
-        <div className="wz-l0">
-          <IonIcon icon={lockClosedOutline} />
-          <span>Сейчас L0: команды в помпу не отправляются. Это настройка профиля, не включение подачи.</span>
-        </div>
 
         {done ? (
           <>
@@ -304,6 +293,8 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
                     Полное прекращение подачи опасно так же, как избыток. Крайняя мера — вернуть управление профилю помпы.
                   </div>
                 </div>
+                {/* Метка конца: пока она не показалась на экране, «Далее» заперта. */}
+                <div ref={конец} />
               </>
             )}
 
@@ -327,6 +318,24 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
                     <span>Часть значений вне рекомендованного диапазона. Подтверждаю согласование с лечащим врачом.</span>
                   </button>
                 )}
+                {/* «Ничего не уйдёт в помпу» сказано один раз и здесь.
+
+                    Раньше эта плашка висела на каждом из пяти шагов и первой занимала
+                    экран. Повторённое пять раз перестаёт читаться к третьему, а место
+                    отнимает на всех. Но и выбросить совсем нельзя: единственное место,
+                    где человек может решить, что сейчас включит подачу, — кнопка
+                    удержания, и предупреждение должно стоять ровно над ней. */}
+                <div className="wz-l0">
+                  <IonIcon icon={lockClosedOutline} />
+                  <span>Приложение на L0: команды в помпу не отправляются. Это запись профиля, не включение подачи.</span>
+                </div>
+                <div className="wz-apply">
+                  <HoldButton
+                    label={needDoctor && !profile.doctorOk ? 'Требуется подтверждение' : 'Удерживайте, чтобы применить'}
+                    disabled={needDoctor && !profile.doctorOk}
+                    onComplete={apply}
+                  />
+                </div>
               </>
             )}
           </>

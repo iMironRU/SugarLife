@@ -121,7 +121,12 @@
 
 /* Ответы в строку. Переносятся, а не сжимаются: «Картридж и набор» на узком экране
    должен уехать на вторую строку целиком, а не превратиться в «Картридж и…». */
-.alert-ask-row { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Внутри обращения ряд действий приходится объявлять с оглядкой на `.today-alert span`
+   (строка выше): у того селектора вес больше, и он возвращал ряду display:block. Пока
+   действие было одно, это не проявлялось никак; с двумя кнопки слипались вплотную —
+   gap у блока не работает, а разделять их было нечем. */
+.alert-ask-row,
+.today-alert .alert-ask-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .alert-ask-row .changed-btn { margin-top: 6px; }
 
 /* «Отдать устройства»: действие в моменте, поэтому живёт среди подсветок, но выглядит
@@ -246,3 +251,49 @@
 .snooze-btn:active { background: var(--color-neutral-800); }
 /* Внутри подсветки без строки ответов кнопка стоит одна — отделяем её от текста. */
 .today-alert > div > .snooze-btn { display: inline-block; }
+
+/* Адрес железки в эфире (#251). Тише подписи намеренно: он нужен, только когда приборов
+   два одинаковых, и в остальное время не должен спорить с именем за внимание. */
+.dev-addr {
+  display: block; margin-top: 2px;
+  font-size: 11px; letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-dim, #6f7285);
+}
+
+/* Значок непрочитанного на вкладке «Метрики» (#255). Маленький и без обводки: он
+   сообщает, что есть новое, а не требует нажать немедленно. Позиция абсолютная, чтобы
+   не двигать значок вкладки — прыгающая иконка читается как сбой. */
+.tab-badge {
+  position: absolute; top: 4px; left: 50%; margin-left: 4px;
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600; line-height: 1;
+  background: var(--color-accent); color: var(--color-neutral-950, #12131c);
+}
+.tab { position: relative; }
+
+/* Переключатель разделов на «Метриках» (#255) — вкладки, а не сегменты.
+
+   Формой он отличается от строки периода намеренно: под ним, внутри раздела «Метрики»,
+   стоит точно такой же ряд сегментов, и два одинаковых элемента подряд читались бы как
+   один составной фильтр. Пилюли выбирают срез данных, подчёркнутые вкладки — переносят
+   между экранами; разная работа должна выглядеть по-разному.
+
+   Сорок четыре пикселя высоты — по правилу касания: это главная навигация экрана, и
+   промахиваться в ней человек будет чаще всего. */
+.sec-switch {
+  display: flex; gap: 2px; margin: 0 0 12px; padding: 0;
+  background: none; border: 0;
+  border-bottom: 1px solid var(--color-neutral-800);
+}
+.sec-switch .period-seg {
+  flex: 1; min-height: 44px; padding: 0 6px; border-radius: 0;
+  background: none; border: 0; box-shadow: none;
+  font-size: 14px; font-weight: 500; color: var(--color-neutral-400);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.sec-switch .period-seg.on {
+  background: none; color: var(--color-text); font-weight: 600;
+  border-bottom-color: var(--color-accent);
+}

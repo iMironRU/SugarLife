@@ -17,6 +17,8 @@ import InstallPrompt from '@/ui/InstallPrompt';
 import HeroPanel from '@/app/HeroPanel';
 import { useStore } from '@/sources/store';
 import { useSnapshot } from '@/sources/bridge';
+import { useAnalysis, непрочитанныеВажные } from '@/domain/useAnalysis';
+import { useSeenInsights } from '@/settings/seenInsights';
 import { diffBleActivity } from '@/sources/bleActivity';
 import { checkBridgeBattery } from '@/settings/bridgeAlerts';
 import { detectTherapy } from '@/domain/therapy';
@@ -109,10 +111,18 @@ function Pager() {
   );
 }
 
-function TabBar({ insIcon }: { insIcon: string }) {
+/* Счётчик непрочитанного важного переехал сюда с плитки «Разбор» (#255).
+
+   Плитку с «Сегодня» убрали, и вместе с ней исчез бы единственный признак того, что в
+   разборе появилось что-то новое. Молча потерять сигнал хуже, чем оставить плитку:
+   человек не знает, что не знает.
+
+   Считаем НЕПРОЧИТАННОЕ, а не всё важное: постоянная цифра через неделю означает ноль —
+   на неё перестают смотреть, и настоящую беду не отличат от привычного числа. */
+function TabBar({ insIcon, новых }: { insIcon: string; новых: number }) {
   const idx = useTab();
   const tabs = [
-    { i: 0, label: 'Метрики', icon: barChart },
+    { i: 0, label: 'Метрики', icon: barChart, badge: новых },
     { i: 1, label: 'НМГ', icon: pulse },
     { i: 2, label: 'Сегодня', icon: home },
     { i: 3, label: 'Инсулин', icon: insIcon },
@@ -123,6 +133,7 @@ function TabBar({ insIcon }: { insIcon: string }) {
       {tabs.map((t) => (
         <button key={t.i} className={'tab' + (idx === t.i ? ' on' : '')} onClick={() => pressTab(t.i)}>
           <IonIcon icon={t.icon} />
+          {!!t.badge && <span className="tab-badge">{t.badge}</span>}
           <span>{t.label}</span>
         </button>
       ))}
@@ -176,6 +187,13 @@ export default function App() {
   // шим, и при выключенном NS данных нет → показываем экран подключения как раньше.
   const bridgeHasData = !!snap && snap.monitor.glucose !== '—' && snap.monitor.glucose !== '';
 
+  /* Сколько важного в разборе человек ещё не видел — для значка на вкладке «Метрики».
+     Расчёт общий с самим разбором и попадает в те же кэши: второго чтения базы не
+     происходит (domain/useAnalysis.ts). */
+  const { analysis } = useAnalysis(14);
+  const виденные = useSeenInsights();
+  const новыхНаходок = непрочитанныеВажные(analysis, виденные);
+
   // Онбординг — главный путь, но не стена (CONNECT-UX §7): показываем, пока ничего не
   // подключено И человек его ещё не прошёл/не пропустил. Пропустил → приложение с прочерками.
   if (status === 'off' && !bridgeHasData && !onboarded) {
@@ -188,7 +206,7 @@ export default function App() {
       <div className="app-shell">
         <HeroPanel />
         <Pager />
-        <TabBar insIcon={insIcon} />
+        <TabBar insIcon={insIcon} новых={новыхНаходок} />
       </div>
       <InstallPrompt />
     </IonApp>

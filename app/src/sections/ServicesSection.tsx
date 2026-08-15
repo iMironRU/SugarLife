@@ -1,8 +1,9 @@
 import { IonIcon } from '@ionic/react';
-import { CloudSection } from '@/sections/lazy';
+import { CloudSection, CloudAccountsSection } from '@/sections/lazy';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
-import { cloudOutline, addCircleOutline, pulse, flash } from 'ionicons/icons';
+import { useSnapshot } from '@/sources/bridge';
+import { cloudOutline, addCircleOutline, pulse, flash, personCircleOutline } from 'ionicons/icons';
 import { useClouds, addCloud, type CloudConfig } from '@/sources/clouds';
 import { useStack } from '@/app/stackCtx';
 
@@ -12,6 +13,7 @@ import { useStack } from '@/app/stackCtx';
 export default function ServicesSection({ onClose }: { onClose: () => void }) {
   const clouds = useClouds();
   const { push, pop } = useStack();
+  const снимок = useSnapshot();
 
   const openCloud = (id: string) => push(<CloudSection cloudId={id} onClose={pop} />);
 
@@ -55,6 +57,26 @@ export default function ServicesSection({ onClose }: { onClose: () => void }) {
           ))}
           <Row icon={addCircleOutline} title="Добавить облако" chevron={false} onClick={onAdd} />
         </div>
+
+        {/* Учётки вендоров — отдельным входом, а не в том же списке (SugarLifeCore#52).
+
+            Nightscout выше — СВОЙ сервер: адрес, токен, туда пишут. Облако вендора —
+            ЧУЖОЙ: логин с паролем, чаще всего только чтение, и данные там могут
+            принадлежать другому человеку. Сложить их в один список значит попросить
+            человека различать это самому.
+
+            Вход виден, только когда движок отдал каталог: без адаптеров это была бы
+            дверь в пустую комнату. */}
+        {(снимок?.cloudProviders?.length ?? 0) > 0 && (
+          <>
+            <div className="section-label sec">Учётные записи</div>
+            <div className="list">
+              <Row icon={personCircleOutline} title="Облачные учётки"
+                sub="LibreLinkUp, Dexcom Share и другие сервисы производителей"
+                onClick={() => push(<CloudAccountsSection onClose={pop} />)} />
+            </div>
+          </>
+        )}
     </Section>
   );
 }

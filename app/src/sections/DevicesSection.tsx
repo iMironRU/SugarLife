@@ -11,7 +11,10 @@ import { useStore } from '@/sources/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
-import { наширядом, железоДиспетчера, СЛОТ } from '@/domain/nearby';
+import {
+  железоДиспетчера, СЛОТ, рядомЖелезо, мостЖелезки, имяЖелезки, адресВЭфире,
+  заМостомЛи, звеноЦепочки, словоЦепочки,
+} from '@/domain/nearby';
 import { связь, меткаСвязи } from '@/domain/deviceState';
 import { sourceStatusLabel } from '@/domain/sourceStatus';
 import { DiscoverySection } from '@/sections/lazy';
@@ -85,7 +88,11 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
     const id = window.setInterval(() => setСейчас(Date.now()), 15_000);
     return () => window.clearInterval(id);
   }, []);
-  const рядом = наширядом(железо, снимок?.discovered ?? [], сейчас);
+  /* «Рядом» считаем с оглядкой на мост (#251): помпа Medtronic по блютусу не вещает
+     вовсе, и пока OrangeLink молчит, «рядом» про неё — утверждение, которого никто не
+     делал. Правило в domain/nearby.ts. */
+  const рядом = рядомЖелезо(снимок, сейчас);
+  const мост = (h: Parameters<typeof имяЖелезки>[0]) => мостЖелезки(h, снимок);
 
   return (
     <Section title="Устройства" subtitle="Профиль · Устройства" onBack={onClose}>
@@ -98,8 +105,14 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
                    «живой» здесь — просто наша связь с железкой. */
                 const живой = связь(d) === 'live';
                 const близко = рядом.has(d.id);
+                const звено = звеноЦепочки(d, снимок);
+                const мостИмя = мост(d) ? имяЖелезки(мост(d)!) : null;
                 const строка = [
-                  sourceStatusLabel(d.status) ?? меткаСвязи[связь(d)],
+                  /* У железки за мостом состояние описывает цепочка, а не одна метка:
+                     иначе строка сказала бы «нет связи · OrangeLink не на связи» — то же
+                     самое дважды, причём первое без подсказки, что делать. */
+                  звено ? словоЦепочки(звено, мостИмя)
+                    : sourceStatusLabel(d.status) ?? меткаСвязи[связь(d)],
                   /* В каком слоте стоит железка — ответ на «а эта штука вообще
                      работает на что-нибудь». Другой конец той же связки виден у роли
                      (SugarLifeCore#44), и показывать надо оба: человек приходит сюда
@@ -110,13 +123,22 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
                   d.busy === 'possibly' ? 'возможно, занят другим телефоном' : null,
                   близко && !живой ? 'рядом' : null,
                 ].filter(Boolean).join(' · ');
+                /* Адрес в эфире — чтобы различать два одинаковых прибора. Не нашли —
+                   не показываем: выдуманный «серийник» хуже отсутствия. */
+                const адрес = адресВЭфире(d);
                 return (
                   <div key={d.id} className="list-row">
-                    <IonIcon icon={d.kind === 'bridge' ? radioOutline : bluetoothOutline}
+                    {/* Значок — про то, каким способом железка разговаривает С ТЕЛЕФОНОМ,
+                        и раньше он стоял наоборот (SugarLifeCore#50). Мост — блютусный:
+                        это он подключён к телефону. А до помпы блютус не доходит вовсе,
+                        связь с ней радийная и через мост, и синий значок рядом с
+                        «Medtronic 722» был утверждением о том, чего нет. */}
+                    <IonIcon icon={заМостомЛи(d, снимок) ? radioOutline : bluetoothOutline}
                       className={'list-ico' + (живой ? '' : ' muted')} />
                     <span className="pick-main">
                       <span className="list-title">{d.model || d.name}</span>
                       <span className="pick-sub">{строка || 'состояние неизвестно'}</span>
+                      {адрес && <span className="dev-addr">{адрес}</span>}
                     </span>
                     {/* Переподключить предлагаем только когда железка рядом: кнопка,
                         которая заведомо ничего не даст (устройство в другой комнате),
@@ -125,9 +147,13 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
                         подключения ничего не ускоряет, а «Пауза» обрывает то, чего
                         человек как раз ждёт. */}
                     {связь(d) === 'wait' ? null : живой ? (
+                      /* У моста действие называется иначе, потому что оно и есть иное.
+                         «Пауза» — про приостановку работы; у моста смысл в том, чтобы
+                         УСТУПИТЬ прибор: блютус держит один центральный, и пока держим
+                         мы, другой телефон к мосту не подключится (SugarLifeCore#50). */
                       <button className="changed-btn"
                         onClick={() => sendIntent({ type: 'disconnect', deviceId: d.id })}>
-                        <IonIcon icon={pauseOutline} />Пауза
+                        <IonIcon icon={pauseOutline} />{d.kind === 'bridge' ? 'Отпустить' : 'Пауза'}
                       </button>
                     ) : близко ? (
                       <button className="changed-btn"

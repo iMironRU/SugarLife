@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { рядомЛи, записьВЭфире, новоеВЭфире, наширядом, железоДиспетчера, РЯДОМ_СВЕЖЕСТЬ } from './nearby';
-import type { Discovered, DeviceView, UiSnapshot } from '@/sources/bridge';
+import {
+  рядомЛи, записьВЭфире, новоеВЭфире, наширядом, железоДиспетчера, РЯДОМ_СВЕЖЕСТЬ,
+  потерянаСвязь, имяЖелезки, рядомЖелезо, адресВЭфире, звеноЦепочки, словоЦепочки,
+} from './nearby';
+import type { Discovered, DeviceView, UiSnapshot, HardwareView, RoleView } from '@/sources/bridge';
 
 /* Граница «наше/новое» под тестами, потому что ошибка в ней не выглядит ошибкой.
    В одну сторону получается лишняя запись о железке, которая уже заведена, — человек
@@ -92,3 +95,224 @@ describe('что показывать в диспетчере', () => {
   });
 });
 
+
+/* Тревога о связи (SugarLife#247).
+
+   Экран противоречил сам себе: лента писала «Medtronic 722 на связи» и «Sibionics GS1 на
+   связи», а карточка прямо под ней — «Связь с устройством потеряна». Оба утверждения
+   были по-своему верны, потому что отвечали про разные слои: железка про радио, слот про
+   данные. Человеку нужен ответ про последствие. */
+const ж = (p: Partial<HardwareView>): HardwareView => ({
+  id: 'h', name: 'H', kind: 'sensor', connection: 'Connected', ...p,
+});
+
+const снимокЖ = (
+  hardware: HardwareView[], roles?: RoleView[], devices: DeviceView[] = [],
+): UiSnapshot => ({
+  bridgeRevision: '1.9', hardware, roles, devices,
+  insights: null, pendingWrites: [], alerts: [],
+  monitor: {} as UiSnapshot['monitor'],
+});
+
+const живойИсточник = (id: string, kind: DeviceView['kind'] = 'sensor'): DeviceView =>
+  зап({ id, name: id, kind, connection: 'Streaming', status: 'Live' });
+
+describe('когда считаем связь потерянной', () => {
+  it('всё на связи — тревоги нет', () => {
+    const s = снимокЖ(
+      [ж({ id: 's', status: 'Live', inSlot: 'cgm' }), ж({ id: 'p', kind: 'pump', status: 'Live', inSlot: 'insulin' })],
+      [{ role: 'cgm', activeSourceId: 's' }, { role: 'insulin', activeSourceId: 'p' }],
+      [живойИсточник('s'), живойИсточник('p', 'pump')],
+    );
+    expect(потерянаСвязь(s)).toEqual([]);
+  });
+
+  /* Тот самый случай со скриншота: радио отвалилось, а слот наполняется. Тревожить
+     нечем — данные идут, и человеку незачем бежать чинить связь. */
+  it('радио молчит, но слот наполняется — не тревога', () => {
+    const s = снимокЖ(
+      [ж({ id: 's', status: 'Disconnected', connection: 'Disconnected', inSlot: 'cgm' })],
+      [{ role: 'cgm', activeSourceId: 's' }],
+      [живойИсточник('s')],
+    );
+    expect(потерянаСвязь(s)).toEqual([]);
+  });
+
+  it('слот не наполняется — тревога, и в ней есть имя', () => {
+    const мёртвый = зап({ id: 's', kind: 'sensor', connection: 'Disconnected', status: 'Disconnected' });
+    const s = снимокЖ(
+      [ж({ id: 's', name: 'GS1-2E4F', model: 'Sibionics GS1', status: 'Disconnected', connection: 'Disconnected', inSlot: 'cgm' })],
+      [{ role: 'cgm', activeSourceId: 's' }],
+      [мёртвый],
+    );
+    expect(потерянаСвязь(s).map(имяЖелезки)).toEqual(['Sibionics GS1']);
+  });
+
+  /* Мост сам по себе не повод для тревоги: если он был нужен, замолчит и то, что за ним,
+     и назовём мы именно его — «помпа не на связи» понятнее, чем «отвалился OrangeLink». */
+  it('мост отвалился, а данные идут — молчим', () => {
+    const s = снимокЖ(
+      [ж({ id: 'o', kind: 'bridge', name: 'OrangeLink', status: 'Disconnected', connection: 'Disconnected', inSlot: null }),
+        ж({ id: 'p', kind: 'pump', status: 'Live', inSlot: 'insulin' })],
+      [{ role: 'insulin', activeSourceId: 'p' }],
+      [живойИсточник('p', 'pump')],
+    );
+    expect(потерянаСвязь(s)).toEqual([]);
+  });
+
+  /* Железка заведена, но ни в каком слоте не стоит — лежит в ящике. Её молчание не
+     событие: она и не должна ничего отдавать. */
+  it('железка вне слотов молчит законно', () => {
+    const s = снимокЖ([ж({ id: 'x', status: 'Disconnected', connection: 'Disconnected', inSlot: null })]);
+    expect(потерянаСвязь(s)).toEqual([]);
+  });
+
+  /* Старый мост слотов не отдаёт. Проверить нечем, и лучше лишняя тревога, чем
+     пропущенная: связь — это то, ради чего человек и открывает экран. */
+  it('движок про слоты молчит — тревожимся, как раньше', () => {
+    const s = снимокЖ([ж({ id: 's', status: 'Disconnected', connection: 'Disconnected' })]);
+    expect(потерянаСвязь(s).map((h) => h.id)).toEqual(['s']);
+  });
+});
+
+describe('как называем железку', () => {
+  it('модель понятнее имени в эфире', () => {
+    expect(имяЖелезки(ж({ name: 'GS1-2E4F', model: 'Sibionics GS1' }))).toBe('Sibionics GS1');
+  });
+  it('модели нет — остаётся имя, а не пустота', () => {
+    expect(имяЖелезки(ж({ name: 'GS1-2E4F' }))).toBe('GS1-2E4F');
+  });
+});
+
+/* Состояние железа берём у его проекции в devices[] (SugarLife#249).
+
+   Симптом был такой: устройство подключают — плитка не меняется, отключают — не
+   меняется, подключают снова — лента честно пишет оба события, а плитка стоит. Списки
+   отвечают на разные вопросы: hardware[] — «что у меня есть», devices[] — «что
+   происходит». Спрашивать про жизнь инвентарь бессмысленно. */
+describe('откуда у железа состояние', () => {
+  it('источник с тем же id живой — железка живая', () => {
+    const s = снимокЖ(
+      [ж({ id: 'p', kind: 'pump', connection: 'Disconnected', status: 'Disconnected' })],
+      undefined,
+      [живойИсточник('p', 'pump')],
+    );
+    expect(железоДиспетчера(s)[0].status).toBe('Live');
+    expect(железоДиспетчера(s)[0].connection).toBe('Streaming');
+  });
+
+  /* Всё остальное остаётся железу: имя, модель, слот, батарея, «рядом» — это его
+     свойства, и источник про них ничего не знает. */
+  it('берём только состояние, не трогая остального', () => {
+    const s = снимокЖ(
+      [ж({ id: 'p', kind: 'pump', name: 'MMT-722', model: 'Medtronic 722', inSlot: 'insulin', batteryPct: 81, nearbyAtMs: 5 })],
+      undefined,
+      [живойИсточник('p', 'pump')],
+    );
+    const h = железоДиспетчера(s)[0];
+    expect([h.model, h.inSlot, h.batteryPct, h.nearbyAtMs]).toEqual(['Medtronic 722', 'insulin', 81, 5]);
+  });
+
+  /* Id не совпал — не додумываем. Имена в эфире повторяются, и связать чужой сенсор со
+     своим хуже, чем не связать вовсе. */
+  it('проекции нет — состояние остаётся своим', () => {
+    const s = снимокЖ([ж({ id: 'p', status: 'Disconnected', connection: 'Disconnected' })], undefined, [живойИсточник('другой')]);
+    expect(железоДиспетчера(s)[0].status).toBe('Disconnected');
+  });
+});
+
+/* Мост и «рядом» (SugarLife#251).
+
+   На экране стояло «Medtronic 722 — нет связи · рядом · [Подключить]», а строкой ниже
+   «OrangeLink (мост к помпе) — нет связи». Так быть не может: помпа Medtronic по
+   блютусу не вещает вовсе, её слышно только через мост. */
+describe('рядом ли то, что живёт за мостом', () => {
+  const мост = ж({ id: 'orange', kind: 'bridge', name: 'OrangeLink' });
+  const помпа = ж({ id: 'p', kind: 'pump', name: 'Medtronic 722', nearbyAtMs: 1_000 });
+  const сейчас = 2_000;
+  const заМостом = зап({ id: 'p', kind: 'pump', behindBridgeId: 'orange' });
+
+  /* Сначала мы приравняли близость помпы к близости моста — лучше прежнего, но всё ещё
+     неправда: ядро поправило каноном (SugarLifeCore#50). Близость есть только у того,
+     кто сам себя рекламирует, и состояние помпы описывают звенья, а не «рядом». */
+  it('за мостом «рядом» не бывает — ни при живом мосте, ни при молчащем', () => {
+    const молчит = снимокЖ([{ ...мост, connection: 'Disconnected', status: 'Disconnected' }, помпа], undefined, [заМостом]);
+    const живой = снимокЖ([{ ...мост, status: 'Live' }, помпа], undefined, [заМостом]);
+    expect([рядомЖелезо(молчит, сейчас).has('p'), рядомЖелезо(живой, сейчас).has('p')]).toEqual([false, false]);
+  });
+
+  /* У самого моста «рядом» считается как раньше: он-то в эфире и есть. */
+  it('железка без моста живёт по прежнему правилу', () => {
+    const сенсор = ж({ id: 's', nearbyAtMs: 1_000 });
+    expect(рядомЖелезо(снимокЖ([сенсор]), сейчас).has('s')).toBe(true);
+  });
+});
+
+describe('адрес в эфире', () => {
+  it('достаём из id записи — по нему и различают два одинаковых прибора', () => {
+    expect(адресВЭфире({ id: 'ble-a4:c1:38:9f:0b:2e-1' })).toBe('A4:C1:38:9F:0B:2E');
+  });
+
+  /* Не нашли — молчим. Выдуманный или обрезанный «серийник» хуже отсутствия: по нему
+     начнут различать приборы. */
+  it('адреса в id нет — ничего не выдумываем', () => {
+    expect(адресВЭфире({ id: 'ns-pump' })).toBe(null);
+    expect(адресВЭфире({ id: 'dev-12345' })).toBe(null);
+  });
+});
+
+/* Звенья цепочки (SugarLifeCore#50, rev ≥ 1.9).
+
+   У устройства за мостом связей две, и до 1.9 они были склеены в одно поле: помпа
+   показывала связь с мостом, мост — ответ помпы. Человек видел два «нет связи» и не мог
+   понять, с чего начинать. */
+describe('какое звено цепочки молчит', () => {
+  const заМостом = (bc: string | null, own: string) => снимокЖ(
+    [ж({ id: 'o', kind: 'bridge', name: 'OrangeLink', status: 'Live' }),
+      ж({ id: 'p', kind: 'pump', name: 'Medtronic 722', behindBridgeId: 'o',
+        bridgeConnection: bc, connection: own, status: own === 'Streaming' ? 'Live' : 'Disconnected' })],
+  );
+
+  it('мост молчит — помпу тревожить незачем', () => {
+    const s = заМостом('Disconnected', 'Disconnected');
+    expect(звеноЦепочки(железоДиспетчера(s)[1], s)).toBe('мост молчит');
+    expect(словоЦепочки('мост молчит', 'OrangeLink')).toBe('«OrangeLink» не на связи');
+  });
+
+  it('мост есть, а устройство не отвечает — это другое действие', () => {
+    const s = заМостом('Connected', 'Disconnected');
+    expect(звеноЦепочки(железоДиспетчера(s)[1], s)).toBe('устройство молчит');
+  });
+
+  it('оба звена живы — называем, через что', () => {
+    const s = заМостом('Streaming', 'Streaming');
+    expect(звеноЦепочки(железоДиспетчера(s)[1], s)).toBe('на связи');
+    expect(словоЦепочки('на связи', 'OrangeLink')).toBe('на связи через «OrangeLink»');
+  });
+
+  /* Прямое устройство цепочки не имеет вовсе — и подписывать его звеньями нельзя. */
+  it('устройство без моста — не про звенья', () => {
+    const s = снимокЖ([ж({ id: 's', status: 'Live' })]);
+    expect(звеноЦепочки(железоДиспетчера(s)[0], s)).toBe(null);
+  });
+
+  /* Старая сборка поля не шлёт: судим по самому мосту. Хуже ответа движка, но честнее
+     молчания. */
+  it('поля нет — смотрим на мост', () => {
+    const s = снимокЖ([
+      ж({ id: 'o', kind: 'bridge', connection: 'Disconnected', status: 'Disconnected' }),
+      ж({ id: 'p', kind: 'pump', behindBridgeId: 'o', connection: 'Disconnected', status: 'Disconnected' }),
+    ]);
+    expect(звеноЦепочки(железоДиспетчера(s)[1], s)).toBe('мост молчит');
+  });
+
+  /* «Рядом» у железки за мостом больше нет вовсе: рекламирует себя мост. */
+  it('за мостом «рядом» не бывает', () => {
+    const s = снимокЖ([
+      ж({ id: 'o', kind: 'bridge', status: 'Live', nearbyAtMs: 1_000 }),
+      ж({ id: 'p', kind: 'pump', behindBridgeId: 'o', nearbyAtMs: 1_000 }),
+    ]);
+    const р = рядомЖелезо(s, 2_000);
+    expect([р.has('o'), р.has('p')]).toEqual([true, false]);
+  });
+});

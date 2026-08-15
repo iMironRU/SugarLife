@@ -18,6 +18,11 @@ export interface Pump {
      движок эту модель напрямую. Своей таблицы поддержки у нас нет: она устарела бы в
      первый же релиз движка (domain/catalogSupport.ts). */
   driverKey?: string;
+  /* Где помпа продаётся (SugarLife#223). `null` — НЕ ВЫЯСНЕНО, а не «нигде»: поле
+     заполняется руками и по источнику, и пустое честнее выдуманного. Кто читает —
+     обязан различать эти два случая, иначе мы скажем человеку «нет в России» там, где
+     всего лишь не проверяли. */
+  market?: string[] | null;
 }
 
 export const INSULINS = (insulinsData as { items: Insulin[] }).items;
@@ -25,8 +30,24 @@ export const PUMPS = (pumpsData as { items: Pump[] }).items;
 
 export const insulinById = (id: string | null | undefined): Insulin | null =>
   (id ? INSULINS.find((i) => i.id === id) : null) ?? null;
-export const pumpById = (id: string | null | undefined): Pump | null =>
-  (id ? PUMPS.find((p) => p.id === id) : null) ?? null;
+/* Записи, слитые с другими (SugarLife#223).
+
+   Дубли в справочнике неизбежны: одна и та же помпа приходит под именем производителя и
+   под именем того, кто её потом продавал. Слить их — правильно, но выбранный человеком
+   id хранится у него в настройках, и молча потерянная модель выглядит как «приложение
+   забыло мою помпу».
+
+   Поэтому удалённый id продолжает отвечать — тем, во что его слили. Таблица растёт по
+   мере чистки справочника и не выбрасывается: настройка могла пролежать год. */
+export const СЛИТЫЕ: Record<string, string> = {
+  'disetronic-наследие-roche-и-ypsomed-d-tron-d-tron-plus':
+    'roche-diabetes-care-accu-chek-accu-chek-d-tron-plus',
+};
+
+export const pumpById = (id: string | null | undefined): Pump | null => {
+  if (!id) return null;
+  return PUMPS.find((p) => p.id === (СЛИТЫЕ[id] ?? id)) ?? null;
+};
 
 // быстрые инсулины (болюс/помпа): ультракороткие, короткие, ультрабыстрые
 const FAST = new Set(['УКД', 'ультрабыстрый', 'КД']);

@@ -2,8 +2,8 @@ import { IonIcon } from '@ionic/react';
 import { bluetoothOutline, chevronForward } from 'ionicons/icons';
 import { useSnapshot } from '@/sources/bridge';
 import Notice from './Notice';
-import { связь } from '@/domain/deviceState';
-import { железоДиспетчера } from '@/domain/nearby';
+import { связь, движокЖивой } from '@/domain/deviceState';
+import { железоДиспетчера, потерянаСвязь, имяЖелезки } from '@/domain/nearby';
 import { useStack } from '@/app/stackCtx';
 import { DiscoverySection, DevicesSection } from '@/sections/lazy';
 
@@ -23,8 +23,10 @@ export default function NearbyTile() {
   const snap = useSnapshot();
   const { push, pop } = useStack();
 
-  const drivers = snap?.availableDrivers ?? [];
-  if (!drivers.length) return null;
+  /* Признак — драйвер ЖЕЛЕЗА, а не «хоть какой-нибудь драйвер» (#256): Nightscout-шим
+     завёл свой, сервисный, и карточка «Подключить устройство» полезла в браузер, где
+     эфира нет как класса. Правило одно на всех — domain/deviceState.ts. */
+  if (!движокЖивой(snap)) return null;
 
   /* Железо и его состояние — из тех же мест, что у диспетчера, и по тому же правилу
      (#224). Плитка считала «на связи» сама: смотрела на connection и пропускала status.
@@ -36,9 +38,12 @@ export default function NearbyTile() {
      Правило теперь одно на всех: domain/deviceState.ts. */
   const железо = железоДиспетчера(snap);
   const живые = железо.filter((d) => связь(d) === 'live');
-  const отвалились = железо.filter((d) => связь(d) === 'off');
-
-  const проблема = железо.length === 0 || отвалились.length > 0 || живые.length === 0;
+  /* Тревога — не «что-то отвалилось», а «данные не идут»: правило и разбор в
+     domain/nearby.ts (#247). Раньше здесь стояло «отвалилась хоть одна железка», и
+     карточка «Связь с устройством потеряна» висела ровно над лентой, где обе железки
+     только что отчитались «на связи». */
+  const потеряно = потерянаСвязь(snap);
+  const проблема = железо.length === 0 || потеряно.length > 0;
   /* Куда вести, зависит от того, есть ли уже своё железо.
 
      Нечего подключать — веди в поиск: там ищут незнакомое. А если железка заведена и
@@ -50,10 +55,14 @@ export default function NearbyTile() {
     : <DevicesSection onClose={pop} />);
 
   if (!проблема) {
+    /* Живых может не быть вовсе при исправных слотах: данные идут облаком, радио молчит.
+       Молчим про число, а не пишем «на связи 0» — это читалось бы как поломка. */
+    const что = живые.length === 1 ? имяЖелезки(живые[0])
+      : живые.length ? `${живые.length} устройства` : null;
     return (
       <button className="nearby-quiet" onClick={открыть}>
         <IonIcon icon={bluetoothOutline} />
-        <span>На связи {живые.length === 1 ? (живые[0].model || живые[0].name) : `${живые.length} устройства`} · посмотреть, что рядом</span>
+        <span>{что ? `На связи ${что} · ` : ''}посмотреть, что рядом</span>
         <IonIcon icon={chevronForward} className="nearby-chev" />
       </button>
     );
@@ -65,7 +74,12 @@ export default function NearbyTile() {
      что сделать прямо сейчас, и действие одно. */
   return (
     <Notice вид="предложение" значок={bluetoothOutline}
-      заголовок={железо.length === 0 ? 'Подключить устройство' : 'Связь с устройством потеряна'}
+      /* Имя обязательно. Безымянное «связь потеряна» человек не может ни проверить, ни
+         опровергнуть: у него на экране два устройства, и какое из них молчит —
+         единственное, что ему нужно знать, чтобы пойти и починить. */
+      заголовок={железо.length === 0 ? 'Подключить устройство'
+        : потеряно.length === 1 ? `«${имяЖелезки(потеряно[0])}» не на связи`
+        : `Не на связи: ${потеряно.map(имяЖелезки).join(', ')}`}
       действия={(
         <button className="changed-btn is-undo" onClick={открыть}>
           {железо.length === 0 ? 'Посмотреть, что рядом' : 'Открыть устройства'}
