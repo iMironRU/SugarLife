@@ -1,5 +1,5 @@
 import type { DeviceView, UiSnapshot } from '@/sources/bridge';
-import { связь, устройствоРоли, толькоОблако } from './deviceState';
+import { связь, устройствоРоли, толькоОблако, рольСнимка } from './deviceState';
 import { каналСлота, СЛОВО_ПУТИ } from './slotStatus';
 import { мостЖелезки, имяЖелезки, железоДиспетчера } from './nearby';
 
@@ -92,6 +92,11 @@ export function причинаСлота(
   snap: UiSnapshot | null | undefined, слот: Слот,
 ): string | null {
   if (слот === 'углеводы') return null;
+  /* С 1.13 причину говорит движок (fallbackReason): он знает, ЧТО именно молчит, а мы
+     бы написали общее место. Берём как есть — то же правило, что с remediation у
+     облачных ошибок. Свой расчёт ниже остаётся для сборок постарше. */
+  const отДвижка = рольСнимка(snap, РОЛЬ[слот])?.fallbackReason?.trim();
+  if (отДвижка) return отДвижка;
   if (каналСлота(snap, РОЛЬ[слот]) !== 'cloud') return null;
 
   const своё = (snap?.devices ?? []).find((d) => подходит(d, слот) && !толькоОблако(d));
