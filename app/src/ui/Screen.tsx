@@ -1,4 +1,5 @@
 import { IonPage, IonContent } from '@ionic/react';
+import { useДочитано } from './useДочитано';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { reportContentScroll, серединаЛи, полшага, плавно, syncToActiveScreen } from '@/app/panel';
 import { useTab, useGoHome } from '@/app/nav';
@@ -43,6 +44,9 @@ export default function Screen({ tab, panel = 'compact', children }: {
   const active = useTab();
   const ref = useRef<HTMLIonContentElement>(null);
   const тело = useRef<HTMLDivElement>(null);
+  /* Затемнение у нижнего края — то же правило, что и в разделах (#272). Скроллер здесь
+     чужой: он внутри ion-content, и хук достаёт его сам. */
+  const { конец, вКонце } = useДочитано<HTMLDivElement>(null);
 
   /* Полупустой экран держит панель на середине, а не в тонкой строке.
 
@@ -142,7 +146,12 @@ export default function Screen({ tab, panel = 'compact', children }: {
       <IonContent ref={ref} fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
         <div ref={тело} className={'screen' + (panel === 'compact' ? ' is-compact' : '') + (середина ? ' is-mid' : '')}>
           {children}
+          {/* Метка конца — она же признак, что ниже ничего нет (#272). Вкладка ничем
+              не отличается от раздела: список настроек в «Профиле» такой же длинный, и
+              где он кончается, человеку так же не видно. */}
+          <div ref={конец} className="stack-end" />
         </div>
+        <div className={'stack-fade' + (вКонце ? ' off' : '')} />
       </IonContent>
     </IonPage>
   );
