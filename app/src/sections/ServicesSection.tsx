@@ -77,7 +77,7 @@ export default function ServicesSection({ onClose, встроенный }: {
           производителей: вход по учётной записи, чтение чужого сервера.
         </div>
 
-        {(снимок?.cloudProviders?.length ?? 0) > 0 && (
+        {(снимок?.availableCloudProviders?.length ?? 0) > 0 && (
           <>
             <div className="section-label sec">Сервисы производителей</div>
             <div className="list">

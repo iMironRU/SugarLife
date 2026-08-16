@@ -83,7 +83,7 @@
       { id: 'orange', displayName: 'OrangeLink', kind: 'bridge', roles: [], settings: { parameters: [] }, available: true, providesTransportFor: ['medtronic'] },
     ],
     logging: null,
-    cloudProviders: [
+    availableCloudProviders: [
       { id: 'libre', displayName: 'LibreLinkUp', available: true, readOnly: true, hasSubjects: true,
         settings: { parameters: [
           { key: 'login', title: 'Почта', type: 'Text', required: true, default: null, options: [] },

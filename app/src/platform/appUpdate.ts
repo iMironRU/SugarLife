@@ -38,6 +38,12 @@ export const isNative = Capacitor.isNativePlatform();
 export const platform = Capacitor.getPlatform(); // 'web' | 'android' | 'ios'
 
 const REPO = 'iMironRU/SugarLife';
+/** Куда вести за исходниками и релизами — из одного места, чтобы не разъехалось. */
+export const ССЫЛКИ = {
+  репозиторий: `https://github.com/${REPO}`,
+  релизы: `https://github.com/${REPO}/releases`,
+  задачи: `https://github.com/${REPO}/issues`,
+};
 const ANDROID_TAG = 'android-latest';
 // Самохостинг OTA-бандла на GitHub Pages (канонический домен, без редиректа
 // с *.github.io — важно для нативного HTTP-загрузчика Capgo).
@@ -142,6 +148,23 @@ export function нативнаяСборка(): НативнаяСборка | n
     if (!s) return null;
     const о = JSON.parse(s);
     return typeof о?.build === 'string' && typeof о?.builtAt === 'string' ? о : null;
+  } catch { return null; }
+}
+
+/* Откуда взялся тот JS, который сейчас работает.
+
+   Вопрос не праздный: после обновления по воздуху внутри установленного приложения
+   живёт код НОВЕЕ, чем APK. Человек, читающий «сборка a1b2c3d», вправе знать, это
+   сборка приложения или то, что приехало поверх. Иначе два номера рядом выглядят
+   ошибкой, а не двумя разными вещами.
+
+   'builtin' — бандл приехал внутри APK, номера совпадают. Любое другое имя означает,
+   что поверх лёг OTA. Не смогли спросить (веб, приватный режим) — молчим. */
+export async function откудаБандл(): Promise<'встроен' | 'по воздуху' | null> {
+  if (!isNative) return null;
+  try {
+    const с = await CapacitorUpdater.current();
+    return с?.bundle?.version === 'builtin' ? 'встроен' : 'по воздуху';
   } catch { return null; }
 }
 

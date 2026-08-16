@@ -49,6 +49,10 @@
   cursor: pointer; font-family: var(--font-body); color: var(--color-text); text-align: left;
 }
 .list-row:last-child { border-bottom: 0; }
+/* Строка-ссылка выглядит строкой, а не ссылкой: подчёркивание и синий цвет браузера
+   выдавали бы за текст то, что человек читает как элемент списка. Правило было только
+   у онбординга — там ссылки появились первыми. */
+a.list-row { text-decoration: none; color: inherit; }
 .list-row:disabled { cursor: default; }
 .list-row:not(:disabled):active { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .list-ico { font-size: 19px; color: var(--color-accent); flex-shrink: 0; }
