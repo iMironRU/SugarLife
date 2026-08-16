@@ -16,11 +16,16 @@ export function sourceStatusLabel(s: SourceStatus | undefined | null): string | 
     case 'Connecting': return 'подключается';
     case 'Delayed': return 'отстаёт';
     case 'Disconnected': return 'нет связи';
+    /* Ручка (rev ≥ 1.15). Не «нет связи»: связи у неё нет по устройству, и напоминать
+       надо не о ней, а о том, что пора поднести прибор к телефону. */
+    case 'ReadOnTouch': return 'читается при поднесении';
     default: return null; // мост поля не прислал — не выдумываем
   }
 }
 
 /** Тревожный ли статус — им красим строку, а не рисуем отдельную иконку. */
 export function sourceStatusWarn(s: SourceStatus | undefined | null): boolean {
+  /* ReadOnTouch сюда не входит намеренно: тревожный вид у нормального состояния
+     обесценивает тревожный вид вообще. */
   return s === 'Delayed' || s === 'Disconnected';
 }
