@@ -1,4 +1,4 @@
-import { IonIcon, IonToggle } from '@ionic/react';
+import { IonIcon } from '@ionic/react';
 import { useState } from 'react';
 import { documentTextOutline, shareOutline, warningOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
@@ -81,28 +81,20 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
         «обычного»; подробный включают, когда что-то разбирают, и выключают после.
       </div>
 
-      <div className="section-label sec">Запись</div>
-      <div className="list">
-        <div className="list-row">
-          <span className="pick-main">
-            <span className="list-title">Писать в файл</span>
-            <span className="pick-sub">
-              без этого лог живёт только в памяти и пропадает при перезапуске
-              {logging.retentionHours ? ` · хранится ${logging.retentionHours} ч` : ''}
-            </span>
-          </span>
-          <IonToggle checked={logging.capturingFile}
-            onIonChange={(e) => sendIntent({ type: 'setLogCapture', file: e.detail.checked, raw: null })} />
-        </div>
-        <div className="list-row">
-          <span className="pick-main">
-            <span className="list-title">Сырой обмен с устройством</span>
-            <span className="pick-sub">нужен редко, для разбора протокола · пишет много</span>
-          </span>
-          <IonToggle checked={logging.capturingRaw}
-            onIonChange={(e) => sendIntent({ type: 'setLogCapture', file: null, raw: e.detail.checked })} />
-        </div>
-      </div>
+      {/* Переключателей «Писать в файл» и «Сырой обмен» здесь больше нет (#317).
+
+          Оба ничего не делали. Флаг доезжал до движка, ложился в переменную и
+          возвращался обратно в снимке — круг замыкался, а запись от этого не менялась:
+          `captureRaw` и `captureFile` не читаются в ядре нигде, кроме этих трёх мест.
+          Плюс не переживали перезапуск, то есть слетали ровно тогда, когда нужны, —
+          человек включает подробную запись ПЕРЕД тем, как ловить проблему.
+
+          Настройка, которая ничего не делает, хуже отсутствующей: человек включает её,
+          воспроизводит проблему, выгружает лог — а сырья там нет, и узнаёт об этом тот,
+          кто будет разбирать, через несколько дней. В разделе «Диагностика» это бьёт
+          ещё и по доверию ко всему разделу: если врёт эта настройка, что ещё врёт.
+
+          Вернём, когда ядро начнёт их читать. */}
 
       <button className="sheet-danger diag-share" onClick={поделиться} disabled={делюсь}>
         <IonIcon icon={делюсь ? shareOutline : shareOutline} />
