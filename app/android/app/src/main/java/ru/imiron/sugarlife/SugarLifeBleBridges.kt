@@ -9,10 +9,14 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 import ru.imiron.sugarlife.drivers.medtronic.PumpTransportBridge
@@ -23,8 +27,14 @@ import java.util.concurrent.ConcurrentLinkedQueue
 /** Нативный Android BLE — зеркало Swift `SugarLifeBleBridges.swift` (логика из проверенного спайка).
  *  Домен/протоколы (Sibionics AA55, Medtronic) остаются в KMP; здесь только транспорт (CoreBluetooth ↔ BluetoothGatt). */
 
+private const val TAG = "SugarLifeBLE"   // issue #33: adb logcat -s SugarLifeBLE — диагностируемость железо-сессии
 private fun uuid16(v: String): UUID = UUID.fromString("0000$v-0000-1000-8000-00805f9b34fb")
 private val CCCD = uuid16("2902")
+// Телеметрия периферала (issue #38): заряд Battery Service 0x180F, прошивка DIS 0x180A, rssi.
+private val BATTERY_CHAR = uuid16("2A19")
+private val FIRMWARE_CHAR = uuid16("2A26")
+/** Сток телеметрии натив→движок: плагин ставит engine.submitTelemetry; BleLink зовёт с json {bleId,batteryPct?,firmware?,rssi?}. */
+var telemetrySink: ((String) -> Unit)? = null
 
 /** Короткая форма стандартного Bluetooth-UUID (как CBUUID на iOS): 0000FF30-0000-1000-8000-00805f9b34fb → "FF30".
  *  Каталог матчит короткие ("FF30"); Android же отдаёт полный 128-битный → без нормализации совпадения нет.
@@ -80,10 +90,12 @@ class BleLink(
         val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
         val device = adapter.getRemoteDevice(address)
         onState?.invoke("Connecting")
+        Log.d(TAG, "connect $address")
         gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
     }
 
     fun disconnect() {
+        Log.d(TAG, "disconnect $address")
         gatt?.disconnect(); gatt?.close(); gatt = null
     }
 
@@ -97,6 +109,20 @@ class BleLink(
         g.writeCharacteristic(c)
     }
 
+    // Телеметрия периферала (issue #38): частичная эмиссия — null-поле движок не затирает.
+    private fun emitTelemetry(batteryPct: Int? = null, firmware: String? = null, rssi: Int? = null) {
+        val parts = StringBuilder("\"bleId\":\"$address\"")
+        if (batteryPct != null) parts.append(",\"batteryPct\":$batteryPct")
+        if (firmware != null) parts.append(",\"firmware\":\"${firmware.replace("\"", "")}\"")
+        if (rssi != null) parts.append(",\"rssi\":$rssi")
+        telemetrySink?.invoke("{$parts}")
+    }
+    private fun readTelemetry(g: BluetoothGatt) {   // заряд/прошивка/rssi, если периферал их отдаёт
+        chars[BATTERY_CHAR]?.let { read(BATTERY_CHAR) { d -> d?.firstOrNull()?.let { emitTelemetry(batteryPct = it.toInt() and 0xFF) } } }
+        chars[FIRMWARE_CHAR]?.let { read(FIRMWARE_CHAR) { d -> d?.let { emitTelemetry(firmware = String(it)) } } }
+        g.readRemoteRssi()
+    }
+
     fun read(char: UUID, completion: (ByteArray?) -> Unit) = enqueue {
         val g = gatt; val c = chars[char]
         if (g == null || c == null) { completion(null); opDone(); return@enqueue }
@@ -106,6 +132,9 @@ class BleLink(
 
     private val callback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
+            // issue #33: status ≠ 0 (напр. 133 GATT_ERROR) — виновник тихих сбоев коннекта; логируем всегда.
+            Log.d(TAG, "connState addr=$address status=$status newState=$newState")
+            if (status != BluetoothGatt.GATT_SUCCESS) Log.w(TAG, "connState НЕ-успех status=$status (133=GATT_ERROR/недоступен) addr=$address")
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     onState?.invoke("Connected")
@@ -118,6 +147,7 @@ class BleLink(
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
+            Log.d(TAG, "servicesDiscovered addr=$address status=$status services=${g.services.size}")
             for (s in g.services) for (c in s.characteristics) {
                 chars[c.uuid] = c
                 if (notifyChars.contains(c.uuid)) {
@@ -129,6 +159,11 @@ class BleLink(
                 }
             }
             onState?.invoke("Streaming")   // discovery завершён — как в iOS (link=Streaming перед readMac)
+            readTelemetry(g)   // заряд/прошивка/rssi, если периферал их отдаёт (issue #38)
+        }
+
+        override fun onReadRemoteRssi(g: BluetoothGatt, rssi: Int, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS) emitTelemetry(rssi = rssi)   // близость периферала (issue #38)
         }
 
         override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) { opDone() }
@@ -215,15 +250,34 @@ class SugarLifeScanner(context: Context, private val onAdvertisement: (String) -
                 .put("name", result.scanRecord?.deviceName)
                 .put("serviceUuids", services)
                 .put("rssi", result.rssi)
+            // issue #33: видно, ЧТО реально приходит в скан (T1: находится ли GS1 после extended-фикса #30).
+            Log.d(TAG, "adv ${dev.address} name=${result.scanRecord?.deviceName} svc=$services rssi=${result.rssi}")
             onAdvertisement(dto.toString())
         }
+
+        override fun onScanFailed(errorCode: Int) { Log.w(TAG, "scan FAILED errorCode=$errorCode") }
     }
 
     fun start() {
         if (scanning) return
-        val scanner = adapter?.bluetoothLeScanner ?: return
+        val adapter = this.adapter ?: return
+        val scanner = adapter.bluetoothLeScanner ?: return
         scanning = true
-        scanner.startScan(callback)   // без фильтров — распознавание по каталогу в ядре (как iOS фильтр на будущее)
+        // issue #30: дефолтный скан — legacy-only + low-power → НЕ видит BLE-5 extended/periodic рекламу
+        // (так рекламируется GS1) → сенсор не находился на Android, а legacy-помпа находилась. Явно включаем
+        // видимость extended-рекламы + активный режим на экране поиска.
+        val settings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    setLegacy(false)   // отдавать И legacy, И extended рекламу (иначе только legacy)
+                    if (adapter.isLeCodedPhySupported) setPhy(ScanSettings.PHY_LE_ALL_SUPPORTED)
+                }
+            }
+            .build()
+        // Фильтров нет: ищем и сенсор (FF30, extended), и помпу (RileyLink, legacy) — распознаёт каталог в ядре.
+        Log.d(TAG, "scan start: LOW_LATENCY legacy=${Build.VERSION.SDK_INT < Build.VERSION_CODES.O} extended=${Build.VERSION.SDK_INT >= Build.VERSION_CODES.O}")
+        scanner.startScan(emptyList<ScanFilter>(), settings, callback)
     }
     fun stop() {
         if (!scanning) return

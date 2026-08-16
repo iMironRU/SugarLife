@@ -73,6 +73,7 @@ final class SharedCentral: NSObject, CBCentralManagerDelegate {
 // MARK: - Линк к одному peripheral (соединение — через общий central; peripheral-делегат — здесь)
 
 final class BleLink: NSObject, CBPeripheralDelegate {
+    private let bleIdStr: String        // исходный bleId (issue #38): по нему движок проецирует телеметрию
     private let peripheralUUID: UUID
     private let serviceUUID: CBUUID
     private let charUUIDs: [CBUUID]
@@ -83,11 +84,25 @@ final class BleLink: NSObject, CBPeripheralDelegate {
     var onState: ((String) -> Void)?
 
     init(bleId: String, service: CBUUID, characteristics: [CBUUID]) {
+        self.bleIdStr = bleId
         self.peripheralUUID = UUID(uuidString: bleId) ?? UUID()
         self.serviceUUID = service
         self.charUUIDs = characteristics
         super.init()
         SharedCentral.shared.register(self, for: peripheralUUID)
+    }
+
+    // Телеметрия периферала (issue #38): частичная эмиссия — null-поле движок не затирает.
+    private func emitTelemetry(battery: Int? = nil, firmware: String? = nil, rssi: Int? = nil) {
+        var parts = ["\"bleId\":\"\(bleIdStr)\""]
+        if let b = battery { parts.append("\"batteryPct\":\(b)") }
+        if let f = firmware { parts.append("\"firmware\":\"\(f.replacingOccurrences(of: "\"", with: ""))\"") }
+        if let r = rssi { parts.append("\"rssi\":\(r)") }
+        telemetrySink?("{\(parts.joined(separator: ","))}")
+    }
+    private func readTelemetry(_ p: CBPeripheral) {   // заряд/прошивка, если периферал их отдаёт
+        if let c = chars[batteryChar] { p.readValue(for: c) }
+        if let c = chars[firmwareChar] { p.readValue(for: c) }
     }
 
     // Перерегистрируемся при каждом connect: reconnect-петля драйвера делает disconnect()→connect() на том же
@@ -109,7 +124,7 @@ final class BleLink: NSObject, CBPeripheralDelegate {
 
     // Колбэки соединения приходят из общего central, маршрутизированные по peripheral.
     func bind(_ p: CBPeripheral) { peripheral = p; p.delegate = self }
-    func didConnect(_ p: CBPeripheral) { onState?("Connected"); p.discoverServices(nil) }  // все сервисы: MAC 0x2A25 в 0x180A, не в FF30
+    func didConnect(_ p: CBPeripheral) { onState?("Connected"); p.readRSSI(); p.discoverServices(nil) }  // rssi (issue #38) + все сервисы: MAC 0x2A25 в 0x180A, не в FF30
     func didDisconnect() { onState?("Disconnected") }
     func didFail() { onState?("Error") }
 
@@ -122,12 +137,19 @@ final class BleLink: NSObject, CBPeripheralDelegate {
             chars[ch.uuid] = ch
             if notifyHandlers[ch.uuid] != nil { p.setNotifyValue(true, for: ch) }
         }
+        readTelemetry(p)   // заряд/прошивка, если сервис их принёс (issue #38)
         onState?("Streaming")
     }
     func peripheral(_ p: CBPeripheral, didUpdateValueFor ch: CBCharacteristic, error: Error?) {
         guard let v = ch.value else { return }
+        // Телеметрия (issue #38): заряд 0x2A19 (uint8 %), прошивка 0x2A26 (строка).
+        if ch.uuid == batteryChar, let b = v.first { emitTelemetry(battery: Int(b)); return }
+        if ch.uuid == firmwareChar, let s = String(data: v, encoding: .utf8) { emitTelemetry(firmware: s); return }
         if let h = notifyHandlers[ch.uuid] { h(v) }
         if let r = readHandlers.removeValue(forKey: ch.uuid) { r(v) }
+    }
+    func peripheral(_ p: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
+        if error == nil { emitTelemetry(rssi: RSSI.intValue) }   // близость периферала (issue #38)
     }
 }
 
@@ -138,11 +160,16 @@ private let sibNotify  = CBUUID(string: "FF31")
 private let sibWrite   = CBUUID(string: "FF32")
 private let macChar    = CBUUID(string: "2A25")
 private let macCharAlt  = CBUUID(string: "2ABE")   // вендор-характеристика MAC (как в Juggluco) — фолбэк
+// Телеметрия периферала (issue #38): заряд Battery Service 0x180F, прошивка DIS 0x180A, rssi.
+private let batteryChar  = CBUUID(string: "2A19")
+private let firmwareChar = CBUUID(string: "2A26")
+// Сток телеметрии натив→движок: плагин ставит engine.submitTelemetry; BleLink зовёт с json {bleId,batteryPct?,firmware?,rssi?}.
+var telemetrySink: ((String) -> Void)?
 
 final class SensorBridge: SensorTransportBridge {
     private let link: BleLink
     private var onDataCb: ((KotlinByteArray) -> Void)?
-    init(bleId: String) { link = BleLink(bleId: bleId, service: sibService, characteristics: [sibNotify, sibWrite, macChar, macCharAlt]) }
+    init(bleId: String) { link = BleLink(bleId: bleId, service: sibService, characteristics: [sibNotify, sibWrite, macChar, macCharAlt, batteryChar, firmwareChar]) }
     func onLink(callback: @escaping (String) -> Void) { link.onState = callback }
     func onData(callback: @escaping (KotlinByteArray) -> Void) {
         onDataCb = callback
@@ -177,7 +204,7 @@ private let rlRespCount = CBUUID(string: "6E6C7910-B89E-43A5-A0FE-50C5E2B81F4A")
 final class PumpBridge: PumpTransportBridge {
     private let link: BleLink
     private var pending: ((KotlinByteArray) -> Void)?
-    init(bleId: String) { link = BleLink(bleId: bleId, service: rlService, characteristics: [rlData, rlRespCount]) }
+    init(bleId: String) { link = BleLink(bleId: bleId, service: rlService, characteristics: [rlData, rlRespCount, batteryChar, firmwareChar]) }
     func onLink(callback: @escaping (String) -> Void) { link.onState = callback }
     func connect() {
         link.subscribe(rlRespCount) { [weak self] _ in
@@ -256,6 +283,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             let e = SugarLifeEngine(driverProvider: nil, withSimulators: false,
                                     dbDriverFactory: DatabaseDriverFactory())
             self.engine = e
+            telemetrySink = { [weak self] json in _ = self?.engine?.submitTelemetry(json: json) }   // натив→движок телеметрия (issue #38)
             self.unsubscribe = e.subscribe(onSnapshot: { [weak self] json in
                 DispatchQueue.main.async { self?.notifyListeners("snapshot", data: ["json": json]) }
             })
