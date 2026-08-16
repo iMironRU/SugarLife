@@ -4,8 +4,10 @@ import { useState } from 'react';
 import Section from '@/ui/Section';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import {
-  источникиСлота, причинаСлота, откудаСейчас, наполненЛи, ИМЯ_СЛОТА, type Слот,
+  источникиСлота, причинаСлота, откудаСейчас, наполненЛи, учёткаСлота, ИМЯ_СЛОТА, type Слот,
 } from '@/domain/sources';
+import { useStack } from '@/app/stackCtx';
+import { CloudAccountsSection } from '@/sections/lazy';
 
 /* «Откуда берутся данные» — слоты вместо двух плоских списков (SugarLife#277).
 
@@ -26,6 +28,7 @@ export default function SourcesSection({ onClose, встроенный }: {
 }) {
   const snap = useSnapshot();
   const [раскрыт, setРаскрыт] = useState<Слот | null>('сахар');
+  const { push, pop } = useStack();
 
   const тело = (
     <>
@@ -55,6 +58,17 @@ export default function SourcesSection({ onClose, встроенный }: {
             {/* Причина стоит под ответом, а не мелким шрифтом внизу: она и есть ответ на
                 «почему из облака, а не с прибора». */}
             {причина && <div className="slot-why">{причина}</div>}
+
+            {/* Учётка — отдельной строкой и с действием (rev ≥ 1.14). Человек, у
+                которого «сахар не идёт», ищет поломку в сенсоре: меняет батарейку,
+                подходит ближе, снимает и ставит заново. А чинить надо вход в облако, и
+                сам он эти две вещи не свяжет. */}
+            {учёткаСлота(snap, слот) && (
+              <button className="slot-why слот-учётка" onClick={() => push(<CloudAccountsSection onClose={pop} />)}>
+                Источник читает данные через учётную запись, и она сейчас не отвечает.
+                Открыть учётные записи →
+              </button>
+            )}
 
             {открыт && (
               <div className="slot-src">

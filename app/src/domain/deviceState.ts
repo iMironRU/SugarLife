@@ -49,6 +49,10 @@ export function связь(d: ЧтоСоСвязью | null | undefined): Свя
        зелёный на отставшем источнике читается как «данные идут прямо сейчас». */
     case 'Delayed': return 'wait';
     case 'Disconnected': return 'off';
+    /* Ручка читается прикосновением (rev ≥ 1.15): это не «нет связи» и не «ждём». Своего
+       состояния заводить не стали — для точки и метки это «известно, но не поток»,
+       ровно то же, что «unknown» уже и означает: не утверждать про связь ничего. */
+    case 'ReadOnTouch': return 'unknown';
     default: break;
   }
   if (d.live === true) return 'live';

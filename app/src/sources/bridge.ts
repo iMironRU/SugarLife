@@ -19,7 +19,20 @@ import { nightscoutBridge } from './bridgeNightscout';
 export interface Monitor {
   glucose: string; glucoseMmol: number | null; trend: Trend; link: Link;
   reservoir: string; battery: string;
+  /* Активный инсулин. С rev 1.15 он УБЫВАЕТ сам: движок считает его по кривой распада
+     на момент запроса, а не складывает дозы. Практическое следствие для нас — числа
+     меняются между снимками без новых событий, и логика вида «IOB изменился → что-то
+     произошло» была бы неверной. У нас такой нет: события мы берём из истории. */
   confirmedIOB: number; assumedIOB: number; conservativeIOB: number;
+  /* Длинный инсулин (rev ≥ 1.15, SugarLifeCore#57) — ОТДЕЛЬНО от активного, и это не
+     упущение. Сложив 24 ед Туджео с 4 ед короткого, мы показали бы 28 «активных»:
+     человек либо испугается числа, либо недооценит короткий на его фоне.
+
+     `longActingUntilMs` приходит, только если человек задал длительность СВОЕГО
+     инсулина: у Тресибы 42 часа, у Лантуса 24, и подставлять типичное за него нельзя. */
+  longActingUnits?: number | null;
+  longActingAtMs?: number | null;
+  longActingUntilMs?: number | null;
   /* rev ≥ 1.7. Единая картина основного источника глюкозы: отдаёт ли он свежее,
      на какой стадии жизненного цикла находится, когда пришло новейшее показание и
      кто он вообще. До этого возраст показания каждый экран считал сам. */
@@ -39,7 +52,13 @@ export type Link = 'Disconnected' | 'Connecting' | 'Connected' | 'Streaming' | '
 /* rev ≥ 1.7: единый статус ЛЮБОГО источника глюкозы — это жизненный цикл получения
    данных, а не состояние BLE-линка (Link). Сенсор может быть Connected и при этом
    Acquiring: связь есть, показаний ещё нет. */
-export type SourceStatus = 'Disconnected' | 'Connecting' | 'Acquiring' | 'Live' | 'Delayed';
+/* Состояние источника. `ReadOnTouch` (rev ≥ 1.15, SugarLifeCore#57) — не разновидность
+   «нет связи», а другой способ жизни: у ручки связи нет и быть не должно, данные
+   приходят пачкой при поднесении к телефону.
+
+   Показать ей «нет связи» значит научить человека не верить этой надписи там, где она
+   означает настоящую поломку. Правильный ответ — когда читали в последний раз. */
+export type SourceStatus = 'Disconnected' | 'Connecting' | 'Acquiring' | 'Live' | 'Delayed' | 'ReadOnTouch';
 
 export type ParamType = 'Text' | 'Secret' | 'Number' | 'Bool' | 'Enum';
 export interface Param {
@@ -166,6 +185,13 @@ export interface DeviceView {
      где мы собираемся спросить человека «это твоя помпа?»: показать надо реальную
      строку, а не наш пересказ, иначе он подтверждает не то, что видит движок. */
   sourceLabel?: string | null;
+  /* Учётка вендор-облака, без которой источник не отдаёт данные (rev ≥ 1.8, заполняется
+     с 1.14). Связывает две вещи, которые человек иначе не свяжет: «сахар не идёт» и «вы
+     вышли из учётной записи LibreLinkUp».
+
+     Без неё он ищет поломку в сенсоре — проверяет батарейку, подходит ближе, снимает и
+     ставит заново, — а чинить надо вход в облако. */
+  requiresAccountId?: string | null;
 }
 /* Канал доставки состояния (rev ≥ 1.8, SugarLifeCore#23).
 
@@ -508,6 +534,11 @@ export type Intent =
      Семантически не «подключить сейчас»: прибор существует, даже когда его не слышно —
      он на теле, а данные идут облаком. Этим интентом закрывается наш локальный реестр:
      модель и серийник переезжают в движок (#224). */
+  /* Записать дозу инсулина руками (rev ≥ 1.15). До 1.15 ручной болюс не доходил до
+     активного инсулина вовсе: писался в историю мимо пересчёта, и монитор показывал ноль
+     через минуту после укола. Признак `long` отделяет длинный от короткого — они и
+     считаются, и показываются по-разному. */
+  | { type: 'logInsulin'; id: string; atMs: number; units: number; long?: boolean; note?: string | null }
   | { type: 'recordDevice'; kind: 'sensor' | 'pump' | 'bridge' | 'meter'; driverType?: string | null; params?: Record<string, string> }
   | { type: 'linkAccount'; providerId: string; params: Record<string, string> }
   | { type: 'selectAccountSubject'; accountId: string; subjectId: string };

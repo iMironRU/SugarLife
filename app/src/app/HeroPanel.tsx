@@ -14,6 +14,7 @@ import { СТРЕЛКА, направление } from '@/domain/trend';
 import { useEntries } from '@/sources/db';
 import { activeInsulin } from '@/domain/loopValue';
 import { useSnapshot } from '@/sources/bridge';
+import { расходка } from '@/domain/supplies';
 import CircleSparkline from '@/charts/CircleSparkline';
 
 const DASH = '—';
@@ -119,7 +120,11 @@ export default function HeroPanel() {
   const minsAgo = latestAt != null ? Math.round((Date.now() - latestAt) / 60000) : null;
   const fresh = minsAgo == null ? DASH : minsAgo < 1 ? 'сейчас' : minsAgo + ' мин';
 
-  const reservoir = dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : DASH;
+  /* Расходка — из снимка, Nightscout запасным (#183). Разница не в источнике: у
+     облачного числа нет ни возраста, ни принадлежности к конкретной помпе, и «37 ед»
+     часовой давности выглядят так же, как свежие. */
+  const расх = расходка(снимок, { reservoir: dev?.reservoir, pumpBattery: dev?.pumpBattery, at: dev?.at });
+  const reservoir = расх.остаток != null ? Math.round(расх.остаток) + ' ед' : DASH;
   const pumpStatus = shortStatus(dev?.status);
   /* Активный инсулин в круге. Раньше строка просто исчезала, когда цикл молчал, —
      и пустота читалась как «инсулина нет». Теперь она на месте всегда, а неизвестное
@@ -131,7 +136,7 @@ export default function HeroPanel() {
   // (OrangeLink/RileyLink, pump.extended.OrangeLinkBattery от AAPS). Показываем только
   // то, что реально известно, без пустых иконок.
   const batteries: { id: string; icon: string; value: number | null }[] = [
-    { id: 'pump', icon: flash, value: dev?.pumpBattery ?? null },
+    { id: 'pump', icon: flash, value: расх.заряд },
     { id: 'phone', icon: phonePortraitOutline, value: dev?.uploaderBattery ?? null },
     { id: 'mount', icon: gitNetworkOutline, value: dev?.mountBattery ?? null },
   ].filter((b) => b.value != null);
@@ -211,7 +216,7 @@ export default function HeroPanel() {
   const sensorDay = status !== 'off' && ages.sensor ? ages.sensor.days + 1 : null;
   const nmgSub = sensorDay != null ? 'датчик' : 'обновлено';
   const nmgVal = sensorDay != null ? 'день ' + sensorDay : fresh;
-  const daysLeft = dev?.reservoir != null && extras.tdd ? dev.reservoir / extras.tdd : null;
+  const daysLeft = расх.остаток != null && extras.tdd ? расх.остаток / extras.tdd : null;
   const resSub2 = daysLeft != null ? '≈ ' + daysHoursText(daysLeft) : 'резервуар';
   // часики на значениях из кеша, пока идёт свежая загрузка (текст не подменяем)
   const staleSensor = extras.stale && sensorDay != null;

@@ -288,7 +288,10 @@
   border-bottom: 1px solid var(--color-neutral-800);
 }
 .sec-switch .period-seg {
-  flex: 1; min-height: 44px; padding: 0 6px; border-radius: 0;
+  /* Резиновые и в одну строку: вкладки делят ширину поровну и не переносятся. Перенос
+     делал одну вкладку вдвое выше соседних, и полоса дёргалась при переключении. */
+  flex: 1 1 0; min-width: 0; white-space: nowrap;
+  min-height: 44px; padding: 0 6px; border-radius: 0;
   background: none; border: 0; box-shadow: none;
   font-size: 14px; font-weight: 500; color: var(--color-neutral-400);
   border-bottom: 2px solid transparent; margin-bottom: -1px;
@@ -347,3 +350,11 @@
   color: var(--color-neutral-400); border: 1px solid var(--color-neutral-700);
 }
 .src-tag.now { color: var(--c-glu); border-color: color-mix(in srgb, var(--c-glu) 45%, transparent); }
+
+/* Строка про учётку внутри слота — кнопка, а не сноска: за ней стоит действие, и
+   выглядеть она должна нажимаемой. Цвет тот же, что у причины: это её продолжение, а не
+   отдельная тревога. */
+.слот-учётка {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  font-family: var(--font-body); font-size: 12.5px; line-height: 1.45;
+}
