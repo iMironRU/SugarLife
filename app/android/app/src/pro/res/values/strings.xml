@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- Издание Pro (core#61): своё имя. Всё остальное — package_name, custom_url_scheme — общее,
+         его подставляет Capacitor из appId; издание меняет только видимое человеку. -->
+    <string name="app_name">SugarLife.Pro</string>
+    <string name="title_activity_main">SugarLife.Pro</string>
+</resources>

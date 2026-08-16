@@ -16,5 +16,10 @@ cd "$CORE_DIR"
 # файла, из-за чего Xcode встраивал УСТАРЕВШИЙ фреймворк → iOS крутил старый движок, пока Android свежий
 # (composite). Чистим прежний выход копии перед сборкой и сносим дубли после — фреймворк всегда свежий из ядра.
 rm -rf engine/build/xcode-frameworks 2>/dev/null || true
-./gradlew :engine:embedAndSignAppleFrameworkForXcode --no-daemon
+# ИЗДАНИЕ ЯДРА (core#61) выводим из идентификатора приложения, а не из отдельной переменной: так
+# «Pro-приложение с Lite-ядром» невозможно по построению — забыть выставить второй флаг просто негде.
+EDITION=lite
+case "${PRODUCT_BUNDLE_IDENTIFIER:-}" in *.pro) EDITION=pro;; esac
+echo "издание ядра: $EDITION (bundle ${PRODUCT_BUNDLE_IDENTIFIER:-неизвестен})"
+./gradlew :engine:embedAndSignAppleFrameworkForXcode --no-daemon -Pedition="$EDITION"
 find engine/build/xcode-frameworks -name '* [0-9].framework' -exec rm -rf {} + 2>/dev/null || true
