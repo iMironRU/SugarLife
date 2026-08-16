@@ -10,6 +10,7 @@ import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
 import { связь, меткаСвязи, предложениеСлияния, своиЖелезки, черезЧто, СЛОВО_КАНАЛА } from '@/domain/deviceState';
 import { мостСлота } from '@/domain/slotStatus';
+import { железоДиспетчера } from '@/domain/nearby';
 import { устройствоДляПараметров, значенияПараметров } from '@/domain/deviceParams';
 import { useSnapshot, sendIntent, type DeviceView } from '@/sources/bridge';
 
@@ -292,18 +293,32 @@ export default function DeviceSection({ onClose, cat, title }: {
 
   // Порядок условий = порядок препятствий: без модели не знаем даже, что искать;
   // в браузере BLE нет как класса; дальше — мост и наличие драйвера.
+  /* Известный экземпляр этого вида — если он уже заведён, подключаться надо К НЕМУ, а
+     не искать заново (SugarLife#301, замечание ядра в #301).
+
+     Поиск по построению показывает только НЕзнакомых, поэтому «Прямое чтение», ведущее
+     в скан, для заведённого прибора открывало пустой экран: он там не появится никогда.
+     Та же ловушка, что была у плитки диспетчера, только с другой стороны. */
+  const известный = железоДиспетчера(snap).find((h) => h.kind === cat) ?? null;
+
   const directSub =
     recordedNoModel ? 'сначала укажите модель — иначе неизвестно, как читать'
     : !isNative ? 'только в приложении для телефона — браузер не умеет BLE'
     : needsBridge && !имяМоста ? 'нужен мост — выбрать'
     : !hasBleDriver ? 'драйвер этого устройства ещё в разработке'
-    : bleLive ? 'подключено' : 'подключить';
+    : bleLive ? 'подключено'
+    : известный ? 'подключить — прибор уже заведён'
+    : 'найти прибор в эфире';
   const directTap =
     recordedNoModel ? () => setPick('model')
     : !isNative ? undefined
     : needsBridge && !имяМоста ? () => setPick('bridge')
-    : hasBleDriver ? () => setScanOpen(true)
-    : undefined;
+    : !hasBleDriver ? undefined
+    : bleLive ? undefined
+    /* Заведённому — connect по его id; незнакомому — скан. Это ровно то, что ядро и
+       просило: «для включения прямого чтения нужен connect с id из hardware[]». */
+    : известный ? () => { void sendIntent({ type: 'connect', deviceId: известный.id }); }
+    : () => setScanOpen(true);
 
   /* «Забыть» должно доходить до движка, а не только до нашего конфига.
 

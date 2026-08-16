@@ -368,6 +368,13 @@ export interface HardwareView {
   reservoirU?: number | null;
   batteryV?: number | null;
   reservoirAtMs?: number | null;
+  /* Когда прибор в последний раз ЧТО-ТО сообщил (rev ≥ 1.18, SugarLife#305): показание
+     сенсора, состояние помпы. null — не сообщал ничего.
+
+     Это третья, отдельная величина, и путать её с двумя соседними нельзя: nearbyAtMs —
+     «видели рекламу в эфире», connection — «канал жив». Связь бывает живой, а данных
+     нет, и именно этот случай человек читает как «сенсор работает». */
+  latestAtMs?: number | null;
   /** Модель по справочнику приложения (rev ≥ 1.14) — то же, что у DeviceView. */
   deviceModel?: string | null;
   /* Стабильная личность прибора: серийник помпы, код сенсора (rev ≥ 1.11). Именно она
@@ -387,6 +394,11 @@ export interface HardwareView {
 export interface UiSnapshot {
   bridgeRevision: string;
   coreCommit?: string; // штамп коммита ядра — сверка идентичности сборок Android/iOS
+  /* Издание ядра (rev ≥ 1.17): 'lite' — только чтение, 'pro' — ещё и управление помпой.
+     Это НАБЛЮДАЕМЫЙ факт, а не наша константа сборки: тракт записи собран в отдельном
+     исходнике ядра и в lite не компилируется вовсе. Поле молчит на старом мосту —
+     тогда считаем 'lite', потому что издание без управления безопаснее в любом сомнении. */
+  edition?: 'lite' | 'pro';
   monitor: Monitor;
   devices: DeviceView[];
   insights: Insights | null;

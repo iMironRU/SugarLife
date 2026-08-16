@@ -9,8 +9,9 @@ import { useState, useEffect } from 'react';
 import { resetLocalData } from '@/settings/reset';
 import { unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
 import { useTheme } from '../theme/useTheme';
-import { APP_EDITION, APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload, installApk, ВЫПУСКАЕТСЯ_APK } from '@/platform/appUpdate';
+import { APP_EDITION, APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload, installApk, ВЫПУСКАЕТСЯ_APK, ИЗДАНИЕ_РЕЛИЗА } from '@/platform/appUpdate';
 import { useStack } from '@/app/stackCtx';
+import { useSnapshot } from '@/sources/bridge';
 import { useHealth } from '@/settings/health';
 import { поВажности } from '@/domain/screenings';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
@@ -32,6 +33,12 @@ export default function Profile() {
   const [updating, setUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
+  /* Издание берём у движка, а не у константы сборки (#298, #294). Константа говорит, чем
+     нас собрали, движок — что внутри на самом деле. Для обновления важно второе: релиз
+     выпускает Lite, и предлагать его сборке Pro значит поставить рядом второе приложение
+     вместо обновления. */
+  const снимок = useSnapshot();
+  const издание = снимок?.edition ?? 'lite';
 
 
   const reset = () => {
@@ -54,7 +61,7 @@ export default function Profile() {
 
       // Android: если по JS всё свежее (или OTA недоступен) — проверяем новый APK.
       if (platform === 'android') {
-        const r = await checkNativeUpdate();
+        const r = await checkNativeUpdate(издание);
         setUpdating(false);
         if (r === 'error') {
           setUpdateMsg(ota === 'current' ? 'У вас последняя версия.' : 'Не удалось проверить обновление.');
@@ -63,6 +70,10 @@ export default function Profile() {
         if (r.hasUpdate && r.apkUrl) {
           setApkUrl(r.apkUrl);
           setUpdateMsg('Нужна новая сборка приложения' + (r.build ? ` (${r.build})` : '') + '.');
+        } else if (издание !== ИЗДАНИЕ_РЕЛИЗА) {
+          /* «У вас последняя версия» здесь было бы неправдой: про сборки Pro мы не знаем
+             ничего — их никто не выпускает. Молчать тоже нельзя, человек нажал кнопку. */
+          setUpdateMsg('Обновлено по воздуху. SugarLife.Pro сборками не раздаётся — нативную часть обновляют пересборкой.');
         } else if (!ВЫПУСКАЕТСЯ_APK) {
           /* Не «у вас последняя версия»: про нативную часть мы этого не знаем — новых
              сборок просто нет. Разница важна тому, кто ждёт исправления именно в
@@ -234,7 +245,10 @@ export default function Profile() {
           <div className="section-label sec">О приложении</div>
           <div className="about">
             <div className="about-info">
-              <div className="about-ver">{APP_EDITION} {APP_VERSION}</div>
+              {/* Имя издания — из движка, если он его назвал (#298). APP_EDITION говорит,
+                  чем нас собрали, и в сборке Pro осталась бы надпись «SugarLife.Lite»:
+                  строка ниже попадает в сообщения о проблемах, и врать в ней дороже всего. */}
+              <div className="about-ver">{издание === 'pro' ? 'SugarLife.Pro' : APP_EDITION} {APP_VERSION}</div>
               <div className="about-build">сборка {APP_BUILD}{isNative ? ' · нативное' : ' · PWA'}</div>
             </div>
             {apkUrl ? (
