@@ -1,5 +1,5 @@
 import { IonIcon } from '@ionic/react';
-import { checkmarkCircle, ellipseOutline, chevronForward } from 'ionicons/icons';
+import { checkmarkCircle, ellipseOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import Section from '@/ui/Section';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
@@ -27,7 +27,17 @@ export default function SourcesSection({ onClose, встроенный }: {
   onClose?: () => void; встроенный?: boolean;
 }) {
   const snap = useSnapshot();
-  const [раскрыт, setРаскрыт] = useState<Слот | null>('сахар');
+  /* Вкладки, а не аккордеон (замечание с телефона).
+
+     Раскрывающиеся карточки меняли высоту содержимого на каждом обновлении снимка:
+     появилась причина отката, пришла и ушла строка про учётку, сменилась подпись
+     источника — и список подпрыгивал сам по себе, без участия человека. Читать
+     прыгающий экран нельзя, а обновляется он каждые несколько секунд.
+
+     У вкладки высота своя и от соседей не зависит. Цена — обзор: три слота больше не
+     видны разом. Поэтому состояние каждого осталось на самой вкладке точкой: пустой
+     слот и слот, идущий обходным путём, видно, не открывая его. */
+  const [вкладка, setВкладка] = useState<Слот>('сахар');
   const { push, pop } = useStack();
 
   const тело = (
@@ -37,23 +47,32 @@ export default function SourcesSection({ onClose, встроенный }: {
         разбор.
       </div>
 
-      {СЛОТЫ.map((слот) => {
+      {/* Точка на вкладке — то, что иначе потерялось бы вместе с обзором: пусто,
+          идёт обходным путём, всё хорошо. Слово рядом не ставим: три подписи в ряд не
+          помещаются, а точка отвечает на «есть ли беда» без чтения. */}
+      <div className="period sec-switch слоты">
+        {СЛОТЫ.map((слот) => (
+          <button key={слот} className={'period-seg' + (вкладка === слот ? ' on' : '')}
+            onClick={() => setВкладка(слот)}>
+            <span className={'slot-dot' + (!наполненЛи(snap, слот) ? ' off'
+              : причинаСлота(snap, слот) ? ' cloud' : ' ok')} />
+            {ИМЯ_СЛОТА[слот]}
+          </button>
+        ))}
+      </div>
+
+      {(() => {
+        const слот = вкладка;
         const источники = источникиСлота(snap, слот);
         const причина = причинаСлота(snap, слот);
-        const открыт = раскрыт === слот;
         return (
-          <div key={слот} className="slot-card">
-            <button className="slot-top" onClick={() => setРаскрыт(открыт ? null : слот)}>
-              {/* Точка отвечает на «наполняется ли»: пусто — серая, идёт обходным
-                  путём — акцентная, всё хорошо — зелёная. Зелёная при пустом слоте была
-                  бы обещанием, которого никто не давал. */}
-              <span className={'slot-dot' + (!наполненЛи(snap, слот) ? ' off' : причина ? ' cloud' : ' ok')} />
-              <span className="pick-main">
-                <span className="list-title">{ИМЯ_СЛОТА[слот]}</span>
-                <span className="pick-sub">{откудаСейчас(snap, слот)}</span>
-              </span>
-              <IonIcon icon={chevronForward} className={'slot-chev' + (открыт ? ' on' : '')} />
-            </button>
+          <div className="slot-card">
+            {/* Имени слота здесь нет: оно уже написано на выбранной вкладке прямо над
+                карточкой, и второй раз отвечает на вопрос, который никто не задавал.
+                Остаётся то, ради чего сюда и смотрят, — откуда данные идут сейчас. */}
+            <div className="slot-top как-подпись">
+              <span className="pick-sub">{откудаСейчас(snap, слот)}</span>
+            </div>
 
             {/* Причина стоит под ответом, а не мелким шрифтом внизу: она и есть ответ на
                 «почему из облака, а не с прибора». */}
@@ -70,31 +89,29 @@ export default function SourcesSection({ onClose, встроенный }: {
               </button>
             )}
 
-            {открыт && (
-              <div className="slot-src">
-                {источники.map((и) => (
-                  <button key={и.id} className={'list-row pick-row' + (и.активен ? ' on' : '')}
-                    /* «Предпочесть» — просьба движку, а не переключатель у нас: своего
-                       состояния не заводим, и разъезжаться нечему. Замолчит выбранный —
-                       данные придут прежним путём, человек не останется ни с чем. */
-                    onClick={() => { if (!и.активен && и.id !== 'руками') void sendIntent({ type: 'setPrimarySource', sourceId: и.id }); }}>
-                    <IonIcon icon={и.активен ? checkmarkCircle : ellipseOutline} className="list-ico" />
-                    <span className="pick-main">
-                      <span className="list-title">{и.имя}</span>
-                      <span className="pick-sub">{и.подпись}</span>
-                    </span>
-                    {и.активен ? <span className="src-tag now">сейчас</span>
-                      : и.живой ? <span className="src-tag">предпочесть</span> : null}
-                  </button>
-                ))}
-                {!источники.length && (
-                  <div className="metric-note">Источников нет — подключите прибор или облако.</div>
-                )}
-              </div>
-            )}
+            <div className="slot-src">
+              {источники.map((и) => (
+                <button key={и.id} className={'list-row pick-row' + (и.активен ? ' on' : '')}
+                  /* «Предпочесть» — просьба движку, а не переключатель у нас: своего
+                     состояния не заводим, и разъезжаться нечему. Замолчит выбранный —
+                     данные придут прежним путём, человек не останется ни с чем. */
+                  onClick={() => { if (!и.активен && и.id !== 'руками') void sendIntent({ type: 'setPrimarySource', sourceId: и.id }); }}>
+                  <IonIcon icon={и.активен ? checkmarkCircle : ellipseOutline} className="list-ico" />
+                  <span className="pick-main">
+                    <span className="list-title">{и.имя}</span>
+                    <span className="pick-sub">{и.подпись}</span>
+                  </span>
+                  {и.активен ? <span className="src-tag now">сейчас</span>
+                    : и.живой ? <span className="src-tag">предпочесть</span> : null}
+                </button>
+              ))}
+              {!источники.length && (
+                <div className="metric-note">Источников нет — подключите прибор или облако.</div>
+              )}
+            </div>
           </div>
         );
-      })}
+      })()}
 
       <div className="metric-note">
         Приложение выбирает источник само: живое прежде отставшего, прибор прежде облака.
