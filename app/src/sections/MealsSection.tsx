@@ -47,7 +47,7 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
   const сумма = Math.round(все.reduce((s, x) => s + x.carbs, 0));
 
   return (
-    <Section title="Приёмы пищи"
+    <Section title="Приёмы пищи" описание="Что и когда вы ели. Отсюда считаются активные углеводы, поэтому пропущенная запись портит не только историю, но и подсказки."
         subtitle={все.length
           ? `${все.length} ${plural(все.length, 'приём', 'приёма', 'приёмов')} · ${toCarbs(сумма, cu)} ${carbUnitLabel(cu)}`
           : 'Пока пусто'}

@@ -40,7 +40,7 @@ export default function DataDevicesSection({ onClose, вкладка: начал
   const [вкладка, setВкладка] = useState<Вкладка>(начальная ?? 'данные');
 
   return (
-    <Section title="Устройства и данные" subtitle="Профиль · Хозяйство" onBack={onClose}
+    <Section title="Устройства и данные" описание="Всё про приборы и данные в одном месте: откуда идут цифры, что за железо у вас есть и какие облака подключены." onBack={onClose}
       подШапкой={(
         <div className="period sec-switch">
           {ВКЛАДКИ.map((в) => (

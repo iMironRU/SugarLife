@@ -124,5 +124,6 @@ export default function AnalyticsSection({ onClose, встроенный }: {
   );
 
   if (встроенный) return тело;
-  return <Section title="Аналитика" onBack={onClose ?? (() => {})} subtitle={подзаголовок}>{тело}</Section>;
+  return <Section title="Аналитика" onBack={onClose ?? (() => {})} subtitle={подзаголовок}
+      описание="Что изменилось за период и почему. Разбор считается по тем же источникам, что и всё остальное, — если данные неполные, здесь об этом сказано.">{тело}</Section>;
 }

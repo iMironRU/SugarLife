@@ -92,7 +92,7 @@ export default function ServicesSection({ onClose, встроенный }: {
 
   if (встроенный) return тело;
   return (
-    <Section title="Сервисы" subtitle="Профиль · Сервисы" onBack={onClose ?? (() => {})}>
+    <Section title="Сервисы" описание="Nightscout и другие серверы, через которые приходят и уходят данные. Прибор — это ЧТО, сервис — это КАК." onBack={onClose ?? (() => {})}>
       {тело}
     </Section>
   );

@@ -40,7 +40,7 @@ export default function CloudAccountsSection({ onClose }: { onClose: () => void 
 
   if (вход) {
     return (
-      <Section title={вход.displayName} subtitle="Вход в облако"
+      <Section title={вход.displayName} subtitle="вход в облако"
         onBack={() => { setВход(null); setПоля({}); }}
         действие={<button className="head-next" onClick={войти}>Войти</button>}>
         <ParamsForm spec={вход.settings} values={поля}
@@ -57,7 +57,7 @@ export default function CloudAccountsSection({ onClose }: { onClose: () => void 
   }
 
   return (
-    <Section title="Облачные учётки" subtitle="Профиль · Сервисы · Учётки" onBack={onClose}>
+    <Section title="Облачные учётки" описание="Входы в облака производителей. Через них читаются данные приборов, которые не отдают их напрямую." onBack={onClose}>
       {!провайдеры.length && (
         <div className="metric-note">
           Движок пока не предлагает ни одного облака. Здесь появятся LibreLinkUp,

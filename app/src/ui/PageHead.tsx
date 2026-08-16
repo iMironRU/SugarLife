@@ -12,11 +12,18 @@ import type { ReactNode } from 'react';
    Теперь везде стрелка слева: это шаг назад по стеку, а не закрытие поверх лежащего
    окна. Отдельным компонентом — чтобы разнобой не завёлся снова при следующем
    добавленном разделе. */
-export default function PageHead({ title, subtitle, onBack, действие }: {
+export default function PageHead({ title, крошка, subtitle, onBack, действие }: {
   title: string;
+  /* Путь до этой страницы — «где я». Собирает его стек, а не раздел: написанная руками
+     крошка не знает, откуда её открыли, и разъезжается (см. stackCtx). */
+  крошка?: string;
   /* Не только строка: в подзаголовке живёт то, что уточняет весь раздел, и иногда это
-     уточнение цветное — например, качество данных в разборе (#197). Заводить ради
-     этого второй проп значило бы делить одно место на два. */
+     уточнение цветное — например, качество данных в разборе (#197).
+
+     Роль у него теперь ровно одна — уточнить ЗАГОЛОВОК, когда одного имени мало
+     («Шаг 1 из 4», «Вход в облако»). «Где я» ушло в крошку выше, «что это» — в описание
+     под шапкой, «что сейчас» — в тело. Раньше все четыре смысла делили одну строку, и
+     раздел получал случайно доставшийся (#311). */
   subtitle?: ReactNode;
   onBack: () => void;
   /* Действие справа — «Далее» у мастера (SugarLife#259).
@@ -32,13 +39,19 @@ export default function PageHead({ title, subtitle, onBack, действие }: 
   действие?: ReactNode;
 }) {
   return (
-    <div className="sheet-head">
-      <button className="sheet-close" onClick={onBack} aria-label="Назад"><IonIcon icon={chevronBack} /></button>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="sheet-title">{title}</div>
-        {subtitle && <div className="sheet-subtitle">{subtitle}</div>}
+    <>
+      {/* Крошка над всем, а не под заголовком: она отвечает на вопрос, который задают
+          первым и один раз, — «куда я попал». Под заголовком она соперничала бы с
+          описанием за одно место, и раздел получал бы что-то одно. */}
+      {крошка && <div className="ph-crumb">{крошка}</div>}
+      <div className="sheet-head">
+        <button className="sheet-close" onClick={onBack} aria-label="Назад"><IonIcon icon={chevronBack} /></button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="sheet-title">{title}</div>
+          {subtitle && <div className="sheet-subtitle">{subtitle}</div>}
+        </div>
+        {действие}
       </div>
-      {действие}
-    </div>
+    </>
   );
 }

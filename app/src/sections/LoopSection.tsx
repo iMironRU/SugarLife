@@ -36,7 +36,7 @@ export default function LoopSection({ onClose }: { onClose: () => void }) {
   const следующий = LOOP_MODES[LOOP_MODES.findIndex((m) => m.id === профиль.mode) + 1] ?? null;
 
   return (
-    <Section title="Петля" subtitle="Профиль · Управление подачей" onBack={onClose}>
+    <Section title="Петля" описание="Правила, по которым считается подача: уровень полномочий, пределы и профиль. Само включение подачи живёт не здесь." onBack={onClose}>
       {/* Первым — что сейчас, а не что настроено. Человек приходит сюда с вопросом
           «работает ли», и ответ на него не должен требовать нажатия. */}
       <div className="wz-l0">

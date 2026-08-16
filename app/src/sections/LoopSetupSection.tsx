@@ -25,6 +25,15 @@ import {
    спрашивает почему. Мастер остался тем, чем должен быть, — разовой настройкой. */
 type Step = 0 | 1 | 2 | 3;
 const STEPS = ['Оборудование', 'Режим петли', 'Лимиты', 'Проверка'];
+/* Описание каждого шага — там же, где у обычных разделов, и одной строкой на шаг.
+   Раньше эти слова лежали внутри веток шага как <p class="wz-lede">, поэтому у одних
+   шагов они были, у других нет. */
+const ОПИСАНИЕ_ШАГА = [
+  'Опрос устройств. Перечень доступных режимов определяется их возможностями.',
+  'Режимы различаются объёмом полномочий алгоритма, а не набором настроек.',
+  'Пределы, за которые алгоритм не выйдет ни при каких расчётах.',
+  'Проверьте, что записывается, и подтвердите. Изменения профиля пишутся с датой и временем.',
+];
 
 type Check = { ok: 'yes' | 'no' | 'maybe'; name: string; note: string };
 
@@ -94,6 +103,11 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
       /* Запертая кнопка обязана объяснять себя: без подписи «Далее» просто не
          нажимается, и это выглядит поломкой, а не условием. */
       subtitle={done ? 'профиль записан' : `Шаг ${step + 1} из 4`}
+      /* Описание шага стоит там же, где описание любого раздела, и одним видом с ним.
+         Раньше шаг печатал своё имя ВТОРОЙ раз крупным заголовком, а под ним свой lede:
+         человек читал «Оборудование», потом снова «Оборудование» размером больше — и
+         только третьей строкой узнавал, что происходит (#311). */
+      описание={done ? 'Профиль записан на этом устройстве. Подача не включена: приложение остаётся на L0.' : ОПИСАНИЕ_ШАГА[step]}
       подШапкой={!done ? (
         <div className="wz-prog">
           {STEPS.map((s, i) => (
@@ -114,7 +128,6 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
 
         {done ? (
           <>
-            <h2 className="wz-h">Профиль применён</h2>
             <div className="wz-fixed ok">
               <div className="wz-fixed-v ok">Петля стартует на уровне L2</div>
               <div className="sheet-note">
@@ -128,11 +141,9 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
           </>
         ) : (
           <>
-            <h2 className="wz-h">{STEPS[step]}</h2>
 
             {step === 0 && (
               <>
-                <p className="wz-lede">Опрос устройств. Перечень доступных режимов определяется их возможностями.</p>
                 {checks.map((c) => (
                   <div key={c.name} className="wz-card wz-hw">
                     <IonIcon className={'wz-ic ' + c.ok} icon={c.ok === 'yes' ? checkmarkCircle : c.ok === 'no' ? closeCircle : alertCircle} />
@@ -147,7 +158,6 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
 
             {step === 1 && (
               <>
-                <p className="wz-lede">Режимы различаются объёмом полномочий алгоритма, а не набором настроек.</p>
                 {LOOP_MODES.map((m) => (
                   <button
                     key={m.id}
@@ -170,7 +180,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
 
             {step === 2 && (
               <>
-                <p className="wz-lede">
+                <p className="sheet-note">
                   Значения по умолчанию — рекомендованные. Состав лимитов определяется режимом «{mode.name}».
                 </p>
                 {limits.length === 0 && (
@@ -266,7 +276,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
 
             {step === 3 && (
               <>
-                <p className="wz-lede">Изменения профиля записываются с датой и временем.</p>
+                <p className="sheet-note">Изменения профиля записываются с датой и временем.</p>
                 <div className="wz-card wz-sum">
                   <div className="wz-srow"><span>Режим</span><b>{mode.code} · {mode.name}</b></div>
                   {limits.map((l) => (

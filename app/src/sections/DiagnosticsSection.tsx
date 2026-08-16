@@ -41,7 +41,7 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
      Экран с переключателями, которые ни на что не влияют, хуже его отсутствия. */
   if (!logging) {
     return (
-      <Section title="Диагностика" subtitle="Логи работы" onBack={onClose}>
+      <Section title="Диагностика" описание="Записи о работе приложения и обмене с приборами. Нужны, когда что-то разбирают: сюда попадает то, чего не видно на экранах." onBack={onClose}>
         <div className="loop-empty">
           <IonIcon icon={documentTextOutline} />
           <div className="loop-empty-t">Логов нет</div>
@@ -61,7 +61,7 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
   };
 
   return (
-    <Section title="Диагностика" subtitle="Логи работы приложения" onBack={onClose}>
+    <Section title="Диагностика" описание="Записи о работе приложения и обмене с приборами. Нужны, когда что-то разбирают: сюда попадает то, чего не видно на экранах." onBack={onClose}>
 
       <div className="section-label sec">Подробность</div>
       <div className="list">
