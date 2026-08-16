@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
-import { useSnapshot } from '@/sources/bridge';
+import { useSnapshot, sendIntent } from '@/sources/bridge';
 import {
   железоДиспетчера, СЛОТ, рядомЖелезо, мостЖелезки, имяЖелезки, адресВЭфире,
   заМостомЛи, звеноЦепочки, словоЦепочки,
@@ -25,6 +25,9 @@ import type { DeviceCatKey } from './DeviceSection';
 import { useStack } from '@/app/stackCtx';
 import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
 import HardwareSheet from '@/sheets/HardwareSheet';
+import {
+  словоОжидания, ходПопытки, СРОК_ОЖИДАНИЯ_МС, type Попытка, type Цель,
+} from '@/domain/connectAttempt';
 
 /* Профиль → «Устройства» — отдельный полноэкранный раздел (не вложенная секция), как в
    docs/CONNECT-UX.md §10 «Карта интерфейса». Группировка по классу устройства (§2a: реестр).
@@ -40,6 +43,14 @@ export default function DevicesSection({ onClose, встроенный }: {
   /* Какая карточка прибора открыта. Держим id, а не сам объект: снимок обновляется
      каждые несколько секунд, и застывшая копия показывала бы состояние на момент тапа. */
   const [карточка, setКарточка] = useState<string | null>(null);
+  /* Ожидание ответа прибора живёт ЗДЕСЬ, а не в карточке (#303): карточку закрывают
+     через секунду после нажатия, и вместе с ней исчезло бы ожидание — а прибор в это
+     время всё ещё пытается ответить. Строка списка должна сказать об этом и без неё. */
+  const [попытка, setПопытка] = useState<Попытка | null>(null);
+  const начать = (цель: Цель, id: string, intent: Parameters<typeof sendIntent>[0]) => {
+    setПопытка({ id, цель, началоМс: Date.now() });
+    void sendIntent(intent);
+  };
 
   const pump = pumpById(devCfg.pumpId);
   const sensor = sensorById(devCfg.sensorId);
@@ -97,10 +108,24 @@ export default function DevicesSection({ onClose, встроенный }: {
   /* Время держим своим счётчиком: «рядом» протухает по часам, а не по приходу снимка,
      и без тика строка «рядом» висела бы, пока движок не пришлёт что-нибудь ещё. */
   const [сейчас, setСейчас] = useState(() => Date.now());
+  /* Пока ждём ответа, часы идут секундой: срок ожидания — тридцать секунд, и с шагом
+     в пятнадцать «не ответил» появлялось бы с опозданием вдвое. В покое шаг прежний —
+     он нужен лишь чтобы протухало «рядом». */
+  const ждём = попытка ? ходПопытки(попытка, false, сейчас) === 'идёт' : false;
   useEffect(() => {
-    const id = window.setInterval(() => setСейчас(Date.now()), 15_000);
+    const id = window.setInterval(() => setСейчас(Date.now()), ждём ? 1_000 : 15_000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [ждём]);
+  /* И отдельный будильник ровно на срок. Полагаться на тик здесь нельзя: он может
+     запоздать или не прийти вовсе — вкладку свернули, система придушила таймеры, — и
+     «Подключаюсь…» осталось бы навсегда. А это ровно то молчание, от которого уходим:
+     ожидание без конца хуже честного «не ответил». */
+  useEffect(() => {
+    if (!попытка) return;
+    const id = window.setTimeout(() => setСейчас(Date.now()),
+      попытка.началоМс + СРОК_ОЖИДАНИЯ_МС + 200 - Date.now());
+    return () => window.clearTimeout(id);
+  }, [попытка]);
   /* «Рядом» считаем с оглядкой на мост (#251): помпа Medtronic по блютусу не вещает
      вовсе, и пока OrangeLink молчит, «рядом» про неё — утверждение, которого никто не
      делал. Правило в domain/nearby.ts. */
@@ -136,6 +161,9 @@ export default function DevicesSection({ onClose, встроенный }: {
                   d.busy === 'possibly' ? 'возможно, занят другим телефоном' : null,
                   близко && !живой ? 'рядом' : null,
                 ].filter(Boolean).join(' · ');
+                /* Ожидание вытесняет обычное состояние, а не приписывается к нему:
+                   «нет связи · подключаюсь…» — это два ответа на один вопрос. */
+                const ожидание = словоОжидания(попытка, d.id, живой, сейчас);
                 /* Адрес в эфире — чтобы различать два одинаковых прибора. Не нашли —
                    не показываем: выдуманный «серийник» хуже отсутствия. */
                 const адрес = адресВЭфире(d);
@@ -153,7 +181,7 @@ export default function DevicesSection({ onClose, встроенный }: {
                       className={'list-ico' + (живой ? '' : ' muted')} />
                     <span className="pick-main">
                       <span className="list-title">{d.model || d.name}</span>
-                      <span className="pick-sub">{строка || 'состояние неизвестно'}</span>
+                      <span className="pick-sub">{ожидание ?? (строка || 'состояние неизвестно')}</span>
                       {адрес && <span className="dev-addr">{адрес}</span>}
                     </span>
                     {/* Кнопок действий на плитке больше нет, и это не потеря удобства, а
@@ -226,6 +254,7 @@ export default function DevicesSection({ onClose, встроенный }: {
             чего уже нет. */}
         {карточка && железо.find((d) => d.id === карточка) && (
           <HardwareSheet прибор={железо.find((d) => d.id === карточка)!} снимок={снимок}
+            попытка={попытка} начать={начать} сейчас={сейчас}
             onClose={() => setКарточка(null)} />
         )}
     </>
