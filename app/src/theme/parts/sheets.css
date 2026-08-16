@@ -129,13 +129,13 @@
      обёртка: пока он был здесь — calc(100% + 1px) — метка конца оказывалась ЗА ним, то
      есть всегда чуть ниже видимой области, и «дочитано» не наступало никогда. */
   min-height: 100%;
-  padding: 6px var(--sl-side) 26px;
+  padding: var(--sl-head-gap) var(--sl-side) 26px;
 }
 .stack-page > .page-foot { flex: 0 0 auto; }
 
 /* Класс .sheet остался на разделах (там это IonContent страницы стека). У шторок
    своя раскладка — .sheet-shell выше; отдельного правила им не нужно. */
-.sheet::part(scroll) { padding: 6px var(--sl-side) 26px; }
+.sheet::part(scroll) { padding: var(--sl-head-gap) var(--sl-side) 26px; }
 /* gap — чтобы круглая кнопка не липла к заголовку (на телефоне читалось как одно пятно) */
 .sheet-head { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 8px 0 4px; }
 
@@ -163,7 +163,7 @@
    scrollTop уходил бы в минус на отскоке, и шторка подхватывала бы чужое движение. */
 .sheet-body {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-  padding: 0 var(--sl-side) 20px; -webkit-overflow-scrolling: touch;
+  padding: var(--sl-head-gap) var(--sl-side) 20px; -webkit-overflow-scrolling: touch;
 }
 .sheet-shell > .sheet-foot, .sheet-shell > .page-foot {
   flex: 0 0 auto; border-top: 1px solid var(--color-neutral-800);
@@ -313,3 +313,17 @@
 /* Метка конца содержимого: по ней гаснет затемнение внизу. Высота ненулевая намеренно —
    нулевой узел не даёт ни высоты, ни надёжного положения. */
 .stack-end { height: 1px; }
+
+/* Первый блок не приносит свой верхний отступ (продолжение того же правила).
+
+   Его margin придуман для зазора МЕЖДУ блоками — заметка после списка, метка секции
+   после карточки. Под шапкой он оказывается не по назначению и складывается с отступом
+   оболочки: отсюда и брались 22 пикселя в «Аналитике» против 10 в «Приборах». Оболочка
+   теперь отвечает за это расстояние целиком, а элементу остаётся его настоящая работа —
+   отделяться от соседа сверху, которого у первого нет.
+
+   Три поверхности перечислены явно, без общего предка: у них разные скроллеры и разные
+   родители, и селектор «на всякий случай» пошире зацепил бы вложенные списки. */
+.stack-fill > :first-child,
+.sheet-body > :first-child,
+.screen > :first-child { margin-top: 0; }

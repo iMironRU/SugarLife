@@ -137,7 +137,7 @@ export default function DevicesSection({ onClose, встроенный }: {
     <>
         {железо.length > 0 && (
           <>
-            <div className="section-label sec первый">Мои устройства</div>
+            <div className="section-label sec">Мои устройства</div>
             <div className="list">
               {железо.map((d) => {
                 /* Облако в этот список больше не попадает по построению, поэтому
