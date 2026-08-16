@@ -4,13 +4,13 @@ import { DeviceSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
 import {
   hardwareChipOutline, flash, speedometerOutline, helpCircleOutline,
-  bluetoothOutline, radioOutline, searchOutline, playOutline, pauseOutline,
+  bluetoothOutline, radioOutline, searchOutline, chevronForward,
 } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
-import { useSnapshot, sendIntent } from '@/sources/bridge';
+import { useSnapshot } from '@/sources/bridge';
 import {
   железоДиспетчера, СЛОТ, рядомЖелезо, мостЖелезки, имяЖелезки, адресВЭфире,
   заМостомЛи, звеноЦепочки, словоЦепочки,
@@ -24,6 +24,7 @@ import { слотПоСнимку, путьСлота, ПОДПИСЬ_СЛОТА
 import type { DeviceCatKey } from './DeviceSection';
 import { useStack } from '@/app/stackCtx';
 import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
+import HardwareSheet from '@/sheets/HardwareSheet';
 
 /* Профиль → «Устройства» — отдельный полноэкранный раздел (не вложенная секция), как в
    docs/CONNECT-UX.md §10 «Карта интерфейса». Группировка по классу устройства (§2a: реестр).
@@ -36,6 +37,9 @@ export default function DevicesSection({ onClose, встроенный }: {
   const { data } = useStore();
   const devCfg = useDeviceConfig();
   const [reqOpen, setReqOpen] = useState(false);
+  /* Какая карточка прибора открыта. Держим id, а не сам объект: снимок обновляется
+     каждые несколько секунд, и застывшая копия показывала бы состояние на момент тапа. */
+  const [карточка, setКарточка] = useState<string | null>(null);
 
   const pump = pumpById(devCfg.pumpId);
   const sensor = sensorById(devCfg.sensorId);
@@ -136,7 +140,10 @@ export default function DevicesSection({ onClose, встроенный }: {
                    не показываем: выдуманный «серийник» хуже отсутствия. */
                 const адрес = адресВЭфире(d);
                 return (
-                  <div key={d.id} className="list-row">
+                  /* Кнопка, а не div (#301). Плитка была неподвижной, хотя подсказка под
+                     списком обещала «тапни устройство — там все действия»: известный
+                     прибор нельзя было подключить вообще ничем. */
+                  <button key={d.id} className="list-row" onClick={() => setКарточка(d.id)}>
                     {/* Значок — про то, каким способом железка разговаривает С ТЕЛЕФОНОМ,
                         и раньше он стоял наоборот (SugarLifeCore#50). Мост — блютусный:
                         это он подключён к телефону. А до помпы блютус не доходит вовсе,
@@ -149,28 +156,18 @@ export default function DevicesSection({ onClose, встроенный }: {
                       <span className="pick-sub">{строка || 'состояние неизвестно'}</span>
                       {адрес && <span className="dev-addr">{адрес}</span>}
                     </span>
-                    {/* Переподключить предлагаем только когда железка рядом: кнопка,
-                        которая заведомо ничего не даст (устройство в другой комнате),
-                        читается как поломка приложения, а не как отсутствие связи. */}
-                    {/* Пока связь встаёт, кнопок нет вовсе: «Подключить» во время
-                        подключения ничего не ускоряет, а «Пауза» обрывает то, чего
-                        человек как раз ждёт. */}
-                    {связь(d) === 'wait' ? null : живой ? (
-                      /* У моста действие называется иначе, потому что оно и есть иное.
-                         «Пауза» — про приостановку работы; у моста смысл в том, чтобы
-                         УСТУПИТЬ прибор: блютус держит один центральный, и пока держим
-                         мы, другой телефон к мосту не подключится (SugarLifeCore#50). */
-                      <button className="changed-btn"
-                        onClick={() => sendIntent({ type: 'disconnect', deviceId: d.id })}>
-                        <IonIcon icon={pauseOutline} />{d.kind === 'bridge' ? 'Отпустить' : 'Пауза'}
-                      </button>
-                    ) : близко ? (
-                      <button className="changed-btn"
-                        onClick={() => sendIntent({ type: 'connect', deviceId: d.id })}>
-                        <IonIcon icon={playOutline} />Подключить
-                      </button>
-                    ) : null}
-                  </div>
+                    {/* Кнопок действий на плитке больше нет, и это не потеря удобства, а
+                        то, что подсказка под списком обещала с самого начала: «на плитке
+                        ничего не отключишь случайно». Раньше здесь стояли «Пауза» и
+                        «Подключить», причём вторая — только когда железка замечена в
+                        эфире, и именно это заперло проверку железа (#301): известный
+                        прибор в эфир не попадает, пока его не слушают.
+
+                        Действия переехали в карточку целиком. Кнопка внутри кнопки —
+                        ещё и невалидная разметка: тап по плитке и тап по действию стали
+                        бы одним событием. */}
+                    <IonIcon icon={chevronForward} className="list-chev" />
+                  </button>
                 );
               })}
             </div>
@@ -224,6 +221,13 @@ export default function DevicesSection({ onClose, встроенный }: {
           <Row icon={helpCircleOutline} title="Проверить / записать по модели" onClick={() => setReqOpen(true)} />
         </div>
         <RequirementsCatalogSheet isOpen={reqOpen} onClose={() => setReqOpen(false)} />
+        {/* Прибор ищем в свежем списке по id: если движок его забыл (removeDevice прошёл,
+            снимок обновился), карточка исчезает сама — показывать её было бы про то,
+            чего уже нет. */}
+        {карточка && железо.find((d) => d.id === карточка) && (
+          <HardwareSheet прибор={железо.find((d) => d.id === карточка)!} снимок={снимок}
+            onClose={() => setКарточка(null)} />
+        )}
     </>
   );
 
