@@ -37,30 +37,46 @@ draw() { # <svg> <размер> <куда>
 src() { draw "$1" 1024 "$TMP/$2.png"; }
 size() { magick "$TMP/$1.png" -resize "$2x$2" -strip "$3"; }
 
-src resources/icon.svg base
-src resources/icon-maskable.svg mask
-src resources/icon-foreground.svg fg
-src resources/icon-background.svg bg
-src resources/icon-dark.svg dark
-src resources/icon-tinted.svg tint
+# ИЗДАНИЕ (core#61). Без аргумента — Lite, как было. `pro` берёт исходники *-pro.svg и кладёт результат
+# в отдельные места: иконки Android — в src/pro/res, iOS — в свой набор AppIcon-Pro. Общие файлы и
+# иконки PWA при этом НЕ ТРОГАЮТСЯ: PWA — это Lite, и чёрно-белая иконка Pro на сайте была бы ошибкой.
+EDITION="${1:-lite}"
+[ "$EDITION" = lite ] || [ "$EDITION" = pro ] || { echo "издание: lite или pro, а не «$EDITION»"; exit 1; }
+SUF=""; [ "$EDITION" = pro ] && SUF="-pro"
+echo "издание: $EDITION"
 
-# Исходник для @capacitor/assets: им перегенерируют иконки те, кто не знает про этот
-# скрипт, и он обязан показывать то же самое.
-size base 1024 resources/icon.png
+src "resources/icon$SUF.svg" base
+src "resources/icon-maskable$SUF.svg" mask
+src "resources/icon-foreground$SUF.svg" fg
+src "resources/icon-background$SUF.svg" bg
+src "resources/icon-dark$SUF.svg" dark
+src "resources/icon-tinted$SUF.svg" tint
 
-# --- PWA и браузер -----------------------------------------------------------
-size base 512 public/icon-512.png
-size base 192 public/icon-192.png
-size base 180 public/apple-touch-icon.png
-size base 48  public/favicon-48.png
-size mask 512 public/icon-maskable-512.png
-size mask 192 public/icon-maskable-192.png
+if [ "$EDITION" = lite ]; then
+  # Исходник для @capacitor/assets: им перегенерируют иконки те, кто не знает про этот
+  # скрипт, и он обязан показывать то же самое.
+  size base 1024 resources/icon.png
+
+  # --- PWA и браузер ---------------------------------------------------------
+  # Только для Lite: сайт — это Lite, и подменять его иконку изданием Pro нельзя.
+  size base 512 public/icon-512.png
+  size base 192 public/icon-192.png
+  size base 180 public/apple-touch-icon.png
+  size base 48  public/favicon-48.png
+  size mask 512 public/icon-maskable-512.png
+  size mask 192 public/icon-maskable-192.png
+fi
 
 # --- iOS ---------------------------------------------------------------------
 # Один файл 1024 на все размеры — так Xcode работает с 14-й версии. Тёмный и
 # тонированный варианты появились в iOS 18; без них система делает их сама, и капля
 # на тёмном получается блеклой.
+# У Pro свой НАБОР иконок рядом, а не поверх: какой брать, решает переменная сборки
+# ASSETCATALOG_COMPILER_APPICON_NAME. Общий AppIcon остаётся иконкой Lite.
 IOS=ios/App/App/Assets.xcassets/AppIcon.appiconset
+[ "$EDITION" = pro ] && IOS=ios/App/App/Assets.xcassets/AppIcon-Pro.appiconset
+mkdir -p "$IOS"
+[ -f "$IOS/Contents.json" ] || cp ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json "$IOS/Contents.json"
 size base 1024 "$IOS/AppIcon-512@2x.png"
 size dark 1024 "$IOS/AppIcon-dark.png"
 size tint 1024 "$IOS/AppIcon-tinted.png"
@@ -68,9 +84,13 @@ size tint 1024 "$IOS/AppIcon-tinted.png"
 # --- Android -----------------------------------------------------------------
 # Плотности: mdpi 1x … xxxhdpi 4x. Legacy-иконка (ic_launcher) 48dp, слои адаптивной —
 # 108dp: у неё края уходят под маску, поэтому холст больше видимой части.
+# Иконки Pro ложатся в свой sourceSet — общий res не трогаем вовсе.
 AND=android/app/src/main/res
+[ "$EDITION" = pro ] && AND=android/app/src/pro/res
+mkdir -p "$AND"
 for pair in "ldpi 36 81" "mdpi 48 108" "hdpi 72 162" "xhdpi 96 216" "xxhdpi 144 324" "xxxhdpi 192 432"; do
   set -- $pair
+  mkdir -p "$AND/mipmap-$1"
   size mask "$2" "$AND/mipmap-$1/ic_launcher.png"
   size mask "$2" "$AND/mipmap-$1/ic_launcher_round.png"
   size fg   "$3" "$AND/mipmap-$1/ic_launcher_foreground.png"
