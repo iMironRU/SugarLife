@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createGesture } from '@ionic/react';
-import { StackCtx, ЭтажCtx, type StackApi } from './stackCtx';
+import { StackCtx, type StackApi } from './stackCtx';
 import { syncToActiveScreen, плавно } from './panel';
 import { useGoHome } from './nav';
 import { canStartBack, shouldGoBack } from './backGesture';
@@ -92,21 +92,7 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
     window.clearTimeout(таймерВъезда.current);
   }, []);
 
-  /* Имена этажей для крошки. Кладут их сами страницы при первом появлении: вкладка —
-     своё имя в нулевой этаж, раздел — свой заголовок в свой.
-
-     Массив, а не карта по ключам страниц: крошка — это ПУТЬ, то есть порядок, и порядок
-     здесь и есть смысл. Лишние имена ниже текущей глубины не мешают — их обрезает тот,
-     кто читает: страница берёт только то, что выше неё. */
-  const [имена, setИмена] = useState<string[]>([]);
-  const назвать = useCallback((глубина: number, имя: string) => {
-    setИмена((п) => (п[глубина] === имя ? п : Object.assign([...п], { [глубина]: имя })));
-  }, []);
-
-  const api = useMemo<StackApi>(
-    () => ({ push, pop, depth: pages.length, назвать, путь: имена }),
-    [push, pop, pages.length, назвать, имена],
-  );
+  const api = useMemo<StackApi>(() => ({ push, pop, depth: pages.length }), [push, pop, pages.length]);
 
   /* Панель должна знать про открытую страницу и слышать её прокрутку.
 
@@ -194,12 +180,7 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
           касаний на четверть секунды после «назад» ощущается как залипание. */}
       {уходит && (
         <div key={'out' + уходит.key} className="stack-page is-top is-leaving" aria-hidden>
-          {/* Уходящая — тоже на своём этаже, и это не формальность. Без провайдера она
-              оказывалась на нулевом, то есть на этаже ВКЛАДКИ, и, доигрывая уход,
-              записывала туда своё имя. Крошка следующего раздела показывала предыдущий:
-              «Здоровье › Устройства и данные» вместо «Профиль › Устройства и данные».
-              Ошибка жила ровно четверть секунды анимации — и оставалась навсегда. */}
-          <ЭтажCtx.Provider value={pages.length + 1}>{уходит.node}</ЭтажCtx.Provider>
+          {уходит.node}
         </div>
       )}
       {pages.map((p, i) => (
@@ -215,7 +196,7 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
                покажется пустота вместо того, куда возвращаются. */
             + (тянут && i === pages.length - 2 ? ' is-under' : '')}
           aria-hidden={i !== pages.length - 1}>
-          <ЭтажCtx.Provider value={i + 1}>{p.node}</ЭтажCtx.Provider>
+          {p.node}
         </div>
       ))}
     </StackCtx.Provider>
