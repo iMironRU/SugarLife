@@ -420,7 +420,15 @@ export interface UiSnapshot {
   hardware?: HardwareView[];
   /* rev ≥ 1.10 (SugarLifeCore#51/#52): облачные учётки и их провайдеры. Отсутствуют —
      движок каркаса ещё не отдаёт, экран учёток тогда не рисуется вовсе. */
-  cloudProviders?: CloudProviderView[];
+  /* Имя ровно такое, как в снимке движка (SugarLife#313). Мы читали `cloudProviders`,
+     а приезжает `availableCloudProviders` — рядом с `availableDrivers` и
+     `availableConnectors`, по тому же правилу именования каталогов.
+
+     Цена опечатки в имени поля — целый экран, которого человек никогда не видел: раздел
+     учётных записей рисуется, только когда каталог не пуст, а он всегда был undefined.
+     Тесты этого не ловят: у нас в зеркале контракта опечатка была согласована сама с
+     собой. Ловится только живым снимком, поэтому и пролежало. */
+  availableCloudProviders?: CloudProviderView[];
   accounts?: AccountView[];
 }
 

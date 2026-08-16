@@ -1,20 +1,18 @@
 import { IonIcon } from '@ionic/react';
-import { DiagnosticsSection, HealthSection, LoopSection, DataDevicesSection } from '@/sections/lazy';
+import { DiagnosticsSection, HealthSection, LoopSection, DataDevicesSection, AboutSection } from '@/sections/lazy';
 import {
-  downloadOutline,
-  optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
-  hardwareChipOutline, repeat, documentTextOutline, heartOutline,
+  optionsOutline, nutritionOutline, ellipse, sunny, moon,
+  hardwareChipOutline, repeat, documentTextOutline, heartOutline, informationCircleOutline,
 } from 'ionicons/icons';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { resetLocalData } from '@/settings/reset';
 import { unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
 import { useTheme } from '../theme/useTheme';
-import { APP_EDITION, APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload, installApk, ВЫПУСКАЕТСЯ_APK, ИЗДАНИЕ_РЕЛИЗА } from '@/platform/appUpdate';
+import { APP_EDITION, APP_VERSION, APP_BUILD, isNative } from '@/platform/appUpdate';
 import { useStack } from '@/app/stackCtx';
 import { useSnapshot } from '@/sources/bridge';
 import { useHealth } from '@/settings/health';
 import { поВажности } from '@/domain/screenings';
-import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
 import { useLoopProfile, LOOP_MODES } from '@/settings/loopProfile';
 import { useDeviceConfig, deviceStatus } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
@@ -30,9 +28,6 @@ export default function Profile() {
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
   const carbUnit = useCarbUnit();
   const { push, pop } = useStack();
-  const [updating, setUpdating] = useState(false);
-  const [updateMsg, setUpdateMsg] = useState<string | null>(null);
-  const [apkUrl, setApkUrl] = useState<string | null>(null);
   /* Издание берём у движка, а не у константы сборки (#298, #294). Константа говорит, чем
      нас собрали, движок — что внутри на самом деле. Для обновления важно второе: релиз
      выпускает Lite, и предлагать его сборке Pro значит поставить рядом второе приложение
@@ -47,70 +42,6 @@ export default function Profile() {
     location.reload();
   };
 
-  // Нативное обновление (OTA + APK). Веб живёт отдельно — в data/swUpdate.ts.
-  const doUpdate = async () => {
-    if (updating) return;
-    setUpdating(true);
-    setUpdateMsg(null);
-    setApkUrl(null);
-
-    // Нативка: сначала OTA (JS-бандл, лёгкий путь), потом APK (нативный код).
-    if (isNative) {
-      const ota = await checkOtaUpdate();
-      if (ota === 'updated') return; // применилось → webview перезагрузится сам
-
-      // Android: если по JS всё свежее (или OTA недоступен) — проверяем новый APK.
-      if (platform === 'android') {
-        const r = await checkNativeUpdate(издание);
-        setUpdating(false);
-        if (r === 'error') {
-          setUpdateMsg(ota === 'current' ? 'У вас последняя версия.' : 'Не удалось проверить обновление.');
-          return;
-        }
-        if (r.hasUpdate && r.apkUrl) {
-          setApkUrl(r.apkUrl);
-          setUpdateMsg('Нужна новая сборка приложения' + (r.build ? ` (${r.build})` : '') + '.');
-        } else if (издание !== ИЗДАНИЕ_РЕЛИЗА) {
-          /* «У вас последняя версия» здесь было бы неправдой: про сборки Pro мы не знаем
-             ничего — их никто не выпускает. Молчать тоже нельзя, человек нажал кнопку. */
-          setUpdateMsg('Обновлено по воздуху. SugarLife.Pro сборками не раздаётся — нативную часть обновляют пересборкой.');
-        } else if (!ВЫПУСКАЕТСЯ_APK) {
-          /* Не «у вас последняя версия»: про нативную часть мы этого не знаем — новых
-             сборок просто нет. Разница важна тому, кто ждёт исправления именно в
-             нативном слое и иначе решил бы, что оно уже у него. */
-          setUpdateMsg('Обновлено по воздуху. Сборка приложения сейчас не выпускается — нативная часть остаётся прежней.');
-        } else {
-          setUpdateMsg('У вас последняя версия.');
-          window.setTimeout(() => setUpdateMsg(null), 4000);
-        }
-        return;
-      }
-
-      // iOS: APK-пути нет (только App Store), но OTA уже отработал выше.
-      setUpdating(false);
-      setUpdateMsg(ota === 'current' ? 'У вас последняя версия.' : 'Не удалось проверить обновление.');
-      if (ota === 'current') window.setTimeout(() => setUpdateMsg(null), 4000);
-      return;
-    }
-  };
-
-  /* Состояние обновления веб-версии. Четыре ответа на три вопроса, которые раньше
-     оставались без ответа: есть ли обновление, применилось ли, нужна ли перезагрузка. */
-  const upd = useUpdateState();
-  const [justUpdated, setJustUpdated] = useState(() => consumeJustUpdated()); // разово после перезагрузки
-  // «Обновлено до X» держится, пока человек не начал новую проверку — иначе оно
-  // висело бы всю сессию и перекрывало «Проверяю…» и ошибки
-  useEffect(() => {
-    if (upd.status === 'checking' || upd.status === 'available') setJustUpdated(false);
-  }, [upd.status]);
-  const agoMin = upd.checkedAt ? Math.round((Date.now() - upd.checkedAt) / 60000) : null;
-  const webUpdateNote = justUpdated ? `Обновлено до сборки ${APP_BUILD}.`
-    : upd.status === 'available' ? 'Новая версия скачана. Применится после перезагрузки.'
-    : upd.status === 'checking' ? 'Проверяю…'
-    : upd.status === 'error' ? 'Не удалось проверить — похоже, нет сети.'
-    : upd.status === 'unsupported' ? 'Автообновление недоступно — обновите страницу вручную.'
-    : upd.status === 'current' ? `Актуально · проверено ${agoMin != null && agoMin > 0 ? agoMin + ' мин назад' : 'только что'}`
-    : 'Проверяю…';
 
   /* Что записано в устройствах — коротко, для строки-входа. Названия моделей, а не
      «настроено»: человек проверяет глазами свою помпу и свой сенсор, а слово
@@ -242,47 +173,19 @@ export default function Profile() {
           </div>
 
           {/* о приложении: версия + сборка + обновление */}
+          {/* «О приложении» — отдельный раздел (замечание с телефона).
+
+              Плашка внизу Профиля показывала одну сборку из двух и звала «Обновиться»
+              кнопку, которая сначала спрашивает сервер. Обе неправды исправлены внутри
+              раздела; здесь остаётся вход и то, что человек проверяет чаще всего —
+              какая версия стоит. */}
           <div className="section-label sec">О приложении</div>
-          <div className="about">
-            <div className="about-info">
-              {/* Имя издания — из движка, если он его назвал (#298). APP_EDITION говорит,
-                  чем нас собрали, и в сборке Pro осталась бы надпись «SugarLife.Lite»:
-                  строка ниже попадает в сообщения о проблемах, и врать в ней дороже всего. */}
-              <div className="about-ver">{издание === 'pro' ? 'SugarLife.Pro' : APP_EDITION} {APP_VERSION}</div>
-              <div className="about-build">сборка {APP_BUILD}{isNative ? ' · нативное' : ' · PWA'}</div>
-            </div>
-            {apkUrl ? (
-              <button className="about-update accent" onClick={async () => {
-                /* Сначала пробуем поставить сами (#269), и только если плагина нет —
-                   открываем браузер. Порядок именно такой: браузерный путь работает
-                   всегда, но требует от человека найти файл в «Загрузках». */
-                const итог = await installApk(apkUrl);
-                if (итог !== 'начали') openApkDownload(apkUrl);
-              }}>
-                <IonIcon icon={downloadOutline} />
-                Скачать APK
-              </button>
-            ) : isNative ? (
-              <button className="about-update" onClick={doUpdate} disabled={updating}>
-                <IonIcon icon={refreshOutline} className={updating ? 'spin' : ''} />
-                {updating ? 'Проверяю…' : 'Обновиться'}
-              </button>
-            ) : upd.status === 'available' ? (
-              /* кнопка честно предупреждает, что будет перезагрузка */
-              <button className="about-update accent" onClick={applyUpdate} disabled={upd.applying}>
-                <IonIcon icon={refreshOutline} className={upd.applying ? 'spin' : ''} />
-                {upd.applying ? 'Обновляю…' : 'Обновить и перезагрузить'}
-              </button>
-            ) : (
-              <button className="about-update" onClick={checkNow} disabled={upd.status === 'checking'}>
-                <IonIcon icon={refreshOutline} className={upd.status === 'checking' ? 'spin' : ''} />
-                {upd.status === 'checking' ? 'Проверяю…' : 'Проверить'}
-              </button>
-            )}
+          <div className="list">
+            <Row icon={informationCircleOutline}
+              title={`${издание === 'pro' ? 'SugarLife.Pro' : APP_EDITION} ${APP_VERSION}`}
+              sub={`сборка ${APP_BUILD}${isNative ? ' · нативное' : ' · PWA'}`}
+              onClick={() => push(<AboutSection onClose={pop} />)} />
           </div>
-          {/* состояние обновления — текстом, а не догадками после нажатия */}
-          {!isNative && <div className="metric-note" style={{ marginTop: 8 }}>{webUpdateNote}</div>}
-          {isNative && updateMsg && <div className="metric-note" style={{ marginTop: 8 }}>{updateMsg}</div>}
 
           {/* оформление */}
           <div className="section-label sec">Оформление</div>

@@ -23,7 +23,7 @@ import {
    облаков, в которые нельзя войти, — обещание, которого мы не выполним. */
 export default function CloudAccountsSection({ onClose }: { onClose: () => void }) {
   const snap = useSnapshot();
-  const провайдеры = snap?.cloudProviders ?? [];
+  const провайдеры = snap?.availableCloudProviders ?? [];
   const [вход, setВход] = useState<CloudProviderView | null>(null);
   const [поля, setПоля] = useState<Record<string, string>>({});
 

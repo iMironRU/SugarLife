@@ -1,0 +1,176 @@
+import { useEffect, useState } from 'react';
+import { refreshOutline, downloadOutline, logoGithub, listOutline, cloudDownloadOutline } from 'ionicons/icons';
+import Section from '@/ui/Section';
+import Row from '@/ui/Row';
+import { useSnapshot } from '@/sources/bridge';
+import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
+import {
+  APP_EDITION, APP_VERSION, APP_BUILD, APP_BUILT_AT, isNative, platform,
+  checkOtaUpdate, checkNativeUpdate, openApkDownload, installApk, откудаБандл,
+  нативнаяСборка, ССЫЛКИ, ВЫПУСКАЕТСЯ_APK, ИЗДАНИЕ_РЕЛИЗА,
+} from '@/platform/appUpdate';
+
+/* «О приложении» отдельным разделом (замечание с телефона).
+
+   Раньше это была плашка внизу «Профиля»: имя, одна сборка и кнопка «Обновиться». Три
+   вещи в ней были неправдой или полуправдой.
+
+   ОДНА СБОРКА ВМЕСТО ДВУХ. В нативном приложении их всегда две: APK и то, что приехало
+   поверх по воздуху. После обновления они расходятся — и это нормальная работа, а не
+   сбой. Показывая одну, мы отвечали на вопрос «какая у меня версия» половиной ответа, а
+   вторую половину человек узнавал, только когда мы просили её в сообщении о проблеме.
+
+   «ОБНОВИТЬСЯ» ВМЕСТО «ПРОВЕРИТЬ». Кнопка сначала спрашивает сервер и только потом,
+   если есть что ставить, обновляет. Названная действием, она обещает результат: человек
+   жмёт, ждёт, ничего не происходит — и это выглядит поломкой, хотя всё правильно, просто
+   обновлять нечего. Теперь проверка называется проверкой, а обновление появляется
+   отдельной кнопкой и только когда есть что обновлять.
+
+   НЕГДЕ ПОСМОТРЕТЬ ИСХОДНИКИ. Приложение открытое, но узнать об этом изнутри было
+   нельзя. Для приложения, которое считает инсулин, «посмотреть, как именно» — не
+   формальность. */
+export default function AboutSection({ onClose }: { onClose: () => void }) {
+  const снимок = useSnapshot();
+  const издание = снимок?.edition ?? 'lite';
+  const имяИздания = издание === 'pro' ? 'SugarLife.Pro' : APP_EDITION;
+
+  const натив = нативнаяСборка();
+  const [откуда, setОткуда] = useState<'встроен' | 'по воздуху' | null>(null);
+  useEffect(() => { void откудаБандл().then(setОткуда); }, []);
+
+  /* Веб и натив обновляются по-разному, но человеку это одно действие: «проверь, нет ли
+     нового». Поэтому состояние одно, а какой слой спрашивать — решаем внутри. */
+  const веб = useUpdateState();
+  const [проверяю, setПроверяю] = useState(false);
+  const [итог, setИтог] = useState<string | null>(null);
+  const [apkUrl, setApkUrl] = useState<string | null>(null);
+  /* «Обновлено до …» — разово после перезагрузки. Флаг забирается один раз, иначе
+     сообщение висело бы всю сессию и перекрывало собой результат новой проверки. */
+  const [толькоОбновились] = useState(consumeJustUpdated);
+
+  const проверить = async () => {
+    if (проверяю) return;
+    setПроверяю(true); setИтог(null); setApkUrl(null);
+    if (!isNative) { checkNow(); setПроверяю(false); return; }
+
+    /* Сначала интерфейс: он обновляется без переустановки и покрывает почти все правки.
+       Если приехал — приложение перезагрузится само, и досказывать нечего. */
+    const ota = await checkOtaUpdate();
+    if (ota === 'updated') return;
+
+    if (platform === 'android') {
+      const r = await checkNativeUpdate(издание);
+      setПроверяю(false);
+      if (r === 'error') { setИтог('Не удалось спросить сервер — похоже, нет сети.'); return; }
+      if (r.hasUpdate && r.apkUrl) {
+        setApkUrl(r.apkUrl);
+        setИтог(`Есть новая сборка приложения${r.build ? ` (${r.build})` : ''}.`);
+      } else if (издание !== ИЗДАНИЕ_РЕЛИЗА) {
+        setИтог('Интерфейс актуален. SugarLife.Pro сборками не раздаётся — нативную часть обновляют пересборкой.');
+      } else if (!ВЫПУСКАЕТСЯ_APK) {
+        setИтог('Интерфейс актуален. Сборки приложения сейчас не выпускаются.');
+      } else {
+        setИтог('Всё актуально: и интерфейс, и приложение.');
+      }
+      return;
+    }
+    setПроверяю(false);
+    setИтог(ota === 'current' ? 'Интерфейс актуален.' : 'Не удалось спросить сервер — похоже, нет сети.');
+  };
+
+  const когда = (iso?: string | null) => {
+    if (!iso) return null;
+    const д = new Date(iso);
+    return Number.isNaN(д.getTime()) ? null
+      : д.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  };
+
+  /* Веб-состояние словами — то же, что было в Профиле: четыре ответа на три вопроса,
+     которые иначе остаются без ответа. */
+  const вебСтрока = веб.status === 'available' ? 'Новая версия скачана — применится после перезагрузки.'
+    : веб.status === 'checking' ? 'Спрашиваю сервер…'
+    : веб.status === 'error' ? 'Не удалось проверить — похоже, нет сети.'
+    : веб.status === 'unsupported' ? 'Автообновление недоступно — обновите страницу вручную.'
+    : веб.status === 'current' ? 'Актуально.' : null;
+
+  return (
+    <Section title="О приложении" onBack={onClose}
+      описание="Что именно у вас установлено и откуда оно взялось. Эти номера стоит приложить к сообщению о проблеме: по ним видно, в какой версии она случилась.">
+
+      <div className="section-label sec">Версия</div>
+      <div className="list">
+        <Row title="Издание" value={`${имяИздания} ${APP_VERSION}`} chevron={false} />
+        {/* Две сборки — не ошибка, а устройство приложения: APK и JS обновляются
+            порознь. Подписи объясняют, что есть что, иначе два номера рядом читаются
+            как опечатка. */}
+        <Row title="Интерфейс" value={APP_BUILD} chevron={false}
+          sub={[когда(APP_BUILT_AT), откуда === 'по воздуху' ? 'приехал по воздуху'
+            : откуда === 'встроен' ? 'из сборки приложения' : null].filter(Boolean).join(' · ') || undefined} />
+        {isNative ? (
+          <Row title="Приложение" value={натив?.build ?? 'неизвестно'} chevron={false}
+            sub={натив ? когда(натив.builtAt) ?? undefined
+              : 'запомним при первом запуске сборки, установленной поверх'} />
+        ) : (
+          <Row title="Приложение" value="нет" chevron={false}
+            sub="это веб-версия: нативной части у неё не бывает" />
+        )}
+        {/* Ядро — третий номер, и он не наш: движок собирают отдельно. В разборе
+            проблемы важен именно он, а узнать его было негде. */}
+        {снимок?.coreCommit && (
+          <Row title="Ядро" value={снимок.coreCommit.slice(0, 7)} chevron={false}
+            sub={снимок.bridgeRevision ? `мост ${снимок.bridgeRevision}` : undefined} />
+        )}
+      </div>
+
+      <div className="section-label sec">Обновление</div>
+      <div className="list">
+        {/* Проверка называется проверкой. Она может ничего не найти — и это нормальный
+            исход, а не неудача, поэтому кнопка не обещает результата. */}
+        <Row icon={refreshOutline} chevron={false} disabled={проверяю || веб.status === 'checking'}
+          title={проверяю || веб.status === 'checking' ? 'Спрашиваю сервер…' : 'Проверить обновления'}
+          sub={isNative ? 'интерфейс приезжает по воздуху, приложение — сборкой'
+            : 'страница обновляется через браузер'}
+          onClick={() => void проверить()} />
+
+        {/* Действие появляется, только когда есть что делать, и говорит, что произойдёт. */}
+        {!isNative && веб.status === 'available' && (
+          <Row icon={refreshOutline} chevron={false} disabled={веб.applying}
+            title={веб.applying ? 'Обновляю…' : 'Обновить и перезагрузить'}
+            sub="страница перезагрузится — незаписанное в открытых шторках пропадёт"
+            onClick={applyUpdate} />
+        )}
+        {apkUrl && (
+          <Row icon={downloadOutline} chevron={false}
+            title="Установить новую сборку" sub="система спросит подтверждение"
+            onClick={async () => {
+              /* Сначала пробуем поставить сами (#269), и только если плагина нет —
+                 открываем браузер: тот путь работает всегда, но требует искать файл
+                 в «Загрузках». */
+              const и = await installApk(apkUrl);
+              if (и !== 'начали') openApkDownload(apkUrl);
+            }} />
+        )}
+      </div>
+      {(итог || толькоОбновились || (!isNative && вебСтрока)) && (
+        <div className="metric-note">
+          {итог ?? (толькоОбновились ? `Обновлено до сборки ${APP_BUILD}.` : вебСтрока)}
+        </div>
+      )}
+
+      <div className="section-label sec">Исходники</div>
+      <div className="list">
+        <Row icon={logoGithub} title="Репозиторий" sub="как это устроено и почему именно так"
+          href={ССЫЛКИ.репозиторий} chevron={false} />
+        <Row icon={cloudDownloadOutline} title="Сборки" sub="все выпущенные версии"
+          href={ССЫЛКИ.релизы} chevron={false} />
+        <Row icon={listOutline} title="Задачи и ошибки" sub="что сделано, что в работе, что сломано"
+          href={ССЫЛКИ.задачи} chevron={false} />
+      </div>
+
+      <div className="metric-note">
+        Приложение не медицинское изделие. Решения принимает человек, а числа здесь —
+        помощь в них, а не замена врачу.
+      </div>
+    </Section>
+  );
+}
