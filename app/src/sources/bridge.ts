@@ -387,6 +387,11 @@ export interface HardwareView {
 export interface UiSnapshot {
   bridgeRevision: string;
   coreCommit?: string; // штамп коммита ядра — сверка идентичности сборок Android/iOS
+  /* Издание ядра (rev ≥ 1.17): 'lite' — только чтение, 'pro' — ещё и управление помпой.
+     Это НАБЛЮДАЕМЫЙ факт, а не наша константа сборки: тракт записи собран в отдельном
+     исходнике ядра и в lite не компилируется вовсе. Поле молчит на старом мосту —
+     тогда считаем 'lite', потому что издание без управления безопаснее в любом сомнении. */
+  edition?: 'lite' | 'pro';
   monitor: Monitor;
   devices: DeviceView[];
   insights: Insights | null;
