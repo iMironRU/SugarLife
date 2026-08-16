@@ -26,6 +26,7 @@
      нужен. Помпа стоит за мостом, и её вторая связь молчит: так видно цепочку. */
   var сенсор = {
     id: 'ble-E2:38:B4:63:51:59', name: 'Sibionics GS1', kind: 'sensor', driverId: 'sibionics',
+    requiresAccountId: 'acc-1',
     roles: ['GlucoseSource'], connection: 'Streaming', status: 'Live', live: true,
     capabilities: {}, settings: { parameters: [] },
     admittedInput: true, admittedOutput: false, testable: false,

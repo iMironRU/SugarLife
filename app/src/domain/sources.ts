@@ -137,6 +137,21 @@ export function наполненЛи(snap: UiSnapshot | null | undefined, сло
   return устройствоРоли(snap, РОЛЬ[слот]) != null;
 }
 
+/* Какую учётку чинить, если слот молчит из-за неё (rev ≥ 1.14).
+
+   Возвращаем id, а не текст: назвать учётку по-человечески может только тот, кто видит
+   accounts[], а это дело экрана. Наше дело — сказать, что причина именно там. */
+export function учёткаСлота(
+  snap: UiSnapshot | null | undefined, слот: Слот,
+): string | null {
+  if (слот === 'углеводы') return null;
+  const кто = устройствоРоли(snap, РОЛЬ[слот]);
+  if (!кто?.requiresAccountId) return null;
+  /* Живой источник чинить не надо: учётка нужна ему всегда, а говорим мы о ней только
+     когда данные не идут. */
+  return связь(кто) === 'live' ? null : кто.requiresAccountId;
+}
+
 /** Чем слот наполняется сейчас — короткой строкой под именем. */
 export function откудаСейчас(
   snap: UiSnapshot | null | undefined, слот: Слот,
