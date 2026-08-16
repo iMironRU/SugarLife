@@ -24,6 +24,18 @@ import { useEffect, useRef, useState } from 'react';
    расхождение в доли пикселя, и точное равенство не наступает никогда. */
 const ПОРОГ_ДНА = 4;
 
+/* Кто здесь прокручивается. Признак — вычисленный overflow, а не класс: так поверхность,
+   которую заведут завтра, получает поведение сама, без правки этого файла. */
+function ближайшийСкроллер(узел: HTMLElement): HTMLElement | null {
+  let э: HTMLElement | null = узел.parentElement;
+  while (э && э !== document.body) {
+    const o = getComputedStyle(э).overflowY;
+    if (o === 'auto' || o === 'scroll') return э;
+    э = э.parentElement;
+  }
+  return null;
+}
+
 export function useДочитано<T extends HTMLElement>(ключ: unknown) {
   const конец = useRef<T | null>(null);
   /* Пересчёт держим в ссылке, чтобы позвать его после КАЖДОЙ отрисовки. Наблюдатель
@@ -72,7 +84,12 @@ export function useДочитано<T extends HTMLElement>(ключ: unknown) {
       };
     };
 
-    const свой = узел.closest('.stack-body') as HTMLElement | null;
+    /* Ищем скроллер по РОЛИ, а не по имени класса. Классов у нас три — раздел, вкладка,
+       шторка, — и перечислять их здесь значит завести четвёртое место, которое надо
+       не забыть поправить при следующей поверхности. Ищем ближайшего предка, который
+       действительно прокручивается; ion-content отвечает отдельно, потому что его
+       скроллер лежит в теневом дереве. */
+    const свой = ближайшийСкроллер(узел);
     if (свой) начать(свой);
     else {
       const контент = узел.closest('ion-content') as HTMLIonContentElement | null;
