@@ -1,6 +1,5 @@
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import PageHead from './PageHead';
-import { useStack, useЭтаж } from '@/app/stackCtx';
 import КрайПрокрутки from './КрайПрокрутки';
 
 /* Оболочка раздела — единственное место, где страница стека становится страницей.
@@ -60,12 +59,6 @@ export default function Section({ title, описание, subtitle, onBack, д�
   className?: string;
   children: ReactNode;
 }) {
-  const { назвать, путь } = useStack();
-  const этаж = useЭтаж();
-  useEffect(() => { if (title) назвать(этаж, title); }, [этаж, title, назвать]);
-  /* Берём то, что ВЫШЕ нас: имя вкладки и заголовки родительских страниц. */
-  const крошка = путь.slice(0, этаж).filter(Boolean).join(' · ');
-
   return (
     <>
       {/* Шапка — отдельным этажом страницы, а не первой строкой прокрутки (#261).
@@ -80,10 +73,7 @@ export default function Section({ title, описание, subtitle, onBack, д�
           Sticky пришлось бы привязывать к её высоте — то есть завести ещё одно место,
           которое надо не забыть поправить, когда панель изменится. */}
       <div className="stack-head">
-        {head ?? (title ? (
-          <PageHead title={title} крошка={крошка || undefined} subtitle={subtitle}
-            onBack={onBack} действие={действие} />
-        ) : null)}
+        {head ?? (title ? <PageHead title={title} subtitle={subtitle} onBack={onBack} действие={действие} /> : null)}
         {подШапкой}
       </div>
       <div className={'sheet stack-body' + (className ? ' ' + className : '')}>

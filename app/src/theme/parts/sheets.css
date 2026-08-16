@@ -224,14 +224,6 @@
 .sheet-desc { font-size: 13px; color: var(--color-neutral-400); line-height: 1.5; margin: 8px 0 16px; }
 .sheet-subtitle { font-size: 11px; color: var(--color-neutral-400); margin-top: 3px; }
 
-/* Крошка — «где я». Мельче и глуше заголовка: она не соперничает с ним за внимание,
-   а отвечает на вопрос, который задают один раз при входе. В одну строку с обрезкой:
-   на глубине три-четыре путь длиннее заголовка, и перенос сделал бы шапку выше ради
-   сведения, которое читают мельком. */
-.ph-crumb {
-  font-size: 11px; color: var(--color-neutral-500); letter-spacing: .01em;
-  padding-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
 
 /* Описание раздела — «что это». Крупнее сносок: его читают один раз и внимательно, а
    одиннадцатым кеглем набирают то, что пробегают глазами. Четыре класса под эту роль

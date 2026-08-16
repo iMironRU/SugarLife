@@ -69,6 +69,13 @@
 .metric-chip ion-icon { font-size: 15px; }
 .metric-chip span { font-size: 13px; font-weight: 500; white-space: nowrap; }
 .metric-chip.on span { color: var(--color-text); }
+/* Точка состояния у названия потока: пусто · идёт обходным путём · всё хорошо.
+   Нужна там, где переключатель показывает один поток, а знать про остальные надо не
+   открывая их (источники). В «Метриках» состояния нет — точки там и не будет. */
+.поток-точка { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+.поток-точка.хорошо { background: var(--c-glu); }
+.поток-точка.обход { background: var(--color-accent); }
+.поток-точка.пусто { background: var(--color-neutral-600); }
 
 .metric-title { display: flex; align-items: center; gap: 10px; margin-top: 22px; }
 .metric-title span { font-size: 24px; font-weight: 600; }

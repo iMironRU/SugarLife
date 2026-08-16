@@ -1,6 +1,8 @@
 import { IonIcon, IonSpinner } from '@ionic/react';
 import { useTab } from '@/app/nav';
 import { water, nutrition, medkit } from 'ionicons/icons';
+import ЧипыПотоков, { type Поток } from '@/ui/Потоки';
+
 import { useState } from 'react';
 import { useEntries, useTreatments } from '@/sources/db';
 import { useBackfilling } from '@/sources/backfill';
@@ -49,6 +51,11 @@ const РАЗДЕЛЫ = [
   { key: 'отчёт', label: 'Отчёт' },
 ] as const;
 type Раздел = typeof РАЗДЕЛЫ[number]['key'];
+
+/* Ключи метрик исторически английские, потоки — русские. Перевод в одном месте и
+   рядом, а не по всему файлу: иначе третий такой список разъедется с первыми двумя. */
+const ПОТОК_МЕТРИКИ: Record<MetricKey, Поток> = { glucose: 'глюкоза', carbs: 'углеводы', insulin: 'инсулин' };
+const МЕТРИКА_ПОТОКА: Record<Поток, MetricKey> = { глюкоза: 'glucose', углеводы: 'carbs', инсулин: 'insulin' };
 
 export default function Metrics() {
   const [раздел, setРаздел] = useState<Раздел>('метрики');
@@ -116,12 +123,6 @@ export default function Metrics() {
       : `Среднее по ${id.coveredDays} дн. с полными данными (из ${id.totalDays}). У вас помпа Medtronic через AAPS: базал и коррекции петли идут через temp basal — поэтому доза выше «обычного базала». Дни с неполной выгрузкой в Nightscout не учитываются, иначе среднее занижается.`,
   };
 
-  const chips: { key: MetricKey; label: string; color: string; icon: string }[] = [
-    { key: 'glucose', label: 'Глюкоза', color: 'var(--c-glu)', icon: water },
-    { key: 'carbs', label: 'Углеводы', color: 'var(--c-carb)', icon: nutrition },
-    { key: 'insulin', label: 'Инсулин', color: 'var(--c-ins)', icon: medkit },
-  ];
-
   return (
     <Screen tab={0}>
           <DataGate>
@@ -152,18 +153,9 @@ export default function Metrics() {
             ))}
           </div>
 
-          <div className="metric-chips">
-            {chips.map((c) => {
-              const on = metric === c.key;
-              return (
-                <button key={c.key} className={'metric-chip' + (on ? ' on' : '')} onClick={() => setMetric(c.key)}
-                  style={on ? { borderColor: `color-mix(in srgb, ${c.color} 60%, transparent)`, background: `color-mix(in srgb, ${c.color} 20%, var(--color-neutral-900))` } : undefined}>
-                  <IonIcon icon={c.icon} style={{ color: on ? c.color : 'var(--color-neutral-500)' }} />
-                  <span>{c.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* Общая деталь: набор, порядок и значки те же, что в источниках. */}
+          <ЧипыПотоков выбран={ПОТОК_МЕТРИКИ[metric]}
+            выбрать={(п) => setMetric(МЕТРИКА_ПОТОКА[п])} />
           </div>
 
           {gathering && (
