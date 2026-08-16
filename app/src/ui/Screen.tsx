@@ -2,6 +2,8 @@ import { IonPage, IonContent } from '@ionic/react';
 import КрайПрокрутки from './КрайПрокрутки';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { reportContentScroll, серединаЛи, полшага, плавно, syncToActiveScreen } from '@/app/panel';
+import { useStack } from '@/app/stackCtx';
+import { ИМЕНА_ВКЛАДОК } from '@/app/nav';
 import { useTab, useGoHome } from '@/app/nav';
 
 /* Оболочка вкладки — единственное место, где вкладка становится страницей.
@@ -41,7 +43,19 @@ export default function Screen({ tab, panel = 'compact', children }: {
   panel?: 'full' | 'compact';
   children: ReactNode;
 }) {
+  /* Вкладка — нулевой этаж пути: с неё начинается любая крошка в разделах под ней.
+     Имя берём из одного списка, а не пишем на каждом экране: два места для одного
+     названия разошлись бы в первый же день, когда вкладку переименуют. */
+  const { назвать } = useStack();
   const active = useTab();
+  /* Имя вкладки в нулевой этаж пути — но только с АКТИВНОЙ вкладки.
+
+     Экраны всех пяти вкладок смонтированы разом (карусель), и если бы каждый писал своё
+     имя, в крошке оказывалось бы имя того, кто отрисовался последним. Крошка на разделе
+     Профиля честно показывала «Здоровье» — то есть чужую вкладку. */
+  useEffect(() => {
+    if (active === tab) назвать(0, ИМЕНА_ВКЛАДОК[tab] ?? '');
+  }, [active, tab, назвать]);
   const ref = useRef<HTMLIonContentElement>(null);
   const тело = useRef<HTMLDivElement>(null);
 

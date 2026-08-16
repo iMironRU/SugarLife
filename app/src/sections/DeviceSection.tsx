@@ -4,7 +4,7 @@ import Row from '@/ui/Row';
 import Section from '@/ui/Section';
 import { chevronForward, batteryHalfOutline, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
-import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
+import { useDeviceConfig, setDeviceConfig, setParam, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
@@ -241,7 +241,6 @@ export default function DeviceSection({ onClose, cat, title }: {
   const pickerItems = hasModel ? modelItems(cat as 'pump' | 'sensor') : [];
 
   // реестр (docs/CONNECT-UX.md §2a): статус записи — только для категорий с моделью
-  const status = (cat === 'sensor' || cat === 'pump') ? deviceStatus(cat, cfg) : null;
 
   // «Забираем через Nightscout» (§2b) — честная строка того, что реально приходит
   const nsFeed = cat === 'pump'
@@ -359,7 +358,14 @@ export default function DeviceSection({ onClose, cat, title }: {
   };
 
   return (
-    <Section title={title} subtitle={status ? deviceStatusLabel(status) : 'Устройство'} onBack={onClose}>
+    /* Состояние ушло из подзаголовка в тело (#311). В шапке оно заставляло её дышать:
+       статус меняется на каждом снимке, а шапка не должна двигаться под пальцем. Его
+       место — вплотную к содержимому, которое оно объясняет. */
+    <Section title={title} onBack={onClose}
+      /* Описание статично намеренно: состояние уже сказано ниже — в «Как получаем
+         данные» и в строке «Состояние». Втащить его сюда значило бы вернуть в шапку
+         дышащую строку, только этажом ниже. */
+      описание="Какими путями этот прибор попадает в приложение и что о нём известно. Способы не спорят друг с другом: облако работает вместе с прямым чтением, а не вместо него.">
 
         <>
             {/* Вопрос про слияние — до всего остального: пока он не решён, экран ниже

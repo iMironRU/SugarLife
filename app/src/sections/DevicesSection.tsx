@@ -267,7 +267,7 @@ export default function DevicesSection({ onClose, встроенный }: {
 
   if (встроенный) return тело;
   return (
-    <Section title="Устройства" subtitle="Профиль · Устройства" onBack={onClose ?? (() => {})}>
+    <Section title="Устройства" описание="Что у вас есть и на связи ли оно: сенсор, помпа, мост. Ниже — слоты: какой прибор чем занят." onBack={onClose ?? (() => {})}>
       {тело}
     </Section>
   );

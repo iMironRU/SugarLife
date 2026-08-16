@@ -52,7 +52,7 @@ export default function DiscoverySection({ onClose }: { onClose: () => void }) {
   const пусто = discovered.length === 0;
 
   return (
-    <Section title="Найти устройство" subtitle="Только то, чего мы ещё не знаем" onBack={onClose}>
+    <Section title="Найти устройство" описание="Приборы, которые сейчас вещают в эфир и ещё не заведены. Уже известные сюда не попадают — они в списке «Мои устройства»." onBack={onClose}>
 
       <div className="section-label sec">Незнакомые в эфире</div>
       <div className={'scan-state' + (scanning ? ' on' : '')}>

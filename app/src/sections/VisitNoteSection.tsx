@@ -272,7 +272,7 @@ export default function VisitNoteSection({ onClose, встроенный }: {
 
   if (встроенный) return тело;
   return (
-    <Section title="Отчёт к приёму" subtitle="Что показать и о чём спросить" onBack={onClose ?? (() => {})}>
+    <Section title="Отчёт к приёму" описание="Сводка к приёму врача: за какой период данные, насколько они полные и что стоит спросить. Готовится из того, что уже записано." onBack={onClose ?? (() => {})}>
       {тело}
     </Section>
   );

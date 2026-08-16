@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import PageHead from './PageHead';
+import { useStack, useЭтаж } from '@/app/stackCtx';
 import КрайПрокрутки from './КрайПрокрутки';
 
 /* Оболочка раздела — единственное место, где страница стека становится страницей.
@@ -30,8 +31,18 @@ import КрайПрокрутки from './КрайПрокрутки';
    Низ отдан действиям раздела: перенести профиль в помпу, отменить правку, шагнуть
    дальше в мастере. Слово «Назад» внизу есть ровно в одном месте — в мастере, — и
    значит там шаг назад, а не выход; на первом шаге оно и написано иначе: «Закрыть». */
-export default function Section({ title, subtitle, onBack, действие, подШапкой, head, footer, className, children }: {
+export default function Section({ title, описание, subtitle, onBack, действие, подШапкой, head, footer, className, children }: {
   title?: string;
+  /* Что это за раздел — одной-двумя строками, статично.
+
+     Не «где я» (это крошка) и не «что сейчас» (это баннер в теле). Раньше все три
+     смысла делили подзаголовок, и раздел получал случайно доставшийся: у семи стояла
+     крошка, у шести описание, у двух состояние, четыре молчали вовсе (#311).
+
+     Стоит первым блоком тела, а не в шапке: описание бывает в три строки, и в
+     непрокручиваемой шапке такой раздел получил бы шапку в пол-экрана — при том что
+     читают её один раз. */
+  описание?: ReactNode;
   subtitle?: ReactNode;
   onBack: () => void;
   /** Действие справа в шапке — «Далее» у мастера (см. PageHead). */
@@ -49,6 +60,12 @@ export default function Section({ title, subtitle, onBack, действие, п�
   className?: string;
   children: ReactNode;
 }) {
+  const { назвать, путь } = useStack();
+  const этаж = useЭтаж();
+  useEffect(() => { if (title) назвать(этаж, title); }, [этаж, title, назвать]);
+  /* Берём то, что ВЫШЕ нас: имя вкладки и заголовки родительских страниц. */
+  const крошка = путь.slice(0, этаж).filter(Boolean).join(' · ');
+
   return (
     <>
       {/* Шапка — отдельным этажом страницы, а не первой строкой прокрутки (#261).
@@ -63,7 +80,10 @@ export default function Section({ title, subtitle, onBack, действие, п�
           Sticky пришлось бы привязывать к её высоте — то есть завести ещё одно место,
           которое надо не забыть поправить, когда панель изменится. */}
       <div className="stack-head">
-        {head ?? (title ? <PageHead title={title} subtitle={subtitle} onBack={onBack} действие={действие} /> : null)}
+        {head ?? (title ? (
+          <PageHead title={title} крошка={крошка || undefined} subtitle={subtitle}
+            onBack={onBack} действие={действие} />
+        ) : null)}
         {подШапкой}
       </div>
       <div className={'sheet stack-body' + (className ? ' ' + className : '')}>
@@ -76,6 +96,10 @@ export default function Section({ title, subtitle, onBack, действие, п�
             содержимого родителя, и с отступами снаружи лишним оказался бы не пиксель,
             а все двадцать шесть. */}
         <div className="stack-fill">
+          {/* Описание — всегда здесь и всегда одним видом. Раньше его писали четырьмя
+              разными классами в четырёх разных местах, и «где-то есть, где-то нет»
+              было не решением, а следствием. */}
+          {описание && <div className="page-lede">{описание}</div>}
           {children}
           <КрайПрокрутки />
         </div>

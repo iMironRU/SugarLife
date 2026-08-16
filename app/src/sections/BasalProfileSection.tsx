@@ -113,7 +113,7 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
 
   if (!pump.length) {
     return (
-      <Section title="Базальный профиль" onBack={onClose}>
+      <Section title="Базальный профиль" описание="Сколько инсулина помпа подаёт в фоне, по часам суток. По нему же считается, хватит ли резервуара до утра." onBack={onClose}>
           <div className="loop-empty">
             <div className="loop-empty-t">Профиль не получен</div>
             <div className="loop-empty-s">

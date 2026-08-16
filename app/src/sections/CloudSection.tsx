@@ -132,9 +132,8 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
   const needToken = access === 'needsToken' || tokenShown;
 
   return (
-    <Section title={cloud.name} onBack={askClose}>
-
-        <p className="sheet-desc">Читаем сахар и тренд напрямую из Nightscout. Адрес хранится локально на устройстве.</p>
+    <Section title={cloud.name} onBack={askClose}
+      описание="Читаем сахар и тренд напрямую из Nightscout. Адрес хранится локально на устройстве.">
 
         <div className="field-label">Адрес сайта</div>
         <div className="field">

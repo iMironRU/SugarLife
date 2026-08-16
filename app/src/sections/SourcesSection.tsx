@@ -127,7 +127,7 @@ export default function SourcesSection({ onClose, встроенный }: {
 
   if (встроенный) return тело;
   return (
-    <Section title="Откуда берутся данные" subtitle="Профиль · Источники" onBack={onClose ?? (() => {})}>
+    <Section title="Откуда берутся данные" описание="Откуда берутся цифры: сахар, инсулин и углеводы. По этим источникам считается всё остальное — активный инсулин, прогноз, разбор." onBack={onClose ?? (() => {})}>
       {тело}
     </Section>
   );
