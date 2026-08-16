@@ -156,8 +156,27 @@ export async function запомнитьНативнуюСборку(): Promise<
   } catch { /* приватный режим, старый плагин — тогда сравним по бандлу, как раньше */ }
 }
 
-export async function checkNativeUpdate(): Promise<NativeUpdateInfo | 'error'> {
+/* Какое издание выпускает релиз `android-latest` (#298).
+
+   Изданий стало два, а релиз один, и выпускает он Lite — то, что стоит у людей.
+
+   Для Pro это делает проверку не просто бесполезной, а вредной. Сборка Pro своя, её SHA с
+   релизом не совпадёт никогда, дата релиза рано или поздно окажется новее — и приложение
+   предложит «обновиться». Скачается Lite. Пакет другой (`.pro` против обычного), подпись
+   та же, поэтому установщик не откажет: он поставит Lite ВТОРЫМ приложением. Человек
+   получит два ярлыка и пустую историю во втором, нажав кнопку с надписью «обновить».
+
+   Сравнением дат это не ловится: ошибка не в «новее или нет», а в том, что сравнивается
+   другое приложение. Поэтому спрашиваем издание. */
+export const ИЗДАНИЕ_РЕЛИЗА = 'lite';
+
+export async function checkNativeUpdate(издание?: string | null): Promise<NativeUpdateInfo | 'error'> {
   if (!ВЫПУСКАЕТСЯ_APK) return { hasUpdate: false, build: null, apkUrl: null, publishedAt: null };
+  /* Издание не назвали — считаем Lite: так вело себя приложение до появления Pro, и на
+     старом мосту поле молчит. Ошибиться сюда безопасно, обратно — нет. */
+  if ((издание ?? ИЗДАНИЕ_РЕЛИЗА) !== ИЗДАНИЕ_РЕЛИЗА) {
+    return { hasUpdate: false, build: null, apkUrl: null, publishedAt: null };
+  }
   try {
     const r = await fetch(`https://api.github.com/repos/${REPO}/releases/tags/${ANDROID_TAG}`, {
       headers: { Accept: 'application/vnd.github+json' },
