@@ -57,6 +57,28 @@ android {
                 "Издание Lite собирается с ядром pro: в Lite не должно быть кода управления помпой. " +
                 "Уберите -Pedition=pro.")
         }
+
+        // Третье место, где издание можно забыть, — ВЕБ-конфиг: его пишет `cap sync` по SUGARLIFE_EDITION,
+        // отдельно от Gradle. Без этой проверки собирался Pro-пакет с appId Lite внутри (нашли на ревью
+        // #297): снаружи .pro, внутри — Lite. Сверяем то, что реально попадёт в APK.
+        def buildsLite = graph.allTasks.any { it.name ==~ /(?i).*(assemble|bundle|install)Lite(Debug|Release)?/ }
+        if (buildsPro || buildsLite) {
+            def cfg = file('src/main/assets/capacitor.config.json')
+            def wanted = buildsPro ? 'ru.imiron.sugarlife.pro' : 'ru.imiron.sugarlife'
+            if (!cfg.exists()) {
+                throw new GradleException(
+                    "Нет $cfg — веб-часть не разложена. Сначала:\n" +
+                    "  cd app && SUGARLIFE_EDITION=${buildsPro ? 'pro' : 'lite'} npx cap sync android")
+            }
+            def got = (cfg.text =~ /"appId"\s*:\s*"([^"]+)"/)
+            def actual = got ? got[0][1] : '(нет appId)'
+            if (actual != wanted) {
+                throw new GradleException(
+                    "Веб-конфиг от другого издания: в APK попал appId '$actual', а собирается '$wanted'.\n" +
+                    "Пересоберите веб под нужное издание:\n" +
+                    "  cd app && SUGARLIFE_EDITION=${buildsPro ? 'pro' : 'lite'} npx cap sync android")
+            }
+        }
     }
 
     flavorDimensions "edition"
