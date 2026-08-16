@@ -6,8 +6,9 @@ import { useSnapshot } from '@/sources/bridge';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
 import {
   APP_EDITION, APP_VERSION, APP_BUILD, APP_BUILT_AT, isNative, platform,
-  checkOtaUpdate, checkNativeUpdate, openApkDownload, installApk, откудаБандл,
-  нативнаяСборка, ССЫЛКИ, ВЫПУСКАЕТСЯ_APK, ИЗДАНИЕ_РЕЛИЗА,
+  узнатьOta, применитьOta, checkNativeUpdate, openApkDownload, installApk, откудаБандл,
+  нативнаяСборка, ПРИЕХАЛО_ПРИ_СТАРТЕ, ССЫЛКИ, ВЫПУСКАЕТСЯ_APK, ИЗДАНИЕ_РЕЛИЗА,
+  type ОтаБандл,
 } from '@/platform/appUpdate';
 
 /* «О приложении» отдельным разделом (замечание с телефона).
@@ -44,9 +45,18 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
   const [проверяю, setПроверяю] = useState(false);
   const [итог, setИтог] = useState<string | null>(null);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
+  /* Найденное, но НЕ применённое. Применение перезагружает webview, и делать это в
+     ответ на «проверить» нельзя: экран моргает, человек оказывается на «Сегодня» и
+     читает успешное обновление как сбой. */
+  const [найдено, setНайдено] = useState<ОтаБандл | null>(null);
+  const [ставлю, setСтавлю] = useState(false);
   /* «Обновлено до …» — разово после перезагрузки. Флаг забирается один раз, иначе
      сообщение висело бы всю сессию и перекрывало собой результат новой проверки. */
+  /* Что именно произошло при последнем запуске: веб перезагрузился ради обновления
+     (флаг service worker'а) или мы сами перезапустили webview ради OTA. Забирается
+     один раз — иначе сообщение висело бы всю сессию. */
   const [толькоОбновились] = useState(consumeJustUpdated);
+  const приехало = ПРИЕХАЛО_ПРИ_СТАРТЕ;
 
   const проверить = async () => {
     if (проверяю) return;
@@ -54,9 +64,13 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
     if (!isNative) { checkNow(); setПроверяю(false); return; }
 
     /* Сначала интерфейс: он обновляется без переустановки и покрывает почти все правки.
-       Если приехал — приложение перезагрузится само, и досказывать нечего. */
-    const ota = await checkOtaUpdate();
-    if (ota === 'updated') return;
+       Но только СПРАШИВАЕМ — ставить будет человек, отдельным нажатием. */
+    const ota = await узнатьOta();
+    if (typeof ota === 'object') {
+      setНайдено(ota); setПроверяю(false);
+      setИтог(`Есть новая версия интерфейса (${ota.build}).`);
+      return;
+    }
 
     if (platform === 'android') {
       const r = await checkNativeUpdate(издание);
@@ -75,7 +89,7 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
       return;
     }
     setПроверяю(false);
-    setИтог(ota === 'current' ? 'Интерфейс актуален.' : 'Не удалось спросить сервер — похоже, нет сети.');
+    setИтог(ota === 'нет' ? 'Интерфейс актуален.' : 'Не удалось спросить сервер — похоже, нет сети.');
   };
 
   const когда = (iso?: string | null) => {
@@ -132,7 +146,18 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
             : 'страница обновляется через браузер'}
           onClick={() => void проверить()} />
 
-        {/* Действие появляется, только когда есть что делать, и говорит, что произойдёт. */}
+        {/* Действие появляется, только когда есть что делать, и говорит, что произойдёт.
+            «Перезапустит приложение» — не мелочь: без этих слов перезагрузка webview
+            читается как сбой, и человек второй раз кнопку уже не нажмёт. */}
+        {найдено && (
+          <Row icon={refreshOutline} chevron={false} disabled={ставлю}
+            title={ставлю ? 'Скачиваю и перезапускаю…' : 'Обновить интерфейс'}
+            sub={`сборка ${найдено.build} · скачается и перезапустит приложение`}
+            onClick={() => {
+              setСтавлю(true);
+              void применитьOta(найдено).then((ок) => { if (!ок) { setСтавлю(false); setИтог('Не удалось скачать — похоже, нет сети.'); } });
+            }} />
+        )}
         {!isNative && веб.status === 'available' && (
           <Row icon={refreshOutline} chevron={false} disabled={веб.applying}
             title={веб.applying ? 'Обновляю…' : 'Обновить и перезагрузить'}
@@ -151,9 +176,9 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
             }} />
         )}
       </div>
-      {(итог || толькоОбновились || (!isNative && вебСтрока)) && (
+      {(итог || толькоОбновились || приехало || (!isNative && вебСтрока)) && (
         <div className="metric-note">
-          {итог ?? (толькоОбновились ? `Обновлено до сборки ${APP_BUILD}.` : вебСтрока)}
+          {итог ?? ((толькоОбновились || приехало) ? `Обновлено до сборки ${APP_BUILD}.` : вебСтрока)}
         </div>
       )}
 
