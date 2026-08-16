@@ -16,6 +16,8 @@ import {
   заМостомЛи, звеноЦепочки, словоЦепочки,
 } from '@/domain/nearby';
 import { связь, меткаСвязи } from '@/domain/deviceState';
+import { расходка, подписьРасходки } from '@/domain/supplies';
+import { agoText } from '@/domain/units';
 import { sourceStatusLabel } from '@/domain/sourceStatus';
 import { DiscoverySection } from '@/sections/lazy';
 import { слотПоСнимку, путьСлота, ПОДПИСЬ_СЛОТА } from '@/domain/slotStatus';
@@ -61,9 +63,13 @@ export default function DevicesSection({ onClose, встроенный }: {
      SugarLifeCore#13/#19). Канал не привязан к выбранной модели: связь есть и тогда,
      когда модель ещё не названа, а «нет данных о резервуаре» без слова о пути к
      помпе — ровно та половина ответа, из-за которой чинят не то. */
+  const расх = расходка(снимок, { reservoir: dev?.reservoir, pumpBattery: dev?.pumpBattery, at: dev?.at });
   const pumpDetail = [путьПомпы,
-    dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : null,
-    dev?.pumpBattery != null ? dev.pumpBattery + '%' : null]
+    расх.остаток != null ? Math.round(расх.остаток) + ' ед' : null,
+    расх.заряд != null ? расх.заряд + '%' : null,
+    /* Возраст и путь — рядом с числом, а не в карточке: строка списка и есть то место,
+       где человек его читает, а «37 ед» часовой давности выглядят как свежие (#183). */
+    подписьРасходки(расх, Date.now(), (мс) => agoText(мс))]
     .filter(Boolean).join(' · ') || (pump ? 'нет данных о резервуаре/батарее' : null);
 
   const titles: Record<DeviceCatKey, string> = {
