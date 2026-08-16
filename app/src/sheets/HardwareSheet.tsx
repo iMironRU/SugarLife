@@ -8,6 +8,7 @@ import {
   СЛОТ, мостЖелезки, имяЖелезки, адресВЭфире, звеноЦепочки, словоЦепочки,
 } from '@/domain/nearby';
 import { ходПопытки, почемуМолчит, type Попытка, type Цель } from '@/domain/connectAttempt';
+import { подписьСвежести } from '@/domain/freshness';
 
 /* Карточка одного прибора (SugarLife#301).
 
@@ -50,7 +51,8 @@ export default function HardwareSheet({ прибор, снимок, попытк
 
   const строка = звено
     ? словоЦепочки(звено, мост ? имяЖелезки(мост) : null)
-    : sourceStatusLabel(прибор.status) ?? меткаСвязи[состояние];
+    : подписьСвежести(прибор, сейчас)
+      ?? sourceStatusLabel(прибор.status) ?? меткаСвязи[состояние];
 
   const моё = попытка && попытка.id === прибор.id ? попытка : null;
   const ход = моё ? ходПопытки(моё, живой, сейчас) : null;
