@@ -246,7 +246,13 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             // Персист-БД (нативный SQLite) → история переживает перезапуск. Фабрику собирает Swift (экспорт :persistence).
-            let e = SugarLifeEngine(driverProvider: nil, withSimulators: false, dbDriverFactory: DatabaseDriverFactory())
+            /* writeTimeoutMs повторяет значение по умолчанию из движка (SugarLifeCore#59). В Kotlin
+               у параметра есть умолчание, но Objective-C-интероп значения по умолчанию теряет, и
+               Swift обязан назвать число сам. Значит, при его изменении в ядре здесь останется
+               старое — молча. Числу место в одном месте, поэтому попрошу ядро вынести его в
+               companion, чтобы отсюда спрашивать, а не повторять. */
+            let e = SugarLifeEngine(driverProvider: nil, withSimulators: false,
+                                    dbDriverFactory: DatabaseDriverFactory(), writeTimeoutMs: 8_000)
             self.engine = e
             self.unsubscribe = e.subscribe(onSnapshot: { [weak self] json in
                 DispatchQueue.main.async { self?.notifyListeners("snapshot", data: ["json": json]) }
