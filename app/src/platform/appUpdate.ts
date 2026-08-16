@@ -59,24 +59,55 @@ export async function notifyAppReady(): Promise<void> {
 
 export type OtaResult = 'updated' | 'current' | 'error';
 
-// Нативный OTA: сверяем build из манифеста на Pages с текущим; если новее —
-// скачиваем zip-бандл, переключаемся на него и перезагружаем webview.
-export async function checkOtaUpdate(): Promise<OtaResult> {
-  if (!isNative) return 'error';
+export interface ОтаБандл { build: string; version: string; url: string }
+
+/* СПРОСИТЬ и ПРИМЕНИТЬ разведены (SugarLife#312).
+
+   Раньше это было одно действие: спросили сервер и, если новее, тут же скачали и
+   перезагрузили webview. Годилось, пока проверку запускал человек нажатием — он сам
+   выбрал момент. Для автоматической проверки при запуске так нельзя: перезагрузка
+   посреди работы уносит то, что человек набрал в открытой шторке. Обновление не стоит
+   потерянного приёма пищи (то же правило, что в вебе, #150).
+
+   Поэтому «узнать» ничего не меняет и не качает — только отвечает, есть ли новее. */
+/* Три исхода, а не два. «Нет нового» и «не смог спросить» — разные новости: первое
+   успокаивает, второе означает, что человек может сидеть на старой сборке и не знать
+   об этом. Свести их в null значило бы соврать одним из двух способов. */
+export async function узнатьOta(): Promise<ОтаБандл | 'нет' | 'ошибка'> {
+  if (!isNative) return 'ошибка';
   try {
     const r = await fetch(`${OTA_BASE}/manifest.json?t=${Date.now()}`, { cache: 'no-store' });
-    if (!r.ok) return 'error';
+    if (!r.ok) return 'ошибка';
     const m = await r.json() as { build?: string; version?: string; url?: string };
     const short = (m.build || '').slice(0, 7);
-    if (!short || !m.url) return 'error';
-    if (APP_BUILD !== 'dev' && short === APP_BUILD) return 'current';
-    const bundle = await CapacitorUpdater.download({ url: m.url, version: m.version || short });
+    if (!short || !m.url) return 'ошибка';
+    if (APP_BUILD !== 'dev' && short === APP_BUILD) return 'нет';
+    return { build: short, version: m.version || short, url: m.url };
+  } catch {
+    return 'ошибка';
+  }
+}
+
+/** Скачать и переключиться. Перезагружает webview — зовётся только по решению человека. */
+export async function применитьOta(б: ОтаБандл): Promise<boolean> {
+  try {
+    const bundle = await CapacitorUpdater.download({ url: б.url, version: б.version });
     await CapacitorUpdater.set(bundle); // сделать активным
     await CapacitorUpdater.reload();    // перезагрузить webview на новый бандл
-    return 'updated';
+    return true;
   } catch {
-    return 'error';
+    return false;
   }
+}
+
+// Проверка «в одно нажатие» для раздела «О приложении»: спросить и, если есть, сразу
+// применить — там момент выбирает человек, нажимая кнопку.
+export async function checkOtaUpdate(): Promise<OtaResult> {
+  if (!isNative) return 'error';
+  const б = await узнатьOta();
+  if (б === 'нет') return 'current';
+  if (б === 'ошибка') return 'error';
+  return (await применитьOta(б)) ? 'updated' : 'error';
 }
 
 // Проверить веб-слой: если есть свежая версия — применить и перезагрузиться.
