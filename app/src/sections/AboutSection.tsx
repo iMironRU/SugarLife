@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { refreshOutline, downloadOutline, logoGithub, listOutline, cloudDownloadOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
+import { состояниеОболочки, словоОболочки, ПУСТО, type СостояниеОболочки } from '@/platform/offlineShell';
 import Row from '@/ui/Row';
 import { useSnapshot } from '@/sources/bridge';
 import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
@@ -31,6 +32,11 @@ import {
    нельзя. Для приложения, которое считает инсулин, «посмотреть, как именно» — не
    формальность. */
 export default function AboutSection({ onClose }: { onClose: () => void }) {
+  /* Спрашиваем при открытии раздела, а не держим в сторе: ответ меняется редко, а
+     смотрят его в тот момент, когда что-то не открылось. */
+  const [оболочка, setОболочка] = useState<СостояниеОболочки>(ПУСТО);
+  useEffect(() => { void состояниеОболочки().then(setОболочка); }, []);
+  const оболочкаСлово = словоОболочки(оболочка);
   const снимок = useSnapshot();
   const издание = снимок?.edition ?? 'lite';
   const имяИздания = издание === 'pro' ? 'SugarLife.Pro' : APP_EDITION;
@@ -134,6 +140,17 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
           <Row title="Ядро" value={снимок.coreCommit.slice(0, 7)} chevron={false}
             sub={снимок.bridgeRevision ? `мост ${снимок.bridgeRevision}` : undefined} />
         )}
+      </div>
+
+      {/* Запуск без сети — отдельным вопросом, потому что это отдельный отказ.
+
+          С телефона: PWA выходит из фона на плохой связи, и белый экран. Белый, а не наш
+          тёмный, — значит не доехал сам документ. Спасает от этого только сохранённая
+          оболочка, и единственный способ узнать, есть ли она на ЭТОМ телефоне, — показать
+          здесь. «Должно работать» тут не ответ: у человека уже не сработало. */}
+      <div className="section-label sec">Без сети</div>
+      <div className="list">
+        <Row title="Оболочка" value={оболочкаСлово.главное} chevron={false} sub={оболочкаСлово.пояснение} />
       </div>
 
       <div className="section-label sec">Обновление</div>
