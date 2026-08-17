@@ -13,32 +13,29 @@ const мин = 60_000;
 const т = Date.now();
 
 describe('статус источника', () => {
-  it('данные свежие, сокета нет — всё равно Live', () => {
-    expect(статус(false, 'ready', т - 1 * мин)).toBe('Live');
-  });
-
-  it('данные свежие и сокет есть — Live', () => {
-    expect(статус(true, 'ready', т - 1 * мин)).toBe('Live');
+  /* Признака сокета в правиле больше нет вовсе — в этом и суть: свежесть данных о нём
+     не спрашивает. Тест сторожит подпись: вернётся аргумент — вернётся и соблазн. */
+  it('данные свежие — Live', () => {
+    expect(статус('ready', т - 1 * мин)).toBe('Live');
   });
 
   /* Acquiring остаётся там, где означает своё: показаний нет ВОВСЕ. */
   it('показаний нет вовсе — Acquiring', () => {
-    expect(статус(true, 'ready', null)).toBe('Acquiring');
+    expect(статус('ready', null)).toBe('Acquiring');
   });
 
-  it('показание старое — Delayed, независимо от сокета', () => {
-    expect(статус(true, 'ready', т - 20 * мин)).toBe('Delayed');
-    expect(статус(false, 'ready', т - 20 * мин)).toBe('Delayed');
+  it('показание старое — Delayed', () => {
+    expect(статус('ready', т - 20 * мин)).toBe('Delayed');
   });
 
   it('стор говорит об обрыве — Delayed даже при свежем числе', () => {
-    expect(статус(false, 'stale', т - 1 * мин)).toBe('Delayed');
-    expect(статус(false, 'error', т - 1 * мин)).toBe('Delayed');
+    expect(статус('stale', т - 1 * мин)).toBe('Delayed');
+    expect(статус('error', т - 1 * мин)).toBe('Delayed');
   });
 
   it('источника нет и загрузка — как было', () => {
-    expect(статус(false, 'off', т)).toBe('Disconnected');
-    expect(статус(false, 'idle', т)).toBe('Disconnected');
-    expect(статус(false, 'loading', null)).toBe('Connecting');
+    expect(статус('off', т)).toBe('Disconnected');
+    expect(статус('idle', т)).toBe('Disconnected');
+    expect(статус('loading', null)).toBe('Connecting');
   });
 });

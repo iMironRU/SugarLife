@@ -43,8 +43,11 @@ const ОТСТАВАНИЕ_МС = 15 * 60e3;
    там, где он и означает своё: показаний нет вовсе (строка выше).
 
    Отсюда же и «часики» в круге: они читали этот статус и верили ему. Правило круга тоже
-   поправлено (domain/deviceState), но причина была здесь. */
-function sourceStatusOf(live: boolean, status: string, latestAt: number | null): SourceStatus {
+   поправлено (domain/deviceState), но причина была здесь.
+
+   Признак сокета из аргументов убран совсем, а не оставлен «на всякий случай»: пока он
+   тут лежит, кто-нибудь снова свяжет с ним смысл. */
+function sourceStatusOf(status: string, latestAt: number | null): SourceStatus {
   if (status === 'off' || status === 'idle') return 'Disconnected';
   if (status === 'loading') return 'Connecting';
   if (latestAt == null) return 'Acquiring';
@@ -82,7 +85,7 @@ function buildSnapshot(): UiSnapshot {
     // rev 1.7: единая картина основного источника — раньше возраст показания
     // каждый экран считал сам, и «свежо ли» у всех получалось по-своему
     live: st.live,
-    status: sourceStatusOf(st.live, st.status, latest?.t ?? null),
+    status: sourceStatusOf(st.status, latest?.t ?? null),
     latestAtMs: latest?.t ?? null,
     source: cfg?.url ? 'Nightscout' : null,
   };
