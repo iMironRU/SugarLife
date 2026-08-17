@@ -106,7 +106,14 @@ class BleLink(
     private val доГотовности = ArrayDeque<() -> Unit>()
 
     @Synchronized private fun приГотовности(op: () -> Unit) {
-        if (готовность) enqueue(op) else { доГотовности.add(op); Log.d(TAG, "операция ждёт discovery на $address") }
+        when {
+            готовность -> enqueue(op)
+            // Ждать имеет смысл, только когда сессия ОТКРЫВАЕТСЯ. Без GATT ждать нечего: пусть операция
+            // выполнится и честно скажет «нет GATT-сессии». Иначе команды копятся молча, а на экране это
+            // выглядит как «мост думает» — поймано на железе после обрыва посреди подбора частоты.
+            gatt == null -> enqueue(op)
+            else -> { доГотовности.add(op); Log.d(TAG, "операция ждёт discovery на $address") }
+        }
     }
 
     @Synchronized private fun готово() {
