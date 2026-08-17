@@ -145,6 +145,7 @@ export default function App() {
   const { data, status } = useStore();
   const snap = useSnapshot();
   const onboarded = useOnboarded();
+  const мастерОткрыт = useRef(false);
   const insIcon = detectTherapy(data) === 'pen' ? medkit : water;
 
   // Спрашиваем разрешение на уведомления сразу при старте (не ждём первого
@@ -196,7 +197,16 @@ export default function App() {
 
   // Онбординг — главный путь, но не стена (CONNECT-UX §7): показываем, пока ничего не
   // подключено И человек его ещё не прошёл/не пропустил. Пропустил → приложение с прочерками.
-  if (status === 'off' && !bridgeHasData && !onboarded) {
+  /* И не убегает из-под пальца. Условие входа перестаёт выполняться в ту секунду, когда
+     приходит первое показание, — а именно этого мастер и добивается. Получалось, что
+     человек заводит сенсор, смотрит на список, и экран под ним сам сменяется на
+     «Сегодня»: результат своего действия он не видит и не понимает, было ли оно.
+
+     Открытый мастер закрывается только человеком — «Готово» или «Пропустить». Оба ставят
+     флаг, он и гасит. */
+  if (status === 'off' && !bridgeHasData && !onboarded) мастерОткрыт.current = true;
+  if (onboarded) мастерОткрыт.current = false;
+  if (мастерОткрыт.current) {
     return <IonApp><Suspense fallback={<Loader />}><Onboarding /></Suspense></IonApp>;
   }
   if (!data && !bridgeHasData && (status === 'idle' || status === 'loading')) return <IonApp><Loader /></IonApp>;

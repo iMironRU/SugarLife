@@ -4,23 +4,27 @@ import { IonIcon, IonInput, IonButton } from '@ionic/react';
 import {
   linkOutline, keyOutline, chevronForward, chevronBack, qrCodeOutline, cloudOutline,
   listOutline, bluetoothOutline, downloadOutline, checkmarkCircle, hardwareChipOutline, flash,
+  warningOutline,
 } from 'ionicons/icons';
 import BrandDrop from '@/ui/BrandDrop';
 import CatalogPicker from '@/sheets/CatalogPicker';
 import { pumpItems, sensorItems, modelTitle } from '@/sheets/modelItems';
 import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
-import { DiscoverySection } from '@/sections/lazy';
+import DevicesSection from '@/sections/DevicesSection';
+import { useSnapshot, sendIntent, эфирДоступен } from '@/sources/bridge';
+import { железоДиспетчера, имяЖелезки } from '@/domain/nearby';
+import { связь } from '@/domain/deviceState';
 import { probeCloud, checkReadAccess, type CloudProbe } from '@/sources/nightscout';
 import { addCloud } from '@/sources/clouds';
 import { refresh } from '@/sources/store';
 import { setDeviceConfig, UNKNOWN_MODEL } from '@/settings/deviceConfig';
 import { setOnboarded } from '@/settings/onboarding';
 import { toUnits, unitLabel } from '@/domain/units';
-import { isNative } from '@/platform/appUpdate';
+
 
 const RELEASES_URL = 'https://github.com/iMironRU/SugarLife/releases';
 
-type Step = 'welcome' | 'ways' | 'scan' | 'cloud' | 'streams';
+type Step = 'welcome' | 'ways' | 'доступ' | 'scan' | 'cloud' | 'streams';
 
 /* Мастер первого запуска (docs/CONNECT-UX.md §7, путь 1) — discovery-first.
    Не «сначала Nightscout», а «как будем доставать данные»: прямое подключение / QR /
@@ -28,6 +32,17 @@ type Step = 'welcome' | 'ways' | 'scan' | 'cloud' | 'streams';
    которого не существует, а честно ведём в нативное приложение. */
 export default function Onboarding() {
   const [step, setStep] = useState<Step>('welcome');
+  const снимок = useSnapshot();
+  /* Эфир, а не «нативная сборка» (#337). Признак — живой мост: в вебе его нет, в демо
+     есть, и локальная копия проходит железный путь целиком. */
+  const эфир = эфирДоступен();
+  const железо = железоДиспетчера(снимок);
+  const заведено = железо.length;
+  /* Вышел ли кто-нибудь на связь. Разница между «завёл» и «работает» — единственное, что
+     человека здесь занимает, и говорить «данные пойдут, когда выйдет на связь» о приборе,
+     который уже на связи, значит обещать в прошедшем времени. */
+  const живой = железо.find((h) => связь(h) === 'live') ?? null;
+  const готовность = снимок?.scanReadiness ?? null;
 
   // --- шаг «облако» ---
   const [url, setUrl] = useState('');
@@ -158,7 +173,7 @@ export default function Onboarding() {
 
         {/* Прямое подключение: в вебе BLE нет — не изображаем поиск, ведём в приложение */}
         <div className="list">
-          {isNative ? (
+          {эфир ? (
             /* Скан, а не каталог (#331). Обе строки открывали одно и то же — каталог
                моделей, — и человек, нажавший «найти рядом», получал вопрос «назови свою
                модель»: ровно тот, ради которого он и нажал кнопку.
@@ -167,7 +182,9 @@ export default function Onboarding() {
                реально вещает рядом, и только потом спрашивать модель — у тех, кого в
                эфире не видно. */
             <Row icon={bluetoothOutline} title="Найти рядом" sub="посмотрим, что вещает вокруг"
-              onClick={() => setStep('scan')} />
+              /* Знаем, что поиск возможен — не задерживаем лишним шагом. Не знаем или
+                 знаем, что нет, — сначала объясняем, потом спрашиваем (#333). */
+              onClick={() => setStep(готовность?.canScan ? 'scan' : 'доступ')} />
           ) : (
             <Row icon={downloadOutline} title="Найти рядом — в приложении"
               sub="браузер не умеет Bluetooth · скачать сборку" href={RELEASES_URL} />
@@ -191,15 +208,125 @@ export default function Onboarding() {
     );
   }
 
-  /* ---------- scan: слушаем эфир ----------
+  /* ---------- доступ: объясняем ДО системного диалога ----------
 
-     Тот же раздел, что и в «Устройствах», а не своя копия: поиск — одно поведение, и
-     второй его вариант разошёлся бы с первым в первую же правку. Здесь он просто
-     первый шаг мастера, а не вложенная страница. */
+     Разрешение, о котором не объяснили заранее, отклоняют — и второй раз система его
+     уже не покажет (#333). Цена отказа здесь выше задержки: человек останется без
+     блютуса навсегда и не поймёт, почему приложение ничего не находит.
+
+     Это объяснение, а не список красных крестиков. Что именно не так — знает движок, он
+     же запускает скан; наша проверка была бы вторым мнением о том же. Поэтому текст
+     общий, а разбор конкретной причины приходит из снимка ниже. */
+  if (step === 'доступ') {
+    /* Показываем препятствие, только если оно НЕ то, о котором и так сказано абзацем
+       выше. Невыданное разрешение, которое система ещё может спросить, — это ровно
+       следующая кнопка; повторять его тревожной плашкой и второй кнопкой «Открыть
+       настройки» значит предложить два занятия сразу и намекнуть, что первое не
+       сработает. Отказ «навсегда» — другое дело: там кнопка и есть единственный выход. */
+    const п = готовность && !готовность.canScan ? готовность : null;
+    const спроситьМожно = п?.blockers?.includes('noPermission') && п.canAskAgain !== false;
+    const мешает = п && !спроситьМожно ? п : null;
+    return (
+      <div className="connect ob-page">
+        <div className="ob-head">
+          <button className="sheet-close" onClick={() => setStep('ways')} aria-label="Назад">
+            <IonIcon icon={chevronBack} />
+          </button>
+          <div>
+            <div className="sheet-title">Поиск приборов</div>
+            <div className="sheet-subtitle">Один раз спросим доступ</div>
+          </div>
+        </div>
+
+        <p className="connect-desc">
+          Чтобы услышать сенсор или мост, телефону нужно разрешение на поиск по блютусу.
+          Сейчас он его спросит — ответьте «разрешить». Поиск идёт на самом телефоне,
+          наружу при этом ничего не уходит.
+        </p>
+        <div className="sheet-note">
+          На Android до 12 система вдобавок требует включённую службу геолокации: без неё
+          она не покажет ни одного устройства, даже когда блютус включён. Это её правило,
+          не наше — местоположением мы не пользуемся.
+        </div>
+
+        {/* Что мешает прямо сейчас — если движок уже знает. Здесь это не пугает, а
+            экономит шаг: человек чинит причину, не выходя с экрана, и снимок сам
+            перестаёт на неё жаловаться. */}
+        {мешает && (
+          <div className="today-alert">
+            <IonIcon icon={warningOutline} className="alert-ico" />
+            <div>
+              <span className="alert-title">{мешает.reason ?? 'Поиск сейчас невозможен'}</span>
+              {мешает.remediation && <span>{мешает.remediation}</span>}
+              {мешает.settingsTarget && (
+                <span className="alert-ask alert-ask-row">
+                  <button className="changed-btn is-undo"
+                    onClick={() => void sendIntent({ type: 'openSystemScreen', target: мешает.settingsTarget! })}>
+                    Открыть настройки
+                  </button>
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="connect-form">
+          <IonButton expand="block" className="connect-btn"
+            onClick={() => { void sendIntent({ type: 'requestScanPermissions' }); setStep('scan'); }}>
+            <IonIcon icon={bluetoothOutline} slot="start" />
+            Разрешить и начать поиск
+          </IonButton>
+        </div>
+        <button className="ob-skip" onClick={skip}>Пропустить — настрою потом</button>
+      </div>
+    );
+  }
+
+  /* ---------- scan: та же лента, что и в «Приборах» ----------
+
+     Именно та же, а не своя копия: у мастера был отдельный поиск, и он разошёлся с
+     разделом в первую же правку — там одна лента со своими и новыми, здесь остался
+     список только незнакомых. Первый запуск учил одному поведению, а приложение назавтра
+     показывало другое.
+
+     Кнопка «Готово» появляется, только когда прибор действительно заведён. Раньше выхода
+     отсюда не было вовсе: человек добавлял сенсор и оставался в мастере — новый сенсор
+     греется часами, первого показания нет, и мастер молча стоял на месте, как будто
+     ничего не произошло. */
   if (step === 'scan') {
     return (
       <div className="connect ob-page">
-        <DiscoverySection onClose={() => setStep('ways')} />
+        <div className="ob-head">
+          <button className="sheet-close" onClick={() => setStep('ways')} aria-label="Назад">
+            <IonIcon icon={chevronBack} />
+          </button>
+          <div>
+            <div className="sheet-title">Что рядом</div>
+            <div className="sheet-subtitle">Тапните прибор, чтобы завести</div>
+          </div>
+        </div>
+
+        <DevicesSection встроенный толькоЛента />
+
+        <div className="connect-form">
+          {заведено > 0 ? (
+            <>
+              {/* Говорим о результате словом, а не оставляем человека сверять список:
+                  «завёл или нет» — единственный вопрос, с которым он сюда пришёл. */}
+              <div className="sheet-note">
+                {живой
+                  ? `${имяЖелезки(живой)} на связи — данные пошли.`
+                  : `Заведено ${заведено === 1 ? 'устройство' : `устройств: ${заведено}`}. Данные пойдут, как только прибор выйдет на связь: новый сенсор греется — это часы, и это нормально.`}
+              </div>
+              <IonButton expand="block" className="connect-btn" onClick={() => setOnboarded(true)}>
+                <IonIcon icon={checkmarkCircle} slot="start" />
+                Готово
+              </IonButton>
+            </>
+          ) : (
+            <button className="ob-skip" onClick={skip}>Пропустить — настрою потом</button>
+          )}
+        </div>
       </div>
     );
   }

@@ -10,9 +10,8 @@ import { useEffect, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
-import { useSnapshot, sendIntent, type Discovered } from '@/sources/bridge';
+import { useSnapshot, sendIntent, эфирДоступен, type Discovered } from '@/sources/bridge';
 import { лента } from '@/domain/deviceFeed';
-import { isNative } from '@/platform/appUpdate';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
 import {
   железоДиспетчера, СЛОТ, мостЖелезки, имяЖелезки, адресВЭфире,
@@ -39,11 +38,19 @@ import {
 /* Цвет точки — по виду строки. Он повторяет то, что уже сказано словом в подписи:
    цветом одним ничего не сообщаем, потому что различают его не все (#325). */
 const ТОЧКА: Record<string, string> = {
-  работает: 'хорошо', молчит: 'обход', рядом: 'обход', неслышно: 'пусто', новый: 'пусто',
+  работает: 'хорошо', молчит: 'обход', рядом: 'обход', подключаюсь: 'обход',
+  неслышно: 'пусто', новый: 'пусто',
 };
 
-export default function DevicesSection({ onClose, встроенный }: {
+export default function DevicesSection({ onClose, встроенный, толькоЛента }: {
   onClose?: () => void; встроенный?: boolean;
+  /* Только лента приборов, без слотов и справочника — для шага мастера.
+
+     Мастер раньше показывал СВОЙ поиск (DiscoverySection), и это разошлось в первую же
+     правку: здесь появилась одна лента со своими и новыми, а там остался старый список
+     только незнакомых. Человек видел на первом запуске одно поведение, а через день в
+     «Приборах» — другое. Один экран, два режима показа. */
+  толькоЛента?: boolean;
 }) {
   const { push, pop } = useStack();
   const { data } = useStore();
@@ -267,7 +274,7 @@ export default function DevicesSection({ onClose, встроенный }: {
             поломка, а не как «пока пусто». */}
         {!мешаетСкан && строки.length === 0 && (
           <div className="sheet-note">
-            {!isNative
+            {!эфирДоступен()
               ? 'В браузере блютуса нет — это свойство браузера, а не настроек. Приборы видны в приложении на телефоне; данные при этом идут через облако, и всё остальное работает.'
               : сканирует
               ? 'Слушаю эфир. Приборы появятся здесь сами — и знакомые, и новые.'
@@ -278,10 +285,14 @@ export default function DevicesSection({ onClose, встроенный }: {
         {!мешаетСкан && строки.length > 0 && (
           <div className="sheet-note">
             {сканирует ? 'Слушаю эфир — новые приборы появятся в списке сами.' : 'Поиск не идёт.'}
-            {' '}Тапни прибор — там все действия: мост, подключение, «забыть».
+            {/* Про «все действия в карточке» — только там, где карточка есть что
+                показать. В мастере заводить ещё нечего, и обещание разбора, мостов и
+                «забыть» на первом запуске сбивает: человек идёт искать этот экран. */}
+            {!толькоЛента && ' Тапни прибор — там все действия: мост, подключение, «забыть».'}
           </div>
         )}
 
+        {!толькоЛента && <>
         {/* Ниже — слоты: кто чем занят. Это ответ на другой вопрос, и потому он второй:
             «что у меня есть» человек проверяет чаще, чем «куда это назначено», а
             заходя сюда с проблемой связи, он ищет прибор, а не роль. */}
@@ -315,6 +326,7 @@ export default function DevicesSection({ onClose, встроенный }: {
           <Row icon={helpCircleOutline} title="Проверить / записать по модели" onClick={() => setReqOpen(true)} />
         </div>
         <RequirementsCatalogSheet isOpen={reqOpen} onClose={() => setReqOpen(false)} />
+        </>}
         {/* Новый прибор заводится той же шторкой, что и раньше, но с ним самим: тап по
             строке передаёт объявление, а не открывает пустой список заново (#337). */}
         <DeviceScanSheet isOpen={!!новый} выбран={новый} onClose={() => setНовый(null)} title="Что рядом" />
