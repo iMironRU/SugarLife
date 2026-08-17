@@ -19,6 +19,9 @@
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
+  <!-- ВНЕШНЯЯ группа: композиция целиком, вместе со значком PRO. Под маску Android
+       обязано влезать всё видимое, а не одна капля — иначе значок срежет первым. -->
+  <g transform="translate(256 256) scale(0.614) translate(-256 -256)">
   <rect width="512" height="512" fill="url(#bg)"/>
   <g transform="translate(0 -19)">
     <path d="M256 104 C256 104 372 250 372 330 a116 116 0 1 1 -232 0 C140 250 256 104 256 104 Z" fill="#5fb3cf" opacity="0.22" filter="url(#glow)"/>
@@ -32,5 +35,6 @@
     <rect x="176" y="386" width="160" height="62" rx="31" fill="none" stroke="#8fd3e8" stroke-width="4" opacity="0.9"/>
     <text x="256" y="429" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
           font-size="40" font-weight="700" letter-spacing="6" fill="#dff6ff">PRO</text>
+  </g>
   </g>
 </svg>

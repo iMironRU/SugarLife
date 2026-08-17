@@ -18,7 +18,7 @@
     </filter>
   </defs>
   <rect width="512" height="512" fill="url(#bg)"/>
-  <g transform="translate(0 -19)">
+  <g transform="translate(256 256) scale(0.928) translate(-256 -275) translate(0 -19)">
     <path d="M256 104 C256 104 372 250 372 330 a116 116 0 1 1 -232 0 C140 250 256 104 256 104 Z" fill="#9184d9" opacity="0.22" filter="url(#glow)"/>
     <path d="M256 104 C256 104 372 250 372 330 a116 116 0 1 1 -232 0 C140 250 256 104 256 104 Z" fill="url(#drop)"/>
     <ellipse cx="212" cy="292" rx="30" ry="52" fill="#ffffff" opacity="0.28" transform="rotate(-24 212 292)"/>
