@@ -57,6 +57,10 @@
     connection: 'Disconnected', status: 'Disconnected', batteryPct: 60, firmware: '2.4',
   };
 
+  /* Копии для восстановления: демо-ручки чистят списки, а вернуть их надо тем же
+     содержимым, иначе «сПриборами» показывало бы не то, с чего начинали. */
+  var железоДемо = null; var эфирДемо = null;
+
   var снимок = {
     bridgeRevision: '1.10',
     monitor: { glucose: '7,8', unit: 'ммоль/л', trend: '→', status: 'Live', link: 'Streaming', live: true,
@@ -116,6 +120,9 @@
      ничего не изменилось, и не перерисовывает. Демо-ручки при этом «работали» —
      состояние в объекте менялось, — а экран оставался прежним, и выглядело это как
      сломанный интерфейс, хотя сломан был демо-мост. */
+  железоДемо = снимок.hardware.slice();
+  эфирДемо = снимок.discovered.slice();
+
   function разослать() {
     снимок = Object.assign({}, снимок);
     подписчики.forEach(function (cb) { cb(снимок); });
@@ -146,6 +153,11 @@
     готов: function () { снимок.scanReadiness = { canScan: true, blockers: [] }; разослать(); return 'ок'; },
     неНастроено: function () { снимок.setup = { configured: false, sources: 0, receiving: false }; разослать(); return 'ок'; },
     настроено: function () { снимок.setup = { configured: true, sources: 2, receiving: true }; разослать(); return 'ок'; },
+    /* Пустая лента — состояние первого запуска и состояние «всё забыли». Проверять его
+       надо чаще, чем кажется: именно на пустом экране видно, объясняет ли приложение
+       себя или молчит. */
+    безПриборов: function () { снимок.hardware = []; снимок.discovered = []; разослать(); return 'ок'; },
+    сПриборами: function () { снимок.hardware = железоДемо.slice(); снимок.discovered = эфирДемо.slice(); разослать(); return 'ок'; },
   };
 
   window.SugarLifeBridge = {
