@@ -1,0 +1,25 @@
+<!-- Издание Pro (core#61): та же геометрия, что у Lite, другая гамма. Порождено из одноимённого
+     файла без «-pro» — правь ОБА или регенерируй, иначе издания разъедутся молча. -->
+<!-- Передний слой адаптивной иконки Android. Прозрачный фон — подложку рисует система из
+     второго слоя, и она же двигает слои друг относительно друга при анимации. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="drop" x1="256" y1="104" x2="256" y2="412" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#dff6ff"/>
+      <stop offset="0.45" stop-color="#8fd3e8"/>
+      <stop offset="1" stop-color="#3f8fb0"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0 -19)">
+    <path d="M256 104 C256 104 372 250 372 330 a116 116 0 1 1 -232 0 C140 250 256 104 256 104 Z" fill="url(#drop)"/>
+    <ellipse cx="212" cy="292" rx="30" ry="52" fill="#ffffff" opacity="0.28" transform="rotate(-24 212 292)"/>
+    <path d="M176 344 h34 l16 -40 l22 78 l20 -58 l14 20 h30" fill="none" stroke="#0f171d" stroke-width="15"
+          stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  </g>
+  <g>
+    <rect x="176" y="386" width="160" height="62" rx="31" fill="#0f171d" opacity="0.86"/>
+    <rect x="176" y="386" width="160" height="62" rx="31" fill="none" stroke="#8fd3e8" stroke-width="4" opacity="0.9"/>
+    <text x="256" y="429" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+          font-size="40" font-weight="700" letter-spacing="6" fill="#dff6ff">PRO</text>
+  </g>
+</svg>

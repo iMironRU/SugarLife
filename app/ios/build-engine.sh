@@ -16,5 +16,22 @@ cd "$CORE_DIR"
 # файла, из-за чего Xcode встраивал УСТАРЕВШИЙ фреймворк → iOS крутил старый движок, пока Android свежий
 # (composite). Чистим прежний выход копии перед сборкой и сносим дубли после — фреймворк всегда свежий из ядра.
 rm -rf engine/build/xcode-frameworks 2>/dev/null || true
-./gradlew :engine:embedAndSignAppleFrameworkForXcode --no-daemon
+# ИЗДАНИЕ ЯДРА (core#61) выводим из идентификатора приложения, а не из отдельной переменной: так
+# «Pro-приложение с Lite-ядром» невозможно по построению — забыть выставить второй флаг просто негде.
+EDITION=lite
+case "${PRODUCT_BUNDLE_IDENTIFIER:-}" in *.pro) EDITION=pro;; esac
+echo "издание ядра: $EDITION (bundle ${PRODUCT_BUNDLE_IDENTIFIER:-неизвестен})"
+
+# Веб-конфиг пишет `cap sync` по SUGARLIFE_EDITION — отдельно от всего остального, и его легко забыть.
+# Сверяем: снаружи .pro, а внутри appId Lite — ровно тот случай, что нашли на ревью #297.
+CAP_CFG="$HERE/App/App/capacitor.config.json"
+if [ -f "$CAP_CFG" ] && [ -n "${PRODUCT_BUNDLE_IDENTIFIER:-}" ]; then
+  CAP_ID=$(sed -n 's/.*"appId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$CAP_CFG" | head -1)
+  if [ "$CAP_ID" != "$PRODUCT_BUNDLE_IDENTIFIER" ]; then
+    echo "error: веб-конфиг от другого издания — в приложении appId '$CAP_ID', а собирается '$PRODUCT_BUNDLE_IDENTIFIER'." >&2
+    echo "       Пересоберите веб: cd app && SUGARLIFE_EDITION=$EDITION npx cap sync ios" >&2
+    exit 1
+  fi
+fi
+./gradlew :engine:embedAndSignAppleFrameworkForXcode --no-daemon -Pedition="$EDITION"
 find engine/build/xcode-frameworks -name '* [0-9].framework' -exec rm -rf {} + 2>/dev/null || true
