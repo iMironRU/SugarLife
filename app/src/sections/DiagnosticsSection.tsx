@@ -4,6 +4,8 @@ import { documentTextOutline, shareOutline, warningOutline, qrCodeOutline } from
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import ScanSheet from '@/sheets/ScanSheet';
+import Готовность from '@/ui/Готовность';
+import { мешает } from '@/domain/scanReadiness';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import type { LoggingState } from '@/sources/bridge';
 
@@ -46,6 +48,16 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
      кодов от движка не зависит вовсе и в браузере работает полностью; спрятав его за той
      же развилкой, мы отняли бы его ровно у того места, где им и будут пользоваться:
      разбирать присланный снимок чужой коробки удобнее за компьютером, а не с телефона. */
+  /* Сводка готовности — третий вход из #333, и он для тех, кто вернулся разбираться
+     позже. Здесь, в отличие от рабочих экранов, уместно сказать и «всё в порядке»:
+     сюда приходят именно с вопросом, а не мимо. */
+  const готовность = (
+    <>
+      <div className="section-label sec">Поиск приборов</div>
+      <Готовность помеха={мешает(snap)} спокойно />
+    </>
+  );
+
   const коды = (
     <>
       {/* Это стенд, а не рабочий путь: рабочий живёт в поле «Код сенсора», где код и
@@ -71,6 +83,7 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
   if (!logging) {
     return (
       <Section title="Диагностика" описание="Записи о работе приложения и обмене с приборами. Нужны, когда что-то разбирают: сюда попадает то, чего не видно на экранах." onBack={onClose}>
+        {готовность}
         {коды}
         <div className="loop-empty">
           <IonIcon icon={documentTextOutline} />
@@ -93,6 +106,7 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
   return (
     <Section title="Диагностика" описание="Записи о работе приложения и обмене с приборами. Нужны, когда что-то разбирают: сюда попадает то, чего не видно на экранах." onBack={onClose}>
 
+      {готовность}
       {коды}
 
       <div className="section-label sec">Подробность</div>
