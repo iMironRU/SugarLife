@@ -1,4 +1,4 @@
-import type { UiSnapshot, DeviceView } from '@/sources/bridge';
+import type { UiSnapshot, DeviceView, Discovered, DriverDescriptor, Param } from '@/sources/bridge';
 import { устройствоРоли } from './deviceState';
 
 /* Куда писать параметры драйвера — серийник помпы, частоту радио (SugarLife#224).
@@ -42,4 +42,46 @@ export function значенияПараметров(
   /* Локальные не подмешиваем: полупустая форма честнее, чем поле, заполненное из
      нашего кэша, — иначе человек не отличит «драйвер это знает» от «мы это помним». */
   return изДвижка;
+}
+
+/* ЧТО ОБЯЗАТЕЛЬНО СПРОСИТЬ, прежде чем заводить прибор (SugarLife#349).
+
+   На чистом телефоне мастер заводил сенсор БЕЗ КОДА и помпу без серийника: прибор
+   появлялся в списке, драйвер подключался и вечно слал запросы в пустоту. Снаружи — «на
+   связи», данных нет никогда. Худший вид поломки: приложение утверждает, что работает, и
+   проверить это человеку нечем.
+
+   Спрашивали по признаку `needsMoreParams` от движка. Признак верный, но отвечает на
+   другой вопрос — «нужны ли ещё сведения, чтобы опознать прибор». Нам нужно «есть ли у
+   драйвера обязательные поля, ответа на которые ещё нет», и это видно прямо в спеке.
+
+   Поле со значением по умолчанию обязательным не считаем: ответ на него уже есть, и
+   спрашивать «подтвердите авто» значит задерживать человека ради нашей строгости. */
+
+export function драйверПоId(
+  snap: UiSnapshot | null | undefined, id: string | null | undefined,
+): DriverDescriptor | null {
+  if (!id) return null;
+  return snap?.availableDrivers?.find((d) => d.id === id) ?? null;
+}
+
+/** Обязательные поля драйвера, у которых нет ответа по умолчанию. */
+export function обязательные(d: DriverDescriptor | null | undefined): Param[] {
+  return (d?.settings?.parameters ?? []).filter((p) => p.required && !p.default);
+}
+
+/** Чего не хватает при данных значениях — по этому решается, можно ли жать «Подключить». */
+export function нехватает(
+  d: DriverDescriptor | null | undefined, значения: Record<string, string>,
+): Param[] {
+  return обязательные(d).filter((p) => !(значения[p.key] ?? '').trim());
+}
+
+/** Надо ли открывать шторку с вопросами при заведении найденного прибора. */
+export function спроситьЛи(snap: UiSnapshot | null | undefined, d: Discovered): boolean {
+  /* Мост — всегда вопрос: через него подключают не его самого, а прибор за ним, и какой
+     именно, знает только человек. */
+  if (d.isTransport) return true;
+  if (d.needsMoreParams) return true;
+  return обязательные(драйверПоId(snap, d.driverId)).length > 0;
 }

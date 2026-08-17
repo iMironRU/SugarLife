@@ -47,6 +47,8 @@ private fun shortUuid(u: UUID): String {
 private val mainHandler = Handler(Looper.getMainLooper())
 /** Сколько ждём колбэк одной GATT-операции. Норма — доли секунды; это срок «стек потерял ответ». */
 private const val ОП_СРОК_МС = 8000L
+/** Сколько ждём discovery, прежде чем отпустить отложенные команды их обычным отказом (#348). */
+private const val DISCOVERY_СРОК_МС = 15000L
 
 // Sibionics
 private val SIB_SERVICE = uuid16("FF30")
@@ -114,9 +116,50 @@ class BleLink(
 
     fun subscribe(char: UUID, handler: (ByteArray) -> Unit) { notifyHandlers[char] = handler }
 
+    /* Операции ждут discovery (SugarLife#348).
+
+       `connect()` возвращается СРАЗУ: connectGatt асинхронный, соединение и discovery
+       приходят колбэками позже. А контракт транспорта читается как «связь готова», и
+       ядро сразу шлёт первую команду. На живом телефоне между ними было ЧЕТЫРЕ
+       МИЛЛИСЕКУНДЫ: запись уходила в пустой `chars`, отбрасывалась, драйвер уходил на
+       бэкофф, переподключался — и попадал в ту же щель снова. Бесконечно, при живом
+       блютусе и исправном мосте.
+
+       Сенсор не страдал по случайности: его драйвер сам ждёт состояния линка. То есть
+       поломка была не в помпе и не в OrangeLink, а в порядке действий — и снаружи, из
+       общего кода, её не видно никак: «до discovery писать нельзя» знает только натив.
+
+       Копим и отпускаем одной пачкой. Но НЕ НАВСЕГДА: не случилось discovery за срок —
+       отпускаем всё равно, и каждая операция уходит своим обычным путём отказа. Иначе
+       вернём ровно то бесконечное ожидание, которое чинили в #344. */
+    private var найдены = false
+    private val доГотовности = ArrayList<() -> Unit>()
+    private var сторожDiscovery: Runnable? = null
+
+    private fun приГотовности(op: () -> Unit) {
+        val ждём = synchronized(this) { if (найдены) false else { доГотовности.add(op); true } }
+        if (!ждём) op()
+    }
+    private fun отпуститьОтложенные(причина: String) {
+        val список = synchronized(this) {
+            сторожDiscovery?.let(mainHandler::removeCallbacks); сторожDiscovery = null
+            val l = ArrayList(доГотовности); доГотовности.clear(); l
+        }
+        if (список.isNotEmpty()) Log.d(TAG, "$address: отпускаю ${список.size} отложенных операций ($причина)")
+        список.forEach { it() }
+    }
+
     fun connect() {
         // Свежая GATT-сессия (реконнект): сбрасываем состояние старой, иначе застрявшая операция/характеристика мешает.
         chars.clear(); readHandlers.clear(); opQueue.clear(); opBusy = false
+        synchronized(this) { найдены = false; доГотовности.clear() }
+        сторожDiscovery?.let(mainHandler::removeCallbacks)
+        val сд = Runnable {
+            Log.w(TAG, "$address: discovery не завершился за ${DISCOVERY_СРОК_МС}мс — отложенные команды пойдут своим отказом")
+            отпуститьОтложенные("сдались ждать discovery")
+        }
+        сторожDiscovery = сд
+        mainHandler.postDelayed(сд, DISCOVERY_СРОК_МС)
         val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
         val device = adapter.getRemoteDevice(address)
         onState?.invoke("Connecting")
@@ -126,18 +169,28 @@ class BleLink(
 
     fun disconnect() {
         Log.d(TAG, "disconnect $address")
+        // Отложенное отпускаем: иначе чтение, начатое до разрыва, не ответит никогда.
+        отпуститьОтложенные("разрыв связи")
         gatt?.disconnect(); gatt?.close(); gatt = null
     }
 
-    fun write(char: UUID, bytes: ByteArray) = enqueue {
+    fun write(char: UUID, bytes: ByteArray) = приГотовности { enqueue {
         val g = gatt; val c = chars[char]
-        if (g == null || c == null) { opDone(); return@enqueue }
+        /* Два РАЗНЫХ отказа, и раньше они были неотличимы — оба выглядели как «прибор не
+           отвечает» (#347). Нет GATT — не подключились, чинится подключением. Нет
+           характеристики — подключились, но пишем не туда, чинится разбором протокола.
+           Молча выброшенная команда это потерянная улика: её искали дважды. */
+        if (g == null) { Log.w(TAG, "запись ${shortUuid(char)} отброшена: нет GATT-сессии с $address"); opDone(); return@enqueue }
+        if (c == null) {
+            Log.w(TAG, "запись ${shortUuid(char)} отброшена: у $address нет такой характеристики; есть: ${chars.keys.joinToString { shortUuid(it) }}")
+            opDone(); return@enqueue
+        }
         c.writeType = if (c.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0)
             BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         else BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
         c.value = bytes
         g.writeCharacteristic(c)
-    }
+    } }
 
     // Телеметрия периферала (issue #38): частичная эмиссия — null-поле движок не затирает.
     private fun emitTelemetry(batteryPct: Int? = null, firmware: String? = null, rssi: Int? = null) {
@@ -153,12 +206,16 @@ class BleLink(
         g.readRemoteRssi()
     }
 
-    fun read(char: UUID, completion: (ByteArray?) -> Unit) = enqueue {
+    fun read(char: UUID, completion: (ByteArray?) -> Unit) = приГотовности { enqueue {
         val g = gatt; val c = chars[char]
-        if (g == null || c == null) { completion(null); opDone(); return@enqueue }
+        if (g == null) { Log.w(TAG, "чтение ${shortUuid(char)} отброшено: нет GATT-сессии с $address"); completion(null); opDone(); return@enqueue }
+        if (c == null) {
+            Log.w(TAG, "чтение ${shortUuid(char)} отброшено: у $address нет такой характеристики; есть: ${chars.keys.joinToString { shortUuid(it) }}")
+            completion(null); opDone(); return@enqueue
+        }
         readHandlers[char] = completion
         g.readCharacteristic(c)
-    }
+    } }
 
     private val callback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
@@ -178,6 +235,14 @@ class BleLink(
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
             Log.d(TAG, "servicesDiscovered addr=$address status=$status services=${g.services.size}")
+            /* ЧТО именно у прибора есть — одной строкой на сервис, один раз за сессию
+               (#347). Раньше писали только количество, и для незнакомого моста это был
+               главный вопрос первых пяти минут: наши ли у него характеристики или мы всё
+               это время пишем в никуда. Догадку такой список превращает в факт — и он же
+               нужен каталогу устройств, потому что следующий мост приедет со своими. */
+            for (s in g.services) {
+                Log.d(TAG, "  сервис ${shortUuid(s.uuid)}: ${s.characteristics.joinToString { shortUuid(it.uuid) }}")
+            }
             for (s in g.services) for (c in s.characteristics) {
                 chars[c.uuid] = c
                 if (notifyChars.contains(c.uuid)) {
@@ -189,6 +254,9 @@ class BleLink(
                 }
             }
             onState?.invoke("Streaming")   // discovery завершён — как в iOS (link=Streaming перед readMac)
+            // Теперь можно писать: всё, что пришло раньше времени, уходит здесь (#348).
+            synchronized(this@BleLink) { найдены = true }
+            отпуститьОтложенные("discovery завершён")
             readTelemetry(g)   // заряд/прошивка/rssi, если периферал их отдаёт (issue #38)
         }
 

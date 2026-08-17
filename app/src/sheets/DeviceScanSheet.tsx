@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import type { Discovered, DriverDescriptor } from '@/sources/bridge';
 import ParamsForm from '@/ui/ParamsForm';
+import { обязательные, нехватает } from '@/domain/deviceParams';
 import Sheet from '@/ui/Sheet';
 
 /* Что показано, то и отправляется.
@@ -51,6 +52,9 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
   const [mode, setMode] = useState<'attach' | 'activate'>('attach');
   const [values, setValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  /* Чего не хватает прямо сейчас — считаем на каждый ввод, а не при нажатии: подсветить
+     недостающее после отказа значит сначала дать промахнуться. */
+  const мало = step.kind === 'params' ? нехватает(step.target, values) : [];
 
   useEffect(() => { if (!isOpen) { setStep({ kind: 'list' }); setValues({}); setMode('attach'); } }, [isOpen]);
   /* Пришли с готовым выбором — сразу к нему, минуя список. Список в этом случае был бы
@@ -76,7 +80,11 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
   const pick = (item: Discovered) => {
     if (item.isTransport) { setStep({ kind: 'target', item }); return; }
     const own = driverById(item.driverId);
-    if (item.needsMoreParams) { setValues(поУмолчанию(own)); setStep({ kind: 'params', item, target: own }); return; }
+    /* К вопросам ведём и тогда, когда движок молчит про needsMoreParams: обязательные
+       поля драйвера видны прямо в спеке (#349). */
+    if (item.needsMoreParams || обязательные(own).length) {
+      setValues(поУмолчанию(own)); setStep({ kind: 'params', item, target: own }); return;
+    }
     void confirm(item, null, {});
   };
 
@@ -159,7 +167,19 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
               values={values}
               onChange={(k, v) => setValues((s) => ({ ...s, [k]: v }))}
             />
-            <button className="food-save" disabled={busy} onClick={() => confirm(step.item, step.target, values)} style={{ marginTop: 16 }}>
+            {/* Кнопка ждёт обязательного.
+
+                Без этого прибор заводился с пустыми полями: сенсор без кода — «на связи»
+                и молчит навсегда, и разобраться в этом человеку нечем. Отказ движка
+                («заведём, но не настроено») — страховка, а спросить надо здесь: человек
+                только что нажал «Добавить» и как раз готов отвечать. */}
+            {!!мало.length && (
+              <div className="metric-note" style={{ marginTop: 10 }}>
+                Без этого прибор не заработает: {мало.map((p) => p.title.toLowerCase()).join(', ')}.
+              </div>
+            )}
+            <button className="food-save" disabled={busy || !!мало.length}
+              onClick={() => confirm(step.item, step.target, values)} style={{ marginTop: 16 }}>
               <IonIcon icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
               {busy ? 'Подключаю…' : 'Подключить'}
             </button>

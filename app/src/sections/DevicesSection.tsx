@@ -12,6 +12,7 @@ import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/dev
 import { pumpById, sensorById } from '@/domain/catalog';
 import { useSnapshot, sendIntent, эфирДоступен, type Discovered } from '@/sources/bridge';
 import { лента } from '@/domain/deviceFeed';
+import { спроситьЛи } from '@/domain/deviceParams';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
 import {
   железоДиспетчера, СЛОТ, мостЖелезки, имяЖелезки, адресВЭфире,
@@ -159,7 +160,10 @@ export default function DevicesSection({ onClose, встроенный, толь
      надо (мост ведёт к нескольким приборам, драйверу нужен серийник), шторка открывается
      и остаётся. */
   const добавить = (d: Discovered) => {
-    if (d.isTransport || d.needsMoreParams) { setНовый(d); return; }
+    /* Спрашиваем не только по флагу движка, но и по спеке драйвера (#349): сенсор без
+       кода заводился молча и потом вечно молчал, изображая связь. Правило — в
+       domain/deviceParams. */
+    if (спроситьЛи(снимок, d)) { setНовый(d); return; }
     void sendIntent({ type: 'addDiscovered', bleId: d.bleId, driverType: d.driverId, params: {} });
   };
 

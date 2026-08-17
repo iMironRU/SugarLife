@@ -82,7 +82,14 @@
         rssi: -68, needsMoreParams: false, isTransport: false, transportFor: [], knownDeviceId: null },
     ],
     availableDrivers: [
-      { id: 'sibionics', displayName: 'Sibionics', kind: 'sensor', roles: ['GlucoseSource'], settings: { parameters: [] }, available: true },
+      /* Код сенсора — обязательный и без значения по умолчанию, как у драйвера ядра
+         (SugarLife#349). Пока его в демо не было, мастер заводил сенсор одним тапом, и
+         поломка «завели без кода — молчит навсегда» не воспроизводилась вовсе. */
+      { id: 'sibionics', displayName: 'Sibionics', kind: 'sensor', roles: ['GlucoseSource'], available: true,
+        settings: { parameters: [
+          { key: 'sensorCode', title: 'Код сенсора', type: 'Text', required: true, default: null, options: [],
+            scan: 'qr', hint: 'На упаковке сенсора, рядом с QR-кодом.' },
+        ] } },
       /* Параметры — СЛОВО В СЛОВО как объявляет драйвер ядра (MedtronicDriver.parameterSpec).
          Списывать точно важнее, чем красиво: подсказки (hint) у этих двух полей нет, и
          демо не должно её выдумывать — иначе форма у нас выглядит понятнее, чем на
