@@ -83,7 +83,15 @@
     ],
     availableDrivers: [
       { id: 'sibionics', displayName: 'Sibionics', kind: 'sensor', roles: ['GlucoseSource'], settings: { parameters: [] }, available: true },
-      { id: 'medtronic', displayName: 'Medtronic', kind: 'pump', roles: ['PumpStateSource'], settings: { parameters: [] }, available: true },
+      /* Параметры — СЛОВО В СЛОВО как объявляет драйвер ядра (MedtronicDriver.parameterSpec).
+         Списывать точно важнее, чем красиво: подсказки (hint) у этих двух полей нет, и
+         демо не должно её выдумывать — иначе форма у нас выглядит понятнее, чем на
+         телефоне, и разговор с ядром о недостающей подсказке не состоится (#344). */
+      { id: 'medtronic', displayName: 'Medtronic', kind: 'pump', roles: ['PumpStateSource'], available: true,
+        settings: { parameters: [
+          { key: 'serial', title: 'Серийный номер помпы', type: 'Text', required: true, default: null, options: [], keyboard: 'numeric' },
+          { key: 'region', title: 'Регион/частота', type: 'Enum', required: true, default: 'auto', options: ['auto', '868', '916'] },
+        ] } },
       { id: 'orange', displayName: 'OrangeLink', kind: 'bridge', roles: [], settings: { parameters: [] }, available: true, providesTransportFor: ['medtronic'] },
     ],
     logging: null,

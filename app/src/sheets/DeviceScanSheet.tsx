@@ -4,8 +4,23 @@ import {bluetoothOutline, radioOutline, checkmarkCircle} from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import type { Discovered, DriverDescriptor } from '@/sources/bridge';
-import DeviceSettingsForm from './DeviceSettingsForm';
+import ParamsForm from '@/ui/ParamsForm';
 import Sheet from '@/ui/Sheet';
+
+/* Что показано, то и отправляется.
+
+   Форма рисует `default` как выбранное — но в `values` его не было, и наружу уходил
+   параметр без значения. Дальше решал драйвер, и обычно так же, как показано, — но это
+   совпадение, а не правило: человек видел «авто», соглашался, а согласие никуда не шло.
+
+   Для помпы это стоит минут: «регион» по умолчанию «авто» — полный перебор частот, до
+   пяти минут молчания на первом подключении (#344). Разница между «выбрал авто» и
+   «ничего не выбрал» должна быть видна нам, а не угадываться движком. */
+function поУмолчанию(d: DriverDescriptor | null): Record<string, string> {
+  const v: Record<string, string> = {};
+  d?.settings.parameters.forEach((p) => { if (p.default != null) v[p.key] = p.default; });
+  return v;
+}
 
 type Step = { kind: 'list' } | { kind: 'target'; item: Discovered } | { kind: 'params'; item: Discovered; target: DriverDescriptor | null };
 
@@ -61,12 +76,14 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
   const pick = (item: Discovered) => {
     if (item.isTransport) { setStep({ kind: 'target', item }); return; }
     const own = driverById(item.driverId);
-    if (item.needsMoreParams) { setStep({ kind: 'params', item, target: own }); return; }
+    if (item.needsMoreParams) { setValues(поУмолчанию(own)); setStep({ kind: 'params', item, target: own }); return; }
     void confirm(item, null, {});
   };
 
   const pickTarget = (item: Discovered, targetId: string) => {
-    setStep({ kind: 'params', item, target: driverById(targetId) });
+    const t = driverById(targetId);
+    setValues(поУмолчанию(t));
+    setStep({ kind: 'params', item, target: t });
   };
 
   const confirm = async (item: Discovered, target: DriverDescriptor | null, params: Record<string, string>) => {
@@ -127,8 +144,18 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
                 <button className={'dev-seg-btn' + (mode === 'activate' ? ' on' : '')} onClick={() => setMode('activate')}>Активировать новый</button>
               </div>
             )}
-            <DeviceSettingsForm
-              params={step.target?.settings.parameters ?? []}
+            {/* Та же форма, что у облачных учёток и в карточке прибора (ui/ParamsForm).
+
+                Здесь стояла вторая, своя, и разошлась ровно там, где дороже всего:
+                ПОДСКАЗКИ ЯДРА ОНА НЕ ПОКАЗЫВАЛА ВОВСЕ. Драйверы их пишут — «где взять
+                токен», «тот же регион, что у учётки», «ручка не знает, что в неё
+                заряжено», — а до человека они не доходили: в форме подключения, то есть
+                там, где он видит эти поля первый и единственный раз.
+
+                Заодно Enum стал переключателем вместо выпадающего списка: варианта два-три,
+                и прятать их за нажатием незачем. */}
+            <ParamsForm
+              spec={step.target?.settings}
               values={values}
               onChange={(k, v) => setValues((s) => ({ ...s, [k]: v }))}
             />
