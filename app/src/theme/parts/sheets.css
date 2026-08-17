@@ -415,3 +415,14 @@ body.скан-идёт ion-modal { display: none !important; }
   font-size: 16px; font-weight: 600; color: #fff; background: rgba(0, 0, 0, .62);
   backdrop-filter: blur(6px);
 }
+
+/* Прочитанное с носителя. Моноширинный и выделяемый: это сырая строка, её сверяют
+   посимвольно с напечатанным на коробке и пересылают в переписку. */
+.скан-текст {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px; line-height: 1.5; word-break: break-all;
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--color-surface-2); color: var(--color-text);
+  user-select: text; -webkit-user-select: text;
+}
+.скан-кнопки { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
