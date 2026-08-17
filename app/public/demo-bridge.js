@@ -97,7 +97,10 @@
       { id: 'medtronic', displayName: 'Medtronic', kind: 'pump', roles: ['PumpStateSource'], available: true,
         settings: { parameters: [
           { key: 'serial', title: 'Серийный номер помпы', type: 'Text', required: true, default: null, options: [], keyboard: 'numeric' },
-          { key: 'region', title: 'Регион/частота', type: 'Enum', required: true, default: 'auto', options: ['auto', '868', '916'] },
+          { key: 'region', title: 'Регион/частота', type: 'Enum', required: true, default: 'auto',
+            options: ['auto', '868', '916'],
+            optionTitles: { auto: 'авто · найдём сами (дольше)', '868': '868 МГц · Европа и мир', '916': '916 МГц · США и Канада' },
+            hint: '«Авто» перебирает частоты и может занять пару минут при первом подключении.' },
         ] } },
       { id: 'orange', displayName: 'OrangeLink', kind: 'bridge', roles: [], settings: { parameters: [] }, available: true, providesTransportFor: ['medtronic'] },
     ],
@@ -221,6 +224,26 @@
     какОбычно: function () {
       try { sessionStorage.removeItem('sl-демо-первый'); } catch (e) { /* ignore */ }
       location.reload(); return 'перезагружаюсь в обычное состояние';
+    },
+    /* Два состояния, ради которых заводили progress и NotConfigured (мост 1.22/1.24).
+       Оба выглядели раньше одинаково — «устройство не отвечает», — и оба этим враньём и
+       были: помпа в это время работает, а сенсор просто не спрошен. */
+    подбирает: function () {
+      снимок.hardware = снимок.hardware.map(function (h) {
+        return h.kind === 'pump'
+          ? Object.assign({}, h, { progress: 'Подбираю частоту помпы — это может занять пару минут' })
+          : h;
+      });
+      разослать(); return 'помпа подбирает частоту';
+    },
+    неНастроен: function () {
+      снимок.hardware = снимок.hardware.map(function (h) {
+        return h.kind === 'sensor'
+          ? Object.assign({}, h, { registryState: 'NotConfigured', note: 'Не хватает настроек: Код сенсора',
+              connection: 'Disconnected', status: 'Disconnected' })
+          : h;
+      });
+      разослать(); return 'сенсор без кода';
     },
     сПриборами: function () { снимок.hardware = железоДемо.slice(); снимок.discovered = эфирДемо.slice(); разослать(); return 'ок'; },
   };

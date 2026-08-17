@@ -19,7 +19,7 @@ import {
   заМостомЛи, звеноЦепочки, словоЦепочки,
 } from '@/domain/nearby';
 import { связь, меткаСвязи } from '@/domain/deviceState';
-import { подписьСвежести } from '@/domain/freshness';
+import { подписьСвежести, чтоСПрибором } from '@/domain/freshness';
 import { расходка, подписьРасходки } from '@/domain/supplies';
 import { agoText } from '@/domain/units';
 import { sourceStatusLabel } from '@/domain/sourceStatus';
@@ -226,10 +226,14 @@ export default function DevicesSection({ onClose, встроенный, толь
                 const живой = с.вид === 'работает';
                 const звено = h ? звеноЦепочки(h, снимок) : null;
                 const мостИмя = h && мост(h) ? имяЖелезки(мост(h)!) : null;
+                /* Что с прибором прямо сейчас — впереди слов о связи (мост 1.22/1.24).
+                   «Подбираю частоту помпы» вместо «устройство не отвечает»: во время
+                   подбора прибор РАБОТАЕТ, и прежняя строка про него врала. */
+                const занят = h ? чтоСПрибором(h) : null;
                 const подпись = h ? [
-                  звено ? словоЦепочки(звено, мостИмя)
+                  занят ?? (звено ? словоЦепочки(звено, мостИмя)
                     : подписьСвежести(h, сейчас)
-                    ?? sourceStatusLabel(h.status) ?? меткаСвязи[связь(h)],
+                    ?? sourceStatusLabel(h.status) ?? меткаСвязи[связь(h)]),
                   h.inSlot ? `слот: ${СЛОТ[h.inSlot]}` : null,
                   /* «Возможно занят» — догадка движка, а не факт: точное «занято
                      телефоном X» он отложил. Так и говорим, без имени чужого телефона.

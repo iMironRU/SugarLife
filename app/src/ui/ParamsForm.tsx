@@ -56,11 +56,15 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
             <div key={p.key} className="param">
               <div className="field-label">{p.title}{p.required && <span className="param-req"> · обязательно</span>}</div>
               {p.hint && <div className="field-hint param-hint">{p.hint}</div>}
+              {/* Подпись варианта — от ядра (мост 1.23). Своей не выдумываем: `auto`,
+                  `868`, `916` человеку не говорят ничего, но что именно они значат,
+                  знает тот, кто знает железку. Нет подписи — показываем сам вариант:
+                  так было всегда и ничего не ломает. */}
               <div className="period">
                 {p.options.map((o) => (
                   <button key={o}
                     className={'period-seg' + ((value || p.default) === o ? ' on' : '')}
-                    onClick={() => onChange(p.key, o)}>{o}</button>
+                    onClick={() => onChange(p.key, o)}>{p.optionTitles?.[o] ?? o}</button>
                 ))}
               </div>
             </div>
