@@ -118,9 +118,16 @@ class BleLink(
         // Свежая GATT-сессия (реконнект): сбрасываем состояние старой, иначе застрявшая операция/характеристика мешает.
         chars.clear(); readHandlers.clear(); opQueue.clear(); opBusy = false
         val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
-        val device = adapter.getRemoteDevice(address)
-        onState?.invoke("Connecting")
+        // Лог ДО getRemoteDevice: на неверном адресе он бросает, и запись «connect …» не появлялась вовсе —
+        // а «нет строки в логе» мы читали как «подключаться не пробовали». Разные вещи (SugarLife#347).
         Log.d(TAG, "connect $address")
+        val device = try {
+            adapter.getRemoteDevice(address)
+        } catch (e: IllegalArgumentException) {
+            Log.e(TAG, "неверный BLE-адрес «$address» — подключаться некуда: ${e.message}")
+            onState?.invoke("Error"); return
+        }
+        onState?.invoke("Connecting")
         gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
     }
 
@@ -131,7 +138,16 @@ class BleLink(
 
     fun write(char: UUID, bytes: ByteArray) = enqueue {
         val g = gatt; val c = chars[char]
-        if (g == null || c == null) { opDone(); return@enqueue }
+        /* Отказ записи — В ЛОГ, и с причиной (SugarLife#347). Молча выброшенная команда снаружи выглядит
+           как «прибор не отвечает», и это два РАЗНЫХ отказа, которые чинятся по-разному:
+             нет GATT           — не подключились или отвалились → лечится подключением;
+             нет характеристики — подключились, но пишем не туда → лечится разбором протокола.
+           На OrangeLink мы потеряли на этой неразличимости целый сеанс с железом. */
+        if (g == null) { Log.w(TAG, "запись ${shortUuid(char)} отброшена: нет GATT-сессии с $address"); opDone(); return@enqueue }
+        if (c == null) {
+            Log.w(TAG, "запись ${shortUuid(char)} отброшена: у $address нет такой характеристики; есть: ${chars.keys.joinToString { shortUuid(it) }}")
+            opDone(); return@enqueue
+        }
         c.writeType = if (c.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0)
             BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         else BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
@@ -178,6 +194,11 @@ class BleLink(
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
             Log.d(TAG, "servicesDiscovered addr=$address status=$status services=${g.services.size}")
+            // ЧТО именно у прибора есть (SugarLife#347). «services=7» не отвечает на главный вопрос первых
+            // пяти минут с незнакомым мостом: те ли это характеристики, в которые мы собираемся писать.
+            for (s in g.services) {
+                Log.d(TAG, "  сервис ${shortUuid(s.uuid)}: ${s.characteristics.joinToString { shortUuid(it.uuid) }}")
+            }
             for (s in g.services) for (c in s.characteristics) {
                 chars[c.uuid] = c
                 if (notifyChars.contains(c.uuid)) {

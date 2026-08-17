@@ -10,7 +10,9 @@ android {
     }
     kotlinOptions { jvmTarget = "21" }   // совпасть с Java-задачами Capacitor (иначе рассинхрон JVM-target)
     defaultConfig {
-        applicationId "ru.imiron.sugarlife.pro"
+        // Базовый id — Lite; суффикс ".pro" вешает флейвор pro (см. productFlavors). Наш прежний хардкод
+        // ".pro" здесь пережил слияние без конфликта и давал ".pro.pro" — третье приложение на телефоне.
+        applicationId "ru.imiron.sugarlife"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 2
