@@ -126,8 +126,24 @@ function start(): void {
   if (started || isNative) return;
   if (!('serviceWorker' in navigator)) { set({ status: 'unsupported' }); return; }
   started = true;
-  navigator.serviceWorker.getRegistration().then((r) => {
-    if (!r) { set({ status: 'unsupported' }); return; }
+  navigator.serviceWorker.getRegistration().then(async (r) => {
+    /* Воркера нет — РЕГИСТРИРУЕМ САМИ, а не объявляем «не поддерживается» (#359).
+
+       Штатная регистрация висит на событии `load`: ушёл человек со страницы раньше,
+       чем она догрузилась на плохой связи, — и воркер не встал. А значит следующий
+       запуск снова пойдёт в сеть, и снова на плохой связи, и снова ни с чем. Дыра
+       ровно там, где болит: у того, у кого связь плохая.
+
+       Путь до файла берём от текущей страницы: у веб-сборки приложение живёт в
+       подпапке, и корневой '/sw.js' там не существует. */
+    if (!r) {
+      try {
+        const свой = await navigator.serviceWorker.register(new URL('sw.js', document.baseURI).href);
+        watch(свой); checkNow(); return;
+      } catch {
+        set({ status: 'unsupported' }); return;
+      }
+    }
     watch(r);
     checkNow();
   });
