@@ -39,6 +39,24 @@ final class SharedCentral: NSObject, CBCentralManagerDelegate {
     private var pending: [UUID] = []             // connect до poweredOn — отложить
     private var wantScan = false
     var scanHandler: ((CBPeripheral, [String: Any], NSNumber) -> Void)?
+    /// Кому сказать, что состояние Bluetooth изменилось (core#61, SugarLife#331): выключили адаптер,
+    /// отказали в доступе. Без этого «Пока никого» означает одновременно «прибора нет» и «нам не дали искать».
+    var readinessHandler: (() -> Void)?
+
+    /// Можем ли слушать эфир прямо сейчас. `nil` — CoreBluetooth ещё не определился (состояние .unknown):
+    /// врать «нельзя» в этот момент нельзя, это нормальная фаза запуска.
+    var bluetoothOn: Bool? {
+        switch central.state {
+        case .poweredOn: return true
+        case .unknown, .resetting: return nil
+        default: return false
+        }
+    }
+    /// Дал ли человек доступ к Bluetooth. На iOS отказ выглядит как «ничего не находится» — молча.
+    var authorized: Bool {
+        if #available(iOS 13.1, *) { return CBCentralManager.authorization == .allowedAlways }
+        return true
+    }
 
     override init() { super.init(); central = CBCentralManager(delegate: self, queue: nil) }
 
@@ -58,6 +76,7 @@ final class SharedCentral: NSObject, CBCentralManagerDelegate {
     func stopScan() { wantScan = false; central.stopScan() }
 
     func centralManagerDidUpdateState(_ c: CBCentralManager) {
+        readinessHandler?()   // выключили/включили Bluetooth или ответили на запрос доступа — сказать движку
         guard c.state == .poweredOn else { return }
         let p = pending; pending = []; p.forEach { connect($0) }
         if wantScan { c.scanForPeripherals(withServices: nil) }
@@ -282,6 +301,19 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
                экземпляре. */
             let e = SugarLifeEngine(driverProvider: nil, withSimulators: false,
                                     dbDriverFactory: DatabaseDriverFactory())
+            // Предпосылки скана (core#61, SugarLife#331): знает только платформа, показать обязан интерфейс —
+            // значит факт идёт через движок. На iOS геолокация к скану отношения не имеет, поле не шлём вовсе.
+            let reportReadiness = { [weak e] in
+                guard let e = e else { return }
+                let bt = SharedCentral.shared.bluetoothOn
+                var json = "{\"permissionsGranted\":\(SharedCentral.shared.authorized)"
+                if let bt = bt { json += ",\"bluetoothOn\":\(bt)" }
+                json += "}"
+                NSLog("SugarLife: scan readiness \(json)")
+                _ = e.submitScanReadiness(json: json)
+            }
+            SharedCentral.shared.readinessHandler = reportReadiness
+            reportReadiness()
             self.engine = e
             telemetrySink = { [weak self] json in _ = self?.engine?.submitTelemetry(json: json) }   // натив→движок телеметрия (issue #38)
             self.unsubscribe = e.subscribe(onSnapshot: { [weak self] json in
