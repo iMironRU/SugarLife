@@ -223,21 +223,42 @@ private let rlRespCount = CBUUID(string: "6E6C7910-B89E-43A5-A0FE-50C5E2B81F4A")
 final class PumpBridge: PumpTransportBridge {
     private let link: BleLink
     private var pending: ((KotlinByteArray) -> Void)?
+    private var срок: DispatchWorkItem?
     init(bleId: String) { link = BleLink(bleId: bleId, service: rlService, characteristics: [rlData, rlRespCount, batteryChar, firmwareChar]) }
     func onLink(callback: @escaping (String) -> Void) { link.onState = callback }
+
+    /* Ровно один ответ на команду — и он есть всегда (SugarLife#344). Зеркало Android;
+       поймали на Android, но код здесь был тот же, и повисло бы так же.
+
+       Пустой массив, а не 0xAA: у колбэка нет канала ошибки, пустой разбирается ядром как
+       «ответа нет», а 0xAA значит «мост ответил, что помпа промолчала» — другая поломка. */
+    private func завершить(_ данные: Data) {
+        срок?.cancel(); срок = nil
+        guard let cb = pending else { return }
+        pending = nil
+        cb(данные.toKotlin())
+    }
+
     func connect() {
         link.subscribe(rlRespCount) { [weak self] _ in
-            self?.link.read(rlData) { data in
-                if let d = data, let cb = self?.pending { self?.pending = nil; cb(d.toKotlin()) }
-            }
+            self?.link.read(rlData) { data in self?.завершить(data ?? Data()) }
         }
         link.connectNow()
     }
     func command(bytes: KotlinByteArray, timeoutMs: Int64, callback: @escaping (KotlinByteArray) -> Void) {
+        завершить(Data())          // предыдущая команда не теряется молча
         pending = callback
+        if timeoutMs > 0 {
+            let r = DispatchWorkItem { [weak self] in
+                NSLog("SugarLifeBLE: мост молчит \(timeoutMs)мс — отвечаем «нет ответа»")
+                self?.завершить(Data())
+            }
+            срок = r
+            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(Int(timeoutMs)), execute: r)
+        }
         link.write(bytes.toData(), to: rlData)
     }
-    func disconnect() { link.disconnect() }
+    func disconnect() { завершить(Data()); link.disconnect() }
 }
 
 // MARK: - Скан эфира → engine.submitAdvertisement
