@@ -126,11 +126,6 @@ class SugarLifeBridgePlugin : Plugin() {
             .onFailure { Log.w(TAG, "не удалось подписаться на состояние системы: ${it.message}") }
     }
 
-    override fun handleOnDestroy() {
-        runCatching { context.unregisterReceiver(systemStateWatcher) }
-        super.handleOnDestroy()
-    }
-
     override fun load() {
         Log.i(TAG, "load: attach to engine")
         telemetrySink = { json -> engine.submitTelemetry(json) }   // натив→движок телеметрия (issue #38)
@@ -180,6 +175,8 @@ class SugarLifeBridgePlugin : Plugin() {
     override fun handleOnDestroy() {
         // Только отписываемся. Движок НЕ останавливаем — он живёт в EngineHolder, процесс держит SugarLifeService.
         unsubscribe?.invoke()
+        // И от системных событий тоже: receiver переживёт плагин, если его не снять.
+        runCatching { context.unregisterReceiver(systemStateWatcher) }
     }
 
     companion object {
