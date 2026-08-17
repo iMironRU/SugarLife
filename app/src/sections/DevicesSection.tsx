@@ -142,6 +142,20 @@ export default function DevicesSection({ onClose, встроенный }: {
   const строки = лента(снимок, сейчас);
   const [новый, setНовый] = useState<Discovered | null>(null);
 
+  /* Простой прибор заводим сразу, без шторки.
+
+     Шторка открывалась и тут же закрывалась сама: внутри она видела готовый выбор,
+     дозаписывать было нечего — и она подтверждала добавление и уходила. Снаружи это
+     мигание, после которого непонятно, случилось что-нибудь или нет.
+
+     Спрашивать нечего — не спрашиваем: «Добавить» и есть согласие. А там, где спросить
+     надо (мост ведёт к нескольким приборам, драйверу нужен серийник), шторка открывается
+     и остаётся. */
+  const добавить = (d: Discovered) => {
+    if (d.isTransport || d.needsMoreParams) { setНовый(d); return; }
+    void sendIntent({ type: 'addDiscovered', bleId: d.bleId, driverType: d.driverId, params: {} });
+  };
+
   /* Скан живёт ЗДЕСЬ, а не в отдельном экране поиска (#337). Он и был вторым местом,
      где звался startScan; два владельца одного эфира — это два независимых включения
      и выключения, и кто последний, тот и прав.
@@ -216,7 +230,7 @@ export default function DevicesSection({ onClose, встроенный }: {
                 const адрес = h ? адресВЭфире(h) : с.вЭфире?.bleId ?? null;
                 return (
                   <button key={с.id} className={'list-row' + (с.вид === 'неслышно' ? ' is-soon' : '')}
-                    onClick={() => (h ? setКарточка(h.id) : setНовый(с.вЭфире))}>
+                    onClick={() => (h ? setКарточка(h.id) : добавить(с.вЭфире!))}>
                     <span className={'поток-точка ' + ТОЧКА[с.вид]} style={{ marginRight: 4 }} />
                     <IonIcon icon={h && заМостомЛи(h, снимок) ? radioOutline : bluetoothOutline}
                       className={'list-ico' + (живой ? '' : ' muted')} />
