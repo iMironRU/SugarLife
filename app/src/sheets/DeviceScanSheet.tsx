@@ -6,8 +6,8 @@ import { useSnapshot, sendIntent } from '@/sources/bridge';
 import type { Discovered, DriverDescriptor } from '@/sources/bridge';
 import ParamsForm from '@/ui/ParamsForm';
 import { обязательные, нехватает } from '@/domain/deviceParams';
-import { сканировать, можноСканировать, ИМЯ_ТИПА, ОтказКамеры, type Прочитанное } from '@/platform/scanCode';
-import ScanOverlay from '@/ui/ScanOverlay';
+import { ИМЯ_ТИПА, type Прочитанное } from '@/platform/scanCode';
+import ScanSheet from './ScanSheet';
 import Sheet from '@/ui/Sheet';
 
 /* Что показано, то и отправляется.
@@ -54,45 +54,23 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
   const [mode, setMode] = useState<'attach' | 'activate'>('attach');
   const [values, setValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
-  /* Что прочитала камера — держим рядом со значением (#350).
+  /* Что прочитано с носителя — держим рядом со значением (#350).
 
-     Тип носителя ядру нужен: на этикетке их два, и разбирается каждый по-своему. Слать
-     его пока некуда — в контракте под это нет поля, — но показать человеку, ЧТО именно
-     прочитано, надо уже сейчас: «сканировал UDI, а в поле легло что-то другое» — первое,
-     что он захочет проверить, если код не подойдёт. */
+     Тип ядру нужен: на упаковке носителей два, и разбирается каждый по-своему. Слать его
+     пока некуда, поля в контракте нет, — но показать человеку, ЧТО прочиталось, надо уже
+     сейчас: «наводил на UDI, а в поле легло другое» — первое, что он проверит, если код
+     не подойдёт. */
   const [прочитано, setПрочитано] = useState<Прочитанное | null>(null);
-  const [бедаКамеры, setБедаКамеры] = useState<string | null>(null);
-  /* Спрашиваем платформу, а не гадаем по ней: на iOS плагин в сборку пока не попадает
-     (нет пакета SPM), и кнопка сканера там была бы обещанием без покрытия. */
-  const [сканерЕсть, setСканерЕсть] = useState(false);
-  useEffect(() => { if (isOpen) void можноСканировать().then(setСканерЕсть); }, [isOpen]);
-
-  /* Отмену держим объектом, а не состоянием: скан ждёт внутри промиса, и перерисовка до
-     него не доходит — ему нужна ссылка, которую можно пометить снаружи. */
-  const [сканИдёт, setСканИдёт] = useState<{ отменено: boolean } | null>(null);
-
-  const сканировать_ = async (ключ: string) => {
-    setБедаКамеры(null);
-    const отмена = { отменено: false };
-    setСканИдёт(отмена);
-    try {
-      const r = await сканировать(отмена);
-      if (!r) return;               // передумал — это не ошибка
-      setПрочитано(r);
-      setValues((s) => ({ ...s, [ключ]: r.текст }));
-    } catch (e) {
-      setБедаКамеры(e instanceof ОтказКамеры ? e.message : 'Не получилось открыть камеру.');
-    } finally {
-      setСканИдёт(null);
-    }
-  };
+  /* Ключ поля, для которого открыли чтение. Он же признак «шторка открыта»: держать
+     отдельный флаг значит завести второе состояние того же самого. */
+  const [читаемДля, setЧитаемДля] = useState<string | null>(null);
 
   /* Чего не хватает прямо сейчас — считаем на каждый ввод, а не при нажатии: подсветить
      недостающее после отказа значит сначала дать промахнуться. */
   const мало = step.kind === 'params' ? нехватает(step.target, values) : [];
 
   useEffect(() => {
-    if (!isOpen) { setStep({ kind: 'list' }); setValues({}); setMode('attach'); setПрочитано(null); setБедаКамеры(null); }
+    if (!isOpen) { setStep({ kind: 'list' }); setValues({}); setMode('attach'); setПрочитано(null); setЧитаемДля(null); }
   }, [isOpen]);
   /* Пришли с готовым выбором — сразу к нему, минуя список. Список в этом случае был бы
      вопросом «что выбрать» после того, как человек уже выбрал. */
@@ -143,10 +121,7 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
 
   return (
     <Sheet isOpen={isOpen} onClose={onClose} title="Подключение по BLE" subtitle={title}>
-      {сканИдёт && (
-        <ScanOverlay подпись="Наведите на код с коробки сенсора — квадратный рядом с подписью «连接码»"
-          onОтмена={() => { сканИдёт.отменено = true; }} />
-      )}
+
 
         {step.kind === 'list' && (
           <>
@@ -210,7 +185,9 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
               /* Кнопку сканера показываем только там, где камера есть: в браузере её нет
                  как класса, и кнопка, которая заведомо ничего не сделает, читается как
                  поломка (тот же довод, что и у поиска приборов). */
-              onScan={сканерЕсть ? сканировать_ : undefined}
+              /* Кнопка есть ВСЕГДА: чтение с фото работает и там, где камеры нет вовсе
+                 (браузер, компьютер) — а именно там всё и проверяется. */
+              onScan={setЧитаемДля}
             />
             {прочитано && (
               <div className="metric-note" style={{ marginTop: 6 }}>
@@ -218,7 +195,12 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
                 не подойдёт — наведите на квадратный код рядом с подписью «连接码».
               </div>
             )}
-            {бедаКамеры && <div className="metric-note" style={{ marginTop: 6 }}>{бедаКамеры}</div>}
+            <ScanSheet isOpen={!!читаемДля} onClose={() => setЧитаемДля(null)}
+              подпись="Код с коробки сенсора — квадратный рядом с подписью «连接码»"
+              onВыбор={(r) => {
+                setПрочитано(r);
+                if (читаемДля) setValues((s) => ({ ...s, [читаемДля]: r.текст }));
+              }} />
             {/* Кнопка ждёт обязательного.
 
                 Без этого прибор заводился с пустыми полями: сенсор без кода — «на связи»
