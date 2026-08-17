@@ -113,9 +113,12 @@ export default function HeroPanel() {
   const последнееБазы = историяЧаса.length
     ? { mmol: историяЧаса[историяЧаса.length - 1].mmol, atMs: историяЧаса[историяЧаса.length - 1].t }
     : null;
+  /* Третьим кандидатом — стор: из него построен список «последних измерений», и без
+     него круг мог промолчать при непустом списке прямо под собой. */
   const выбор = выбратьПоказание(
     m?.glucoseMmol != null && m.latestAtMs != null ? { mmol: m.glucoseMmol, atMs: m.latestAtMs } : null,
     последнееБазы,
+    latest ? { mmol: latest.mmol, atMs: latest.t } : null,
   );
   const latestAt = выбор.показание?.atMs ?? m?.latestAtMs ?? latest?.t ?? null;
 

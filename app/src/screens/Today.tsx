@@ -2,7 +2,7 @@ import { IonIcon } from '@ionic/react';
 import { MealsSection } from '@/sections/lazy';
 import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, chevronForward } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
-import { useStore } from '@/sources/store';
+import { useStore, refresh } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt, agoText } from '@/domain/units';
 import { activeCarbs } from '@/domain/loopValue';
 import ChangedButton from '@/ui/ChangedButton';
@@ -15,7 +15,7 @@ import { useОтложения, показывать, прибрать } from '@
 import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
-import { useSnapshot } from '@/sources/bridge';
+import { useSnapshot, sendIntent } from '@/sources/bridge';
 import { useHealth } from '@/settings/health';
 import { устройствоРоли } from '@/domain/deviceState';
 import { хватитЛи, пораГоворить } from '@/domain/reservoirForecast';
@@ -29,6 +29,7 @@ import { часыБодрствования, НОЧЬ_С } from '@/domain/awake'
 import { useMeals } from '@/sources/mealStore';
 import type { Plateau } from '@/domain/plateau';
 import { getSeries, onDbChange } from '@/sources/db';
+import { syncHistory } from '@/sources/historySync';
 import { useCloseOnLeave } from '@/app/nav';
 import { notify } from '@/platform/notify';
 import FoodSheet from '@/sheets/FoodSheet';
@@ -320,8 +321,25 @@ export default function Today() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soonEmpty]);
 
+  /* Потянуть — спросить всех сразу (замечание с телефона).
+
+     Опрос идёт сам раз в минуту, но после пропавшей и вернувшейся связи ждать минуту
+     незачем: человек уже смотрит в экран. Дёргаем три пути, потому что данные приходят
+     тремя: облачный стор, наша история и живой прибор через движок.
+
+     Ошибку глотаем намеренно: жест либо обновил, либо нет — и это видно по числам.
+     Сообщение «не удалось» поверх экрана, где и так написано «нет связи», добавило бы
+     шума, а не смысла. */
+  const обновитьВсё = async () => {
+    await Promise.allSettled([
+      refresh(),
+      syncHistory(),
+      sendIntent({ type: 'readNow', deviceId: устройствоРоли(снимок, 'sensor')?.id ?? '' }),
+    ]);
+  };
+
   return (
-    <Screen tab={2} panel="full">
+    <Screen tab={2} panel="full" обновить={обновитьВсё}>
           <DataGate>
           {/* Панель углеводов: сейчас — сверху, записанное — снизу.
 
