@@ -1,6 +1,7 @@
 import { IonIcon } from '@ionic/react';
 import { cloudOfflineOutline, chevronForward } from 'ionicons/icons';
 import { useStore } from '@/sources/store';
+import { useSnapshot } from '@/sources/bridge';
 import { setOnboarded } from '@/settings/onboarding';
 
 /* Приложение не настроено — заметный выход, а не мелкая надпись.
@@ -25,12 +26,25 @@ import { setOnboarded } from '@/settings/onboarding';
    и последние известные значения остаются на месте: ночью они могут быть важнее всего. */
 export function DataGate({ children }: { children: React.ReactNode }) {
   const { status } = useStore();
+  /* Настроенность спрашиваем у движка, а не считаем по облакам (#337, мост 1.20).
+
+     Стор считал её по списку Nightscout-облаков, и прямой BLE-сенсор, который прямо
+     сейчас шлёт показания, в счёт не входил: данные идут, а поверх них висит «приложение
+     не настроено» с кнопкой, зовущей настраивать заново. Это видели на живом телефоне.
+
+     Настроено ≠ на связи. Молчащий источник остаётся настроенным: связь рвётся по десять
+     раз на дню, и предлагать «настроить заново» при каждом обрыве значит гнать человека
+     по кругу вместо того, чтобы сказать «прибор не отвечает». */
+  const setup = useSnapshot()?.setup;
+  if (setup?.configured) return <>{children}</>;
   if (status === 'off') return <NotConfigured />;
   return <>{children}</>;
 }
 
 export default function NotConfigured() {
   const { status } = useStore();
+  const setup = useSnapshot()?.setup;
+  if (setup?.configured) return null;
   // 'off' = ни одного включённого облака. Только это и значит «не настроено»;
   // при обрыве связи (stale/error) настройки на месте, мастер предлагать незачем.
   if (status !== 'off') return null;

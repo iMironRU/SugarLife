@@ -83,6 +83,12 @@
       { id: 'orange', displayName: 'OrangeLink', kind: 'bridge', roles: [], settings: { parameters: [] }, available: true, providesTransportFor: ['medtronic'] },
     ],
     logging: null,
+    /* Готовность к поиску и настроенность (мост 1.20, SugarLife#337). В демо ими можно
+       управлять из консоли: window.демо.мешает('noPermission') и window.демо.готов().
+       Ради этого демо и существует — пройти путь целиком, не имея под рукой чистого
+       телефона с выключенной геолокацией. */
+    scanReadiness: { canScan: true, blockers: [] },
+    setup: { configured: true, sources: 2, receiving: true },
     availableCloudProviders: [
       { id: 'libre', displayName: 'LibreLinkUp', available: true, readOnly: true, hasSubjects: true,
         settings: { parameters: [
@@ -104,7 +110,43 @@
     ],
   };
 
-  function разослать() { подписчики.forEach(function (cb) { cb(снимок); }); }
+  /* Рассылаем КОПИЮ, а не тот же объект.
+
+     React сравнивает снимки по ссылке: получив ту же самую, он справедливо решает, что
+     ничего не изменилось, и не перерисовывает. Демо-ручки при этом «работали» —
+     состояние в объекте менялось, — а экран оставался прежним, и выглядело это как
+     сломанный интерфейс, хотя сломан был демо-мост. */
+  function разослать() {
+    снимок = Object.assign({}, снимок);
+    подписчики.forEach(function (cb) { cb(снимок); });
+  }
+
+  /* Ручки для проверки путей, которых иначе не достать.
+
+     Состояния вроде «отказал насовсем» или «выключена служба геолокации» на своём
+     телефоне не воспроизводятся без сброса настроек, а проверять их надо каждый раз,
+     когда трогаем этот путь. Здесь они переключаются одной строкой в консоли. */
+  var ПРИЧИНЫ = {
+    noPermission: { reason: 'Нет разрешения на поиск устройств рядом',
+      remediation: 'Разрешите приложению искать устройства поблизости', canAskAgain: true, settingsTarget: 'appSettings' },
+    noPermissionForever: { blocker: 'noPermission', reason: 'Нет разрешения на поиск устройств рядом',
+      remediation: 'Разрешение выключено насовсем — включите его в настройках приложения', canAskAgain: false, settingsTarget: 'appSettings' },
+    bluetoothOff: { reason: 'Bluetooth выключен',
+      remediation: 'Включите Bluetooth — без него приборы не слышно', canAskAgain: null, settingsTarget: 'bluetooth' },
+    locationOff: { reason: 'Выключена служба геолокации',
+      remediation: 'На этой версии Android без неё система не покажет ни одного устройства', canAskAgain: null, settingsTarget: 'location' },
+  };
+  window.демо = {
+    мешает: function (код) {
+      var п = ПРИЧИНЫ[код] || ПРИЧИНЫ.noPermission;
+      снимок.scanReadiness = { canScan: false, blockers: [п.blocker || код],
+        reason: п.reason, remediation: п.remediation, canAskAgain: п.canAskAgain, settingsTarget: п.settingsTarget };
+      разослать(); return снимок.scanReadiness;
+    },
+    готов: function () { снимок.scanReadiness = { canScan: true, blockers: [] }; разослать(); return 'ок'; },
+    неНастроено: function () { снимок.setup = { configured: false, sources: 0, receiving: false }; разослать(); return 'ок'; },
+    настроено: function () { снимок.setup = { configured: true, sources: 2, receiving: true }; разослать(); return 'ок'; },
+  };
 
   window.SugarLifeBridge = {
     bridgeRevision: '1.10',
