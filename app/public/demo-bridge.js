@@ -173,6 +173,22 @@
     sendIntent: function (i) {
       /* Скан в демо честный: startScan включает признак, stopScan гасит. Без этого
          подпись «Слушаю эфир» никогда не появлялась бы, и проверить её было бы нечем. */
+      /* Добавление заводит прибор по-настоящему: он уходит из эфира и появляется своим.
+         Без этого «Добавить» выглядело бы нажатием в пустоту — а именно этот переход и
+         надо смотреть глазами. */
+      if (i.type === 'addDiscovered') {
+        var нашли = снимок.discovered.filter(function (d) { return d.bleId === i.bleId; })[0];
+        if (нашли) {
+          снимок.discovered = снимок.discovered.filter(function (d) { return d.bleId !== i.bleId; });
+          снимок.hardware = снимок.hardware.concat([{
+            id: 'ble-' + нашли.bleId, name: нашли.displayName || нашли.name, model: нашли.displayName,
+            kind: 'sensor', connection: 'Disconnected', status: 'Disconnected',
+            inSlot: null, nearbyAtMs: Date.now(),
+          }]);
+          разослать();
+        }
+        return Promise.resolve({ accepted: true });
+      }
       if (i.type === 'startScan') { снимок.scanning = true; разослать(); }
       if (i.type === 'stopScan') { снимок.scanning = false; разослать(); }
       if (i.type === 'setPrimarySource') {
