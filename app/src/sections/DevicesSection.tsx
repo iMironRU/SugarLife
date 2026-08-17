@@ -3,34 +3,70 @@ import Section from '@/ui/Section';
 import { DeviceSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
 import {
-  hardwareChipOutline, flash, repeat, speedometerOutline, helpCircleOutline,
-  bluetoothOutline, radioOutline, searchOutline, playOutline, pauseOutline,
+  hardwareChipOutline, flash, speedometerOutline, helpCircleOutline,
+  bluetoothOutline, radioOutline, chevronForward, warningOutline,
 } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useStore } from '@/sources/store';
 import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
-import { useSnapshot, sendIntent } from '@/sources/bridge';
+import { useSnapshot, sendIntent, эфирДоступен, type Discovered } from '@/sources/bridge';
+import { лента } from '@/domain/deviceFeed';
+import DeviceScanSheet from '@/sheets/DeviceScanSheet';
 import {
-  железоДиспетчера, СЛОТ, рядомЖелезо, мостЖелезки, имяЖелезки, адресВЭфире,
+  железоДиспетчера, СЛОТ, мостЖелезки, имяЖелезки, адресВЭфире,
   заМостомЛи, звеноЦепочки, словоЦепочки,
 } from '@/domain/nearby';
 import { связь, меткаСвязи } from '@/domain/deviceState';
+import { подписьСвежести } from '@/domain/freshness';
+import { расходка, подписьРасходки } from '@/domain/supplies';
+import { agoText } from '@/domain/units';
 import { sourceStatusLabel } from '@/domain/sourceStatus';
-import { DiscoverySection } from '@/sections/lazy';
 import { слотПоСнимку, путьСлота, ПОДПИСЬ_СЛОТА } from '@/domain/slotStatus';
 import type { DeviceCatKey } from './DeviceSection';
 import { useStack } from '@/app/stackCtx';
 import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
+import HardwareSheet from '@/sheets/HardwareSheet';
+import {
+  словоОжидания, ходПопытки, СРОК_ОЖИДАНИЯ_МС, type Попытка, type Цель,
+} from '@/domain/connectAttempt';
 
 /* Профиль → «Устройства» — отдельный полноэкранный раздел (не вложенная секция), как в
    docs/CONNECT-UX.md §10 «Карта интерфейса». Группировка по классу устройства (§2a: реестр).
    Детали (резервуар/батарея и т.п.) показываем только когда данные реально есть — честно. */
-export default function DevicesSection({ onClose }: { onClose: () => void }) {
+/* Раздел живёт вкладкой внутри «Устройств и данных» (SugarLife#279). */
+/* Цвет точки — по виду строки. Он повторяет то, что уже сказано словом в подписи:
+   цветом одним ничего не сообщаем, потому что различают его не все (#325). */
+const ТОЧКА: Record<string, string> = {
+  работает: 'хорошо', молчит: 'обход', рядом: 'обход', подключаюсь: 'обход',
+  неслышно: 'пусто', новый: 'пусто',
+};
+
+export default function DevicesSection({ onClose, встроенный, толькоЛента }: {
+  onClose?: () => void; встроенный?: boolean;
+  /* Только лента приборов, без слотов и справочника — для шага мастера.
+
+     Мастер раньше показывал СВОЙ поиск (DiscoverySection), и это разошлось в первую же
+     правку: здесь появилась одна лента со своими и новыми, а там остался старый список
+     только незнакомых. Человек видел на первом запуске одно поведение, а через день в
+     «Приборах» — другое. Один экран, два режима показа. */
+  толькоЛента?: boolean;
+}) {
   const { push, pop } = useStack();
   const { data } = useStore();
   const devCfg = useDeviceConfig();
   const [reqOpen, setReqOpen] = useState(false);
+  /* Какая карточка прибора открыта. Держим id, а не сам объект: снимок обновляется
+     каждые несколько секунд, и застывшая копия показывала бы состояние на момент тапа. */
+  const [карточка, setКарточка] = useState<string | null>(null);
+  /* Ожидание ответа прибора живёт ЗДЕСЬ, а не в карточке (#303): карточку закрывают
+     через секунду после нажатия, и вместе с ней исчезло бы ожидание — а прибор в это
+     время всё ещё пытается ответить. Строка списка должна сказать об этом и без неё. */
+  const [попытка, setПопытка] = useState<Попытка | null>(null);
+  const начать = (цель: Цель, id: string, intent: Parameters<typeof sendIntent>[0]) => {
+    setПопытка({ id, цель, началоМс: Date.now() });
+    void sendIntent(intent);
+  };
 
   const pump = pumpById(devCfg.pumpId);
   const sensor = sensorById(devCfg.sensorId);
@@ -58,9 +94,13 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
      SugarLifeCore#13/#19). Канал не привязан к выбранной модели: связь есть и тогда,
      когда модель ещё не названа, а «нет данных о резервуаре» без слова о пути к
      помпе — ровно та половина ответа, из-за которой чинят не то. */
+  const расх = расходка(снимок, { reservoir: dev?.reservoir, pumpBattery: dev?.pumpBattery, at: dev?.at });
   const pumpDetail = [путьПомпы,
-    dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : null,
-    dev?.pumpBattery != null ? dev.pumpBattery + '%' : null]
+    расх.остаток != null ? Math.round(расх.остаток) + ' ед' : null,
+    расх.заряд != null ? расх.заряд + '%' : null,
+    /* Возраст и путь — рядом с числом, а не в карточке: строка списка и есть то место,
+       где человек его читает, а «37 ед» часовой давности выглядят как свежие (#183). */
+    подписьРасходки(расх, Date.now(), (мс) => agoText(мс))]
     .filter(Boolean).join(' · ') || (pump ? 'нет данных о резервуаре/батарее' : null);
 
   const titles: Record<DeviceCatKey, string> = {
@@ -84,107 +124,178 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
   /* Время держим своим счётчиком: «рядом» протухает по часам, а не по приходу снимка,
      и без тика строка «рядом» висела бы, пока движок не пришлёт что-нибудь ещё. */
   const [сейчас, setСейчас] = useState(() => Date.now());
+  /* Пока ждём ответа, часы идут секундой: срок ожидания — тридцать секунд, и с шагом
+     в пятнадцать «не ответил» появлялось бы с опозданием вдвое. В покое шаг прежний —
+     он нужен лишь чтобы протухало «рядом». */
+  const ждём = попытка ? ходПопытки(попытка, false, сейчас) === 'идёт' : false;
   useEffect(() => {
-    const id = window.setInterval(() => setСейчас(Date.now()), 15_000);
+    const id = window.setInterval(() => setСейчас(Date.now()), ждём ? 1_000 : 15_000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [ждём]);
+  /* И отдельный будильник ровно на срок. Полагаться на тик здесь нельзя: он может
+     запоздать или не прийти вовсе — вкладку свернули, система придушила таймеры, — и
+     «Подключаюсь…» осталось бы навсегда. А это ровно то молчание, от которого уходим:
+     ожидание без конца хуже честного «не ответил». */
+  useEffect(() => {
+    if (!попытка) return;
+    const id = window.setTimeout(() => setСейчас(Date.now()),
+      попытка.началоМс + СРОК_ОЖИДАНИЯ_МС + 200 - Date.now());
+    return () => window.clearTimeout(id);
+  }, [попытка]);
   /* «Рядом» считаем с оглядкой на мост (#251): помпа Medtronic по блютусу не вещает
      вовсе, и пока OrangeLink молчит, «рядом» про неё — утверждение, которого никто не
      делал. Правило в domain/nearby.ts. */
-  const рядом = рядомЖелезо(снимок, сейчас);
   const мост = (h: Parameters<typeof имяЖелезки>[0]) => мостЖелезки(h, снимок);
+  const строки = лента(снимок, сейчас);
+  const [новый, setНовый] = useState<Discovered | null>(null);
 
-  return (
-    <Section title="Устройства" subtitle="Профиль · Устройства" onBack={onClose}>
-        {железо.length > 0 && (
+  /* Простой прибор заводим сразу, без шторки.
+
+     Шторка открывалась и тут же закрывалась сама: внутри она видела готовый выбор,
+     дозаписывать было нечего — и она подтверждала добавление и уходила. Снаружи это
+     мигание, после которого непонятно, случилось что-нибудь или нет.
+
+     Спрашивать нечего — не спрашиваем: «Добавить» и есть согласие. А там, где спросить
+     надо (мост ведёт к нескольким приборам, драйверу нужен серийник), шторка открывается
+     и остаётся. */
+  const добавить = (d: Discovered) => {
+    if (d.isTransport || d.needsMoreParams) { setНовый(d); return; }
+    void sendIntent({ type: 'addDiscovered', bleId: d.bleId, driverType: d.driverId, params: {} });
+  };
+
+  /* Скан живёт ЗДЕСЬ, а не в отдельном экране поиска (#337). Он и был вторым местом,
+     где звался startScan; два владельца одного эфира — это два независимых включения
+     и выключения, и кто последний, тот и прав.
+
+     Слушаем, пока открыта вкладка приборов: новые приборы должны появляться в той же
+     ленте сами, иначе «одна лента» распадается обратно на две. */
+  const мешаетСкан = снимок?.scanReadiness && !снимок.scanReadiness.canScan ? снимок.scanReadiness : null;
+  const сканирует = !!снимок?.scanning;
+  useEffect(() => {
+    if (мешаетСкан || !встроенный) return;
+    void sendIntent({ type: 'startScan' });
+    return () => { void sendIntent({ type: 'stopScan' }); };
+  }, [мешаетСкан, встроенный]);
+
+  const тело = (
+    <>
+        {/* ОДНА ЛЕНТА вместо двух списков (#337).
+
+            Было два: «мои устройства» и отдельный поиск, показывавший только незнакомых.
+            Разделение завели не зря — заведённый мост среди кандидатов выглядел как
+            предложение завести второй, — но цена вышла выше: заведённый прибор пропадал
+            из поиска ровно тогда, когда его искали. Человек с отвалившимся сенсором шёл
+            в поиск и не находил там ни сенсора, ни объяснения.
+
+            Теперь показываем всё, а вид строки отвечает, что с этим делать. Правило
+            живёт в domain/deviceFeed под тестами: два его следствия — у работающего
+            прибора нет кнопки «Подключить», а неслышный не исчезает — важнее самой
+            ленты, и проверять их надо не глазами. */}
+        {мешаетСкан && (
+          <div className="today-alert">
+            <IonIcon icon={warningOutline} className="alert-ico" />
+            <div>
+              <span className="alert-title">{мешаетСкан.reason ?? 'Поиск сейчас невозможен'}</span>
+              {мешаетСкан.remediation && <span>{мешаетСкан.remediation}</span>}
+              <span className="alert-ask alert-ask-row">
+                {мешаетСкан.canAskAgain !== false && мешаетСкан.blockers?.includes('noPermission') ? (
+                  <button className="changed-btn is-undo"
+                    onClick={() => void sendIntent({ type: 'requestScanPermissions' })}>Разрешить</button>
+                ) : мешаетСкан.settingsTarget ? (
+                  <button className="changed-btn is-undo"
+                    onClick={() => void sendIntent({ type: 'openSystemScreen', target: мешаетСкан.settingsTarget! })}>
+                    Открыть настройки
+                  </button>
+                ) : null}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {строки.length > 0 && (
           <>
-            <div className="section-label sec первый">Мои устройства</div>
+            <div className="section-label sec">Приборы</div>
             <div className="list">
-              {железо.map((d) => {
-                /* Облако в этот список больше не попадает по построению, поэтому
-                   «живой» здесь — просто наша связь с железкой. */
-                const живой = связь(d) === 'live';
-                const близко = рядом.has(d.id);
-                const звено = звеноЦепочки(d, снимок);
-                const мостИмя = мост(d) ? имяЖелезки(мост(d)!) : null;
-                const строка = [
-                  /* У железки за мостом состояние описывает цепочка, а не одна метка:
-                     иначе строка сказала бы «нет связи · OrangeLink не на связи» — то же
-                     самое дважды, причём первое без подсказки, что делать. */
+              {строки.map((с) => {
+                const h = с.железо;
+                const имя = h ? (h.model || h.name) : (с.вЭфире?.displayName || с.вЭфире?.name || 'Неизвестный');
+                const живой = с.вид === 'работает';
+                const звено = h ? звеноЦепочки(h, снимок) : null;
+                const мостИмя = h && мост(h) ? имяЖелезки(мост(h)!) : null;
+                const подпись = h ? [
                   звено ? словоЦепочки(звено, мостИмя)
-                    : sourceStatusLabel(d.status) ?? меткаСвязи[связь(d)],
-                  /* В каком слоте стоит железка — ответ на «а эта штука вообще
-                     работает на что-нибудь». Другой конец той же связки виден у роли
-                     (SugarLifeCore#44), и показывать надо оба: человек приходит сюда
-                     и от роли («откуда сахар»), и от железа («зачем этот прибор»). */
-                  d.inSlot ? `слот: ${СЛОТ[d.inSlot]}` : null,
+                    : подписьСвежести(h, сейчас)
+                    ?? sourceStatusLabel(h.status) ?? меткаСвязи[связь(h)],
+                  h.inSlot ? `слот: ${СЛОТ[h.inSlot]}` : null,
                   /* «Возможно занят» — догадка движка, а не факт: точное «занято
-                     телефоном X» он отложил. Так и говорим, без имени чужого телефона. */
-                  d.busy === 'possibly' ? 'возможно, занят другим телефоном' : null,
-                  близко && !живой ? 'рядом' : null,
-                ].filter(Boolean).join(' · ');
-                /* Адрес в эфире — чтобы различать два одинаковых прибора. Не нашли —
-                   не показываем: выдуманный «серийник» хуже отсутствия. */
-                const адрес = адресВЭфире(d);
+                     телефоном X» он отложил. Так и говорим, без имени чужого телефона.
+                     Для неслышного прибора это и есть самое вероятное объяснение. */
+                  h.busy === 'possibly' ? 'возможно, занят другим телефоном' : null,
+                  с.вид === 'неслышно' && h.busy !== 'possibly' ? 'в эфире не слышно' : null,
+                ].filter(Boolean).join(' · ') : 'новый — рядом в эфире';
+                const ожидание = h ? словоОжидания(попытка, h.id, живой, сейчас) : null;
+                const адрес = h ? адресВЭфире(h) : с.вЭфире?.bleId ?? null;
                 return (
-                  <div key={d.id} className="list-row">
-                    {/* Значок — про то, каким способом железка разговаривает С ТЕЛЕФОНОМ,
-                        и раньше он стоял наоборот (SugarLifeCore#50). Мост — блютусный:
-                        это он подключён к телефону. А до помпы блютус не доходит вовсе,
-                        связь с ней радийная и через мост, и синий значок рядом с
-                        «Medtronic 722» был утверждением о том, чего нет. */}
-                    <IonIcon icon={заМостомЛи(d, снимок) ? radioOutline : bluetoothOutline}
+                  <button key={с.id} className={'list-row' + (с.вид === 'неслышно' ? ' is-soon' : '')}
+                    onClick={() => (h ? setКарточка(h.id) : добавить(с.вЭфире!))}>
+                    <span className={'поток-точка ' + ТОЧКА[с.вид]} style={{ marginRight: 4 }} />
+                    <IonIcon icon={h && заМостомЛи(h, снимок) ? radioOutline : bluetoothOutline}
                       className={'list-ico' + (живой ? '' : ' muted')} />
                     <span className="pick-main">
-                      <span className="list-title">{d.model || d.name}</span>
-                      <span className="pick-sub">{строка || 'состояние неизвестно'}</span>
+                      <span className="list-title">{имя}</span>
+                      <span className="pick-sub">{ожидание ?? подпись}</span>
                       {адрес && <span className="dev-addr">{адрес}</span>}
                     </span>
-                    {/* Переподключить предлагаем только когда железка рядом: кнопка,
-                        которая заведомо ничего не даст (устройство в другой комнате),
-                        читается как поломка приложения, а не как отсутствие связи. */}
-                    {/* Пока связь встаёт, кнопок нет вовсе: «Подключить» во время
-                        подключения ничего не ускоряет, а «Пауза» обрывает то, чего
-                        человек как раз ждёт. */}
-                    {связь(d) === 'wait' ? null : живой ? (
-                      /* У моста действие называется иначе, потому что оно и есть иное.
-                         «Пауза» — про приостановку работы; у моста смысл в том, чтобы
-                         УСТУПИТЬ прибор: блютус держит один центральный, и пока держим
-                         мы, другой телефон к мосту не подключится (SugarLifeCore#50). */
-                      <button className="changed-btn"
-                        onClick={() => sendIntent({ type: 'disconnect', deviceId: d.id })}>
-                        <IonIcon icon={pauseOutline} />{d.kind === 'bridge' ? 'Отпустить' : 'Пауза'}
-                      </button>
-                    ) : близко ? (
-                      <button className="changed-btn"
-                        onClick={() => sendIntent({ type: 'connect', deviceId: d.id })}>
-                        <IonIcon icon={playOutline} />Подключить
-                      </button>
-                    ) : null}
-                  </div>
+                    {/* Действие — только там, где оно осмысленно. У работающего прибора
+                        кнопки нет: она читается как приглашение починить, то есть
+                        сломать работающее. */}
+                    {с.действие === 'подключить' && h ? (
+                      <span className="changed-btn is-undo"
+                        onClick={(e) => { e.stopPropagation(); начать('связь', h.id, { type: 'connect', deviceId: h.id }); }}>
+                        Подключить
+                      </span>
+                    ) : с.действие === 'добавить' ? (
+                      <span className="changed-btn is-undo">Добавить</span>
+                    ) : (
+                      <IonIcon icon={chevronForward} className="list-chev" />
+                    )}
+                  </button>
                 );
               })}
             </div>
           </>
         )}
 
-        {/* Поиск стоит рядом со списком железа, а не внизу раздела: это продолжение
-            того же вопроса «что у меня есть», только про то, чего ещё нет. И только
-            про НОВОЕ — известное лежит списком выше, и показывать его среди кандидатов
-            на добавление значит предлагать завести второй такой же (SugarLifeCore#34). */}
-        <div className="list" style={{ marginTop: железо.length ? 10 : 0 }}>
-          <Row icon={searchOutline} title="Найти новое устройство"
-            sub="поиск в эфире — только то, чего мы ещё не знаем"
-            onClick={() => push(<DiscoverySection onClose={pop} />)} />
-        </div>
+        {/* Пустой список — не одно состояние, а три, и они требуют разных слов.
 
+            Раньше здесь стояла строка «Найти новое устройство», и она хотя бы отвечала
+            «делай так». Сведя списки в один, я её убрал — и пустая лента замолчала
+            совсем: экран, на котором нет ни приборов, ни объяснения, читается как
+            поломка, а не как «пока пусто». */}
+        {!мешаетСкан && строки.length === 0 && (
+          <div className="sheet-note">
+            {!эфирДоступен()
+              ? 'В браузере блютуса нет — это свойство браузера, а не настроек. Приборы видны в приложении на телефоне; данные при этом идут через облако, и всё остальное работает.'
+              : сканирует
+              ? 'Слушаю эфир. Приборы появятся здесь сами — и знакомые, и новые.'
+              : 'Поиск не идёт. Обычно это значит, что приложению не разрешили блютус.'}
+          </div>
+        )}
+
+        {!мешаетСкан && строки.length > 0 && (
+          <div className="sheet-note">
+            {сканирует ? 'Слушаю эфир — новые приборы появятся в списке сами.' : 'Поиск не идёт.'}
+            {/* Про «все действия в карточке» — только там, где карточка есть что
+                показать. В мастере заводить ещё нечего, и обещание разбора, мостов и
+                «забыть» на первом запуске сбивает: человек идёт искать этот экран. */}
+            {!толькоЛента && ' Тапни прибор — там все действия: мост, подключение, «забыть».'}
+          </div>
+        )}
+
+        {!толькоЛента && <>
         {/* Ниже — слоты: кто чем занят. Это ответ на другой вопрос, и потому он второй:
             «что у меня есть» человек проверяет чаще, чем «куда это назначено», а
             заходя сюда с проблемой связи, он ищет прибор, а не роль. */}
-        <div className="sheet-note">
-          Тапни устройство — там все действия (мост, подключение, «забыть»). На плитке ничего не отключишь случайно.
-        </div>
-
         <div className="section-label sec">Помпа</div>
         <div className="list">
           <Row icon={flash} title={pump?.model ?? 'Ввод инсулина'} sub={pumpDetail || undefined}
@@ -197,7 +308,10 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
             value={состояние('sensor')} onClick={() => openCat('sensor')} />
         </div>
 
-        <div className="section-label sec">Глюкометры и петля</div>
+        {/* Петли здесь больше нет (#279). Она не прибор, а режим управления подачей:
+            у неё нет ни связи, ни батареи, ни «забыть». Её место — рядом с профилем
+            петли, где задают полномочия, а не среди железа. */}
+        <div className="section-label sec">Глюкометр</div>
         <div className="list">
           {/* Значение строки обязано совпадать с тем, что человек найдёт внутри (#163).
               Здесь стояло «настроить» у обоих, а внутри — «в разработке»: у глюкометра
@@ -206,14 +320,31 @@ export default function DevicesSection({ onClose }: { onClose: () => void }) {
               не как «ещё не сделали». */}
           <Row icon={speedometerOutline} title="Глюкометр" value="внести показание"
             onClick={() => openCat('meter')} />
-          <Row icon={repeat} title="Петля" value="в разработке" valueMuted
-            onClick={() => openCat('loop')} />
         </div>
 
         <div className="list" style={{ marginTop: 12 }}>
           <Row icon={helpCircleOutline} title="Проверить / записать по модели" onClick={() => setReqOpen(true)} />
         </div>
         <RequirementsCatalogSheet isOpen={reqOpen} onClose={() => setReqOpen(false)} />
+        </>}
+        {/* Новый прибор заводится той же шторкой, что и раньше, но с ним самим: тап по
+            строке передаёт объявление, а не открывает пустой список заново (#337). */}
+        <DeviceScanSheet isOpen={!!новый} выбран={новый} onClose={() => setНовый(null)} title="Что рядом" />
+        {/* Прибор ищем в свежем списке по id: если движок его забыл (removeDevice прошёл,
+            снимок обновился), карточка исчезает сама — показывать её было бы про то,
+            чего уже нет. */}
+        {карточка && железо.find((d) => d.id === карточка) && (
+          <HardwareSheet прибор={железо.find((d) => d.id === карточка)!} снимок={снимок}
+            попытка={попытка} начать={начать} сейчас={сейчас}
+            onClose={() => setКарточка(null)} />
+        )}
+    </>
+  );
+
+  if (встроенный) return тело;
+  return (
+    <Section title="Устройства" описание="Что у вас есть и на связи ли оно: сенсор, помпа, мост. Ниже — слоты: какой прибор чем занят." onBack={onClose ?? (() => {})}>
+      {тело}
     </Section>
   );
 }

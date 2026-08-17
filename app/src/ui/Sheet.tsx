@@ -2,6 +2,7 @@ import { IonModal, IonIcon } from '@ionic/react';
 import { closeOutline, chevronBack } from 'ionicons/icons';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { закрыватьЛи, сдвиг, тянемШторку, начинатьЛи, ПОРОГ_СТАРТА, ОКНО_СКОРОСТИ } from './sheetGesture';
+import КрайПрокрутки from './КрайПрокрутки';
 
 /* Оболочка шторки — единственное место, где собирается модалка.
 
@@ -198,7 +199,9 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
             <IonIcon icon={closeOutline} />
           </button>
         </div>
-        <div className="sheet-body" ref={тело}>{children}</div>
+        {/* У шторки этого не было вовсе (#285): длинный список в шторке обрывался у
+            нижнего края без всякого признака, что ниже есть ещё. */}
+        <div className="sheet-body" ref={тело}>{children}<КрайПрокрутки /></div>
         {footer}
       </div>
     </IonModal>

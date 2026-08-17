@@ -23,7 +23,7 @@ import {
    облаков, в которые нельзя войти, — обещание, которого мы не выполним. */
 export default function CloudAccountsSection({ onClose }: { onClose: () => void }) {
   const snap = useSnapshot();
-  const провайдеры = snap?.cloudProviders ?? [];
+  const провайдеры = snap?.availableCloudProviders ?? [];
   const [вход, setВход] = useState<CloudProviderView | null>(null);
   const [поля, setПоля] = useState<Record<string, string>>({});
 
@@ -40,7 +40,7 @@ export default function CloudAccountsSection({ onClose }: { onClose: () => void 
 
   if (вход) {
     return (
-      <Section title={вход.displayName} subtitle="Вход в облако"
+      <Section title={вход.displayName} subtitle="вход в облако"
         onBack={() => { setВход(null); setПоля({}); }}
         действие={<button className="head-next" onClick={войти}>Войти</button>}>
         <ParamsForm spec={вход.settings} values={поля}
@@ -57,7 +57,7 @@ export default function CloudAccountsSection({ onClose }: { onClose: () => void 
   }
 
   return (
-    <Section title="Облачные учётки" subtitle="Профиль · Сервисы · Учётки" onBack={onClose}>
+    <Section title="Облачные учётки" описание="Входы в облака производителей. Через них читаются данные приборов, которые не отдают их напрямую." onBack={onClose}>
       {!провайдеры.length && (
         <div className="metric-note">
           Движок пока не предлагает ни одного облака. Здесь появятся LibreLinkUp,
@@ -65,25 +65,40 @@ export default function CloudAccountsSection({ onClose }: { onClose: () => void 
         </div>
       )}
 
+      {/* Сначала подключённое, потом каталог (#279). Раньше и то и другое лежало одной
+          простынёй: человек видел «LibreLinkUp», «Войти», «не удалось войти» и «Dexcom
+          Share — пока недоступно» подряд и не понимал, где его учётки, а где список
+          того, что бывает. Порядок отвечает на вопросы по частоте: «что у меня» человек
+          спрашивает каждый раз, «что бывает» — один раз при заведении. */}
       {провайдеры.map((p) => {
         const свои = учёткиПровайдера(snap, p.id);
+        if (!свои.length) return null;
         return (
           <div key={p.id}>
             <div className="section-label sec">{p.displayName}</div>
             <div className="list">
               {свои.map((a) => <Учётка key={a.id} a={a} />)}
-              {/* Недоступного провайдера показываем, но войти не даём: спрятать значило
-                  бы соврать про планы, показать без пометки — про готовность. */}
-              <Row icon={cloudOutline}
-                title={можноВойти(p) ? 'Войти в учётную запись' : 'Пока недоступно'}
-                sub={p.readOnly ? 'чужое облако — только чтение' : undefined}
-                titleMuted={!можноВойти(p)}
-                chevron={можноВойти(p)}
+              <Row icon={cloudOutline} title="Добавить ещё одну"
                 onClick={можноВойти(p) ? () => { setВход(p); setПоля({}); } : undefined} />
             </div>
           </div>
         );
       })}
+
+      {/* Каталог — вторым блоком и целиком: сюда приходят один раз, при заведении.
+          Недоступного показываем с пометкой: спрятать значило бы соврать про планы,
+          показать без пометки — про готовность. */}
+      <div className="section-label sec">Подключить сервис</div>
+      <div className="list">
+        {провайдеры.map((p) => (
+          <Row key={p.id} icon={cloudOutline} title={p.displayName}
+            sub={!можноВойти(p) ? 'пока недоступно'
+              : p.readOnly ? 'вход по учётной записи · только чтение' : 'вход по учётной записи'}
+            titleMuted={!можноВойти(p)}
+            chevron={можноВойти(p)}
+            onClick={можноВойти(p) ? () => { setВход(p); setПоля({}); } : undefined} />
+        ))}
+      </div>
     </Section>
   );
 }

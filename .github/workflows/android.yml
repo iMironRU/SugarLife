@@ -54,13 +54,23 @@ jobs:
         if: env.HAS_CORE_TOKEN == 'да'
 
       # Ядро кладём рядом; settings.gradle читает путь из SUGARLIFE_CORE_DIR.
-      # Чекаутим ветку по умолчанию: пока AAR не публикуется (SugarLifeCore#24), наша
-      # сборка зависит от того, что у соседей лежит в main прямо сейчас.
+      #
+      # Берём ИМЕННО main, а не ветку по умолчанию. У соседей ветка по умолчанию —
+      # docs/connect-ux-handoff, и она отстаёт: main на дюжину коммитов впереди и ни на
+      # один позади. На этом мы и встали — submitScanReadiness есть в main, в ветке по
+      # умолчанию его нет, и APK перестал собираться сразу после слияния нашего #336.
+      # Локально при этом всё собиралось: клон ядра на машине стоял на свежей ветке.
+      #
+      # Ветка по умолчанию — не то же самое, что «текущее состояние ядра», и полагаться
+      # на неё как на источник значит зависеть от чужой настройки репозитория, о которой
+      # мы даже не узнаем, когда её поменяют. Пока AAR не публикуется (SugarLifeCore#24),
+      # называем ветку явно — это хотя бы видно в diff.
       - name: Checkout SugarLifeCore
         if: env.HAS_CORE_TOKEN == 'да'
         uses: actions/checkout@v4
         with:
           repository: iMironRU/SugarLifeCore
+          ref: main
           token: ${{ secrets.CORE_REPO_TOKEN }}
           path: core
 
@@ -97,7 +107,10 @@ jobs:
         if: env.HAS_CORE_TOKEN == 'да'
         run: yes | sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || true
 
-      - name: Build debug APK
+      # ИЗДАНИЯ (core#61): после введения флейворов задачи `assembleDebug` больше нет — есть
+      # assembleLiteDebug и assembleProDebug. Релиз выпускает ИМЕННО Lite: это издание стоит у людей,
+      # и обновление обязано доходить до них, а не подменяться пакетом .pro.
+      - name: Build debug APK (Lite)
         if: env.HAS_CORE_TOKEN == 'да'
         working-directory: app/android
         env:
@@ -105,11 +118,11 @@ jobs:
           SUGARLIFE_CORE_DIR: ${{ github.workspace }}/core
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleLiteDebug --no-daemon --stacktrace
 
       - name: Rename APK
         if: env.HAS_CORE_TOKEN == 'да'
-        run: cp app/android/app/build/outputs/apk/debug/app-debug.apk sugarlife-debug.apk
+        run: cp app/android/app/build/outputs/apk/lite/debug/app-lite-debug.apk sugarlife-debug.apk
 
       - name: Upload artifact
         if: env.HAS_CORE_TOKEN == 'да'

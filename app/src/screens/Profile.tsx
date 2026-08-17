@@ -1,21 +1,18 @@
-import { IonIcon } from '@ionic/react';
-import { DevicesSection, DiagnosticsSection, HealthSection, LoopSetupSection, ServicesSection } from '@/sections/lazy';
+import { DiagnosticsSection, HealthSection, LoopSection, DataDevicesSection, AboutSection, AppearanceSection } from '@/sections/lazy';
 import {
-  downloadOutline,
-  optionsOutline, nutritionOutline, ellipse, sunny, moon, refreshOutline,
-  hardwareChipOutline, cloudOutline, repeat, documentTextOutline, heartOutline,
+  optionsOutline, nutritionOutline,
+  hardwareChipOutline, repeat, documentTextOutline, heartOutline, informationCircleOutline,
+  colorPaletteOutline,
 } from 'ionicons/icons';
-import { useState, useEffect } from 'react';
-import { useStore } from '@/sources/store';
+import { useState } from 'react';
 import { resetLocalData } from '@/settings/reset';
-import { useClouds } from '@/sources/clouds';
 import { unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
 import { useTheme } from '../theme/useTheme';
-import { APP_EDITION, APP_VERSION, APP_BUILD, isNative, platform, checkOtaUpdate, checkNativeUpdate, openApkDownload, ВЫПУСКАЕТСЯ_APK } from '@/platform/appUpdate';
+import { APP_EDITION, APP_VERSION, APP_BUILD, isNative } from '@/platform/appUpdate';
 import { useStack } from '@/app/stackCtx';
+import { useSnapshot } from '@/sources/bridge';
 import { useHealth } from '@/settings/health';
 import { поВажности } from '@/domain/screenings';
-import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
 import { useLoopProfile, LOOP_MODES } from '@/settings/loopProfile';
 import { useDeviceConfig, deviceStatus } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
@@ -24,27 +21,20 @@ import UnitsModal from '@/sheets/UnitsModal';
 import CarbUnitsModal from '@/sheets/CarbUnitsModal';
 import Screen from '@/ui/Screen';
 
-const DASH = '—';
-
 export default function Profile() {
-  const { status } = useStore();
-  const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
   const unit = useUnit();
   const [unitsOpen, setUnitsOpen] = useState(false);
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
   const carbUnit = useCarbUnit();
   const { push, pop } = useStack();
-  const [updating, setUpdating] = useState(false);
-  const [updateMsg, setUpdateMsg] = useState<string | null>(null);
-  const [apkUrl, setApkUrl] = useState<string | null>(null);
+  /* Издание берём у движка, а не у константы сборки (#298, #294). Константа говорит, чем
+     нас собрали, движок — что внутри на самом деле. Для обновления важно второе: релиз
+     выпускает Lite, и предлагать его сборке Pro значит поставить рядом второе приложение
+     вместо обновления. */
+  const снимок = useSnapshot();
+  const издание = снимок?.edition ?? 'lite';
 
-  const clouds = useClouds();
-  const enabledClouds = clouds.filter((c) => c.enabled);
-  const cloudsValue = clouds.length === 0 ? 'нет облаков'
-    : enabledClouds.length === 0 ? 'выкл'
-    : status === 'ok' ? (enabledClouds.length > 1 ? `${enabledClouds.length} подключено` : 'подключено')
-    : status === 'loading' ? 'подключение…'
-    : (status === 'error' || status === 'stale') ? 'нет связи' : DASH;
 
   const reset = () => {
     if (!window.confirm('Сбросить настройки? С этого устройства будут удалены облака, записанные устройства и локальная история глюкозы.')) return;
@@ -52,66 +42,6 @@ export default function Profile() {
     location.reload();
   };
 
-  // Нативное обновление (OTA + APK). Веб живёт отдельно — в data/swUpdate.ts.
-  const doUpdate = async () => {
-    if (updating) return;
-    setUpdating(true);
-    setUpdateMsg(null);
-    setApkUrl(null);
-
-    // Нативка: сначала OTA (JS-бандл, лёгкий путь), потом APK (нативный код).
-    if (isNative) {
-      const ota = await checkOtaUpdate();
-      if (ota === 'updated') return; // применилось → webview перезагрузится сам
-
-      // Android: если по JS всё свежее (или OTA недоступен) — проверяем новый APK.
-      if (platform === 'android') {
-        const r = await checkNativeUpdate();
-        setUpdating(false);
-        if (r === 'error') {
-          setUpdateMsg(ota === 'current' ? 'У вас последняя версия.' : 'Не удалось проверить обновление.');
-          return;
-        }
-        if (r.hasUpdate && r.apkUrl) {
-          setApkUrl(r.apkUrl);
-          setUpdateMsg('Нужна новая сборка приложения' + (r.build ? ` (${r.build})` : '') + '.');
-        } else if (!ВЫПУСКАЕТСЯ_APK) {
-          /* Не «у вас последняя версия»: про нативную часть мы этого не знаем — новых
-             сборок просто нет. Разница важна тому, кто ждёт исправления именно в
-             нативном слое и иначе решил бы, что оно уже у него. */
-          setUpdateMsg('Обновлено по воздуху. Сборка приложения сейчас не выпускается — нативная часть остаётся прежней.');
-        } else {
-          setUpdateMsg('У вас последняя версия.');
-          window.setTimeout(() => setUpdateMsg(null), 4000);
-        }
-        return;
-      }
-
-      // iOS: APK-пути нет (только App Store), но OTA уже отработал выше.
-      setUpdating(false);
-      setUpdateMsg(ota === 'current' ? 'У вас последняя версия.' : 'Не удалось проверить обновление.');
-      if (ota === 'current') window.setTimeout(() => setUpdateMsg(null), 4000);
-      return;
-    }
-  };
-
-  /* Состояние обновления веб-версии. Четыре ответа на три вопроса, которые раньше
-     оставались без ответа: есть ли обновление, применилось ли, нужна ли перезагрузка. */
-  const upd = useUpdateState();
-  const [justUpdated, setJustUpdated] = useState(() => consumeJustUpdated()); // разово после перезагрузки
-  // «Обновлено до X» держится, пока человек не начал новую проверку — иначе оно
-  // висело бы всю сессию и перекрывало «Проверяю…» и ошибки
-  useEffect(() => {
-    if (upd.status === 'checking' || upd.status === 'available') setJustUpdated(false);
-  }, [upd.status]);
-  const agoMin = upd.checkedAt ? Math.round((Date.now() - upd.checkedAt) / 60000) : null;
-  const webUpdateNote = justUpdated ? `Обновлено до сборки ${APP_BUILD}.`
-    : upd.status === 'available' ? 'Новая версия скачана. Применится после перезагрузки.'
-    : upd.status === 'checking' ? 'Проверяю…'
-    : upd.status === 'error' ? 'Не удалось проверить — похоже, нет сети.'
-    : upd.status === 'unsupported' ? 'Автообновление недоступно — обновите страницу вручную.'
-    : upd.status === 'current' ? `Актуально · проверено ${agoMin != null && agoMin > 0 ? agoMin + ' мин назад' : 'только что'}`
-    : 'Проверяю…';
 
   /* Что записано в устройствах — коротко, для строки-входа. Названия моделей, а не
      «настроено»: человек проверяет глазами свою помпу и свой сенсор, а слово
@@ -140,12 +70,6 @@ export default function Profile() {
   const loopSub = loop.savedAt
     ? `${loopMode?.code} · ${loopMode?.name.toLowerCase()}`
     : 'не настроен';
-
-  const themes: { key: 'system' | 'light' | 'dark'; label: string; icon: string }[] = [
-    { key: 'system', label: 'Системная', icon: ellipse },
-    { key: 'light', label: 'Светлая', icon: sunny },
-    { key: 'dark', label: 'Тёмная', icon: moon },
-  ];
 
   return (
     <Screen tab={4}>
@@ -189,30 +113,28 @@ export default function Profile() {
               у всех остальных блоков он есть, и глаз читает ритм «заголовок — блок».
               Первый блок из ритма выпадал, и экран казался слегка сломанным (#212).
 
-              «Моё хозяйство» — не сочинённое имя, а то самое общее, которое и раньше
-              было записано здесь словами: устройства — железо, облака — транспорт,
-              профиль петли — правила счёта, здоровье — то, что человек знает о себе
-              сам. Всё вместе — его, работающее, и требующее присмотра.
+              «Что настроено» вместо «Моё хозяйство»: второе звучало по-домашнему там,
+              где речь о приборах, подающих инсулин. Заголовок собирает разное —
+              устройства, облака, правила счёта, здоровье — и отвечает на общий для них
+              вопрос: что здесь уже настроено и требует присмотра.
 
               Границу ЧТО (устройства) и КАК (сервисы) из docs/CONNECT-UX.md §10 это не
               трогает: разделы разные, входы разные, рядом стоят только строки. */}
-          <div className="section-label sec первый">Моё хозяйство</div>
+          <div className="section-label sec">Что настроено</div>
           <div className="list">
             {/* Подпись — то, что записано на самом деле. Заголовок перечисляет, что
                 внутри раздела, и на вопрос «а что у меня подключено» не отвечал: за
                 ответом надо было открывать. Самый быстрый взгляд — тот, ради которого
                 никуда не переходят. */}
-            <Row icon={hardwareChipOutline} title="Помпа, сенсоры, глюкометр, петля"
+            {/* Одна дверь в хозяйство вместо трёх (#279): источники, приборы и облака
+                лежали порознь, и человеку приходилось выбирать дверь до того, как он
+                понял, что ищет. Внутри — две вкладки, потому что вопросы разные. */}
+            <Row icon={hardwareChipOutline} title="Устройства и данные"
               sub={устройства} value={нуженМост ? 'нужен мост' : undefined}
-              onClick={() => push(<DevicesSection onClose={pop} />)} />
-            {/* облако — такой же транспорт, как мост, только со своими настройками
-                (URL/токен) и статусом (доступность/связь) вместо сигнала и батареи */}
-            <Row icon={cloudOutline} title="Облака" sub="Nightscout и другие источники"
-              value={cloudsValue}
-              onClick={() => push(<ServicesSection onClose={pop} />)} />
+              onClick={() => push(<DataDevicesSection onClose={pop} />)} />
             {/* профиль петли: только настройка — подача не включается (решение 0004) */}
-            <Row icon={repeat} title="Профиль петли" sub={loopSub}
-              onClick={() => push(<LoopSetupSection onClose={pop} />)} />
+            <Row icon={repeat} title="Петля" sub={loopSub}
+              onClick={() => push(<LoopSection onClose={pop} />)} />
             {/* Здоровье — рядом с железом и петлёй по той же причине: это «моё,
                 работающее», просто не про приборы, а про то, что знает сам человек
                 и записывает врач (#156). */}
@@ -245,53 +167,34 @@ export default function Profile() {
           </div>
 
           {/* о приложении: версия + сборка + обновление */}
-          <div className="section-label sec">О приложении</div>
-          <div className="about">
-            <div className="about-info">
-              <div className="about-ver">{APP_EDITION} {APP_VERSION}</div>
-              <div className="about-build">сборка {APP_BUILD}{isNative ? ' · нативное' : ' · PWA'}</div>
-            </div>
-            {apkUrl ? (
-              <button className="about-update accent" onClick={() => openApkDownload(apkUrl)}>
-                <IonIcon icon={downloadOutline} />
-                Скачать APK
-              </button>
-            ) : isNative ? (
-              <button className="about-update" onClick={doUpdate} disabled={updating}>
-                <IonIcon icon={refreshOutline} className={updating ? 'spin' : ''} />
-                {updating ? 'Проверяю…' : 'Обновиться'}
-              </button>
-            ) : upd.status === 'available' ? (
-              /* кнопка честно предупреждает, что будет перезагрузка */
-              <button className="about-update accent" onClick={applyUpdate} disabled={upd.applying}>
-                <IonIcon icon={refreshOutline} className={upd.applying ? 'spin' : ''} />
-                {upd.applying ? 'Обновляю…' : 'Обновить и перезагрузить'}
-              </button>
-            ) : (
-              <button className="about-update" onClick={checkNow} disabled={upd.status === 'checking'}>
-                <IonIcon icon={refreshOutline} className={upd.status === 'checking' ? 'spin' : ''} />
-                {upd.status === 'checking' ? 'Проверяю…' : 'Проверить'}
-              </button>
-            )}
+          {/* «О приложении» — отдельный раздел (замечание с телефона).
+
+              Плашка внизу Профиля показывала одну сборку из двух и звала «Обновиться»
+              кнопку, которая сначала спрашивает сервер. Обе неправды исправлены внутри
+              раздела; здесь остаётся вход и то, что человек проверяет чаще всего —
+              какая версия стоит. */}
+          {/* Оформление — над «О приложении»: это настройка, а «О приложении» —
+              справка. Настройки человек меняет, справку читает. */}
+          <div className="section-label sec">Оформление</div>
+          <div className="list">
+            {/* Строка называется «Тема», а не «Оформление»: заголовок над ней уже сказал
+                это слово, и повторять его значит потратить строку на эхо. Ровно от этого
+                здесь уходили, убирая заголовки над каждой одиночной строкой. */}
+            <Row icon={colorPaletteOutline} title="Тема"
+              sub={theme === 'system' ? 'как в настройках телефона' : theme === 'light' ? 'светлая' : 'тёмная'}
+              value={theme === 'system' ? 'системная' : undefined}
+              onClick={() => push(<AppearanceSection onClose={pop} />)} />
           </div>
-          {/* состояние обновления — текстом, а не догадками после нажатия */}
-          {!isNative && <div className="metric-note" style={{ marginTop: 8 }}>{webUpdateNote}</div>}
-          {isNative && updateMsg && <div className="metric-note" style={{ marginTop: 8 }}>{updateMsg}</div>}
+
+          <div className="section-label sec">О приложении</div>
+          <div className="list">
+            <Row icon={informationCircleOutline}
+              title={`${издание === 'pro' ? 'SugarLife.Pro' : APP_EDITION} ${APP_VERSION}`}
+              sub={`сборка ${APP_BUILD}${isNative ? ' · нативное' : ' · PWA'}`}
+              onClick={() => push(<AboutSection onClose={pop} />)} />
+          </div>
 
           {/* оформление */}
-          <div className="section-label sec">Оформление</div>
-          <div className="theme-chips">
-            {themes.map((t) => {
-              const on = theme === t.key;
-              return (
-                <button key={t.key} className={'theme-chip' + (on ? ' on' : '')} onClick={() => setTheme(t.key)}>
-                  <IonIcon icon={t.icon} />
-                  <span>{t.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
           <button className="logout" onClick={reset}>Сбросить настройки</button>
 
         <UnitsModal isOpen={unitsOpen} onClose={() => setUnitsOpen(false)} />

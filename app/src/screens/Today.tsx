@@ -2,7 +2,7 @@ import { IonIcon } from '@ionic/react';
 import { MealsSection } from '@/sections/lazy';
 import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, chevronForward } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
-import { useStore } from '@/sources/store';
+import { useStore, refresh } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt, agoText } from '@/domain/units';
 import { activeCarbs } from '@/domain/loopValue';
 import ChangedButton from '@/ui/ChangedButton';
@@ -15,14 +15,21 @@ import { useОтложения, показывать, прибрать } from '@
 import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
+import { useSnapshot, sendIntent } from '@/sources/bridge';
+import { useHealth } from '@/settings/health';
+import { устройствоРоли } from '@/domain/deviceState';
+import { хватитЛи, пораГоворить } from '@/domain/reservoirForecast';
+import { toSegs } from '@/domain/basal';
+import { deviceAges } from '@/domain/treatmentStats';
 import { reservoirStats } from '@/domain/treatmentStats';
 import { batteryRuntime, BATTERY_KINDS } from '@/domain/battery';
 import { detectRefill } from '@/domain/refill';
 import { onlyLocal } from '@/domain/meals';
-import { часыБодрствования } from '@/domain/awake';
+import { часыБодрствования, НОЧЬ_С } from '@/domain/awake';
 import { useMeals } from '@/sources/mealStore';
 import type { Plateau } from '@/domain/plateau';
 import { getSeries, onDbChange } from '@/sources/db';
+import { syncHistory } from '@/sources/historySync';
 import { useCloseOnLeave } from '@/app/nav';
 import { notify } from '@/platform/notify';
 import FoodSheet from '@/sheets/FoodSheet';
@@ -56,6 +63,8 @@ export default function Today() {
   const changes = useChanges();
   const meals = useMeals();
   const rstat = reservoirStats(extras.devHist);
+  const снимок = useSnapshot();
+  const здоровье = useHealth();
   /* История заряда копится в своей базе: в облаке за один запрос доступны последние
      часы, а один цикл разряда занимает недели (sources/db.ts, putBatteryPoints). */
   const [bhist, setBhist] = useState<Plateau[]>([]);
@@ -127,6 +136,39 @@ export default function Today() {
   // рекомендуем заменить заранее, чтобы подача не прервалась во сне. Оценка (≈).
   const reservoir = dev?.reservoir ?? rstat.current ?? null;
   const hoursLeft = reservoir != null && extras.tdd ? reservoir / (extras.tdd / 24) : null;
+
+  /* Прогноз «хватит ли до утра» (#280) — вместо счёта по средней скорости.
+
+     Средняя не знает ни базала именно этих часов, ни коррекций при высоком сахаре, ни
+     стоимости заправки. Считаем пессимистично и отвечаем не часами, а состоянием: часы
+     скачут на каждом болюсе, а «до утра не хватит» — решение, которое принимают один раз.
+
+     Остаток берём из снимка числом (rev 1.11) вместе со временем чтения: помпа могла
+     молчать час, и за этот час она подавала. Числа нет — падаем на прежнюю оценку по
+     средней: она хуже, но лучше молчания. */
+  const помпаСнимка = устройствоРоли(снимок, 'pump');
+  const сегментыБазала = снимок?.pumpBasal?.segments
+    ?? toSegs(data?.profile?.basalSchedule ?? [])
+      .map((с) => ({ startMinutes: Math.round(с.a * 60), rateUPerHour: с.v }));
+  const возрасты = deviceAges(extras.events, changes);
+  const прогнозРезервуара = хватитЛи({
+    остаток: помпаСнимка?.reservoirU ?? reservoir,
+    прочитаноМс: помпаСнимка?.reservoirAtMs ?? null,
+    сейчасМс: Date.now(),
+    сегменты: сегментыБазала,
+    подъём: здоровье.режим?.подъём ?? null,
+    /* Коррекции ждём, когда сахар высокий: именно этого средняя и не видела — ночь на
+       двенадцати с ростом стоит нескольких единиц сверх базала. */
+    ждёмКоррекций: (data?.latest?.mmol ?? 0) >= 10,
+    /* Заправка: канюле третий день — значит смена случится ночью или утром, и её
+       пятнадцать единиц надо иметь заранее. */
+    ждёмЗаправку: (возрасты.site?.days ?? 0) >= 2,
+  });
+  /* Отбой человек может не указать — тогда берём ту же границу ночи, по которой считаем
+     часы бодрствования. Своя цифра здесь завела бы две разные «ночи» в одном экране. */
+  const пораПроНочь = пораГоворить(
+    прогнозРезервуара, здоровье.режим?.отбой ?? `${НОЧЬ_С}:00`, здоровье.режим?.подъём,
+  );
   let nightEmpty: Date | null = null;
   if (hoursLeft != null && hoursLeft > 0 && hoursLeft < 14) {
     const e = new Date(Date.now() + hoursLeft * 3600e3);
@@ -139,8 +181,14 @@ export default function Today() {
      Но днём окончание тоже пропускается, если занят, а прерывание подачи одинаково
      плохо в любое время. Порог в ЧАСАХ, не в единицах: 10 ед при суточной дозе 20
      и при 60 — это принципиально разное время. Ночной баннер имеет приоритет,
-     чтобы не показывать два про одно и то же. */
-  const soonEmpty = hoursLeft != null && hoursLeft > 0 && hoursLeft < 6 && !nightEmpty;
+     чтобы не показывать два про одно и то же.
+
+     Пессимистичный счёт тоже имеет приоритет: «кончается сейчас» говорит о том же
+     резервуаре и в тот же час, только точнее. Иначе человек получил бы два сообщения
+     про одну беду и с разными числами. */
+  const soonEmpty = hoursLeft != null && hoursLeft > 0 && hoursLeft < 6 && !nightEmpty
+    && прогнозРезервуара.прогноз !== 'кончается сейчас'
+    && прогнозРезервуара.прогноз !== 'не хватит до утра';
   const emptyAt = soonEmpty
     ? new Date(Date.now() + (hoursLeft as number) * 3600e3).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
     : null;
@@ -235,15 +283,33 @@ export default function Today() {
     suspendedRef.current = now;
   }, [dev?.suspended]);
 
+  /* Ночное предупреждение — по пессимистичному счёту, а не по средней (#280).
+
+     Экранная плашка перешла на новый счёт сразу, а уведомление осталось на старом, и это
+     было хуже, чем кажется: до человека с погашенным экраном доходит именно уведомление.
+     Экран и уведомление говорили про одно и то же разными числами.
+
+     Момент тут важнее точности, поэтому спрашиваем `пораГоворить`, а не только прогноз:
+     тот же ответ в три ночи бесполезен — картридж в тумбочке, решение спросонья.
+
+     Старая оценка по средней осталась запасной ровно там же, где на экране: время
+     подъёма не указано — считать до утра не от чего, и молчать нельзя. */
   const nightWarnedRef = useRef(false);
   useEffect(() => {
-    const now = !!nightEmpty;
+    const запасной = прогнозРезервуара.прогноз === 'неизвестно' && !!nightEmpty;
+    const now = пораПроНочь || запасной;
     if (now && !nightWarnedRef.current) {
-      notify('Инсулин закончится ночью', `Осталось ≈${Math.round(hoursLeft as number)} ч (~${emptyTime}). Замените резервуар заранее.`);
+      if (запасной) {
+        notify('Инсулин закончится ночью', `Осталось ≈${Math.round(hoursLeft as number)} ч (~${emptyTime}). Замените резервуар заранее.`);
+      } else if (прогнозРезервуара.прогноз === 'кончается сейчас') {
+        notify('Инсулин заканчивается', 'В резервуаре осталось мало. Замените сейчас — до утра не хватит.');
+      } else {
+        notify('До утра инсулина не хватит', `До подъёма нужно ≈${Math.round(прогнозРезервуара.нужно ?? 0)} ед. Замените резервуар сейчас, пока не легли.`);
+      }
     }
     nightWarnedRef.current = now;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!nightEmpty]);
+  }, [пораПроНочь, прогнозРезервуара.прогноз, !!nightEmpty]);
 
   // то же для дневного окончания: смысл предупреждения в том, что на экран не смотрят
   const soonWarnedRef = useRef(false);
@@ -255,8 +321,25 @@ export default function Today() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soonEmpty]);
 
+  /* Потянуть — спросить всех сразу (замечание с телефона).
+
+     Опрос идёт сам раз в минуту, но после пропавшей и вернувшейся связи ждать минуту
+     незачем: человек уже смотрит в экран. Дёргаем три пути, потому что данные приходят
+     тремя: облачный стор, наша история и живой прибор через движок.
+
+     Ошибку глотаем намеренно: жест либо обновил, либо нет — и это видно по числам.
+     Сообщение «не удалось» поверх экрана, где и так написано «нет связи», добавило бы
+     шума, а не смысла. */
+  const обновитьВсё = async () => {
+    await Promise.allSettled([
+      refresh(),
+      syncHistory(),
+      sendIntent({ type: 'readNow', deviceId: устройствоРоли(снимок, 'sensor')?.id ?? '' }),
+    ]);
+  };
+
   return (
-    <Screen tab={2} panel="full">
+    <Screen tab={2} panel="full" обновить={обновитьВсё}>
           <DataGate>
           {/* Панель углеводов: сейчас — сверху, записанное — снизу.
 
@@ -333,12 +416,49 @@ export default function Today() {
             </Notice>
           )}
 
-          {/* окончание резервуара придётся на ночь — поменять заранее */}
-          {nightEmpty && виденРезервуар && (
+          {/* Не хватит до утра (#280).
+
+              Раньше здесь стояла оценка по средней скорости и фраза «закончится ночью
+              (~03:40)». Точное время в такой оценке — обещание, которого она не может
+              выполнить: средняя не знает ни базала этих часов, ни коррекций, ни
+              заправки. Теперь считается пессимистичная сумма до подъёма, а сказано то,
+              что человеку и нужно решить: менять сейчас или нет.
+
+              Прежний расчёт остался запасным — для случая, когда времени подъёма мы не
+              знаем: молчать там нельзя, а сказать точнее нечем. */}
+          {прогнозРезервуара.прогноз === 'не хватит до утра' && виденРезервуар && (
+            <Notice id="reservoir-night" вид="предупреждение" значок={moonOutline}
+              заголовок="До утра инсулина не хватит"
+              отложить={() => отложить('reservoir', эпРезервуар, Math.round(-(hoursLeft ?? 0)))}>
+              До подъёма нужно ≈{Math.round(прогнозРезервуара.нужно ?? 0)} ед — с запасом на
+              коррекции и заправку.{' '}
+              {/* Днём «замените сейчас, чтобы не прервалась во сне» звучит преждевременно:
+                  до сна ещё полдня, и человек справедливо решит, что приложение паникует.
+                  Само предупреждение днём остаётся — он его открыл сам и имеет право знать. */}
+              {пораПроНочь
+                ? 'Замените резервуар сейчас, чтобы подача не прервалась во сне.'
+                : 'Замените до вечера — ночью прерывание подачи не заметить.'}
+            </Notice>
+          )}
+
+          {/* Кончается сейчас (#280): остаток ниже критического. Здесь ждать вечера нечего
+              и считать до подъёма не нужно — при любом базале столько не доживёт. */}
+          {прогнозРезервуара.прогноз === 'кончается сейчас' && виденРезервуар && (
+            <Notice id="reservoir-soon" вид="предупреждение" значок={warningOutline}
+              заголовок="Инсулин заканчивается"
+              отложить={() => отложить('reservoir', эпРезервуар, Math.round(-(hoursLeft ?? 0)))}>
+              В резервуаре осталось мало — подача скоро прервётся. Замените сейчас, не откладывая
+              на вечер.
+            </Notice>
+          )}
+
+          {/* Запасной путь: времени подъёма не знаем — считаем как раньше, по средней. */}
+          {прогнозРезервуара.прогноз === 'неизвестно' && nightEmpty && виденРезервуар && (
             <Notice id="reservoir-night" вид="предупреждение" значок={moonOutline}
               заголовок={`Инсулина ≈${Math.round(hoursLeft as number)} ч — закончится ночью (~${emptyTime})`}
               отложить={() => отложить('reservoir', эпРезервуар, Math.round(-(hoursLeft ?? 0)))}>
-              Замените резервуар заранее, чтобы подача не прервалась во сне. Оценка по среднему расходу.
+              Замените резервуар заранее, чтобы подача не прервалась во сне. Оценка по среднему
+              расходу — укажите время подъёма в «Здоровье», и счёт станет точнее.
             </Notice>
           )}
 

@@ -38,11 +38,47 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Установка обновления из приложения (#269). Тихой установки это НЕ даёт: система
+         всё равно спросит подтверждение. Даёт одно нажатие вместо четырёх шагов через
+         браузер и «Загрузки». -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Foreground-сервис фонового мониторинга + его уведомление (Android 13+). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- BLE: сканирование (без геолокации) + подключение к сенсору/помпе. -->
+    <!-- BLE: сканирование (без геолокации) + подключение к сенсору/помпе. Android 12+. -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" tools:targetApi="s" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" tools:targetApi="s" />
+    <!-- Те же две возможности до Android 12 — другими разрешениями (#299).
+
+         Без них приложение на Android 8–11 ставилось и работало, но скан не находил
+         НИЧЕГО и никогда: обращение к BluetoothAdapter падало на SecurityException, а
+         запрос геолокации (плагин просит её правильно, по версии) система отклоняла
+         молча — просить незаявленное в манифесте бесполезно, диалога не будет вовсе.
+         Человек при этом видел рабочее приложение и искал поломку в сенсоре.
+
+         ACCESS_FINE_LOCATION нужна не для геолокации: до Android 12 система считала
+         список устройств рядом способом узнать положение, и без этой отметки скан
+         возвращал пустой список без ошибки.
+
+         maxSdkVersion=30 обязателен. Без него на Android 12+ появился бы запрос
+         геолокации, которого сейчас нет и который там не нужен, — ровно от него мы
+         закрылись флагом neverForLocation выше. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+
+    <!-- Ни одна из этих железок не обязательна (#299).
+
+         Разрешения выше сами по себе порождают требования: из BLUETOOTH/BLUETOOTH_ADMIN
+         выводится android.hardware.bluetooth, из ACCESS_FINE_LOCATION — hardware.location,
+         и по умолчанию выведенное считается ОБЯЗАТЕЛЬНЫМ. Магазин по такому требованию
+         прячет приложение от устройств без этой железки. То есть починка Android 8–11
+         молча отрезала бы часть устройств — ровно наоборот тому, зачем делалась.
+
+         И это не формальность: приложение полностью работает без Bluetooth вообще, когда
+         данные идут через облако. Требовать железо, без которого оно живёт, нельзя. -->
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
 </manifest>

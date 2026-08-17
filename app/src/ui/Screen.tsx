@@ -1,4 +1,5 @@
-import { IonPage, IonContent } from '@ionic/react';
+import { IonPage, IonContent, IonRefresher, IonRefresherContent } from '@ionic/react';
+import КрайПрокрутки from './КрайПрокрутки';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { reportContentScroll, серединаЛи, полшага, плавно, syncToActiveScreen } from '@/app/panel';
 import { useTab, useGoHome } from '@/app/nav';
@@ -22,8 +23,17 @@ import { useTab, useGoHome } from '@/app/nav';
    Отступ сверху задаёт CSS одной величиной (--sl-content-top в theme/parts/shell.css),
    общей со страницами стека и шторками. Первые блоки своих margin-top не приносят —
    иначе зазор снова начнёт складываться из чужих полей. */
-export default function Screen({ tab, panel = 'compact', children }: {
+export default function Screen({ tab, panel = 'compact', обновить, children }: {
   tab: number;
+  /* Потянуть вниз — обновить (замечание с телефона).
+
+     Опрос идёт раз в минуту, но когда связь пропала и вернулась, ждать минуту незачем:
+     человек уже смотрит в экран и хочет спросить сейчас. Кнопки для этого нет и не
+     нужно — жест на месте, где он и ожидается, и не занимает строки.
+
+     Даём его только тем экранам, которые сами скажут, что делать: тянуть за обновление
+     там, где обновлять нечего, — обещание без содержания. */
+  обновить?: () => Promise<void>;
   /* Насколько велика панель на этом экране.
 
      'full' — там, где сахар и есть содержимое: «Сегодня». Круг крупный, панель
@@ -40,6 +50,9 @@ export default function Screen({ tab, panel = 'compact', children }: {
   panel?: 'full' | 'compact';
   children: ReactNode;
 }) {
+  /* Вкладка — нулевой этаж пути: с неё начинается любая крошка в разделах под ней.
+     Имя берём из одного списка, а не пишем на каждом экране: два места для одного
+     названия разошлись бы в первый же день, когда вкладку переименуют. */
   const active = useTab();
   const ref = useRef<HTMLIonContentElement>(null);
   const тело = useRef<HTMLDivElement>(null);
@@ -140,8 +153,20 @@ export default function Screen({ tab, panel = 'compact', children }: {
   return (
     <IonPage>
       <IonContent ref={ref} fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
+        {обновить && (
+          /* Порог побольше стандартного: панель здесь и так ездит за пальцем, и
+             случайный потяг при обычной прокрутке запускал бы опрос по десять раз. */
+          <IonRefresher slot="fixed" pullMin={90} pullMax={200}
+            onIonRefresh={(e) => { void обновить().finally(() => e.detail.complete()); }}>
+            <IonRefresherContent pullingText="Потяните, чтобы обновить"
+              refreshingSpinner="crescent" refreshingText="Спрашиваю…" />
+          </IonRefresher>
+        )}
         <div ref={тело} className={'screen' + (panel === 'compact' ? ' is-compact' : '') + (середина ? ' is-mid' : '')}>
           {children}
+          {/* Вкладка ничем не отличается от раздела: список настроек такой же длинный,
+              и где он кончается, человеку так же не видно (#272, #285). */}
+          <КрайПрокрутки />
         </div>
       </IonContent>
     </IonPage>

@@ -10,7 +10,10 @@ import { useStack } from '@/app/stackCtx';
 /* Профиль → «Сервисы» — отдельный полноэкранный раздел (docs/CONNECT-UX.md §10,
    §2b). Список облаков, а не одно поле: можно держать несколько Nightscout одновременно
    (свой + партнёра), у каждого — своя роль («забираем» глюкозу и/или статус помпы). */
-export default function ServicesSection({ onClose }: { onClose: () => void }) {
+/* Раздел живёт вкладкой внутри «Устройств и данных» (SugarLife#279). */
+export default function ServicesSection({ onClose, встроенный }: {
+  onClose?: () => void; встроенный?: boolean;
+}) {
   const clouds = useClouds();
   const { push, pop } = useStack();
   const снимок = useSnapshot();
@@ -39,23 +42,25 @@ export default function ServicesSection({ onClose }: { onClose: () => void }) {
     );
   };
 
-  return (
-    <Section title="Сервисы" subtitle="Профиль · Сервисы" onBack={onClose}>
-        <div className="sheet-note">
-          Облако — такой же способ подключения, как мост, только со своими адресом/токеном.
-          Можно держать несколько одновременно, у каждого своя роль в «Забираем отсюда».
-        </div>
+  const тело = (
+    <>
+        {/* Два вида облаков названы по владельцу, а не одним словом (#279).
 
-        <div className="section-label sec">Облака</div>
+            «Облако» у нас значило две разные вещи, и человек честно путался: в слотах
+            это ПУТЬ к прибору, а здесь — учётная запись. Плюс в одном списке лежали
+            свой сервер (адрес и токен, туда пишут) и чужой сервис (логин с паролем,
+            только чтение, данные могут быть другого человека). Разделили по владельцу:
+            вопрос «моё или чужое» человек решает раньше всех остальных. */}
+        <div className="section-label sec">Мой сервер</div>
         <div className="list">
           {clouds.length === 0 && (
-            <Row title="Нет ни одного облака" titleMuted />
+            <Row title="Своего сервера нет" titleMuted />
           )}
           {clouds.map((c) => (
             <Row key={c.id} icon={cloudOutline} title={c.name || 'Nightscout'} oneLine
               value={roleIcons(c)} onClick={() => openCloud(c.id)} />
           ))}
-          <Row icon={addCircleOutline} title="Добавить облако" chevron={false} onClick={onAdd} />
+          <Row icon={addCircleOutline} title="Добавить свой сервер" chevron={false} onClick={onAdd} />
         </div>
 
         {/* Учётки вендоров — отдельным входом, а не в том же списке (SugarLifeCore#52).
@@ -67,16 +72,28 @@ export default function ServicesSection({ onClose }: { onClose: () => void }) {
 
             Вход виден, только когда движок отдал каталог: без адаптеров это была бы
             дверь в пустую комнату. */}
-        {(снимок?.cloudProviders?.length ?? 0) > 0 && (
+        <div className="metric-note">
+          Nightscout — ваш сервер: адрес и токен, туда же можно писать. Дальше — сервисы
+          производителей: вход по учётной записи, чтение чужого сервера.
+        </div>
+
+        {(снимок?.availableCloudProviders?.length ?? 0) > 0 && (
           <>
-            <div className="section-label sec">Учётные записи</div>
+            <div className="section-label sec">Сервисы производителей</div>
             <div className="list">
-              <Row icon={personCircleOutline} title="Облачные учётки"
-                sub="LibreLinkUp, Dexcom Share и другие сервисы производителей"
+              <Row icon={personCircleOutline} title="Учётные записи"
+                sub="LibreLinkUp, Dexcom Share и другие"
                 onClick={() => push(<CloudAccountsSection onClose={pop} />)} />
             </div>
           </>
         )}
+    </>
+  );
+
+  if (встроенный) return тело;
+  return (
+    <Section title="Сервисы" описание="Nightscout и другие серверы, через которые приходят и уходят данные. Прибор — это ЧТО, сервис — это КАК." onBack={onClose ?? (() => {})}>
+      {тело}
     </Section>
   );
 }

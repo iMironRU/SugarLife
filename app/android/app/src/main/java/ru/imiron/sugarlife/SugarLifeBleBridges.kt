@@ -45,6 +45,8 @@ private fun shortUuid(u: UUID): String {
         s.substring(4, 8).uppercase() else s.uppercase()
 }
 private val mainHandler = Handler(Looper.getMainLooper())
+/** Сколько ждём колбэк одной GATT-операции. Норма — доли секунды; это срок «стек потерял ответ». */
+private const val ОП_СРОК_МС = 8000L
 
 // Sibionics
 private val SIB_SERVICE = uuid16("FF30")
@@ -73,12 +75,40 @@ class BleLink(
 
     private val opQueue = ConcurrentLinkedQueue<() -> Unit>()
     private var opBusy = false
+    /* Сторож очереди (SugarLife#344, второй этаж той же поломки).
+
+       Очередь двигает opDone(), а зовут его колбэки BluetoothGatt. Не пришёл колбэк — не
+       пришёл и opDone: opBusy остаётся true НАВСЕГДА, и всё, что встало в очередь после,
+       не выполняется никогда. Молча: ни ошибки, ни лога, ни отказа.
+
+       Это то же «одна команда останавливает драйвер», но этажом ниже: срок на команду
+       вернёт ядру «нет ответа», а писать в характеристику мы после этого всё равно
+       перестанем. Android теряет колбэки — это свойство стека, не предположение.
+
+       Поколение нужно, чтобы опоздавший колбэк не сдвинул очередь дважды: сторож снял
+       операцию, следующая пошла, и тут приходит ответ на снятую. */
+    private var opПоколение = 0
+    private var opСторож: Runnable? = null
     @Synchronized private fun enqueue(op: () -> Unit) { opQueue.add(op); pump() }
-    @Synchronized private fun opDone() { opBusy = false; pump() }
+    @Synchronized private fun opDone() {
+        opСторож?.let(mainHandler::removeCallbacks); opСторож = null
+        opBusy = false; pump()
+    }
     @Synchronized private fun pump() {
         if (opBusy) return
         val op = opQueue.poll() ?: return
         opBusy = true
+        val поколение = ++opПоколение
+        val сторож = Runnable {
+            synchronized(this) {
+                if (!opBusy || opПоколение != поколение) return@Runnable
+                Log.w(TAG, "GATT-операция $address не ответила за ${ОП_СРОК_МС}мс — снимаем, иначе очередь встанет насовсем")
+                opСторож = null; opBusy = false
+            }
+            pump()
+        }
+        opСторож = сторож
+        mainHandler.postDelayed(сторож, ОП_СРОК_МС)
         op()
     }
 
@@ -215,23 +245,57 @@ class AndroidSensorBridge(context: Context, bleId: String) : SensorTransportBrid
 class AndroidPumpBridge(context: Context, bleId: String) : PumpTransportBridge {
     private val link = BleLink(context, bleId, notifyChars = setOf(RL_RESP))
     private var pending: ((ByteArray) -> Unit)? = null
+    private var срок: Runnable? = null
+
+    /* Ровно один ответ на команду — и он есть ВСЕГДА (SugarLife#344).
+     
+       Было так: колбэк складывался в `pending` и ждал нотификации моста. Не ответил мост —
+       не ответили и мы, никогда: корутина драйвера повисала навсегда, без ошибки и без
+       следующей пробы. На живом железе это выглядело как «помпа не подключается» — восемь
+       минут одной строки в логе, при живом сенсоре и мосте на связи.
+     
+       `timeoutMs` в сигнатуре был и молча игнорировался. Хуже, чем отсутствовать: ядро
+       рассчитывало на отказ по сроку и шло дальше, а расчёт не выполнялся.
+     
+       ПОЧЕМУ ПУСТОЙ МАССИВ. Колбэк принимает ByteArray и канала ошибки не имеет. Пустой
+       разбирается у ядра как `Response.Error(-1)` — «ответа нет». Соблазн прислать 0xAA
+       (RX_TIMEOUT) велик и неверен: этот код значит «мост ответил, что помпа промолчала»,
+       а у нас промолчал сам мост. Разные поломки чинятся по-разному, и путать их нельзя. */
+    private fun завершить(данные: ByteArray) {
+        val cb = synchronized(this) {
+            срок?.let(mainHandler::removeCallbacks); срок = null
+            val c = pending; pending = null; c
+        } ?: return
+        cb(данные)
+    }
 
     override fun onLink(callback: (String) -> Unit) { link.onState = callback }
     override fun connect() {
         // Ответ приходит нотификацией respCount → читаем data → отдаём ожидающему.
         link.subscribe(RL_RESP) {
-            link.read(RL_DATA) { data ->
-                val cb = pending; pending = null
-                if (data != null && cb != null) cb(data)
-            }
+            link.read(RL_DATA) { data -> завершить(data ?: ByteArray(0)) }
         }
         link.connect()
     }
     override fun command(bytes: ByteArray, timeoutMs: Long, callback: (ByteArray) -> Unit) {
-        pending = callback
+        /* Предыдущая команда, если ещё висит, завершается здесь же. Раньше её колбэк
+           просто затирался новым — то есть терялся вместе с корутиной, которая его ждала. */
+        завершить(ByteArray(0))
+        synchronized(this) { pending = callback }
+        if (timeoutMs > 0) {
+            val r = Runnable {
+                Log.w(TAG, "мост молчит ${timeoutMs}мс на команду 0x%02X — отвечаем «нет ответа»"
+                    .format(bytes.firstOrNull()?.toInt()?.and(0xFF) ?: -1))
+                завершить(ByteArray(0))
+            }
+            synchronized(this) { срок = r }
+            mainHandler.postDelayed(r, timeoutMs)
+        }
         link.write(RL_DATA, bytes)
     }
-    override fun disconnect() = link.disconnect()
+    /* Разрыв — тоже ответ. Иначе команда, отправленная перед disconnect, ждала бы свой
+       срок уже после того, как ждать стало нечего. */
+    override fun disconnect() { завершить(ByteArray(0)); link.disconnect() }
 }
 
 /** Скан эфира → engine.submitAdvertisement (JSON: bleId=MAC, name, serviceUuids, rssi). */

@@ -4,12 +4,13 @@ import Row from '@/ui/Row';
 import Section from '@/ui/Section';
 import { chevronForward, batteryHalfOutline, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
-import { useDeviceConfig, setDeviceConfig, setParam, deviceStatus, deviceStatusLabel, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
+import { useDeviceConfig, setDeviceConfig, setParam, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
 import { связь, меткаСвязи, предложениеСлияния, своиЖелезки, черезЧто, СЛОВО_КАНАЛА } from '@/domain/deviceState';
 import { мостСлота } from '@/domain/slotStatus';
+import { железоДиспетчера } from '@/domain/nearby';
 import { устройствоДляПараметров, значенияПараметров } from '@/domain/deviceParams';
 import { useSnapshot, sendIntent, type DeviceView } from '@/sources/bridge';
 
@@ -85,8 +86,19 @@ export default function DeviceSection({ onClose, cat, title }: {
     : cat === 'pump' ? pump?.model : cat === 'sensor' ? sensor?.name : null;
 
   // выбранный мост
+  /* Мост спрашиваем у снимка, локальный выбор оставляем запасным (#281, шаг 2).
+
+     Движок знает, за каким мостом стоит железка, — он это видит, а не помнит с наших
+     слов. Наш `bridgePumpId` был нужен, пока спросить было некого; теперь он отвечает
+     только там, где движка нет вовсе (браузер) или он ещё не опознал прибор.
+
+     Показываем при этом РАЗНОЕ по смыслу: движок отдаёт экземпляр моста, который реально
+     обслуживает прибор, а локальный выбор — модель моста из справочника, которую человек
+     назвал. Совпадать они обязаны, но первый вернее. */
+  const мостИзСнимка = (cat === 'pump' || cat === 'sensor') ? мостСлота(snap, cat) : null;
   const bridgeId = cat === 'pump' ? cfg.bridgePumpId : cat === 'sensor' ? cfg.bridgeSensorId : null;
   const bridge = bridgeById(bridgeId);
+  const имяМоста = мостИзСнимка?.name || bridge?.name || null;
 
   // подсказка про мост
   const bridgeHint = cat === 'pump'
@@ -193,12 +205,42 @@ export default function DeviceSection({ onClose, cat, title }: {
   const alert = useBridgeAlert();
 
   const modelIcon = cat === 'pump' ? flash : hardwareChipOutline;
-  const setModel = (id: string) => setDeviceConfig(cat === 'pump' ? { pumpId: id } : { sensorId: id });
+  /* Выбор модели уходит и в движок (SugarLife#281, шаг 2).
+
+     Пока пишем в оба места: локально — как было, и в инвентарь движка интентом
+     recordDevice. Это переходное состояние и оно намеренное: сначала запись должна
+     появиться у них и пережить перезапуск, и только потом можно убирать нашу. Убрать
+     раньше значит на один релиз остаться вообще без реестра, если что-то не сойдётся.
+
+     driverType — ключ ДРАЙВЕРА из нашего справочника (`driverKey`), а не id модели: у
+     движка драйвер один на семейство («medtronic»), а моделей в семействе десяток.
+     Модель кладём в params под своим ключом — она нужна нам для резервуара и
+     спецификаций, движку она безразлична.
+
+     Модели без драйвера (только облако) записываются с driverType = null: прибор всё
+     равно существует, просто читать его напрямую нечем. */
+  const setModel = (id: string) => {
+    setDeviceConfig(cat === 'pump' ? { pumpId: id } : { sensorId: id });
+    if (cat !== 'pump' && cat !== 'sensor') return;
+    const модель = cat === 'pump' ? pumpById(id) : sensorById(id);
+    void sendIntent({
+      type: 'recordDevice',
+      kind: cat,
+      driverType: модель?.driverKey ?? null,
+      params: {
+        /* Штатное место для модели по нашему справочнику (rev ≥ 1.14): ключ
+           `deviceModel`. Свой ключ мы придумывали, пока места не было, — и едва не
+           налетели на их служебный `model`, в котором лежал driverType. Они его
+           переименовали, мы перешли на штатный: чужих ключей больше не трогаем. */
+        deviceModel: id,
+        name: (cat === 'pump' ? pumpById(id)?.model : sensorById(id)?.name) ?? '',
+      },
+    });
+  };
   const setBridge = (id: string) => setDeviceConfig(cat === 'pump' ? { bridgePumpId: id } : { bridgeSensorId: id });
   const pickerItems = hasModel ? modelItems(cat as 'pump' | 'sensor') : [];
 
   // реестр (docs/CONNECT-UX.md §2a): статус записи — только для категорий с моделью
-  const status = (cat === 'sensor' || cat === 'pump') ? deviceStatus(cat, cfg) : null;
 
   // «Забираем через Nightscout» (§2b) — честная строка того, что реально приходит
   const nsFeed = cat === 'pump'
@@ -250,18 +292,32 @@ export default function DeviceSection({ onClose, cat, title }: {
 
   // Порядок условий = порядок препятствий: без модели не знаем даже, что искать;
   // в браузере BLE нет как класса; дальше — мост и наличие драйвера.
+  /* Известный экземпляр этого вида — если он уже заведён, подключаться надо К НЕМУ, а
+     не искать заново (SugarLife#301, замечание ядра в #301).
+
+     Поиск по построению показывает только НЕзнакомых, поэтому «Прямое чтение», ведущее
+     в скан, для заведённого прибора открывало пустой экран: он там не появится никогда.
+     Та же ловушка, что была у плитки диспетчера, только с другой стороны. */
+  const известный = железоДиспетчера(snap).find((h) => h.kind === cat) ?? null;
+
   const directSub =
     recordedNoModel ? 'сначала укажите модель — иначе неизвестно, как читать'
     : !isNative ? 'только в приложении для телефона — браузер не умеет BLE'
-    : needsBridge && !bridge ? 'нужен мост — выбрать'
+    : needsBridge && !имяМоста ? 'нужен мост — выбрать'
     : !hasBleDriver ? 'драйвер этого устройства ещё в разработке'
-    : bleLive ? 'подключено' : 'подключить';
+    : bleLive ? 'подключено'
+    : известный ? 'подключить — прибор уже заведён'
+    : 'найти прибор в эфире';
   const directTap =
     recordedNoModel ? () => setPick('model')
     : !isNative ? undefined
-    : needsBridge && !bridge ? () => setPick('bridge')
-    : hasBleDriver ? () => setScanOpen(true)
-    : undefined;
+    : needsBridge && !имяМоста ? () => setPick('bridge')
+    : !hasBleDriver ? undefined
+    : bleLive ? undefined
+    /* Заведённому — connect по его id; незнакомому — скан. Это ровно то, что ядро и
+       просило: «для включения прямого чтения нужен connect с id из hardware[]». */
+    : известный ? () => { void sendIntent({ type: 'connect', deviceId: известный.id }); }
+    : () => setScanOpen(true);
 
   /* «Забыть» должно доходить до движка, а не только до нашего конфига.
 
@@ -302,7 +358,14 @@ export default function DeviceSection({ onClose, cat, title }: {
   };
 
   return (
-    <Section title={title} subtitle={status ? deviceStatusLabel(status) : 'Устройство'} onBack={onClose}>
+    /* Состояние ушло из подзаголовка в тело (#311). В шапке оно заставляло её дышать:
+       статус меняется на каждом снимке, а шапка не должна двигаться под пальцем. Его
+       место — вплотную к содержимому, которое оно объясняет. */
+    <Section title={title} onBack={onClose}
+      /* Описание статично намеренно: состояние уже сказано ниже — в «Как получаем
+         данные» и в строке «Состояние». Втащить его сюда значило бы вернуть в шапку
+         дышащую строку, только этажом ниже. */
+      описание="Какими путями этот прибор попадает в приложение и что о нём известно. Способы не спорят друг с другом: облако работает вместе с прямым чтением, а не вместо него.">
 
         <>
             {/* Вопрос про слияние — до всего остального: пока он не решён, экран ниже
@@ -367,7 +430,10 @@ export default function DeviceSection({ onClose, cat, title }: {
                       <IonIcon icon={gitNetworkOutline} className="list-ico" />
                       <span className="pick-main">
                         <span className="list-title">Мост / трансмиттер</span>
-                        <span className="pick-sub">{bridge ? bridge.name : 'не выбран'}</span>
+                        {/* Имя из снимка вернее выбранного: движок видит, какой мост
+                            реально обслуживает прибор, а справочник помнит, какой
+                            назвали (#281). */}
+                        <span className="pick-sub">{имяМоста ?? 'не выбран'}</span>
                       </span>
                       <IonIcon icon={chevronForward} className="list-chev" />
                     </button>

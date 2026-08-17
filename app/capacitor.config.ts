@@ -1,8 +1,13 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+// ИЗДАНИЕ (core#61, #296): lite — только чтение, pro — ещё и управление помпой.
+// Берётся из окружения, чтобы издания разъезжались СБОРКОЙ: в репозитории общие файлы одинаковы для обоих,
+// и «переименовать приложение коммитом» больше не требуется.
+const EDITION = process.env.SUGARLIFE_EDITION === 'pro' ? 'pro' : 'lite';
+
 const config: CapacitorConfig = {
-  appId: 'ru.imiron.sugarlife.pro',
-  appName: 'SugarLife.Pro',
+  appId: EDITION === 'pro' ? 'ru.imiron.sugarlife.pro' : 'ru.imiron.sugarlife',
+  appName: EDITION === 'pro' ? 'SugarLife.Pro' : 'SugarLife.Lite',
   webDir: 'dist',
   backgroundColor: '#161826',
   ios: {

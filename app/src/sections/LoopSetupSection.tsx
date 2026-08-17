@@ -6,14 +6,13 @@ import { useDeviceConfig, isModelKnown } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
 import HoldButton from '@/ui/HoldButton';
 import Section from '@/ui/Section';
-import { useДочитано } from '@/ui/useДочитано';
 import {
   LOOP_MODES, limitsFor, outOfRec, anyOutOfRec, fmtLimit,
   useLoopProfile, saveLoopProfile, type LoopModeId, type LoopLimit,
 } from '@/settings/loopProfile';
 
-/* Мастер настройки профиля петли — пять шагов из прототипа (inbox/loop.zip):
-   Оборудование → Режим → Лимиты → Деградация → Проверка.
+/* Мастер настройки профиля петли — четыре шага (из пятишагового прототипа inbox/loop.zip):
+   Оборудование → Режим → Лимиты → Проверка.
 
    ТОЛЬКО интерфейс: команд в помпу отсюда не уходит, приложение на L0
    (см. docs/decisions/0004-loop-pro-redakciya.md).
@@ -21,8 +20,20 @@ import {
    Отличие от прототипа одно и намеренное: шаг «Оборудование» опрашивает РЕАЛЬНЫЕ
    устройства, а не показывает захардкоженный список. Фикцию на экране, где
    настраивают подачу, показывать нельзя. */
-type Step = 0 | 1 | 2 | 3 | 4;
-const STEPS = ['Оборудование', 'Режим петли', 'Лимиты', 'Деградация', 'Проверка'];
+/* Шагов четыре, а не пять (#279). «Деградация» уехала в раздел «Петля»: правила
+   понижения полномочий нужны не при настройке, а когда полномочия упали и человек
+   спрашивает почему. Мастер остался тем, чем должен быть, — разовой настройкой. */
+type Step = 0 | 1 | 2 | 3;
+const STEPS = ['Оборудование', 'Режим петли', 'Лимиты', 'Проверка'];
+/* Описание каждого шага — там же, где у обычных разделов, и одной строкой на шаг.
+   Раньше эти слова лежали внутри веток шага как <p class="wz-lede">, поэтому у одних
+   шагов они были, у других нет. */
+const ОПИСАНИЕ_ШАГА = [
+  'Опрос устройств. Перечень доступных режимов определяется их возможностями.',
+  'Режимы различаются объёмом полномочий алгоритма, а не набором настроек.',
+  'Пределы, за которые алгоритм не выйдет ни при каких расчётах.',
+  'Проверьте, что записывается, и подтвердите. Изменения профиля пишутся с датой и временем.',
+];
 
 type Check = { ok: 'yes' | 'no' | 'maybe'; name: string; note: string };
 
@@ -65,14 +76,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
 
   const apply = () => { saveLoopProfile({ savedAt: Date.now() }); setDone(true); };
 
-  /* Шаг «Деградация» — единственный, где «Далее» ждёт прочтения (#261). Настроек там
-     нет ни одной, только последствия: что произойдёт, когда пропадут данные НМГ или
-     разойдутся часы помпы. Пролиставший их за секунду узнает об этом в момент, когда
-     оно случится. На остальных шагах запирать нечего — человек там выбирает, а не
-     читает, и лишний барьер научил бы его проматывать не глядя. */
-  const { конец, дочитано } = useДочитано<HTMLDivElement>(step);
-  const ждётПрочтения = step === 3 && !дочитано;
-  const canNext = (step !== 1 || picked != null) && !ждётПрочтения;
+  const canNext = step !== 1 || picked != null;
 
   /* Мастер живёт в обычной шапке раздела (SugarLife#259).
 
@@ -98,8 +102,12 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
       title={done ? 'Готово' : STEPS[step]}
       /* Запертая кнопка обязана объяснять себя: без подписи «Далее» просто не
          нажимается, и это выглядит поломкой, а не условием. */
-      subtitle={done ? 'профиль записан'
-        : ждётПрочтения ? 'дочитайте до конца' : `Шаг ${step + 1} из 5`}
+      subtitle={done ? 'профиль записан' : `Шаг ${step + 1} из 4`}
+      /* Описание шага стоит там же, где описание любого раздела, и одним видом с ним.
+         Раньше шаг печатал своё имя ВТОРОЙ раз крупным заголовком, а под ним свой lede:
+         человек читал «Оборудование», потом снова «Оборудование» размером больше — и
+         только третьей строкой узнавал, что происходит (#311). */
+      описание={done ? 'Профиль записан на этом устройстве. Подача не включена: приложение остаётся на L0.' : ОПИСАНИЕ_ШАГА[step]}
       подШапкой={!done ? (
         <div className="wz-prog">
           {STEPS.map((s, i) => (
@@ -107,7 +115,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
           ))}
         </div>
       ) : undefined}
-      действие={!done && step < 4 ? (
+      действие={!done && step < 3 ? (
         <button className="head-next" disabled={!canNext}
           onClick={() => { setStep((step + 1) as Step); setEditing(null); }}>
           Далее
@@ -120,7 +128,6 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
 
         {done ? (
           <>
-            <h2 className="wz-h">Профиль применён</h2>
             <div className="wz-fixed ok">
               <div className="wz-fixed-v ok">Петля стартует на уровне L2</div>
               <div className="sheet-note">
@@ -134,11 +141,9 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
           </>
         ) : (
           <>
-            <h2 className="wz-h">{STEPS[step]}</h2>
 
             {step === 0 && (
               <>
-                <p className="wz-lede">Опрос устройств. Перечень доступных режимов определяется их возможностями.</p>
                 {checks.map((c) => (
                   <div key={c.name} className="wz-card wz-hw">
                     <IonIcon className={'wz-ic ' + c.ok} icon={c.ok === 'yes' ? checkmarkCircle : c.ok === 'no' ? closeCircle : alertCircle} />
@@ -153,7 +158,6 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
 
             {step === 1 && (
               <>
-                <p className="wz-lede">Режимы различаются объёмом полномочий алгоритма, а не набором настроек.</p>
                 {LOOP_MODES.map((m) => (
                   <button
                     key={m.id}
@@ -176,7 +180,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
 
             {step === 2 && (
               <>
-                <p className="wz-lede">
+                <p className="sheet-note">
                   Значения по умолчанию — рекомендованные. Состав лимитов определяется режимом «{mode.name}».
                 </p>
                 {limits.length === 0 && (
@@ -272,35 +276,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
 
             {step === 3 && (
               <>
-                <p className="wz-lede">Правила понижения полномочий. Не настраиваются.</p>
-                {([
-                  ['нет данных НМГ', `через ${profile.values.stale} мин полномочия понижаются на ступень, далее ещё на одну`],
-                  ['доза не подтверждена', 'микроболюсы снимаются немедленно'],
-                  ['расхождение часов помпы', 'понижение до L1: временную привязку доз восстановить нельзя, активный инсулин не считается'],
-                  ['потеря связи', 'ВБС отменяется, помпа возвращается к базальному профилю'],
-                  ['перезапуск приложения', 'старт с L2 с последующим подъёмом'],
-                  ['восстановление', 'после трёх циклов без замечаний, не ранее 15 минут'],
-                ] as [string, string][]).map(([a, b]) => (
-                  <div key={a} className="wz-rule">
-                    <span className="wz-rule-a">{a}</span>
-                    <span className="wz-rule-b">{b}</span>
-                  </div>
-                ))}
-                <div className="wz-fixed ok">
-                  <div className="wz-fixed-n">Нижняя ступень — не нулевая подача</div>
-                  <div className="wz-fixed-v ok">возврат к базальному профилю помпы</div>
-                  <div className="sheet-note">
-                    Полное прекращение подачи опасно так же, как избыток. Крайняя мера — вернуть управление профилю помпы.
-                  </div>
-                </div>
-                {/* Метка конца: пока она не показалась на экране, «Далее» заперта. */}
-                <div ref={конец} />
-              </>
-            )}
-
-            {step === 4 && (
-              <>
-                <p className="wz-lede">Изменения профиля записываются с датой и временем.</p>
+                <p className="sheet-note">Изменения профиля записываются с датой и временем.</p>
                 <div className="wz-card wz-sum">
                   <div className="wz-srow"><span>Режим</span><b>{mode.code} · {mode.name}</b></div>
                   {limits.map((l) => (

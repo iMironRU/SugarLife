@@ -1,6 +1,8 @@
 import { IonIcon, IonSpinner } from '@ionic/react';
 import { useTab } from '@/app/nav';
 import { water, nutrition, medkit } from 'ionicons/icons';
+import ЧипыПотоков, { type Поток } from '@/ui/Потоки';
+
 import { useState } from 'react';
 import { useEntries, useTreatments } from '@/sources/db';
 import { useBackfilling } from '@/sources/backfill';
@@ -13,6 +15,8 @@ import { DataGate } from '@/ui/NotConfigured';
 import MetricBars from '@/charts/MetricBars';
 import Screen from '@/ui/Screen';
 import { AnalyticsSection, VisitNoteSection } from '@/sections/lazy';
+import { useAnalysis, непрочитанныеВажные } from '@/domain/useAnalysis';
+import { useSeenInsights } from '@/settings/seenInsights';
 
 type MetricKey = 'glucose' | 'carbs' | 'insulin';
 type Cell = [string, string, string];
@@ -48,8 +52,24 @@ const РАЗДЕЛЫ = [
 ] as const;
 type Раздел = typeof РАЗДЕЛЫ[number]['key'];
 
+/* Ключи метрик исторически английские, потоки — русские. Перевод в одном месте и
+   рядом, а не по всему файлу: иначе третий такой список разъедется с первыми двумя. */
+const ПОТОК_МЕТРИКИ: Record<MetricKey, Поток> = { glucose: 'глюкоза', carbs: 'углеводы', insulin: 'инсулин' };
+const МЕТРИКА_ПОТОКА: Record<Поток, MetricKey> = { глюкоза: 'glucose', углеводы: 'carbs', инсулин: 'insulin' };
+
 export default function Metrics() {
   const [раздел, setРаздел] = useState<Раздел>('метрики');
+  /* Счётчик — и на вкладке в панели, и здесь (SugarLife#275).
+
+     Цифра внизу говорит «есть непрочитанное», но не говорит где: человек открывает
+     «Метрики» и оказывается перед тремя разделами, из которых цифра относилась к
+     одному. Показать её только в панели значит поставить вопрос и не ответить.
+
+     Считается тем же кодом и из тех же кэшей, что и в панели: два числа про одно и то
+     же обязаны совпадать, а совпадают они надёжно, только если считаются одинаково. */
+  const { analysis } = useAnalysis(14);
+  const виденные = useSeenInsights();
+  const новых = непрочитанныеВажные(analysis, виденные);
   /* Вкладка видна? Все пять смонтированы разом ради свайпа, но читать базу
      невидимому экрану незачем — это и были рывки на соседних вкладках. */
   const активна = useTab() === 0;
@@ -103,12 +123,6 @@ export default function Metrics() {
       : `Среднее по ${id.coveredDays} дн. с полными данными (из ${id.totalDays}). У вас помпа Medtronic через AAPS: базал и коррекции петли идут через temp basal — поэтому доза выше «обычного базала». Дни с неполной выгрузкой в Nightscout не учитываются, иначе среднее занижается.`,
   };
 
-  const chips: { key: MetricKey; label: string; color: string; icon: string }[] = [
-    { key: 'glucose', label: 'Глюкоза', color: 'var(--c-glu)', icon: water },
-    { key: 'carbs', label: 'Углеводы', color: 'var(--c-carb)', icon: nutrition },
-    { key: 'insulin', label: 'Инсулин', color: 'var(--c-ins)', icon: medkit },
-  ];
-
   return (
     <Screen tab={0}>
           <DataGate>
@@ -118,7 +132,10 @@ export default function Metrics() {
           <div className="period sec-switch">
             {РАЗДЕЛЫ.map((р) => (
               <button key={р.key} className={'period-seg' + (раздел === р.key ? ' on' : '')}
-                onClick={() => setРаздел(р.key)}>{р.label}</button>
+                onClick={() => setРаздел(р.key)}>
+                {р.label}
+                {р.key === 'анализ' && новых > 0 && <span className="sec-badge">{новых}</span>}
+              </button>
             ))}
           </div>
 
@@ -136,18 +153,9 @@ export default function Metrics() {
             ))}
           </div>
 
-          <div className="metric-chips">
-            {chips.map((c) => {
-              const on = metric === c.key;
-              return (
-                <button key={c.key} className={'metric-chip' + (on ? ' on' : '')} onClick={() => setMetric(c.key)}
-                  style={on ? { borderColor: `color-mix(in srgb, ${c.color} 60%, transparent)`, background: `color-mix(in srgb, ${c.color} 20%, var(--color-neutral-900))` } : undefined}>
-                  <IonIcon icon={c.icon} style={{ color: on ? c.color : 'var(--color-neutral-500)' }} />
-                  <span>{c.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* Общая деталь: набор, порядок и значки те же, что в источниках. */}
+          <ЧипыПотоков выбран={ПОТОК_МЕТРИКИ[metric]}
+            выбрать={(п) => setMetric(МЕТРИКА_ПОТОКА[п])} />
           </div>
 
           {gathering && (

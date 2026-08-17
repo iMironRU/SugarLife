@@ -6,11 +6,18 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import android.Manifest
+import android.content.IntentFilter
 import android.content.Intent
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
+import android.location.LocationManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import androidx.core.location.LocationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import ru.imiron.sugarlife.engine.SugarLifeEngine
@@ -68,6 +75,57 @@ class SugarLifeBridgePlugin : Plugin() {
         if (missing.isNotEmpty()) activity?.let { ActivityCompat.requestPermissions(it, missing.toTypedArray(), 7401) }
     }
 
+    /**
+     * Сообщить движку, можем ли мы вообще слушать эфир (core#61, SugarLife#331).
+     *
+     * Провал тихий: на Android 10 при выключенной СЛУЖБЕ геолокации скан возвращает пустой список без
+     * единой ошибки — «Пока никого» тогда означает не «прибора нет рядом», а «система не дала искать».
+     * Отличить может только натив, поэтому факт уходит в движок, а показывает его интерфейс.
+     *
+     * Вызываем при старте и при возврате в приложение: человек мог включить Bluetooth или геолокацию
+     * в шторке, не перезапуская нас.
+     */
+    private fun reportScanReadiness() {
+        val bt = (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+        // Геолокация нужна для скана только до Android 12; дальше — null, чтобы движок не требовал лишнего.
+        val locationNeeded = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+        val locationOn = if (!locationNeeded) null else {
+            val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            lm?.let { LocationManagerCompat.isLocationEnabled(it) }
+        }
+        val json = buildString {
+            append("{\"bluetoothOn\":").append(bt?.isEnabled ?: false)
+            append(",\"permissionsGranted\":").append(hasBlePermissions())
+            if (locationOn != null) append(",\"locationEnabled\":").append(locationOn)
+            append("}")
+        }
+        Log.i(TAG, "scan readiness: $json")
+        engine.submitScanReadiness(json)
+    }
+
+    override fun handleOnResume() {
+        super.handleOnResume()
+        reportScanReadiness()   // могли включить Bluetooth/геолокацию в шторке, не перезапуская приложение
+    }
+
+    /**
+     * Слушаем систему, а не только возвраты в приложение: человек включает Bluetooth или геолокацию прямо
+     * из шторки, НЕ уходя с нашего экрана. Без этого он исправит причину и продолжит читать подсказку
+     * про уже исправленное — то есть мы будем врать ровно тому, кто нас послушался.
+     */
+    private val systemStateWatcher = object : BroadcastReceiver() {
+        override fun onReceive(c: Context?, i: Intent?) = reportScanReadiness()
+    }
+
+    private fun watchSystemState() {
+        val f = IntentFilter().apply {
+            addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+            addAction(LocationManager.PROVIDERS_CHANGED_ACTION)
+        }
+        runCatching { context.registerReceiver(systemStateWatcher, f) }
+            .onFailure { Log.w(TAG, "не удалось подписаться на состояние системы: ${it.message}") }
+    }
+
     override fun load() {
         Log.i(TAG, "load: attach to engine")
         telemetrySink = { json -> engine.submitTelemetry(json) }   // натив→движок телеметрия (issue #38)
@@ -82,6 +140,8 @@ class SugarLifeBridgePlugin : Plugin() {
         // сохранённые сенсор/помпу из БД (без ожидания скана). Нет разрешений — отложим до первого скана
         // (не спамим запрос на старте; restore всё равно сработает при первом attachDriverProvider).
         if (hasBlePermissions()) EngineHolder.ensureProvider(context.applicationContext)
+        reportScanReadiness()
+        watchSystemState()
     }
 
     @PluginMethod
@@ -115,6 +175,8 @@ class SugarLifeBridgePlugin : Plugin() {
     override fun handleOnDestroy() {
         // Только отписываемся. Движок НЕ останавливаем — он живёт в EngineHolder, процесс держит SugarLifeService.
         unsubscribe?.invoke()
+        // И от системных событий тоже: receiver переживёт плагин, если его не снять.
+        runCatching { context.unregisterReceiver(systemStateWatcher) }
     }
 
     companion object {

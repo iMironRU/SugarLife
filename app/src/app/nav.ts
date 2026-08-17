@@ -78,3 +78,4 @@ export function useCloseOnLeave(myTab: number, ...closers: Array<() => void>): v
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, myTab]);
 }
+

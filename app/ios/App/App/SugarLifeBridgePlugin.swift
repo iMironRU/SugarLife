@@ -39,6 +39,24 @@ final class SharedCentral: NSObject, CBCentralManagerDelegate {
     private var pending: [UUID] = []             // connect до poweredOn — отложить
     private var wantScan = false
     var scanHandler: ((CBPeripheral, [String: Any], NSNumber) -> Void)?
+    /// Кому сказать, что состояние Bluetooth изменилось (core#61, SugarLife#331): выключили адаптер,
+    /// отказали в доступе. Без этого «Пока никого» означает одновременно «прибора нет» и «нам не дали искать».
+    var readinessHandler: (() -> Void)?
+
+    /// Можем ли слушать эфир прямо сейчас. `nil` — CoreBluetooth ещё не определился (состояние .unknown):
+    /// врать «нельзя» в этот момент нельзя, это нормальная фаза запуска.
+    var bluetoothOn: Bool? {
+        switch central.state {
+        case .poweredOn: return true
+        case .unknown, .resetting: return nil
+        default: return false
+        }
+    }
+    /// Дал ли человек доступ к Bluetooth. На iOS отказ выглядит как «ничего не находится» — молча.
+    var authorized: Bool {
+        if #available(iOS 13.1, *) { return CBCentralManager.authorization == .allowedAlways }
+        return true
+    }
 
     override init() { super.init(); central = CBCentralManager(delegate: self, queue: nil) }
 
@@ -58,6 +76,7 @@ final class SharedCentral: NSObject, CBCentralManagerDelegate {
     func stopScan() { wantScan = false; central.stopScan() }
 
     func centralManagerDidUpdateState(_ c: CBCentralManager) {
+        readinessHandler?()   // выключили/включили Bluetooth или ответили на запрос доступа — сказать движку
         guard c.state == .poweredOn else { return }
         let p = pending; pending = []; p.forEach { connect($0) }
         if wantScan { c.scanForPeripherals(withServices: nil) }
@@ -204,21 +223,42 @@ private let rlRespCount = CBUUID(string: "6E6C7910-B89E-43A5-A0FE-50C5E2B81F4A")
 final class PumpBridge: PumpTransportBridge {
     private let link: BleLink
     private var pending: ((KotlinByteArray) -> Void)?
+    private var срок: DispatchWorkItem?
     init(bleId: String) { link = BleLink(bleId: bleId, service: rlService, characteristics: [rlData, rlRespCount, batteryChar, firmwareChar]) }
     func onLink(callback: @escaping (String) -> Void) { link.onState = callback }
+
+    /* Ровно один ответ на команду — и он есть всегда (SugarLife#344). Зеркало Android;
+       поймали на Android, но код здесь был тот же, и повисло бы так же.
+
+       Пустой массив, а не 0xAA: у колбэка нет канала ошибки, пустой разбирается ядром как
+       «ответа нет», а 0xAA значит «мост ответил, что помпа промолчала» — другая поломка. */
+    private func завершить(_ данные: Data) {
+        срок?.cancel(); срок = nil
+        guard let cb = pending else { return }
+        pending = nil
+        cb(данные.toKotlin())
+    }
+
     func connect() {
         link.subscribe(rlRespCount) { [weak self] _ in
-            self?.link.read(rlData) { data in
-                if let d = data, let cb = self?.pending { self?.pending = nil; cb(d.toKotlin()) }
-            }
+            self?.link.read(rlData) { data in self?.завершить(data ?? Data()) }
         }
         link.connectNow()
     }
     func command(bytes: KotlinByteArray, timeoutMs: Int64, callback: @escaping (KotlinByteArray) -> Void) {
+        завершить(Data())          // предыдущая команда не теряется молча
         pending = callback
+        if timeoutMs > 0 {
+            let r = DispatchWorkItem { [weak self] in
+                NSLog("SugarLifeBLE: мост молчит \(timeoutMs)мс — отвечаем «нет ответа»")
+                self?.завершить(Data())
+            }
+            срок = r
+            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(Int(timeoutMs)), execute: r)
+        }
         link.write(bytes.toData(), to: rlData)
     }
-    func disconnect() { link.disconnect() }
+    func disconnect() { завершить(Data()); link.disconnect() }
 }
 
 // MARK: - Скан эфира → engine.submitAdvertisement
@@ -273,7 +313,28 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             // Персист-БД (нативный SQLite) → история переживает перезапуск. Фабрику собирает Swift (экспорт :persistence).
-            let e = SugarLifeEngine(driverProvider: nil, withSimulators: false, dbDriverFactory: DatabaseDriverFactory())
+            /* Конструктор движка — три аргумента, и это теперь правило, а не совпадение
+               (SugarLife#292). Kotlin/Native не переносит в Swift значения по умолчанию,
+               поэтому ЛЮБОЙ новый параметр конструктора молча ломает сборку оболочки, и
+               сборка ядра этого не ловит — плагин живёт у нас. Настройки движка ядро
+               теперь добавляет свойствами; таймаут квитанции (writeTimeoutMs) стал одним
+               из них и здесь не называется вовсе — значение живёт в ядре в единственном
+               экземпляре. */
+            let e = SugarLifeEngine(driverProvider: nil, withSimulators: false,
+                                    dbDriverFactory: DatabaseDriverFactory())
+            // Предпосылки скана (core#61, SugarLife#331): знает только платформа, показать обязан интерфейс —
+            // значит факт идёт через движок. На iOS геолокация к скану отношения не имеет, поле не шлём вовсе.
+            let reportReadiness = { [weak e] in
+                guard let e = e else { return }
+                let bt = SharedCentral.shared.bluetoothOn
+                var json = "{\"permissionsGranted\":\(SharedCentral.shared.authorized)"
+                if let bt = bt { json += ",\"bluetoothOn\":\(bt)" }
+                json += "}"
+                NSLog("SugarLife: scan readiness \(json)")
+                _ = e.submitScanReadiness(json: json)
+            }
+            SharedCentral.shared.readinessHandler = reportReadiness
+            reportReadiness()
             self.engine = e
             telemetrySink = { [weak self] json in _ = self?.engine?.submitTelemetry(json: json) }   // натив→движок телеметрия (issue #38)
             self.unsubscribe = e.subscribe(onSnapshot: { [weak self] json in

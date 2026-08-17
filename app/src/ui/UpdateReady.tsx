@@ -2,7 +2,8 @@ import { refreshOutline } from 'ionicons/icons';
 import Notice from './Notice';
 import { useState } from 'react';
 import { useUpdateState, applyUpdate } from '@/platform/swUpdate';
-import { APP_BUILD } from '@/platform/appUpdate';
+import { APP_BUILD, isNative, применитьOta } from '@/platform/appUpdate';
+import { useОтаОбновление } from '@/platform/otaWatch';
 import { прочитать, записать } from '@/settings/storage';
 
 /* «Обновление скачано и ждёт» — на «Сегодня», а не только в настройках (SugarLife#150).
@@ -41,11 +42,18 @@ const отложено = (): boolean => прочитать(КЛЮЧ) === APP_BUI
 
 export default function UpdateReady() {
   const upd = useUpdateState();
+  /* Нативная половина (#312). В вебе обновление УЖЕ скачано service worker'ом и ждёт
+     перезапуска; в нативе оно только найдено — качать будем по нажатию. Разница
+     существенная для текста: обещать «пара секунд» там, где сейчас начнётся загрузка
+     десятка мегабайт по мобильной сети, нельзя. */
+  const ota = useОтаОбновление();
+  const [ставлю, setСтавлю] = useState(false);
   const [скрыто, setСкрыто] = useState(отложено);
 
+  if (скрыто) return null;
   /* Только 'available'. «Проверяю», «актуально» и ошибка проверки — состояния экрана
      настроек: они отвечают на вопрос, который здесь никто не задавал. */
-  if (upd.status !== 'available' || скрыто) return null;
+  if (!(isNative ? ota : upd.status === 'available')) return null;
 
   const потом = () => { записать(КЛЮЧ, APP_BUILD); setСкрыто(true); };
 
@@ -53,17 +61,26 @@ export default function UpdateReady() {
      тем, из-за чего кнопки пришлось увеличивать отдельно, а «Потом» вести себя иначе,
      чем у подсветок. Вид — «сообщение»: обновление не про диабет и тревожным быть не
      должно, но и молчать о нём нельзя (#150). */
+  const занят = ставлю || upd.applying;
   return (
-    <Notice вид="сообщение" значок={refreshOutline} заголовок="Обновление скачано"
+    <Notice вид="сообщение" значок={refreshOutline}
+      заголовок={isNative ? 'Есть новая сборка' : 'Обновление скачано'}
       действия={(
         <>
-          <button className="changed-btn is-undo" onClick={applyUpdate} disabled={upd.applying}>
-            {upd.applying ? 'Обновляю…' : 'Обновить'}
+          <button className="changed-btn is-undo" disabled={занят}
+            onClick={() => {
+              if (!isNative) { applyUpdate(); return; }
+              setСтавлю(true);
+              void применитьOta(ota!).then((ок) => { if (!ок) setСтавлю(false); });
+            }}>
+            {занят ? 'Обновляю…' : 'Обновить'}
           </button>
-          <button className="changed-btn" onClick={потом} disabled={upd.applying}>Потом</button>
+          <button className="changed-btn" onClick={потом} disabled={занят}>Потом</button>
         </>
       )}>
-      Перезапустит приложение — пара секунд.
+      {isNative
+        ? `Сборка ${ota!.build}. Скачается и перезапустит приложение — лучше по Wi-Fi.`
+        : 'Перезапустит приложение — пара секунд.'}
     </Notice>
   );
 }

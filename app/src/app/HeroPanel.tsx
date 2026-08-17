@@ -12,8 +12,10 @@ import { syncToActiveScreen, сразу } from '@/app/panel';
 import { связь, связьГлюкозы, источникПомпы, устройствоРоли, меткаСвязи, видКруга, черезЧтоСпорное, type Связь } from '@/domain/deviceState';
 import { СТРЕЛКА, направление } from '@/domain/trend';
 import { useEntries } from '@/sources/db';
+import { выбратьПоказание, ОТСТАВАНИЕ_МС } from '@/domain/latestGlucose';
 import { activeInsulin } from '@/domain/loopValue';
 import { useSnapshot } from '@/sources/bridge';
+import { расходка } from '@/domain/supplies';
 import CircleSparkline from '@/charts/CircleSparkline';
 
 const DASH = '—';
@@ -100,13 +102,31 @@ export default function HeroPanel() {
      по которому решают, колоть ли, это недопустимо.
      Контракт 1.7 отдаёт latestAtMs ровно для этого; фолбэк на стор — на случай
      старого моста, который поля ещё не присылает. */
-  const latestAt = m?.latestAtMs ?? latest?.t ?? null;
+  /* Свежайшее из двух, а не «всегда мост» (#326).
 
-  // Головное значение и тренд — из моста (контракт); фолбэк на стор до первого снимка.
-  // m.glucose — «сырая» строка движка (может включать единицу, напр. "6.1 mmol/L" у
-  // нативного скелета) — для отображения в круге используем короткое число из glucoseMmol,
-  // единицу показывает соседний .hp-unit.
-  const glucose = m ? (m.glucoseMmol != null ? toUnits(m.glucoseMmol) : m.glucose) : latest ? toUnits(latest.mmol) : DASH;
+     С телефона пришло: в списке 9,1 за 00:21, в круге 8,6 и «10 минут назад». Оба
+     числа честные, просто добытые разными путями одного источника: круг брал у моста,
+     список — из нашей базы, и рассинхрон между ними ничем не ограничен.
+
+     Брать всегда базу тоже нельзя: с нативным ядром источником может быть сенсор
+     напрямую, и тогда мост знает то, чего в базе ещё нет. Правило в domain/latestGlucose. */
+  const последнееБазы = историяЧаса.length
+    ? { mmol: историяЧаса[историяЧаса.length - 1].mmol, atMs: историяЧаса[историяЧаса.length - 1].t }
+    : null;
+  /* Третьим кандидатом — стор: из него построен список «последних измерений», и без
+     него круг мог промолчать при непустом списке прямо под собой. */
+  const выбор = выбратьПоказание(
+    m?.glucoseMmol != null && m.latestAtMs != null ? { mmol: m.glucoseMmol, atMs: m.latestAtMs } : null,
+    последнееБазы,
+    latest ? { mmol: latest.mmol, atMs: latest.t } : null,
+  );
+  const latestAt = выбор.показание?.atMs ?? m?.latestAtMs ?? latest?.t ?? null;
+
+  // Головное значение — из выбранного источника; строка моста остаётся запасной на
+  // случай, когда числом он не поделился (у нативного скелета glucose бывает строкой
+  // «6.1 mmol/L» целиком, единицу показывает соседний .hp-unit).
+  const glucose = выбор.показание ? toUnits(выбор.показание.mmol)
+    : m ? m.glucose : latest ? toUnits(latest.mmol) : DASH;
   /* Одна таблица стрелок на всё приложение (domain/trend.ts). Их было две — по словам
      контракта здесь и по кодам Nightscout в сторе, — и при неизвестном направлении они
      вели себя по-разному: одна молчала, вторая рисовала «ровно» (#215). */
@@ -115,11 +135,16 @@ export default function HeroPanel() {
      любого моста (sources/historySync.ts) — иначе стрелка пропала бы ровно тогда,
      когда сенсор читается напрямую. */
   const arrow = СТРЕЛКА[направление(историяЧаса)] ?? '';
+  const латест = latestAt;
   const ago = latestAt != null ? agoText(latestAt) : DASH;
   const minsAgo = latestAt != null ? Math.round((Date.now() - latestAt) / 60000) : null;
   const fresh = minsAgo == null ? DASH : minsAgo < 1 ? 'сейчас' : minsAgo + ' мин';
 
-  const reservoir = dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : DASH;
+  /* Расходка — из снимка, Nightscout запасным (#183). Разница не в источнике: у
+     облачного числа нет ни возраста, ни принадлежности к конкретной помпе, и «37 ед»
+     часовой давности выглядят так же, как свежие. */
+  const расх = расходка(снимок, { reservoir: dev?.reservoir, pumpBattery: dev?.pumpBattery, at: dev?.at });
+  const reservoir = расх.остаток != null ? Math.round(расх.остаток) + ' ед' : DASH;
   const pumpStatus = shortStatus(dev?.status);
   /* Активный инсулин в круге. Раньше строка просто исчезала, когда цикл молчал, —
      и пустота читалась как «инсулина нет». Теперь она на месте всегда, а неизвестное
@@ -131,7 +156,7 @@ export default function HeroPanel() {
   // (OrangeLink/RileyLink, pump.extended.OrangeLinkBattery от AAPS). Показываем только
   // то, что реально известно, без пустых иконок.
   const batteries: { id: string; icon: string; value: number | null }[] = [
-    { id: 'pump', icon: flash, value: dev?.pumpBattery ?? null },
+    { id: 'pump', icon: flash, value: расх.заряд },
     { id: 'phone', icon: phonePortraitOutline, value: dev?.uploaderBattery ?? null },
     { id: 'mount', icon: gitNetworkOutline, value: dev?.mountBattery ?? null },
   ].filter((b) => b.value != null);
@@ -171,7 +196,24 @@ export default function HeroPanel() {
      число просто перерисовывается новым значением, промежуточных кадров нет. */
   const круг = видКруга(снимок);
   const кругЖдёт = круг === 'ждём';
-  const кругОтстал = круг === 'отстало';
+  /* Отстал не только по мнению моста, но и когда база его обогнала (#326).
+
+     Мост считает себя живым, пока показанию меньше пятнадцати минут, — а человек
+     видит в списке число свежее того, что в круге, и вопрос «почему так» возникает
+     задолго до нашего порога. Молчание здесь хуже отставания: два разных числа без
+     объяснения читаются как поломка. */
+  /* «Отстало» — про ПОКАЗАННОЕ число, а не про мнение моста (#326).
+
+     Мост может считать себя отставшим, а в круге при этом уже стоит свежее значение из
+     базы: приглушать его было бы неправдой в другую сторону. И наоборот — мост считает
+     себя живым до пятнадцати минут, а человек видит в списке число свежее того, что в
+     круге, и спрашивает «почему», задолго до нашего порога.
+
+     Поэтому решает возраст того, что показано, а состояние моста остаётся источником
+     только для «ждём»: у него ещё не было ни одного показания, и возраст мерить не у
+     чего. */
+  const кругОтстал = (латест != null && Date.now() - латест > ОТСТАВАНИЕ_МС)
+    || (круг === 'отстало' && выбор.откуда !== 'база');
   const syncState = !online ? 'offline'
     : (m?.status === 'Delayed' || status === 'stale' || status === 'error') ? 'stale'
     : liveNow ? 'live'
@@ -211,7 +253,7 @@ export default function HeroPanel() {
   const sensorDay = status !== 'off' && ages.sensor ? ages.sensor.days + 1 : null;
   const nmgSub = sensorDay != null ? 'датчик' : 'обновлено';
   const nmgVal = sensorDay != null ? 'день ' + sensorDay : fresh;
-  const daysLeft = dev?.reservoir != null && extras.tdd ? dev.reservoir / extras.tdd : null;
+  const daysLeft = расх.остаток != null && extras.tdd ? расх.остаток / extras.tdd : null;
   const resSub2 = daysLeft != null ? '≈ ' + daysHoursText(daysLeft) : 'резервуар';
   // часики на значениях из кеша, пока идёт свежая загрузка (текст не подменяем)
   const staleSensor = extras.stale && sensorDay != null;

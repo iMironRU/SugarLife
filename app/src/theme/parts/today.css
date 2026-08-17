@@ -288,7 +288,10 @@
   border-bottom: 1px solid var(--color-neutral-800);
 }
 .sec-switch .period-seg {
-  flex: 1; min-height: 44px; padding: 0 6px; border-radius: 0;
+  /* Резиновые и в одну строку: вкладки делят ширину поровну и не переносятся. Перенос
+     делал одну вкладку вдвое выше соседних, и полоса дёргалась при переключении. */
+  flex: 1 1 0; min-width: 0; white-space: nowrap;
+  min-height: 44px; padding: 0 6px; border-radius: 0;
   background: none; border: 0; box-shadow: none;
   font-size: 14px; font-weight: 500; color: var(--color-neutral-400);
   border-bottom: 2px solid transparent; margin-bottom: -1px;
@@ -296,4 +299,79 @@
 .sec-switch .period-seg.on {
   background: none; color: var(--color-text); font-weight: 600;
   border-bottom-color: var(--color-accent);
+}
+
+/* Счётчик непрочитанного на вкладке раздела (#275). Тот же смысл, что и у значка в
+   нижней панели, поэтому и вид тот же — иначе человек не свяжет одно с другим и решит,
+   что это разные новости. */
+.sec-badge {
+  margin-left: 6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600; line-height: 1;
+  background: var(--color-accent); color: var(--color-neutral-950, #12131c);
+}
+
+/* Слоты «откуда берутся данные» (#277). Карточка, а не строка списка: у слота есть
+   раскрываемое содержимое, и строка, которая иногда разворачивается в три, читается
+   как сбой вёрстки. */
+.slot-card {
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+  border-radius: 16px; overflow: hidden; margin-top: 10px;
+}
+.slot-top {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px 14px;
+  background: none; border: 0; cursor: pointer; text-align: left;
+  font-family: var(--font-body); color: var(--color-text);
+}
+.slot-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+.slot-dot.ok { background: var(--c-glu); }
+.slot-dot.cloud { background: var(--color-accent); }
+.slot-dot.off { background: var(--color-neutral-600); }
+.slot-chev { color: var(--color-neutral-500); font-size: 15px; transition: transform .18s; }
+.slot-chev.on { transform: rotate(90deg); }
+/* Шапка слота перестала быть кнопкой: слоты переключаются вкладками, а не раскрытием.
+   Курсор и отклик на нажатие у неподвижной строки обещали бы действие, которого нет. */
+.slot-top.как-подпись { cursor: default; }
+/* Точка состояния — на самой вкладке: обзор трёх слотов разом ушёл вместе с
+   аккордеоном, и без неё «сахар не идёт» стало бы видно только внутри вкладки. */
+.sec-switch .period-seg .slot-dot { margin-right: 7px; vertical-align: middle; display: inline-block; }
+/* Вложенные вкладки — тише внешних. Два одинаковых по весу ряда читаются как два
+   равноправных выбора, хотя второй живёт внутри первого: сперва решают, о чём раздел,
+   и только потом — про какой слот. Разница в весе и есть эта вложенность. */
+.sec-switch.слоты {
+  /* .period даёт плашку с фоном и скруглением — второй такой же ряд читался бы как
+     равный внешнему. Гасим и фон, и скругление, и внутреннее поле: остаётся только
+     подчёркивание выбранного. */
+  background: none; border: 0; border-radius: 0; padding: 0;
+  border-bottom: 1px solid var(--color-neutral-800); margin-top: 2px;
+}
+.sec-switch.слоты .period-seg { font-size: 13.5px; min-height: 40px; }
+
+/* Причина — рядом с ответом, а не сноской. Приглушённая рамка вместо красной: это не
+   поломка, а объяснение, почему выбран обходной путь. */
+.slot-why {
+  margin: 0 14px 12px; padding: 9px 11px; border-radius: 12px;
+  font-size: 12.5px; line-height: 1.45; color: var(--color-neutral-300);
+  background: color-mix(in srgb, var(--c-carb) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-carb) 26%, transparent);
+}
+.slot-src { border-top: 1px solid var(--color-neutral-800); }
+/* Пояснение внутри карточки живёт по её отступам, а не по общим: без этого «источников
+   нет» уезжало к самому краю и выглядело вывалившимся из карточки. */
+.slot-src .metric-note { margin: 0; padding: 12px 14px; }
+/* То же и для обычного списка: пояснение внутри карточки живёт по её отступам. Своих у
+   .metric-note нет — они рассчитаны на страницу, и у края карточки текст прилипал. */
+.list > .metric-note { margin: 0; padding: 12px 14px; }
+.src-tag {
+  flex: 0 0 auto; font-size: 10.5px; padding: 3px 7px; border-radius: 7px;
+  color: var(--color-neutral-400); border: 1px solid var(--color-neutral-700);
+}
+.src-tag.now { color: var(--c-glu); border-color: color-mix(in srgb, var(--c-glu) 45%, transparent); }
+
+/* Строка про учётку внутри слота — кнопка, а не сноска: за ней стоит действие, и
+   выглядеть она должна нажимаемой. Цвет тот же, что у причины: это её продолжение, а не
+   отдельная тревога. */
+.слот-учётка {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  font-family: var(--font-body); font-size: 12.5px; line-height: 1.45;
 }

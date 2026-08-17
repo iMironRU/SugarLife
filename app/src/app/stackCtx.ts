@@ -12,3 +12,4 @@ export interface StackApi {
 export const StackCtx = createContext<StackApi>({ push: () => {}, pop: () => {}, depth: 0 });
 
 export const useStack = (): StackApi => useContext(StackCtx);
+

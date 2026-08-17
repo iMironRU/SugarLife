@@ -33,6 +33,67 @@ android {
             keyPassword 'android'
         }
     }
+    // ИЗДАНИЯ (SugarLife#296, core#61). Разъезжаются СБОРКОЙ, а не правкой общих файлов: применение
+    // «переименовать приложение в репозитории» превращало единственное издание в другое — у всех, кто
+    // поставил Lite, обновление перестало бы приходить, потому что рядом встал бы другой пакет с пустой
+    // историей. Здесь же общие файлы не отличаются между изданиями вовсе.
+    //
+    // lite — только чтение. pro — ещё и управление помпой; ядро в pro собирается с -Pedition=pro
+    // (см. ../build-engine.sh), и кода отправки команд в lite-артефакте нет физически.
+    // Издание ЯДРА задаётся свойством Gradle (-Pedition), потому что движок подключён composite-сборкой и
+    // резолвится один раз на запуск: собрать оба APK одной командой нельзя. Чтобы «Pro с ядром Lite» не
+    // случился молча — падаем сразу и объясняем. Молчаливо собранный Pro без пульта отладить намного дороже.
+    gradle.taskGraph.whenReady { graph ->
+        def buildsPro = graph.allTasks.any { it.name ==~ /(?i).*(assemble|bundle|install)Pro(Debug|Release)?/ }
+        def edition = (project.findProperty('edition') ?: 'lite').toString().toLowerCase()
+        if (buildsPro && edition != 'pro') {
+            throw new GradleException(
+                "Издание Pro собирается с ядром '$edition'. Ядро выбирается отдельно, потому что оно " +
+                "подключено composite-сборкой:\n  ./gradlew assembleProDebug -Pedition=pro\n" +
+                "А Lite собирается без флага: ./gradlew assembleLiteDebug")
+        }
+        if (!buildsPro && edition == 'pro' && graph.allTasks.any { it.name ==~ /(?i).*(assemble|bundle|install)Lite(Debug|Release)?/ }) {
+            throw new GradleException(
+                "Издание Lite собирается с ядром pro: в Lite не должно быть кода управления помпой. " +
+                "Уберите -Pedition=pro.")
+        }
+
+        // Третье место, где издание можно забыть, — ВЕБ-конфиг: его пишет `cap sync` по SUGARLIFE_EDITION,
+        // отдельно от Gradle. Без этой проверки собирался Pro-пакет с appId Lite внутри (нашли на ревью
+        // #297): снаружи .pro, внутри — Lite. Сверяем то, что реально попадёт в APK.
+        def buildsLite = graph.allTasks.any { it.name ==~ /(?i).*(assemble|bundle|install)Lite(Debug|Release)?/ }
+        if (buildsPro || buildsLite) {
+            def cfg = file('src/main/assets/capacitor.config.json')
+            def wanted = buildsPro ? 'ru.imiron.sugarlife.pro' : 'ru.imiron.sugarlife'
+            if (!cfg.exists()) {
+                throw new GradleException(
+                    "Нет $cfg — веб-часть не разложена. Сначала:\n" +
+                    "  cd app && SUGARLIFE_EDITION=${buildsPro ? 'pro' : 'lite'} npx cap sync android")
+            }
+            def got = (cfg.text =~ /"appId"\s*:\s*"([^"]+)"/)
+            def actual = got ? got[0][1] : '(нет appId)'
+            if (actual != wanted) {
+                throw new GradleException(
+                    "Веб-конфиг от другого издания: в APK попал appId '$actual', а собирается '$wanted'.\n" +
+                    "Пересоберите веб под нужное издание:\n" +
+                    "  cd app && SUGARLIFE_EDITION=${buildsPro ? 'pro' : 'lite'} npx cap sync android")
+            }
+        }
+    }
+
+    flavorDimensions "edition"
+    productFlavors {
+        lite {
+            dimension "edition"
+            // Идентификатор НЕ трогаем: это издание, которое уже стоит у людей, и обновление обязано дойти.
+        }
+        pro {
+            dimension "edition"
+            applicationIdSuffix ".pro"
+            // Своё имя и своя иконка лежат в src/pro/ — рядом, а не поверх общих.
+        }
+    }
+
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
