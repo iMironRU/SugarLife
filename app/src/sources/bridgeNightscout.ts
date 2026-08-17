@@ -26,13 +26,35 @@ function linkOf(live: boolean, status: string): Link {
    Порог отставания — 15 минут: сенсор пишет раз в минуту-пять, и четверть часа
    молчания это уже не задержка сети. */
 const ОТСТАВАНИЕ_МС = 15 * 60e3;
-function sourceStatusOf(live: boolean, status: string, latestAt: number | null): SourceStatus {
+
+/* СВЕЖИЕ ДАННЫЕ — ЭТО 'LIVE', ДАЖЕ КОГДА СОКЕТА НЕТ (SugarLife#358).
+
+   Здесь стояло `live ? 'Live' : 'Acquiring'`, где `live` — «подключён хотя бы один
+   сокет». Получалось так: сокет отвалился, опрос раз в минуту продолжает приносить
+   показания, свежесть — минута, а мы объявляем 'Acquiring', то есть «связь есть,
+   показаний ещё нет». Прямая неправда: показания есть.
+
+   Ловится это возвращением приложения из фона — сокет там рвётся штатно, а опрос живёт.
+   Человек видел часики и «догоняю…» над списком, где верхней строчкой стоит показание
+   минутной давности.
+
+   Способ доставки не входит в вопрос «идут ли данные». Сокет или опрос — дело наше;
+   человеку важно, свежее ли число, и на это отвечает его возраст. `Acquiring` остаётся
+   там, где он и означает своё: показаний нет вовсе (строка выше).
+
+   Отсюда же и «часики» в круге: они читали этот статус и верили ему. Правило круга тоже
+   поправлено (domain/deviceState), но причина была здесь.
+
+   Признак сокета из аргументов убран совсем, а не оставлен «на всякий случай»: пока он
+   тут лежит, кто-нибудь снова свяжет с ним смысл. */
+function sourceStatusOf(status: string, latestAt: number | null): SourceStatus {
   if (status === 'off' || status === 'idle') return 'Disconnected';
   if (status === 'loading') return 'Connecting';
   if (latestAt == null) return 'Acquiring';
   if (Date.now() - latestAt > ОТСТАВАНИЕ_МС || status === 'stale' || status === 'error') return 'Delayed';
-  return live ? 'Live' : 'Acquiring';
+  return 'Live';
 }
+export const _sourceStatusOf = sourceStatusOf;   // для теста: правило важнее сборки снимка
 
 function buildSnapshot(): UiSnapshot {
   const st = getStoreState();
@@ -63,7 +85,7 @@ function buildSnapshot(): UiSnapshot {
     // rev 1.7: единая картина основного источника — раньше возраст показания
     // каждый экран считал сам, и «свежо ли» у всех получалось по-своему
     live: st.live,
-    status: sourceStatusOf(st.live, st.status, latest?.t ?? null),
+    status: sourceStatusOf(st.status, latest?.t ?? null),
     latestAtMs: latest?.t ?? null,
     source: cfg?.url ? 'Nightscout' : null,
   };
