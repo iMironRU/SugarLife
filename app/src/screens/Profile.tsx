@@ -1,8 +1,8 @@
-import { IonIcon } from '@ionic/react';
-import { DiagnosticsSection, HealthSection, LoopSection, DataDevicesSection, AboutSection } from '@/sections/lazy';
+import { DiagnosticsSection, HealthSection, LoopSection, DataDevicesSection, AboutSection, AppearanceSection } from '@/sections/lazy';
 import {
-  optionsOutline, nutritionOutline, ellipse, sunny, moon,
+  optionsOutline, nutritionOutline,
   hardwareChipOutline, repeat, documentTextOutline, heartOutline, informationCircleOutline,
+  colorPaletteOutline,
 } from 'ionicons/icons';
 import { useState } from 'react';
 import { resetLocalData } from '@/settings/reset';
@@ -22,7 +22,7 @@ import CarbUnitsModal from '@/sheets/CarbUnitsModal';
 import Screen from '@/ui/Screen';
 
 export default function Profile() {
-  const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
   const unit = useUnit();
   const [unitsOpen, setUnitsOpen] = useState(false);
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
@@ -70,12 +70,6 @@ export default function Profile() {
   const loopSub = loop.savedAt
     ? `${loopMode?.code} · ${loopMode?.name.toLowerCase()}`
     : 'не настроен';
-
-  const themes: { key: 'system' | 'light' | 'dark'; label: string; icon: string }[] = [
-    { key: 'system', label: 'Системная', icon: ellipse },
-    { key: 'light', label: 'Светлая', icon: sunny },
-    { key: 'dark', label: 'Тёмная', icon: moon },
-  ];
 
   return (
     <Screen tab={4}>
@@ -179,6 +173,19 @@ export default function Profile() {
               кнопку, которая сначала спрашивает сервер. Обе неправды исправлены внутри
               раздела; здесь остаётся вход и то, что человек проверяет чаще всего —
               какая версия стоит. */}
+          {/* Оформление — над «О приложении»: это настройка, а «О приложении» —
+              справка. Настройки человек меняет, справку читает. */}
+          <div className="section-label sec">Оформление</div>
+          <div className="list">
+            {/* Строка называется «Тема», а не «Оформление»: заголовок над ней уже сказал
+                это слово, и повторять его значит потратить строку на эхо. Ровно от этого
+                здесь уходили, убирая заголовки над каждой одиночной строкой. */}
+            <Row icon={colorPaletteOutline} title="Тема"
+              sub={theme === 'system' ? 'как в настройках телефона' : theme === 'light' ? 'светлая' : 'тёмная'}
+              value={theme === 'system' ? 'системная' : undefined}
+              onClick={() => push(<AppearanceSection onClose={pop} />)} />
+          </div>
+
           <div className="section-label sec">О приложении</div>
           <div className="list">
             <Row icon={informationCircleOutline}
@@ -188,19 +195,6 @@ export default function Profile() {
           </div>
 
           {/* оформление */}
-          <div className="section-label sec">Оформление</div>
-          <div className="theme-chips">
-            {themes.map((t) => {
-              const on = theme === t.key;
-              return (
-                <button key={t.key} className={'theme-chip' + (on ? ' on' : '')} onClick={() => setTheme(t.key)}>
-                  <IonIcon icon={t.icon} />
-                  <span>{t.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
           <button className="logout" onClick={reset}>Сбросить настройки</button>
 
         <UnitsModal isOpen={unitsOpen} onClose={() => setUnitsOpen(false)} />
