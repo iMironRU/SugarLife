@@ -9,6 +9,7 @@ import BrandDrop from '@/ui/BrandDrop';
 import CatalogPicker from '@/sheets/CatalogPicker';
 import { pumpItems, sensorItems, modelTitle } from '@/sheets/modelItems';
 import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
+import { DiscoverySection } from '@/sections/lazy';
 import { probeCloud, checkReadAccess, type CloudProbe } from '@/sources/nightscout';
 import { addCloud } from '@/sources/clouds';
 import { refresh } from '@/sources/store';
@@ -19,7 +20,7 @@ import { isNative } from '@/platform/appUpdate';
 
 const RELEASES_URL = 'https://github.com/iMironRU/SugarLife/releases';
 
-type Step = 'welcome' | 'ways' | 'cloud' | 'streams';
+type Step = 'welcome' | 'ways' | 'scan' | 'cloud' | 'streams';
 
 /* Мастер первого запуска (docs/CONNECT-UX.md §7, путь 1) — discovery-first.
    Не «сначала Nightscout», а «как будем доставать данные»: прямое подключение / QR /
@@ -158,8 +159,15 @@ export default function Onboarding() {
         {/* Прямое подключение: в вебе BLE нет — не изображаем поиск, ведём в приложение */}
         <div className="list">
           {isNative ? (
-            <Row icon={bluetoothOutline} title="Найти рядом" sub="поиск устройств по Bluetooth"
-              onClick={() => setCatalogOpen(true)} />
+            /* Скан, а не каталог (#331). Обе строки открывали одно и то же — каталог
+               моделей, — и человек, нажавший «найти рядом», получал вопрос «назови свою
+               модель»: ровно тот, ради которого он и нажал кнопку.
+
+               Порядок у нас discovery-first (SugarLifeCore#43): сначала показать, что
+               реально вещает рядом, и только потом спрашивать модель — у тех, кого в
+               эфире не видно. */
+            <Row icon={bluetoothOutline} title="Найти рядом" sub="посмотрим, что вещает вокруг"
+              onClick={() => setStep('scan')} />
           ) : (
             <Row icon={downloadOutline} title="Найти рядом — в приложении"
               sub="браузер не умеет Bluetooth · скачать сборку" href={RELEASES_URL} />
@@ -168,7 +176,9 @@ export default function Onboarding() {
           <Row icon={cloudOutline} title="Через облако" sub="данные из Nightscout — работает уже сейчас"
             onClick={() => setStep('cloud')} />
 
-          <Row icon={listOutline} title="Выбрать модель" sub="скажем, что нужно для вашей модели"
+          {/* Каталог — запасной путь: он для тех, кого в эфире не нашли. Поэтому и
+              стоит ниже, и подписан как ответ на неудачу поиска. */}
+          <Row icon={listOutline} title="Выбрать модель" sub="если в эфире не нашлось — скажем, что нужно"
             onClick={() => setCatalogOpen(true)} />
 
           <Row className="is-soon" icon={qrCodeOutline} title="По QR-коду"
@@ -177,6 +187,19 @@ export default function Onboarding() {
 
         <button className="ob-skip" onClick={skip}>Пропустить — настрою потом</button>
         <RequirementsCatalogSheet isOpen={catalogOpen} onClose={() => setCatalogOpen(false)} />
+      </div>
+    );
+  }
+
+  /* ---------- scan: слушаем эфир ----------
+
+     Тот же раздел, что и в «Устройствах», а не своя копия: поиск — одно поведение, и
+     второй его вариант разошёлся бы с первым в первую же правку. Здесь он просто
+     первый шаг мастера, а не вложенная страница. */
+  if (step === 'scan') {
+    return (
+      <div className="connect ob-page">
+        <DiscoverySection onClose={() => setStep('ways')} />
       </div>
     );
   }
