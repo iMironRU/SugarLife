@@ -36,6 +36,26 @@ private val FIRMWARE_CHAR = uuid16("2A26")
 /** Сток телеметрии натив→движок: плагин ставит engine.submitTelemetry; BleLink зовёт с json {bleId,batteryPct?,firmware?,rssi?}. */
 var telemetrySink: ((String) -> Unit)? = null
 
+/**
+ * Канал BLE-слоя в ОБЩИЙ журнал (core#72).
+ *
+ * До сих пор эти строки уходили только в logcat: «запись отброшена: нет характеристики», «MTU 185»,
+ * «нотификация 1 байт». Ровно они решили разбор помпы 2026-08-17 — и ровно их не увидит ни человек с
+ * телефоном, ни тестировщик с железом. Дублируем в движок: Log.d остаётся для нас, журнал — для них.
+ */
+var logSink: ((level: String, event: String, deviceId: String?, fields: Map<String, String>, frame: Boolean) -> Unit)? = null
+
+/** Событие BLE в журнал прибора. `frame = true` — кадр обмена: он содержит идентификаторы прибора. */
+internal fun bleLog(
+    level: String,
+    event: String,
+    deviceId: String?,
+    vararg fields: Pair<String, String>,
+    frame: Boolean = false,
+) {
+    logSink?.invoke(level, event, deviceId, fields.toMap(), frame)
+}
+
 /** Короткая форма стандартного Bluetooth-UUID (как CBUUID на iOS): 0000FF30-0000-1000-8000-00805f9b34fb → "FF30".
  *  Каталог матчит короткие ("FF30"); Android же отдаёт полный 128-битный → без нормализации совпадения нет.
  *  Кастомные 128-битные (RileyLink) остаются полными. */
@@ -176,9 +196,17 @@ class BleLink(
              нет GATT           — не подключились или отвалились → лечится подключением;
              нет характеристики — подключились, но пишем не туда → лечится разбором протокола.
            На OrangeLink мы потеряли на этой неразличимости целый сеанс с железом. */
-        if (g == null) { Log.w(TAG, "запись ${shortUuid(char)} отброшена: нет GATT-сессии с $address"); opDone(); return@приГотовности }
+        if (g == null) {
+            Log.w(TAG, "запись ${shortUuid(char)} отброшена: нет GATT-сессии с $address")
+            bleLog("Warn", "запись отброшена: нет связи с прибором", address, "характеристика" to shortUuid(char))
+            opDone(); return@приГотовности
+        }
         if (c == null) {
             Log.w(TAG, "запись ${shortUuid(char)} отброшена: у $address нет такой характеристики; есть: ${chars.keys.joinToString { shortUuid(it) }}")
+            bleLog(
+                "Error", "прибор не принимает команду: у него нет такой характеристики", address,
+                "искали" to shortUuid(char), "есть" to chars.keys.joinToString { shortUuid(it) },
+            )
             opDone(); return@приГотовности
         }
         c.writeType = if (c.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0)
@@ -213,7 +241,18 @@ class BleLink(
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
             // issue #33: status ≠ 0 (напр. 133 GATT_ERROR) — виновник тихих сбоев коннекта; логируем всегда.
             Log.d(TAG, "connState addr=$address status=$status newState=$newState")
-            if (status != BluetoothGatt.GATT_SUCCESS) Log.w(TAG, "connState НЕ-успех status=$status (133=GATT_ERROR/недоступен) addr=$address")
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.w(TAG, "connState НЕ-успех status=$status (133=GATT_ERROR/недоступен) addr=$address")
+                bleLog(
+                    "Warn", "связь с прибором не установилась", address,
+                    "код" to status.toString(),
+                    "смысл" to when (status) {
+                        133 -> "прибор недоступен или занят"
+                        19 -> "прибор разорвал связь сам"
+                        else -> "код стека Android"
+                    },
+                )
+            }
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     onState?.invoke("Connected")
@@ -252,6 +291,10 @@ class BleLink(
                     }
                 }
             }
+            bleLog(
+                "Info", "прибор изучен: характеристики найдены", address,
+                "сервисов" to g.services.size.toString(),
+            )
             готово()   // характеристики найдены — выпускаем всё, что ждало (#348)
             onState?.invoke("Streaming")   // discovery завершён — как в iOS (link=Streaming перед readMac)
             readTelemetry(g)   // заряд/прошивка/rssi, если периферал их отдаёт (issue #38)
@@ -259,6 +302,7 @@ class BleLink(
 
         override fun onMtuChanged(g: BluetoothGatt, mtu: Int, status: Int) {
             Log.d(TAG, "MTU для $address: $mtu (status=$status) → discovery")
+            bleLog("Info", "размер пакета согласован", address, "MTU" to mtu.toString())
             g.discoverServices()
         }
 
@@ -272,6 +316,8 @@ class BleLink(
         }
         override fun onCharacteristicWrite(g: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) {
             Log.d(TAG, "запись ${shortUuid(c.uuid)} ушла: status=$status тип=${c.writeType} байт=${c.value?.size}")
+            bleLog("Trace", "отправлено прибору", address, "байт" to (c.value?.size ?: 0).toString(),
+                "hex" to (c.value?.joinToString(" ") { b -> "%02X".format(b) } ?: ""), frame = true)
             opDone()
         }
 
@@ -283,6 +329,8 @@ class BleLink(
 
         override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic) {
             Log.d(TAG, "нотификация ${shortUuid(c.uuid)}: ${c.value?.size ?: 0} байт")
+            bleLog("Trace", "получено от прибора", address, "байт" to (c.value?.size ?: 0).toString(),
+                "hex" to (c.value?.joinToString(" ") { b -> "%02X".format(b) } ?: ""), frame = true)
             notifyHandlers[c.uuid]?.invoke(c.value ?: ByteArray(0))
         }
     }

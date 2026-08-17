@@ -129,6 +129,17 @@ class SugarLifeBridgePlugin : Plugin() {
     override fun load() {
         Log.i(TAG, "load: attach to engine")
         telemetrySink = { json -> engine.submitTelemetry(json) }   // натив→движок телеметрия (issue #38)
+        // BLE-слой → ОБЩИЙ журнал (core#72). Раньше эти строки жили только в logcat, то есть не доходили ни
+        // до человека, ни до выгрузки диагностики — а именно они решили разбор помпы. deviceId отдаём MAC-ом:
+        // сопоставление с логической записью прибора делает движок, у него для этого есть реестр.
+        logSink = { level, event, deviceId, fields, frame ->
+            val f = fields.entries.joinToString(",") { (k, v) -> "${jsonStr(k)}:${jsonStr(v)}" }
+            engine.sendIntent(
+                """{"type":"submitLog","level":${jsonStr(level)},"tag":"ble","event":${jsonStr(event)},""" +
+                    (if (deviceId != null) """"deviceId":${jsonStr(deviceId)},""" else "") +
+                    """"fields":{$f},"hasIdentifiers":$frame}""",
+            )
+        }
         // Держим процесс живым в фоне (иначе HyperOS убьёт → потеря сенсора). Стартуем с переднего плана — ОК.
         SugarLifeService.start(context.applicationContext)
         // Снимок из движка-синглтона (переживает пересоздание Activity) → в webview на UI-потоке.
@@ -183,3 +194,7 @@ class SugarLifeBridgePlugin : Plugin() {
         private const val TAG = "SugarLifeBridge"
     }
 }
+
+/** Экранирование строки в JSON: значения приезжают из эфира и содержат кавычки и слэши. */
+private fun jsonStr(s: String): String =
+    "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\""
