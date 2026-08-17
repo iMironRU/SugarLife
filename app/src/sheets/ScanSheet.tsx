@@ -5,7 +5,7 @@ import Sheet from '@/ui/Sheet';
 import Row from '@/ui/Row';
 import ScanOverlay from '@/ui/ScanOverlay';
 import { сканировать, можноСканировать, ИМЯ_ТИПА, ОтказКамеры, type Прочитанное } from '@/platform/scanCode';
-import { прочитатьИзображение } from '@/platform/scanFromImage';
+import { прочитатьИзображение, type Ход } from '@/platform/scanFromImage';
 
 /* Одна шторка на всё чтение кодов (SugarLife#350).
 
@@ -34,6 +34,13 @@ export default function ScanSheet({ isOpen, onClose, подпись, onВыбо�
   const [скопировано, setСкопировано] = useState<string | null>(null);
   const [камераЕсть, setКамераЕсть] = useState(false);
   const [сканИдёт, setСканИдёт] = useState<{ отменено: boolean } | null>(null);
+  /* Что произошло со снимком — на экране, а не в консоли.
+
+     «Нажал, выбрал — и ничего» невозможно разобрать по рассказу: молчал выбор файла,
+     не открылась картинка, не нашёлся код — снаружи это одно и то же. Показываем имя
+     файла, размер и путь разбора. Строка нужна ровно до первого успеха, дальше она
+     мешает — поэтому живёт рядом с ошибкой, а не в результате. */
+  const [ход, setХод] = useState<Ход | null>(null);
   const файлВвод = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -60,16 +67,20 @@ export default function ScanSheet({ isOpen, onClose, подпись, onВыбо�
   };
 
   const изФайла = async (файл: File) => {
-    setБеда(null); setЗанят(true); setНайдено(null);
+    const х: Ход = { файл: файл.name || 'снимок', байт: файл.size, тип: файл.type || 'неизвестен', шаги: [] };
+    setБеда(null); setНайдено(null); setХод(х); setЗанят(true);
     try {
-      const коды = await прочитатьИзображение(файл);
+      const коды = await прочитатьИзображение(файл, х);
+      setХод({ ...х });
       if (!коды.length) {
-        setБеда('На этом снимке кода не видно. Снимите ближе и ровнее — чтобы код занимал большую часть кадра и не бликовал.');
+        setБеда('На этом снимке кода не видно. Снимите ближе и ровнее — чтобы код занимал большую часть кадра, был в фокусе и не бликовал.');
       } else {
         setНайдено(коды);
       }
     } catch (e) {
-      setБеда('Не получилось разобрать снимок: ' + (e instanceof Error ? e.message : String(e)));
+      х.шаги.push('сорвалось: ' + (e instanceof Error ? e.message : String(e)));
+      setХод({ ...х });
+      setБеда('Не получилось разобрать снимок.');
     } finally {
       setЗанят(false);
     }
@@ -117,14 +128,24 @@ export default function ScanSheet({ isOpen, onClose, подпись, onВыбо�
             <Row icon={cameraOutline} title="Снять камерой" sub="наведите на код — прочитается сам"
               onClick={камерой} />
           )}
-          {/* Фото — всегда: это единственный способ, который работает и в браузере. */}
-          <Row icon={imageOutline} title="Выбрать фото"
-            sub={занят ? 'разбираю снимок…' : 'снимок коробки — можно из галереи'}
-            onClick={() => файлВвод.current?.click()} />
+          {/* Выбор файла — НАСТОЯЩИМ нажатием по <label>, а не программным кликом по
+              скрытому полю.
+
+              Программный клик работает не везде: часть браузеров и вебвью открывает
+              выбор файлов только по прямому жесту человека, и «нажал — ничего не
+              открылось» получается именно там. Метка даёт этот жест сама, без единой
+              строки скрипта, и поле для неё не должно быть hidden — прячем размером. */}
+          <label className="list-row" htmlFor="скан-файл">
+            <IonIcon icon={imageOutline} className="list-ico" />
+            <span className="pick-main">
+              <span className="list-title">Выбрать фото</span>
+              <span className="pick-sub">{занят ? 'разбираю снимок…' : 'снимок коробки — можно из галереи'}</span>
+            </span>
+          </label>
         </div>
       )}
 
-      <input ref={файлВвод} type="file" accept="image/*" hidden
+      <input ref={файлВвод} id="скан-файл" type="file" accept="image/*" className="скан-ввод"
         onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void изФайла(f); }} />
 
       {найдено && (
@@ -160,6 +181,16 @@ export default function ScanSheet({ isOpen, onClose, подпись, onВыбо�
       )}
 
       {беда && <div className="metric-note" style={{ marginTop: 10 }}>{беда}</div>}
+
+      {/* Разбор пути — только когда результата нет. При удаче он лишний шум, при
+          неудаче это единственное, по чему можно понять, где всё встало. */}
+      {ход && !найдено && (
+        <div className="metric-note скан-ход">
+          {ход.файл} · {ход.байт >= 1048576 ? (ход.байт / 1048576).toFixed(1) + ' МБ' : Math.round(ход.байт / 1024) + ' КБ'} · {ход.тип}
+          {ход.шаги.map((ш, i) => <span key={i}>{'\n'}— {ш}</span>)}
+          {занят && <span>{'\n'}— читаю…</span>}
+        </div>
+      )}
     </Sheet>
   );
 }

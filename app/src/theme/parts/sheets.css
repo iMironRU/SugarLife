@@ -426,3 +426,11 @@ body.скан-идёт ion-modal { display: none !important; }
   user-select: text; -webkit-user-select: text;
 }
 .скан-кнопки { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+/* Поле выбора файла прячем размером, а не display:none.
+
+   Скрытое через hidden поле часть вебвью отказывается открывать по метке — а метка
+   нужна: программный клик по input открывает выбор файлов не везде. */
+.скан-ввод { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+label.list-row { cursor: pointer; }
+.скан-ход { white-space: pre-line; }
