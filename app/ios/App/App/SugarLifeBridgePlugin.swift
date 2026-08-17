@@ -126,19 +126,71 @@ final class BleLink: NSObject, CBPeripheralDelegate {
 
     // Перерегистрируемся при каждом connect: reconnect-петля драйвера делает disconnect()→connect() на том же
     // линке, а disconnect() снимает маршрут — без этого повторный коннект не встал бы.
-    func connectNow() { SharedCentral.shared.register(self, for: peripheralUUID); SharedCentral.shared.connect(peripheralUUID) }
+    func connectNow() {
+        SharedCentral.shared.register(self, for: peripheralUUID); SharedCentral.shared.connect(peripheralUUID)
+        сторожDiscovery?.cancel()
+        let r = DispatchWorkItem { [weak self] in
+            NSLog("SugarLifeBLE: discovery не завершился за 15с — отложенные команды пойдут своим отказом")
+            self?.отпуститьОтложенные(всё: true, причина: "сдались ждать discovery")
+        }
+        сторожDiscovery = r
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15, execute: r)
+    }
     func disconnect() {
+        сторожDiscovery?.cancel(); сторожDiscovery = nil
+        // Отложенное отпускаем: иначе чтение, начатое до разрыва, не ответит никогда.
+        отпуститьОтложенные(всё: true, причина: "разрыв связи")
         if let p = peripheral { SharedCentral.shared.cancel(p) }
         SharedCentral.shared.unregister(peripheralUUID, self)   // линк отпущен — снять маршрут (и дать ARC освободить)
     }
     func subscribe(_ char: CBUUID, handler: @escaping (Data) -> Void) { notifyHandlers[char] = handler }
+
+    /* Операции ждут discovery, а отказ не пропадает молча (SugarLife#347, #348).
+
+       Зеркало Android, где это поймали на живом железе: между «подключились» и «нашли
+       характеристики» проходят миллисекунды, и первая команда ядра успевает уйти в
+       пустой `chars`. Она молча выбрасывалась, драйвер уходил на бэкофф и попадал в ту же
+       щель снова — бесконечно, при исправном приборе.
+
+       Ждём ПОКАЖДОЙ характеристике отдельно: на iOS discovery приходит по одному сервису
+       за раз, и «готово» вообще не единый момент. Не дождались за срок — операция уходит
+       своим обычным отказом, а не висит: бесконечное ожидание мы уже чинили в #344. */
+    private var отложенные: [(CBUUID, () -> Void)] = []
+    private var сторожDiscovery: DispatchWorkItem?
+
+    private func приГотовности(_ char: CBUUID, _ op: @escaping () -> Void) {
+        if chars[char] != nil { op(); return }
+        отложенные.append((char, op))
+    }
+    private func отпуститьОтложенные(всё: Bool, причина: String) {
+        let были = отложенные
+        отложенные = всё ? [] : были.filter { chars[$0.0] == nil }
+        let идут = были.filter { всё || chars[$0.0] != nil }
+        if !идут.isEmpty { NSLog("SugarLifeBLE: отпускаю \(идут.count) отложенных операций (\(причина))") }
+        идут.forEach { $0.1() }
+    }
+
     func write(_ data: Data, to char: CBUUID) {
-        guard let p = peripheral, let c = chars[char] else { return }
-        p.writeValue(data, for: c, type: c.properties.contains(.write) ? .withResponse : .withoutResponse)
+        приГотовности(char) { [weak self] in
+            guard let self else { return }
+            guard let p = self.peripheral else {
+                NSLog("SugarLifeBLE: запись \(char) отброшена: нет соединения"); return
+            }
+            guard let c = self.chars[char] else {
+                NSLog("SugarLifeBLE: запись \(char) отброшена: у прибора нет такой характеристики; есть: \(self.chars.keys.map { $0.uuidString }.joined(separator: ", "))")
+                return
+            }
+            p.writeValue(data, for: c, type: c.properties.contains(.write) ? .withResponse : .withoutResponse)
+        }
     }
     func read(_ char: CBUUID, completion: @escaping (Data?) -> Void) {
-        guard let p = peripheral, let c = chars[char] else { completion(nil); return }
-        readHandlers[char] = completion; p.readValue(for: c)
+        приГотовности(char) { [weak self] in
+            guard let self, let p = self.peripheral, let c = self.chars[char] else {
+                NSLog("SugarLifeBLE: чтение \(char) отброшено: нет соединения или характеристики")
+                completion(nil); return
+            }
+            self.readHandlers[char] = completion; p.readValue(for: c)
+        }
     }
 
     // Колбэки соединения приходят из общего central, маршрутизированные по peripheral.
@@ -156,6 +208,10 @@ final class BleLink: NSObject, CBPeripheralDelegate {
             chars[ch.uuid] = ch
             if notifyHandlers[ch.uuid] != nil { p.setNotifyValue(true, for: ch) }
         }
+        // ЧТО у прибора есть — одной строкой на сервис (#347): для незнакомого моста это
+        // главный вопрос первых пяти минут, и догадку такой список превращает в факт.
+        NSLog("SugarLifeBLE: сервис \(s.uuid.uuidString): \((s.characteristics ?? []).map { $0.uuid.uuidString }.joined(separator: ", "))")
+        отпуститьОтложенные(всё: false, причина: "нашлись характеристики")
         readTelemetry(p)   // заряд/прошивка, если сервис их принёс (issue #38)
         onState?("Streaming")
     }
