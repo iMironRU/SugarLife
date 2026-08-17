@@ -31,8 +31,28 @@ function детекторБраузера(): КонструкторДетект�
   return w.BarcodeDetector ?? null;
 }
 
+/* Картинка из файла — двумя путями, и второй не запасной аэродром, а рабочий.
+
+   `createImageBitmap` не берёт HEIC, а именно им iPhone снимает по умолчанию. Отказ
+   приходит исключением, и без второго пути «выбрал фото — ничего не произошло»
+   получается на самом частом снимке, какой только может прийти.
+
+   Через <img> декодирует сам браузер, тем же кодом, что показывает картинки на
+   страницах, — значит берёт всё, что телефон умеет показать. */
 async function картинка(файл: Blob): Promise<ImageBitmap> {
-  return createImageBitmap(файл);
+  try {
+    return await createImageBitmap(файл);
+  } catch {
+    const url = URL.createObjectURL(файл);
+    try {
+      const и = new Image();
+      и.src = url;
+      await и.decode();
+      return await createImageBitmap(и);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
 }
 
 /** Прозрачное на белом. Без этого прозрачный фон читается как чёрный — см. ниже. */
@@ -74,15 +94,23 @@ async function черезБраузер(файл: Blob): Promise<Прочита�
    Яркость считаем сами по BT.601 — ZXing ждёт её массивом, а не цветом. Формула не
    произвольная: зелёный человеческий глаз (и камера) видят ярче, и «среднее по трём»
    размыло бы контраст ровно там, где он и решает — на границе чёрного и белого. */
-async function черезZXing(файл: Blob): Promise<Прочитанное[]> {
+async function черезZXing(файл: Blob, доля = 1): Promise<Прочитанное[]> {
   const { MultiFormatReader, BinaryBitmap, HybridBinarizer, RGBLuminanceSource,
     BarcodeFormat, DecodeHintType } = await import('@zxing/library');
   const битмап = await картинка(файл);
   const МАКС = 1600;
-  const к = Math.min(1, МАКС / Math.max(битмап.width, битмап.height));
+  /* Берём либо весь кадр, либо его середину. Середина — не каприз: код на снимке коробки
+     занимает малую часть кадра, и после сжатия всего снимка до 1600 точек от него
+     остаётся несколько десятков — меньше, чем нужно, чтобы различить модули. Вырезав
+     середину и сжав уже её, мы даём коду те же 1600 точек целиком. */
+  const свх = Math.round(битмап.width * доля);
+  const свы = Math.round(битмап.height * доля);
+  const сдвX = Math.round((битмап.width - свх) / 2);
+  const сдвY = Math.round((битмап.height - свы) / 2);
+  const к = Math.min(1, МАКС / Math.max(свх, свы));
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(битмап.width * к);
-  canvas.height = Math.round(битмап.height * к);
+  canvas.width = Math.round(свх * к);
+  canvas.height = Math.round(свы * к);
   const ctx = canvas.getContext('2d');
   if (!ctx) return [];
   /* Сначала белый фон, потом картинка.
@@ -92,7 +120,7 @@ async function черезZXing(файл: Blob): Promise<Прочитанное[]
      ни один декодер там ничего не находил. Поймано на своих же тестовых картинках. */
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(битмап, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(битмап, сдвX, сдвY, свх, свы, 0, 0, canvas.width, canvas.height);
   битмап.close?.();
 
   const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -121,11 +149,37 @@ async function черезZXing(файл: Blob): Promise<Прочитанное[]
   }
 }
 
+/** Чем читали и что вышло — чтобы «ничего не произошло» можно было объяснить. */
+export interface Ход {
+  файл: string;
+  байт: number;
+  тип: string;
+  шаги: string[];
+}
+
 /** Прочитать все коды с фотографии. Пусто — значит не нашли, и об этом надо сказать. */
-export async function прочитатьИзображение(файл: Blob): Promise<Прочитанное[]> {
-  const быстро = await черезБраузер(файл);
-  /* Встроенный детектор мог не найти ничего, а ZXing — найти: у них разные пороги на
-     смазанном снимке. Поэтому пустой ответ не считаем окончательным и пробуем вторым. */
-  if (быстро && быстро.length) return быстро;
-  return черезZXing(файл);
+export async function прочитатьИзображение(файл: Blob, ход?: Ход): Promise<Прочитанное[]> {
+  const шаг = (с: string) => { ход?.шаги.push(с); };
+  try {
+    const быстро = await черезБраузер(файл);
+    шаг(быстро === null ? 'системного декодера нет'
+      : быстро.length ? `системный нашёл ${быстро.length}` : 'системный не нашёл');
+    /* Встроенный детектор мог не найти ничего, а ZXing — найти: у них разные пороги на
+       смазанном снимке. Поэтому пустой ответ не считаем окончательным. */
+    if (быстро && быстро.length) return быстро;
+  } catch (e) {
+    /* Системный декодер падает на своём — например, не берёт формат картинки. Это не
+       повод сдаться: у запасного своя разборка изображения. */
+    шаг('системный споткнулся: ' + (e instanceof Error ? e.message : String(e)));
+  }
+  const свой = await черезZXing(файл);
+  шаг(свой.length ? `запасной нашёл ${свой.length}` : 'запасной не нашёл');
+  if (свой.length) return свой;
+
+  /* Последняя попытка — по центру кадра. Люди снимают коробку целиком, а код на ней
+     маленький: в общем плане он теряется, в середине читается. Дороже двух предыдущих,
+     поэтому и последняя. */
+  const центр = await черезZXing(файл, 0.55);
+  шаг(центр.length ? `по центру кадра нашёл ${центр.length}` : 'по центру кадра тоже нет');
+  return центр;
 }
