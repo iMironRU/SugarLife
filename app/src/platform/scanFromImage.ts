@@ -85,68 +85,46 @@ async function черезБраузер(файл: Blob): Promise<Прочита�
   }
 }
 
-/* ZXing читает с канвы, через яркость пикселей.
+/* Запасной декодер — zxing-wasm (сборка zxing-cpp), и это замена по факту, а не по вкусу.
 
-   Крупные фото сжимаем: распознавание идёт по точкам, и снимок на двенадцать мегапикселей
-   — это секунды работы там, где хватает полутора тысяч точек по длинной стороне. Причём
-   лишние точки не помогают: код на них тот же, а шума больше.
+   До него здесь стоял @zxing/library — тот же ZXing, но переписанный на JS. На чистых
+   картинках он читал всё, а на ПЕРВОЙ ЖЕ настоящей фотографии коробки не нашёл ничего:
+   ни целиком, ни по центру кадра. Воспроизвели у себя — тот же снимок, тот же результат.
+   Сборка на C++ читает его за сотую долю секунды.
 
-   Яркость считаем сами по BT.601 — ZXing ждёт её массивом, а не цветом. Формула не
-   произвольная: зелёный человеческий глаз (и камера) видят ярче, и «среднее по трём»
-   размыло бы контраст ровно там, где он и решает — на границе чёрного и белого. */
-async function черезZXing(файл: Blob, доля = 1): Promise<Прочитанное[]> {
-  const { MultiFormatReader, BinaryBitmap, HybridBinarizer, RGBLuminanceSource,
-    BarcodeFormat, DecodeHintType } = await import('@zxing/library');
-  const битмап = await картинка(файл);
-  const МАКС = 1600;
-  /* Берём либо весь кадр, либо его середину. Середина — не каприз: код на снимке коробки
-     занимает малую часть кадра, и после сжатия всего снимка до 1600 точек от него
-     остаётся несколько десятков — меньше, чем нужно, чтобы различить модули. Вырезав
-     середину и сжав уже её, мы даём коду те же 1600 точек целиком. */
-  const свх = Math.round(битмап.width * доля);
-  const свы = Math.round(битмап.height * доля);
-  const сдвX = Math.round((битмап.width - свх) / 2);
-  const сдвY = Math.round((битмап.height - свы) / 2);
-  const к = Math.min(1, МАКС / Math.max(свх, свы));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(свх * к);
-  canvas.height = Math.round(свы * к);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return [];
-  /* Сначала белый фон, потом картинка.
+   Разница не в скорости, а в том, что умеет детектор: повёрнутый кадр, код в углу, блик,
+   перспектива от съёмки под углом. Ровно то, из чего состоит любая фотография коробки, —
+   и ровно то, чего не бывает в тестовой картинке, которой мы проверяли.
 
-     Прозрачные пиксели на пустой канве дают чёрный: PNG с прозрачным фоном (а это любой
-     скриншот кода и всё, что нарисовано генератором) превращался в сплошную черноту, и
-     ни один декодер там ничего не находил. Поймано на своих же тестовых картинках. */
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(битмап, сдвX, сдвY, свх, свы, 0, 0, canvas.width, canvas.height);
-  битмап.close?.();
+   Цена — мегабайт wasm, и он грузится ТОЛЬКО когда понадобился: у кого системный декодер
+   есть, тот его не увидит никогда. Файл лежит у нас, а не на чужом CDN: приложение
+   обязано работать без сети, и медицинскому приложению нечего ходить за кодом на сторону.
 
-  const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const яркость = new Uint8ClampedArray(width * height);
-  for (let i = 0, п = 0; i < data.length; i += 4, п++) {
-    яркость[п] = (data[i] * 306 + data[i + 1] * 601 + data[i + 2] * 117) >> 10;
-  }
+   ЭТО НЕ ЗАПАСНОЙ ПУТЬ, А ОСНОВНОЙ. На телефоне, с которого пришла жалоба, системного
+   декодера нет вовсе — «запасной» там единственный. */
+async function черезWasm(файл: Blob): Promise<Прочитанное[]> {
+  const { readBarcodes, prepareZXingModule } = await import('zxing-wasm/reader');
+  const адрес = new URL('zxing-wasm/reader/zxing_reader.wasm', import.meta.url).href;
+  prepareZXingModule({ overrides: { locateFile: () => адрес } });
 
-  const чтец = new MultiFormatReader();
-  чтец.setHints(new Map<number, unknown>([
-    [DecodeHintType.POSSIBLE_FORMATS,
-      [BarcodeFormat.QR_CODE, BarcodeFormat.DATA_MATRIX, BarcodeFormat.CODE_128]],
-    [DecodeHintType.TRY_HARDER, true],
-  ]));
-  try {
-    const r = чтец.decode(new BinaryBitmap(
-      new HybridBinarizer(new RGBLuminanceSource(яркость, width, height)),
-    ));
-    const имя = BarcodeFormat[r.getBarcodeFormat()];
-    const тип: ТипКода = имя === 'QR_CODE' ? 'qr'
-      : имя === 'DATA_MATRIX' ? 'dataMatrix'
-      : имя === 'CODE_128' ? 'code128' : 'иной';
-    return [{ текст: r.getText().trim(), тип }];
-  } catch {
-    return [];   // не нашли — это не ошибка, это ответ
-  }
+  const найдено = await readBarcodes(файл, {
+    formats: ['QRCode', 'DataMatrix', 'Code128'],
+    /* Стараться, крутить, обращать. Каждое — про настоящую фотографию: снято боком,
+       код в углу, этикетка тёмная и код на ней светлый. Дороже обычного разбора, но
+       разбираем мы один снимок по нажатию, а не поток кадров. */
+    tryHarder: true, tryRotate: true, tryInvert: true, tryDownscale: true,
+    /* Носителей на упаковке несколько — на коробке Sibionics два, — и какой из них
+       нужен, решает не сканер. Собираем все. */
+    maxNumberOfSymbols: 8,
+  });
+  return найдено
+    .filter((к) => (к.text ?? '').trim())
+    .map((к) => ({
+      текст: к.text.trim(),
+      тип: к.format === 'QRCode' ? 'qr'
+        : к.format === 'DataMatrix' ? 'dataMatrix'
+        : к.format === 'Code128' ? 'code128' : 'иной',
+    }));
 }
 
 /** Чем читали и что вышло — чтобы «ничего не произошло» можно было объяснить. */
@@ -172,14 +150,14 @@ export async function прочитатьИзображение(файл: Blob, �
        повод сдаться: у запасного своя разборка изображения. */
     шаг('системный споткнулся: ' + (e instanceof Error ? e.message : String(e)));
   }
-  const свой = await черезZXing(файл);
-  шаг(свой.length ? `запасной нашёл ${свой.length}` : 'запасной не нашёл');
-  if (свой.length) return свой;
-
-  /* Последняя попытка — по центру кадра. Люди снимают коробку целиком, а код на ней
-     маленький: в общем плане он теряется, в середине читается. Дороже двух предыдущих,
-     поэтому и последняя. */
-  const центр = await черезZXing(файл, 0.55);
-  шаг(центр.length ? `по центру кадра нашёл ${центр.length}` : 'по центру кадра тоже нет');
-  return центр;
+  try {
+    const свой = await черезWasm(файл);
+    шаг(свой.length ? `свой декодер нашёл ${свой.length}` : 'свой декодер не нашёл');
+    return свой;
+  } catch (e) {
+    /* Не загрузился wasm (нет сети при первом обращении, отказ памяти) — говорим об
+       этом прямо: «кода не видно» тут было бы неправдой, кода мы вообще не искали. */
+    шаг('свой декодер не запустился: ' + (e instanceof Error ? e.message : String(e)));
+    return [];
+  }
 }
