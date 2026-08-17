@@ -80,5 +80,14 @@
          данные идут через облако. Требовать железо, без которого оно живёт, нельзя. -->
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+
+    <!-- Камера — только для кода сенсора с коробки (#350). Плагин сканера своего манифеста
+         не приносит, разрешение объявляем мы.
+
+         required="false" обязательно: без него Google Play спрячет приложение от планшетов
+         без камеры, а работать оно там будет полностью — код вводится и руками. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-feature android:name="android.hardware.location" android:required="false" />
 </manifest>

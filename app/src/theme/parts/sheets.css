@@ -383,3 +383,35 @@
 /* Своего нижнего поля у заголовка в шапке раздела нет: ниже либо величина выше, либо
    отступ тела. В шторке .sheet-head живёт по другим правилам и это его не касается. */
 .stack-head.stack-head > .sheet-head { padding-bottom: 0; }
+
+/* Скан кода камерой (#350). Пока идёт скан, приложение прозрачно — камеру рисует натив
+   ПОД веб-слоем. Прячем всё, кроме наложения: любой непрозрачный кусок закрыл бы
+   картинку, а полупрозрачный сделал бы её грязной. */
+body.скан-идёт,
+body.скан-идёт ion-app,
+body.скан-идёт .app-shell { background: transparent !important; }
+body.скан-идёт ion-app > *:not(.скан-слой) { visibility: hidden; }
+body.скан-идёт ion-modal { display: none !important; }
+
+.скан-слой {
+  position: fixed; inset: 0; z-index: 30000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; pointer-events: none;
+}
+.скан-слой > * { pointer-events: auto; }
+/* Рамка — единственный ориентир: куда навести. Тень наружу приглушает края кадра, не
+   закрывая их, — так видно и рамку, и то, что вокруг. */
+.скан-рамка {
+  width: min(74vw, 300px); aspect-ratio: 1;
+  border: 3px solid var(--color-accent); border-radius: 20px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .45);
+}
+.скан-подпись {
+  font-size: 15px; color: #fff; text-align: center; max-width: 78vw;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .9);
+}
+.скан-отмена {
+  margin-top: 6px; padding: 13px 34px; border-radius: 999px; border: 0;
+  font-size: 16px; font-weight: 600; color: #fff; background: rgba(0, 0, 0, .62);
+  backdrop-filter: blur(6px);
+}

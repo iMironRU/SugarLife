@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import Row from '@/ui/Row';
 import { IonIcon, IonInput, IonButton } from '@ionic/react';
 import {
-  linkOutline, keyOutline, chevronForward, chevronBack, qrCodeOutline, cloudOutline,
+  linkOutline, keyOutline, chevronForward, chevronBack, cloudOutline,
   listOutline, bluetoothOutline, downloadOutline, checkmarkCircle, hardwareChipOutline, flash,
   warningOutline,
 } from 'ionicons/icons';
@@ -198,8 +198,13 @@ export default function Onboarding() {
           <Row icon={listOutline} title="Выбрать модель" sub="если в эфире не нашлось — скажем, что нужно"
             onClick={() => setCatalogOpen(true)} />
 
-          <Row className="is-soon" icon={qrCodeOutline} title="По QR-коду"
-            sub="для новых сенсоров · сканер камеры в разработке" />
+          {/* Отдельного «подключения по QR» здесь больше нет (#350).
+
+              Строка обещала способ подключения, а код с коробки — это ОДНО ПОЛЕ одного
+              прибора, а не путь. Сканер живёт там, где это поле спрашивают: нашли сенсор
+              в эфире → «Добавить» → «Код сенсора» с кнопкой камеры. Третий вход в то же
+              самое, да ещё подписанный «в разработке», только делал вид, что у нас есть
+              нерассказанная возможность. */}
         </div>
 
         <button className="ob-skip" onClick={skip}>Пропустить — настрою потом</button>
