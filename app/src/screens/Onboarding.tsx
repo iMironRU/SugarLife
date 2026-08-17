@@ -4,7 +4,6 @@ import { IonIcon, IonInput, IonButton } from '@ionic/react';
 import {
   linkOutline, keyOutline, chevronForward, chevronBack, cloudOutline,
   listOutline, bluetoothOutline, downloadOutline, checkmarkCircle, hardwareChipOutline, flash,
-  warningOutline,
 } from 'ionicons/icons';
 import BrandDrop from '@/ui/BrandDrop';
 import CatalogPicker from '@/sheets/CatalogPicker';
@@ -13,6 +12,8 @@ import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
 import DevicesSection from '@/sections/DevicesSection';
 import { useSnapshot, sendIntent, эфирДоступен } from '@/sources/bridge';
 import { железоДиспетчера, имяЖелезки } from '@/domain/nearby';
+import { мешает as помеха, спроситьМожно } from '@/domain/scanReadiness';
+import Готовность from '@/ui/Готовность';
 import { связь } from '@/domain/deviceState';
 import { probeCloud, checkReadAccess, type CloudProbe } from '@/sources/nightscout';
 import { addCloud } from '@/sources/clouds';
@@ -228,9 +229,8 @@ export default function Onboarding() {
        следующая кнопка; повторять его тревожной плашкой и второй кнопкой «Открыть
        настройки» значит предложить два занятия сразу и намекнуть, что первое не
        сработает. Отказ «навсегда» — другое дело: там кнопка и есть единственный выход. */
-    const п = готовность && !готовность.canScan ? готовность : null;
-    const спроситьМожно = п?.blockers?.includes('noPermission') && п.canAskAgain !== false;
-    const мешает = п && !спроситьМожно ? п : null;
+    const п = помеха(снимок);
+    const мешаетТут = спроситьМожно(п) ? null : п;
     return (
       <div className="connect ob-page">
         <div className="ob-head">
@@ -256,24 +256,8 @@ export default function Onboarding() {
 
         {/* Что мешает прямо сейчас — если движок уже знает. Здесь это не пугает, а
             экономит шаг: человек чинит причину, не выходя с экрана, и снимок сам
-            перестаёт на неё жаловаться. */}
-        {мешает && (
-          <div className="today-alert">
-            <IonIcon icon={warningOutline} className="alert-ico" />
-            <div>
-              <span className="alert-title">{мешает.reason ?? 'Поиск сейчас невозможен'}</span>
-              {мешает.remediation && <span>{мешает.remediation}</span>}
-              {мешает.settingsTarget && (
-                <span className="alert-ask alert-ask-row">
-                  <button className="changed-btn is-undo"
-                    onClick={() => void sendIntent({ type: 'openSystemScreen', target: мешает.settingsTarget! })}>
-                    Открыть настройки
-                  </button>
-                </span>
-              )}
-            </div>
-          </div>
-        )}
+            перестаёт на неё жаловаться. Тот же блок, что в «Приборах» и диагностике. */}
+        <Готовность помеха={мешаетТут} />
 
         <div className="connect-form">
           <IonButton expand="block" className="connect-btn"

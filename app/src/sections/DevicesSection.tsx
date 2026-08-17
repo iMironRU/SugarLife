@@ -4,7 +4,7 @@ import { DeviceSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
 import {
   hardwareChipOutline, flash, speedometerOutline, helpCircleOutline,
-  bluetoothOutline, radioOutline, chevronForward, warningOutline,
+  bluetoothOutline, radioOutline, chevronForward,
 } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useStore } from '@/sources/store';
@@ -12,6 +12,8 @@ import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/dev
 import { pumpById, sensorById } from '@/domain/catalog';
 import { useSnapshot, sendIntent, эфирДоступен, type Discovered } from '@/sources/bridge';
 import { лента } from '@/domain/deviceFeed';
+import { мешает, словоПустоты, ТЕРПЕНИЕ_МС } from '@/domain/scanReadiness';
+import Готовность from '@/ui/Готовность';
 import { спроситьЛи } from '@/domain/deviceParams';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
 import {
@@ -148,6 +150,7 @@ export default function DevicesSection({ onClose, встроенный, толь
      делал. Правило в domain/nearby.ts. */
   const мост = (h: Parameters<typeof имяЖелезки>[0]) => мостЖелезки(h, снимок);
   const строки = лента(снимок, сейчас);
+  const строкиПусты = строки.length === 0;
   const [новый, setНовый] = useState<Discovered | null>(null);
 
   /* Простой прибор заводим сразу, без шторки.
@@ -173,8 +176,21 @@ export default function DevicesSection({ onClose, встроенный, толь
 
      Слушаем, пока открыта вкладка приборов: новые приборы должны появляться в той же
      ленте сами, иначе «одна лента» распадается обратно на две. */
-  const мешаетСкан = снимок?.scanReadiness && !снимок.scanReadiness.canScan ? снимок.scanReadiness : null;
+  const мешаетСкан = мешает(снимок);
   const сканирует = !!снимок?.scanning;
+  /* Подсказки о вероятных причинах — не сразу (#333). Первые секунды пустой эфир это
+     норма: реклама прибора приходит раз в несколько секунд. Вывалить список догадок
+     немедленно значит объяснять то, чего ещё не случилось.
+
+     И наоборот: когда причина ИЗВЕСТНА, ждать нечего — блок «что мешает» показывается
+     сразу, безо всякого терпения. */
+  const [долгоЖдём, setДолгоЖдём] = useState(false);
+  const пустоВЭфире = строкиПусты;
+  useEffect(() => {
+    if (!сканирует || !пустоВЭфире) { setДолгоЖдём(false); return; }
+    const id = window.setTimeout(() => setДолгоЖдём(true), ТЕРПЕНИЕ_МС);
+    return () => window.clearTimeout(id);
+  }, [сканирует, пустоВЭфире]);
   useEffect(() => {
     if (мешаетСкан || !встроенный) return;
     void sendIntent({ type: 'startScan' });
@@ -195,26 +211,7 @@ export default function DevicesSection({ onClose, встроенный, толь
             живёт в domain/deviceFeed под тестами: два его следствия — у работающего
             прибора нет кнопки «Подключить», а неслышный не исчезает — важнее самой
             ленты, и проверять их надо не глазами. */}
-        {мешаетСкан && (
-          <div className="today-alert">
-            <IonIcon icon={warningOutline} className="alert-ico" />
-            <div>
-              <span className="alert-title">{мешаетСкан.reason ?? 'Поиск сейчас невозможен'}</span>
-              {мешаетСкан.remediation && <span>{мешаетСкан.remediation}</span>}
-              <span className="alert-ask alert-ask-row">
-                {мешаетСкан.canAskAgain !== false && мешаетСкан.blockers?.includes('noPermission') ? (
-                  <button className="changed-btn is-undo"
-                    onClick={() => void sendIntent({ type: 'requestScanPermissions' })}>Разрешить</button>
-                ) : мешаетСкан.settingsTarget ? (
-                  <button className="changed-btn is-undo"
-                    onClick={() => void sendIntent({ type: 'openSystemScreen', target: мешаетСкан.settingsTarget! })}>
-                    Открыть настройки
-                  </button>
-                ) : null}
-              </span>
-            </div>
-          </div>
-        )}
+        <Готовность помеха={мешаетСкан} />
 
         {строки.length > 0 && (
           <>
@@ -280,13 +277,11 @@ export default function DevicesSection({ onClose, встроенный, толь
             «делай так». Сведя списки в один, я её убрал — и пустая лента замолчала
             совсем: экран, на котором нет ни приборов, ни объяснения, читается как
             поломка, а не как «пока пусто». */}
-        {!мешаетСкан && строки.length === 0 && (
+        {/* Пустой эфир — не одно состояние, а несколько, и слова у них разные. Правило
+            и тексты — в domain/scanReadiness, потому что то же самое говорит мастер. */}
+        {!мешаетСкан && строкиПусты && (
           <div className="sheet-note">
-            {!эфирДоступен()
-              ? 'В браузере блютуса нет — это свойство браузера, а не настроек. Приборы видны в приложении на телефоне; данные при этом идут через облако, и всё остальное работает.'
-              : сканирует
-              ? 'Слушаю эфир. Приборы появятся здесь сами — и знакомые, и новые.'
-              : 'Поиск не идёт. Обычно это значит, что приложению не разрешили блютус.'}
+            {словоПустоты({ эфирЕсть: эфирДоступен(), сканирует, долгоЖдём })}
           </div>
         )}
 
