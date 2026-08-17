@@ -159,6 +159,10 @@
        «подключить» выглядели бы работающими, ничего не делая, — а именно это мы и
        пришли проверять. */
     sendIntent: function (i) {
+      /* Скан в демо честный: startScan включает признак, stopScan гасит. Без этого
+         подпись «Слушаю эфир» никогда не появлялась бы, и проверить её было бы нечем. */
+      if (i.type === 'startScan') { снимок.scanning = true; разослать(); }
+      if (i.type === 'stopScan') { снимок.scanning = false; разослать(); }
       if (i.type === 'setPrimarySource') {
         снимок.roles = снимок.roles.map(function (r) {
           var свои = r.sourceIds || [];
