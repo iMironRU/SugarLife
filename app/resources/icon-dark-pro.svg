@@ -10,7 +10,7 @@
       <stop offset="1" stop-color="#3f8fb0"/>
     </linearGradient>
   </defs>
-  <g transform="translate(256 256) scale(1.18) translate(-256 -275)">
+  <g transform="translate(256 256) scale(1.257) translate(-256 -275)">
     <path d="M256 104 C256 104 372 250 372 330 a116 116 0 1 1 -232 0 C140 250 256 104 256 104 Z" fill="url(#drop)"/>
     <ellipse cx="212" cy="292" rx="30" ry="52" fill="#ffffff" opacity="0.28" transform="rotate(-24 212 292)"/>
     <path d="M176 344 h34 l16 -40 l22 78 l20 -58 l14 20 h30" fill="none" stroke="#0f171d" stroke-width="15"
