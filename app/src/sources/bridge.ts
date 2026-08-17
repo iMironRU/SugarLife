@@ -656,6 +656,23 @@ export function getBridge(): SugarLifeBridge {
   return nightscoutBridge;
 }
 
+/* Может ли ЭТО устройство слушать эфир.
+
+   Не то же самое, что «нативная сборка». В браузере BLE нет как класса — но есть
+   демо-мост, который для интерфейса неотличим от живого движка и заведён ровно затем,
+   чтобы пройти путь целиком, не имея под рукой железа. Спрашивать `isNativePlatform()`
+   значит отвечать на вопрос про упаковку, а не про эфир, и мастер первого запуска в
+   локальной копии молча превращался в «скачайте приложение».
+
+   Признак — наличие моста с совместимой версией: у нативной сборки его ставит оболочка,
+   в демо — скрипт до бандла, а Nightscout-шим сюда не попадает, потому что он и есть
+   отсутствие моста. */
+export function эфирДоступен(): boolean {
+  if (typeof window === 'undefined') return false;
+  const b = window.SugarLifeBridge;
+  return !!b && String(b.bridgeRevision).split('.')[0] === BRIDGE_MAJOR;
+}
+
 // Хук: текущий снимок (null до первого).
 export function useSnapshot(): UiSnapshot | null {
   const [snap, setSnap] = useState<UiSnapshot | null>(null);

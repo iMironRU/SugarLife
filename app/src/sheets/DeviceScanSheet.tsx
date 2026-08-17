@@ -41,7 +41,14 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
   /* Пришли с готовым выбором — сразу к нему, минуя список. Список в этом случае был бы
      вопросом «что выбрать» после того, как человек уже выбрал. */
   useEffect(() => { if (isOpen && выбран) pick(выбран); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [isOpen, выбран?.bleId]);
-  useEffect(() => { if (isOpen) sendIntent({ type: 'startScan' }); return () => { if (isOpen) sendIntent({ type: 'stopScan' }); }; }, [isOpen]);
+  /* Скан ЗДЕСЬ НЕ ВЫКЛЮЧАЕМ. Эфиром владеет экран, который его открыл (#337): шторка
+     всплывает поверх ленты, где скан уже идёт, и, гася его при закрытии, она гасила
+     чужой. Снаружи это выглядело так: завёл мост, закрыл шторку — и под ней «Поиск не
+     идёт», хотя человек стоит ровно на экране поиска.
+
+     Включаем на всякий случай: шторку открывают и из мест, где скан не запущен. Лишний
+     startScan движок сносит, лишний stopScan — нет. */
+  useEffect(() => { if (isOpen) sendIntent({ type: 'startScan' }); }, [isOpen]);
 
   // релевантные категории: прямые устройства нужного kind + мосты, ведущие к нему
   const relevant = kind == null ? discovered : discovered.filter((d) => {

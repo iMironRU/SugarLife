@@ -93,8 +93,6 @@ export const CloudAccountsSection = ленивый<{ onClose: () => void }>(
 export const AnalyticsSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
   () => import('./AnalyticsSection'), 'Аналитика');
 
-export const DiscoverySection = ленивый<{ onClose: () => void }>(
-  () => import('./DiscoverySection'), 'Устройства рядом');
 
 export const MealsSection = ленивый<{ onClose: () => void }>(
   () => import('./MealsSection'), 'Приёмы пищи');
@@ -110,7 +108,7 @@ export const DiagnosticsSection = ленивый<{ onClose: () => void }>(
    Прогрев не обязан успеть. Не успел — откроется как раньше, через заглушку. */
 const ОЧЕРЕДЬ: { прогреть: () => Promise<unknown> }[] = [
   AnalyticsSection, MealsSection, DevicesSection, DeviceSection, HealthSection, VisitNoteSection, AboutSection, AppearanceSection,
-  ServicesSection, DiscoverySection, CloudSection,
+  ServicesSection, CloudSection,
   BasalProfileSection, LoopSetupSection, DiagnosticsSection,
 ];
 

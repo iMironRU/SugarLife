@@ -114,6 +114,48 @@
     ],
   };
 
+  /* ЧИСТЫЙ ПЕРВЫЙ ЗАПУСК — телефон, на котором ещё ничего нет.
+
+     Состояние, в которое своё приложение почти невозможно вернуть: чтобы увидеть мастер
+     глазами, надо снести настройки, а на живом телефоне это стоит дорого. Оттого первый
+     запуск и правят реже всего — а видит его каждый человек ровно один раз, и другого
+     впечатления у него не будет.
+
+     Приборов нет, показаний нет, в эфире вещают двое незнакомых. Разрешения не выданы:
+     на Android так и есть при первом входе, и это то самое место, где решается, увидим
+     ли мы эфир вообще. Включается window.демо.первыйЗапуск() — с перезагрузкой, потому
+     что флаг «мастер пройден» приложение читает при старте. */
+  var чистый = false;
+  try { чистый = sessionStorage.getItem('sl-демо-первый') === '1'; } catch (e) { /* ignore */ }
+  if (чистый) {
+    снимок.monitor = { glucose: '—', unit: 'ммоль/л', trend: '', status: 'Disconnected', link: 'Disconnected',
+      live: false, iob: '—', cob: '—', reservoir: '—', battery: '—', updatedAtMs: null };
+    снимок.hardware = [];
+    снимок.devices = [];
+    снимок.roles = [];
+    снимок.accounts = [];
+    снимок.setup = { configured: false, sources: 0, receiving: false };
+    снимок.scanReadiness = { canScan: false, blockers: ['noPermission'],
+      reason: 'Приложению не разрешён поиск по блютусу',
+      remediation: 'Разрешите поиск устройств поблизости — без этого система не покажет ни одного прибора',
+      canAskAgain: true, settingsTarget: 'appSettings' };
+    /* Всё в эфире — незнакомое. Своё железо мы только что стёрли, а на чистом телефоне
+       знакомых и нет: сенсор соседа вещает ровно так же, как свой.
+
+       Троих, а не одного, и намеренно разных: сенсор заводится одним тапом, мост ведёт
+       к нескольким помпам и потому спрашивает — какую, а третий просто чужой. Мастер на
+       одном приборе выглядит ровно и ничего не проверяет; ломается он там, где приборов
+       несколько и они разные. */
+    снимок.discovered = [
+      { bleId: 'E2:38:B4:63:51:59', name: 'GS1-2E4F', displayName: 'Sibionics GS1', driverId: 'sibionics',
+        rssi: -55, needsMoreParams: false, isTransport: false, transportFor: [], knownDeviceId: null },
+      { bleId: 'E8:E6:C9:69:AB:6D', name: 'OrangeLink', displayName: 'OrangeLink (мост к помпе)', driverId: 'orange',
+        rssi: -72, needsMoreParams: true, isTransport: true, transportFor: ['medtronic'], knownDeviceId: null },
+    ].concat(снимок.discovered.map(function (d) {
+      return Object.assign({}, d, { knownDeviceId: null });
+    }));
+  }
+
   /* Рассылаем КОПИЮ, а не тот же объект.
 
      React сравнивает снимки по ссылке: получив ту же самую, он справедливо решает, что
@@ -157,6 +199,14 @@
        надо чаще, чем кажется: именно на пустом экране видно, объясняет ли приложение
        себя или молчит. */
     безПриборов: function () { снимок.hardware = []; снимок.discovered = []; разослать(); return 'ок'; },
+    первыйЗапуск: function () {
+      try { sessionStorage.setItem('sl-демо-первый', '1'); localStorage.removeItem('sl.onboarded.v1'); } catch (e) { /* ignore */ }
+      location.reload(); return 'перезагружаюсь в чистый запуск';
+    },
+    какОбычно: function () {
+      try { sessionStorage.removeItem('sl-демо-первый'); } catch (e) { /* ignore */ }
+      location.reload(); return 'перезагружаюсь в обычное состояние';
+    },
     сПриборами: function () { снимок.hardware = железоДемо.slice(); снимок.discovered = эфирДемо.slice(); разослать(); return 'ок'; },
   };
 
@@ -180,13 +230,42 @@
         var нашли = снимок.discovered.filter(function (d) { return d.bleId === i.bleId; })[0];
         if (нашли) {
           снимок.discovered = снимок.discovered.filter(function (d) { return d.bleId !== i.bleId; });
+          var новыйId = 'ble-' + нашли.bleId;
           снимок.hardware = снимок.hardware.concat([{
-            id: 'ble-' + нашли.bleId, name: нашли.displayName || нашли.name, model: нашли.displayName,
-            kind: 'sensor', connection: 'Disconnected', status: 'Disconnected',
+            id: новыйId, name: нашли.displayName || нашли.name, model: нашли.displayName,
+            kind: 'sensor', connection: 'Connecting', status: 'Connecting',
             inSlot: null, nearbyAtMs: Date.now(),
           }]);
           разослать();
+          /* Заведённый прибор САМ идёт на связь, и через несколько секунд приходит первое
+             показание. Так делает движок, и без этого демо врало в самом важном месте:
+             только что заведённый сенсор навечно стоял «нет связи» с кнопкой
+             «Подключить» — то есть первый запуск выглядел неудачным ровно тогда, когда
+             всё прошло удачно. */
+          setTimeout(function () {
+            снимок.hardware = снимок.hardware.map(function (h) {
+              return h.id === новыйId
+                ? Object.assign({}, h, { connection: 'Streaming', status: 'Live', inSlot: 'cgm' })
+                : h;
+            });
+            снимок.monitor = Object.assign({}, снимок.monitor, {
+              glucose: '6,4', trend: '→', status: 'Live', link: 'Streaming', live: true,
+              updatedAtMs: Date.now(),
+            });
+            /* Сводка настроенности идёт вместе с данными: движок считает её сам, и
+               «не настроено» поверх первого же показания было бы его ошибкой, не
+               нашей. Демо повторяет движок, а не удобное нам поведение. */
+            снимок.setup = { configured: true, sources: 1, receiving: true };
+            разослать();
+          }, 4000);
         }
+        return Promise.resolve({ accepted: true });
+      }
+      /* Разрешение в демо выдаётся: иначе железный путь обрывается на первой же кнопке
+         и посмотреть, что будет дальше, нечем. Отказ проверяется ручкой демо.мешает(). */
+      if (i.type === 'requestScanPermissions') {
+        снимок.scanReadiness = { canScan: true, blockers: [] };
+        снимок.scanning = true; разослать();
         return Promise.resolve({ accepted: true });
       }
       if (i.type === 'startScan') { снимок.scanning = true; разослать(); }

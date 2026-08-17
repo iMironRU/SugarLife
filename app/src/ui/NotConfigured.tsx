@@ -3,6 +3,24 @@ import { cloudOfflineOutline, chevronForward } from 'ionicons/icons';
 import { useStore } from '@/sources/store';
 import { useSnapshot } from '@/sources/bridge';
 import { setOnboarded } from '@/settings/onboarding';
+import type { UiSnapshot } from '@/sources/bridge';
+
+/* Настроено ли — по флагу движка ИЛИ по факту идущих данных.
+
+     Флаг отвечает на вопрос «есть ли настроенный источник», и обычно этого хватает. Но
+     он может отстать: прибор заводят прямо сейчас, показания уже пошли, а сводка
+     настроенности приходит следующим снимком. И полсекунды поверх живого сахара висит
+     «Приложение не настроено» с кнопкой «пройти мастер заново» — предложение выбросить
+     то, что только что настроили.
+
+     Идущие данные — доказательство сильнее любого флага: источник, который шлёт
+     показания, настроен по определению. Обратное неверно, поэтому правило одностороннее:
+     молчащий источник остаётся настроенным. */
+function настроено(snap: UiSnapshot | null | undefined): boolean {
+  if (snap?.setup?.configured) return true;
+  const g = snap?.monitor?.glucose;
+  return !!g && g !== '—' && g !== '';
+}
 
 /* Приложение не настроено — заметный выход, а не мелкая надпись.
 
@@ -35,16 +53,14 @@ export function DataGate({ children }: { children: React.ReactNode }) {
      Настроено ≠ на связи. Молчащий источник остаётся настроенным: связь рвётся по десять
      раз на дню, и предлагать «настроить заново» при каждом обрыве значит гнать человека
      по кругу вместо того, чтобы сказать «прибор не отвечает». */
-  const setup = useSnapshot()?.setup;
-  if (setup?.configured) return <>{children}</>;
+  if (настроено(useSnapshot())) return <>{children}</>;
   if (status === 'off') return <NotConfigured />;
   return <>{children}</>;
 }
 
 export default function NotConfigured() {
   const { status } = useStore();
-  const setup = useSnapshot()?.setup;
-  if (setup?.configured) return null;
+  if (настроено(useSnapshot())) return null;
   // 'off' = ни одного включённого облака. Только это и значит «не настроено»;
   // при обрыве связи (stale/error) настройки на месте, мастер предлагать незачем.
   if (status !== 'off') return null;
