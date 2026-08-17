@@ -47,15 +47,10 @@ export function useДочитано<T extends HTMLElement>(ключ: unknown) {
   const пересчитатьРеф = useRef<(() => void) | null>(null);
   const [вКонце, setВКонце] = useState(false);
   const [дочитано, setДочитано] = useState(false);
-  /* Верхний край — зеркально нижнему (#320). Отдельное значение, а не «не вКонце»:
-     короткое содержимое стоит одновременно и в начале, и в конце, и одно из другого
-     не выводится. */
-  const [вНачале, setВНачале] = useState(true);
 
   useEffect(() => {
     setВКонце(false);
     setДочитано(false);
-    setВНачале(true);
     const узел = конец.current;
     if (!узел) return;
     /* Скроллер ищем по устройству страницы, а не по одному классу: у раздела это
@@ -71,7 +66,6 @@ export function useДочитано<T extends HTMLElement>(ключ: unknown) {
       const пересчитать = () => {
         const дно = скроллер.scrollTop + скроллер.clientHeight >= скроллер.scrollHeight - ПОРОГ_ДНА;
         setВКонце(дно);
-        setВНачале(скроллер.scrollTop <= ПОРОГ_ДНА);
         if (дно) setДочитано(true);  // только вверх: дочитанное дочитано до смены ключа
       };
 
@@ -111,5 +105,5 @@ export function useДочитано<T extends HTMLElement>(ключ: unknown) {
      страницы, и единственный надёжный признак этого — сам факт перерисовки. */
   useEffect(() => { пересчитатьРеф.current?.(); });
 
-  return { конец, вКонце, вНачале, дочитано };
+  return { конец, вКонце, дочитано };
 }
