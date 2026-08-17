@@ -429,6 +429,21 @@ export interface UiSnapshot {
      Тесты этого не ловят: у нас в зеркале контракта опечатка была согласована сама с
      собой. Ловится только живым снимком, поэтому и пролежало. */
   availableCloudProviders?: CloudProviderView[];
+  /* Можно ли вообще слушать эфир (rev ≥ 1.20, SugarLife#333/#337).
+
+     Спрашиваем движок, а не систему: он запускает скан и единственный знает, почему тот
+     не идёт. Своя проверка завела бы второе мнение о том же — приложение говорит «всё в
+     порядке», а скан пуст. Мы уже дважды на этом обожглись: с порогами свежести и с
+     состоянием слотов. */
+  scanReadiness?: ScanReadinessView;
+  /* Настроено ли приложение (rev ≥ 1.20, SugarLife#337).
+
+     До этого поля каждый экран считал настроенность по-своему, и стор считал её по
+     облакам: прямой BLE-сенсор, который прямо сейчас шлёт показания, в счёт не входил —
+     баннер «приложение не настроено» висел поверх работающего сенсора.
+
+     И спрашивать человека «у вас уже настроено?» больше незачем: мы это знаем. */
+  setup?: SetupView;
   accounts?: AccountView[];
 }
 
@@ -457,6 +472,33 @@ export interface SubjectView {
   kind: 'patient' | 'device';
   serial?: string | null;
   startedAtMs?: number | null;
+}
+
+/* Готовность к поиску (rev ≥ 1.20). */
+export interface ScanReadinessView {
+  canScan: boolean;
+  /* Причины, а не булев флаг: список открыт, и следующая особенность Android добавит
+     код, не требуя нового поля. Порядок — в котором устранять. */
+  blockers?: ('bluetoothOff' | 'noPermission' | 'locationOff' | string)[];
+  reason?: string | null;
+  /* Что СДЕЛАТЬ. Причина без действия оставляет человека с диагнозом и без лечения — а
+     здесь чинится одним движением. */
+  remediation?: string | null;
+  /* Поднимется ли системный диалог. false — отказ насовсем: показывать надо «Открыть
+     настройки», а не «Разрешить». Кнопка, которая ничего не открывает, — тупик. */
+  canAskAgain?: boolean | null;
+  settingsTarget?: 'appSettings' | 'bluetooth' | 'location' | string | null;
+}
+
+/* Итог настройки (rev ≥ 1.20). Главное различие: НАСТРОЕНО ≠ НА СВЯЗИ. Молчащий источник
+   остаётся настроенным — связь рвётся по десять раз на дню, и предлагать «настроить
+   заново» при каждом обрыве значит гнать человека по кругу. */
+export interface SetupView {
+  configured: boolean;
+  sources?: number;
+  /* Идут ли данные прямо сейчас. configured без receiving — это «настроено, но молчит»:
+     говорить надо про связь, а не про настройку. */
+  receiving?: boolean;
 }
 
 export interface CloudProviderView {
@@ -513,6 +555,14 @@ export type Intent =
   | { type: 'enableAlgorithm'; enabled: boolean }
   | { type: 'setAlgorithmParams'; params: Record<string, string> }
   // rev ≥ 1.5: plug-and-play скан эфира
+  /* Разрешения спрашиваем ОТДЕЛЬНЫМ интентом, а не «натив спросит сам при первом
+     скане» (rev ≥ 1.20): системный диалог даётся один раз, и до него человеку надо
+     объяснить, о чём его спросят. Иначе он жмёт «Запретить» на непонятный вопрос, а
+     второго шанса система не даёт. Итог приходит в scanReadiness, а не в ответе. */
+  | { type: 'requestScanPermissions' }
+  /* Куда вести — знает движок (settingsTarget), как открыть — натив. Интерфейсу не надо
+     знать ни того, ни другого. */
+  | { type: 'openSystemScreen'; target: 'appSettings' | 'bluetooth' | 'location' | string }
   | { type: 'startScan' }
   | { type: 'stopScan' }
   | { type: 'addDiscovered'; bleId: string; driverType: string; params: Record<string, string>; mode?: 'attach' | 'activate'; targetDriver?: string }

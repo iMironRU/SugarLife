@@ -14,11 +14,17 @@ type Step = { kind: 'list' } | { kind: 'target'; item: Discovered } | { kind: 'p
    целевого устройства из transportFor) → addDiscovered. Показывается ТОЛЬКО когда мост
    реально предлагает драйвер для этой категории (availableDrivers) — иначе секции нет:
    Nightscout-шим никогда не сканирует, категории без BLE (шприцы/глюкометры) сюда не попадают. */
-export default function DeviceScanSheet({ isOpen, onClose, kind, title }: {
+export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбран }: {
   /* kind не задан — не фильтруем вовсе. Так шторка работает и из карточки конкретной
      категории («покажи сенсоры»), и из общего «что рядом», где категория заранее
      неизвестна: движок сам узнаёт, что вещает (SugarLifeCore#12). */
   isOpen: boolean; onClose: () => void; kind?: 'sensor' | 'pump'; title: string;
+  /* С каким прибором пришли (SugarLife#337, п. 1).
+
+     Раньше тап по найденному прибору открывал эту шторку без него: скан начинался
+     заново, и выбирать приходилось второй раз. Обработчик игнорировал предмет нажатия —
+     тот же класс, что «Найти рядом» → каталог. */
+  выбран?: Discovered | null;
 }) {
   const snap = useSnapshot();
   const drivers = snap?.availableDrivers ?? [];
@@ -32,6 +38,9 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title }: {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { if (!isOpen) { setStep({ kind: 'list' }); setValues({}); setMode('attach'); } }, [isOpen]);
+  /* Пришли с готовым выбором — сразу к нему, минуя список. Список в этом случае был бы
+     вопросом «что выбрать» после того, как человек уже выбрал. */
+  useEffect(() => { if (isOpen && выбран) pick(выбран); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [isOpen, выбран?.bleId]);
   useEffect(() => { if (isOpen) sendIntent({ type: 'startScan' }); return () => { if (isOpen) sendIntent({ type: 'stopScan' }); }; }, [isOpen]);
 
   // релевантные категории: прямые устройства нужного kind + мосты, ведущие к нему

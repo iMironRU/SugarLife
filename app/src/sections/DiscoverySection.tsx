@@ -1,10 +1,10 @@
 import { IonIcon, IonSpinner } from '@ionic/react';
-import { bluetoothOutline, radioOutline } from 'ionicons/icons';
+import { bluetoothOutline, radioOutline, warningOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
-import { useSnapshot, sendIntent } from '@/sources/bridge';
+import { useSnapshot, sendIntent, type Discovered } from '@/sources/bridge';
 import { plural } from '@/domain/units';
 import { новоеВЭфире } from '@/domain/nearby';
 import { близость } from '@/domain/signal';
@@ -32,7 +32,7 @@ const isNative = Capacitor.isNativePlatform();
    найдено» значит оставить человека гадать. */
 export default function DiscoverySection({ onClose }: { onClose: () => void }) {
   const snap = useSnapshot();
-  const [scanOpen, setScanOpen] = useState(false);
+  const [выбран, setВыбран] = useState<Discovered | null>(null);
 
   const devices = (snap?.devices ?? []).filter((d) => d.kind !== 'service');
   const весьЭфир = snap?.discovered ?? [];
@@ -41,13 +41,23 @@ export default function DiscoverySection({ onClose }: { onClose: () => void }) {
   const discovered = новоеВЭфире(весьЭфир, devices);
   const своиВЭфире = весьЭфир.length - discovered.length;
   const scanning = !!snap?.scanning;
+  /* Привратник (SugarLife#337, п. 4). Проверяем ПЕРЕД каждым входом в поиск, а не
+     только на первом запуске: человек через месяц выключит блютус и забудет.
+
+     Диагноз спрашиваем у движка — он запускает скан и единственный знает, почему тот не
+     идёт. Своя проверка завела бы второе мнение о том же. */
+  const готовность = snap?.scanReadiness ?? null;
+  const мешает = готовность && !готовность.canScan ? готовность : null;
 
   /* Скан идёт, пока экран открыт, и останавливается при уходе: эфир слушать вхолостую —
      это батарея телефона, и «забыли выключить» здесь стоит дорого. */
   useEffect(() => {
+    /* Не зовём скан, когда он заведомо невозможен: «Слушаю эфир…» при выключенном
+       блютусе — обещание, которого мы не выполним, и человек ждёт впустую. */
+    if (мешает) return;
     void sendIntent({ type: 'startScan' });
     return () => { void sendIntent({ type: 'stopScan' }); };
-  }, []);
+  }, [мешает]);
 
   const пусто = discovered.length === 0;
 
@@ -65,11 +75,38 @@ export default function DiscoverySection({ onClose }: { onClose: () => void }) {
   return (
     <Section title="Найти устройство" описание="Приборы, которые сейчас вещают в эфир и ещё не заведены. Уже известные сюда не попадают — они в списке «Мои устройства»." onBack={onClose}>
 
-      <div className="section-label sec">Незнакомые в эфире</div>
-      <div className={'scan-state' + (scanning ? ' on' : '')}>
+      {/* Что мешает — вместо поиска, а не рядом с ним. Показать список пустого эфира
+          под надписью «блютус выключен» значит предложить человеку два занятия сразу,
+          из которых работает ноль. */}
+      {мешает && (
+        <div className="today-alert">
+          <IonIcon icon={warningOutline} className="alert-ico" />
+          <div>
+            <span className="alert-title">{мешает.reason ?? 'Поиск сейчас невозможен'}</span>
+            {мешает.remediation && <span>{мешает.remediation}</span>}
+            <span className="alert-ask alert-ask-row">
+              {/* Диалог даётся один раз: если человек отказал насовсем, кнопка
+                  «Разрешить» открыла бы ничего — тупик, из которого он не выберется и
+                  решит, что приложение сломано. Тогда ведём в настройки. */}
+              {мешает.canAskAgain !== false && мешает.blockers?.includes('noPermission') ? (
+                <button className="changed-btn is-undo"
+                  onClick={() => void sendIntent({ type: 'requestScanPermissions' })}>Разрешить</button>
+              ) : мешает.settingsTarget ? (
+                <button className="changed-btn is-undo"
+                  onClick={() => void sendIntent({ type: 'openSystemScreen', target: мешает.settingsTarget! })}>
+                  Открыть настройки
+                </button>
+              ) : null}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {!мешает && <div className="section-label sec">Незнакомые в эфире</div>}
+      {!мешает && <div className={'scan-state' + (scanning ? ' on' : '')}>
         {scanning ? <IonSpinner name="crescent" /> : <IonIcon icon={bluetoothOutline} />}
         <span>{scanning ? 'Слушаю эфир…' : 'Поиск не идёт'}</span>
-      </div>
+      </div>}
 
       {!пусто && (
         <div className="list">
@@ -79,12 +116,15 @@ export default function DiscoverySection({ onClose }: { onClose: () => void }) {
                  половины железок они совпадают, и строка «Dexcom G7 · Dexcom G7»
                  выглядит сбоем. */
               title={d.displayName} sub={d.name && d.name !== d.displayName ? d.name : undefined}
-              value={близость(d.rssi)} onClick={() => setScanOpen(true)} />
+              /* Передаём именно ТОТ прибор, по которому нажали (#337). Раньше здесь
+                 открывалась шторка без него, скан начинался заново, и выбирать
+                 приходилось второй раз — на экране, куда человек пришёл выбирать. */
+              value={близость(d.rssi)} onClick={() => setВыбран(d)} />
           ))}
         </div>
       )}
 
-      {пусто && (
+      {пусто && !мешает && (
         <div className="sheet-note">
           {/* В браузере блютуса нет как класса, и списывать пустой эфир на разрешения
               здесь — враньё: человек пойдёт их проверять и ничего не найдёт (#163).
@@ -119,7 +159,7 @@ export default function DiscoverySection({ onClose }: { onClose: () => void }) {
         </div>
       )}
 
-      <DeviceScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} title="Что рядом" />
+      <DeviceScanSheet isOpen={!!выбран} выбран={выбран} onClose={() => setВыбран(null)} title="Что рядом" />
     </Section>
   );
 }
