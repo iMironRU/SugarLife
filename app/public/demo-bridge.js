@@ -283,6 +283,25 @@
     },
     /* Источник «догоняет», а показание свежее — случай с телефона (#358): круг показывал
        часики при живом списке измерений. */
+    /* Длинный инсулин (#287): три состояния, ради которых правило и писалось —
+       действует, срок неизвестен, срок вышел. */
+    длинный: function (режим) {
+      var ч = 3600e3, сейчас = Date.now();
+      if (режим === 'нет') {
+        снимок.monitor = Object.assign({}, снимок.monitor,
+          { longActingUnits: null, longActingAtMs: null, longActingUntilMs: null });
+      } else if (режим === 'безСрока') {
+        снимок.monitor = Object.assign({}, снимок.monitor,
+          { longActingUnits: 24, longActingAtMs: сейчас - 3 * ч, longActingUntilMs: null });
+      } else if (режим === 'кончился') {
+        снимок.monitor = Object.assign({}, снимок.monitor,
+          { longActingUnits: 24, longActingAtMs: сейчас - 26 * ч, longActingUntilMs: сейчас - 2 * ч });
+      } else {
+        снимок.monitor = Object.assign({}, снимок.monitor,
+          { longActingUnits: 24, longActingAtMs: сейчас - 3 * ч, longActingUntilMs: сейчас + 21 * ч });
+      }
+      разослать(); return 'длинный: ' + (режим || 'действует');
+    },
     догоняет: function () {
       снимок.monitor = Object.assign({}, снимок.monitor, {
         status: 'Acquiring', live: false,
@@ -365,6 +384,15 @@
       }
       /* setParams в демо действительно записывает: у ядра он до сегодняшнего дня молча
          игнорировался (core#75), и повторять эту поломку у себя незачем. */
+      /* Запись длинного действительно меняет снимок: иначе «Записать» выглядит нажатием
+         в пустоту, а проверяем мы именно то, что после записи строка появилась. */
+      if (i.type === 'logInsulin' && i.long) {
+        снимок.monitor = Object.assign({}, снимок.monitor,
+          { longActingUnits: i.units, longActingAtMs: i.atMs, longActingUntilMs: null });
+        записать(null, 'Info', 'записан длинный инсулин', { 'ед': i.units });
+        разослать();
+        return Promise.resolve({ accepted: true });
+      }
       if (i.type === 'setDeviceLogDetail') {
         снимок.hardware = снимок.hardware.map(function (h) {
           return h.id === i.deviceId
