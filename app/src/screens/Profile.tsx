@@ -4,12 +4,14 @@ import {
   hardwareChipOutline, repeat, documentTextOutline, heartOutline, informationCircleOutline,
   colorPaletteOutline,
 } from 'ionicons/icons';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { resetLocalData } from '@/settings/reset';
 import { unitLabel, useUnit, carbUnitLabel, useCarbUnit } from '@/domain/units';
 import { useTheme } from '../theme/useTheme';
 import { APP_EDITION, APP_VERSION, APP_BUILD, isNative } from '@/platform/appUpdate';
 import { useStack } from '@/app/stackCtx';
+import { разделИзАдреса } from '@/platform/deepLink';
+import { setTab } from '@/app/nav';
 import { useSnapshot } from '@/sources/bridge';
 import { useHealth } from '@/settings/health';
 import { поВажности } from '@/domain/screenings';
@@ -28,6 +30,33 @@ export default function Profile() {
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
   const carbUnit = useCarbUnit();
   const { push, pop } = useStack();
+
+  /* Входящий диплинк — открываем ИМЕННО ТОТ раздел, за которым шли (#315).
+
+     Без этого ссылка ведёт «в приложение», человек попадает на «Сегодня» и начинает
+     искать то, за чем пришёл, — то есть возвращаемся к совету, только длиннее.
+
+     Слушаем здесь, а не в App.tsx: разделы открываются стеком профиля, и стек живёт тут.
+     Открываем один раз на адрес: повторное событие того же адреса (система шлёт его при
+     возврате из фона) не должно класть второй такой же экран поверх первого. */
+  const открытоПо = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isNative) return;
+    let снять: (() => void) | null = null;
+    void import('@capacitor/app').then(({ App }) => {
+      App.addListener('appUrlOpen', ({ url }) => {
+        if (открытоПо.current === url) return;
+        const раздел = разделИзАдреса(url);
+        if (!раздел) return;
+        открытоПо.current = url;
+        setTab(4);
+        if (раздел === 'диагностика') push(<DiagnosticsSection onClose={pop} />);
+        else push(<DataDevicesSection onClose={pop} вкладка="приборы" />);
+      }).then((h) => { снять = () => void h.remove(); });
+    });
+    return () => { снять?.(); };
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, []);
   /* Издание берём у движка, а не у константы сборки (#298, #294). Константа говорит, чем
      нас собрали, движок — что внутри на самом деле. Для обновления важно второе: релиз
      выпускает Lite, и предлагать его сборке Pro значит поставить рядом второе приложение

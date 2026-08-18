@@ -311,6 +311,16 @@ class AndroidSensorBridge(context: Context, bleId: String) : SensorTransportBrid
 
 /** Мост помпы Medtronic через OrangeLink/RileyLink → [PumpTransportBridge] (зеркало iOS PumpBridge). */
 class AndroidPumpBridge(context: Context, bleId: String) : PumpTransportBridge {
+    /* Запас времени НА ТРАНСПОРТ (SugarLifeCore#80). Срок ответа складывается из двух
+       разных вещей: сколько мост держит радио — знает протокол, сколько добавит BLE-стек —
+       знает платформа. Раньше их смешивали в одном числе и подбирали на глаз (3000 здесь,
+       5000 там, 8000 у сторожа).
+
+       7,5 с — цифра AndroidAPS (EXPECTED_MAX_BLUETOOTH_LATENCY_MS), у них это работает на
+       том же зоопарке телефонов. У iOS ориентир вдвое меньше, и разница честная: стек
+       Android заметно менее предсказуем. */
+    override val bleLatencyMs: Long = 7500
+
     private val link = BleLink(context, bleId, notifyChars = setOf(RL_RESP))
     private var pending: ((ByteArray) -> Unit)? = null
     private var срок: Runnable? = null
