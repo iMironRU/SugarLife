@@ -184,7 +184,16 @@ class BleLink(
         val device = adapter.getRemoteDevice(address)
         onState?.invoke("Connecting")
         Log.d(TAG, "connect $address")
-        gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
+        // autoConnect = TRUE и без TRANSPORT_LE — как в AndroidAPS (RileyLinkBLE.connectGattInternal).
+        //
+        // Разница не косметическая. `false` означает «подключись немедленно и агрессивно»: стек занимает слот
+        // сканирования, конкурирует с другими соединениями и охотно отваливается кодами 133/8 при живом
+        // эфире — что мы и видели, когда рядом работал сенсор. `true` — «встань в очередь, подключись, когда
+        // сможешь, и держи»: первый коннект медленнее, зато соединение переживает соседей и восстанавливается
+        // само.
+        //
+        // Приборы не мешают друг другу — мешает способ, которым мы к ним ломимся (core#77).
+        gatt = device.connectGatt(context, true, callback)
     }
 
     fun disconnect() {
