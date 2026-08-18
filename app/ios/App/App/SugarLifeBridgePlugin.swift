@@ -277,9 +277,10 @@ private let rlData      = CBUUID(string: "C842E849-5028-42E2-867C-016ADADA9155")
 private let rlRespCount = CBUUID(string: "6E6C7910-B89E-43A5-A0FE-50C5E2B81F4A")
 
 final class PumpBridge: PumpTransportBridge {
-    /* Запас на транспорт (SugarLifeCore#80). У CoreBluetooth задержки предсказуемее, чем у
-       Android: ориентир rileylink_ios — две секунды, его и берём. Не «как на Android, но
-       поменьше»: число должно быть тем, что измерили на этой платформе. */
+    /* Запас на транспорт (SugarLifeCore#80). В Swift лишнее свойство сборку не ломает —
+       протокол его просто не требует, пока ядро не опубликовано, — поэтому здесь оно
+       остаётся: два часа спустя будет уже нужно. Ориентир rileylink_ios: две секунды. Не
+       «как на Android, но поменьше» — число должно быть измерено на своей платформе. */
     let bleLatencyMs: Int64 = 2000
 
     private let link: BleLink

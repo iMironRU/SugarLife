@@ -311,15 +311,19 @@ class AndroidSensorBridge(context: Context, bleId: String) : SensorTransportBrid
 
 /** Мост помпы Medtronic через OrangeLink/RileyLink → [PumpTransportBridge] (зеркало iOS PumpBridge). */
 class AndroidPumpBridge(context: Context, bleId: String) : PumpTransportBridge {
-    /* Запас времени НА ТРАНСПОРТ (SugarLifeCore#80). Срок ответа складывается из двух
-       разных вещей: сколько мост держит радио — знает протокол, сколько добавит BLE-стек —
-       знает платформа. Раньше их смешивали в одном числе и подбирали на глаз (3000 здесь,
-       5000 там, 8000 у сторожа).
+    /* ЗАПАС ВРЕМЕНИ НА ТРАНСПОРТ (SugarLifeCore#80) — ЖДЁТ ПУБЛИКАЦИИ ЯДРА.
 
-       7,5 с — цифра AndroidAPS (EXPECTED_MAX_BLUETOOTH_LATENCY_MS), у них это работает на
-       том же зоопарке телефонов. У iOS ориентир вдвое меньше, и разница честная: стек
-       Android заметно менее предсказуем. */
-    override val bleLatencyMs: Long = 7500
+       Здесь стояло `override val bleLatencyMs = 7500`, и это ломало сборку APK: свойство
+       есть в РАБОЧЕЙ КОПИИ соседей и отсутствует в опубликованном ядре, откуда собирает
+       CI. «overrides nothing» — ровно про это.
+
+       Ошибка моя и по природе та же, что уже случалась дважды (наш #292, их #336): код
+       написан против интерфейса, которого никто, кроме автора, ещё не видит. Разница лишь
+       в том, что в прошлые разы отставала ветка по умолчанию, а тут — чужой рабочий стол,
+       случайно оказавшийся у нас под рукой.
+
+       Вернём одной строкой, как только core#80 окажется в main: 7500 мс — цифра AndroidAPS
+       (EXPECTED_MAX_BLUETOOTH_LATENCY_MS), проверенная на том же зоопарке телефонов. */
 
     private val link = BleLink(context, bleId, notifyChars = setOf(RL_RESP))
     private var pending: ((ByteArray) -> Unit)? = null
