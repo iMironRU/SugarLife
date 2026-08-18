@@ -272,6 +272,49 @@ export interface Alert { level: 'info' | 'warn' | 'critical'; text: string; prob
 // rev ≥ 1.4: состояние логирования (раздел «Настройки логирования»)
 export interface LoggingState { level: 'Trace' | 'Debug' | 'Info' | 'Warn' | 'Error'; capturingFile: boolean; capturingRaw: boolean; retentionHours: number }
 
+/* Журнал обмена по ПРИБОРАМ (rev ≥ 1.25, SugarLifeCore#72).
+
+   Заведён по SugarLife#354, и повод весомый: три поломки за день нашлись только потому,
+   что ядро читало логи через `adb logcat` с компьютера. У человека с телефоном такого
+   канала нет — он видит «устройство не отвечает» и не может сказать больше.
+
+   ЗАПРОС, А НЕ ПОЛЕ СНИМКА, и это принципиально: записей тысячи, а снимок обязан
+   оставаться маленьким — он приходит каждые несколько секунд и целиком.
+
+   `event` — по-русски и для человека: коды BLE-стека движок расшифровывает сам («связь
+   потеряна: прибор ушёл из зоны»). Мы их не переводим и не додумываем: у нас нет
+   контекста, а у него есть. */
+export type LogLevel = 'Trace' | 'Debug' | 'Info' | 'Warn' | 'Error';
+
+export interface LogRecord {
+  atMs: number;
+  level: LogLevel;
+  deviceId?: string | null;
+  tag?: string | null;
+  /** Человеческая формулировка события — её и показываем. */
+  event: string;
+  fields?: Record<string, string | number | boolean | null> | null;
+  code?: string | null;
+  /** Для «отправить отчёт»: тот же идентификатор, что у ошибки в снимке. */
+  errorId?: string | null;
+  /* В записи есть радио-адрес помпы или код сенсора. Помечает движок, потому что
+     блок-лист по именам полей их не ловит: они приезжают внутри сырых кадров. */
+  hasIdentifiers?: boolean;
+}
+
+export interface LogQuery {
+  deviceId?: string;
+  sinceMs?: number;
+  minLevel?: LogLevel;
+  limit?: number;
+}
+
+export interface LogResult {
+  records: LogRecord[];
+  /** Записей было больше, чем влезло в limit. */
+  truncated?: boolean;
+}
+
 // rev ≥ 1.5: plug-and-play — опознанное при скане устройство
 export interface Discovered {
   bleId: string; name: string | null; driverId: string; displayName: string; rssi: number | null;
@@ -412,6 +455,10 @@ export interface HardwareView {
      ядро отложило (SugarLifeCore#41), и до тех пор это догадка, а не факт: так её и
      показываем — «возможно», без имени чужого телефона. */
   busy?: 'possibly' | null;
+  /* Докуда включён подробный обмен (rev ≥ 1.25). null/отсутствует — обычный уровень.
+     Держим временем, а не флагом: подробность гаснет сама, и «включено» без срока
+     соврало бы через четверть часа. */
+  logDetailUntilMs?: number | null;
   registryState?: 'Recorded' | 'Configured' | 'Linked' | 'Paused' | 'NotConfigured';
   /* Чего не хватает / чем занят — то же, что у DeviceView (мост 1.22/1.24). У железа это
      важнее: именно его карточку открывают, когда «не работает». */
@@ -598,6 +645,11 @@ export type Intent =
   | { type: 'setLogLevel'; level: 'Trace' | 'Debug' | 'Info' | 'Warn' | 'Error' }
   | { type: 'setLogCapture'; file: boolean | null; raw: boolean | null }
   | { type: 'exportLog' }
+  /* Подробный обмен ПО ОДНОМУ прибору (rev ≥ 1.25). Именно по прибору, а не глобально:
+     кадры обмена — это сотни записей в минуту, и включают их, чтобы воспроизвести
+     проблему, а не чтобы с этим жить. Движок гасит подробность сам через 15 минут;
+     докуда она включена, видно в `logDetailUntilMs` у прибора. */
+  | { type: 'setDeviceLogDetail'; deviceId: string; detailed: boolean }
   | { type: 'sendReport'; errorId: string }
   /* rev ≥ 1.6: облачный хаб САМОГО пользователя (Nightscout) — читаем и пишем.
      Это НЕ вендор-аккаунт: у чужого облака производителя своя сущность Account
@@ -649,6 +701,22 @@ export interface SugarLifeBridge {
   // rev ≥ 1.1: окно истории для графиков. В 1.7 обязателен — Nightscout-шим отдаёт
   // историю из локальной IndexedDB, так что необязательным его держать больше незачем.
   query(q: HistoryQuery): Promise<HistoryResult>;
+  /* rev ≥ 1.25 — журнал обмена. Необязателен: Nightscout-шим в браузере ничего не пишет,
+     и требовать от него метод значило бы обещать экран, которому нечего показать. */
+  logQuery?(q: LogQuery): Promise<LogResult>;
+}
+
+/* Журнал обмена через активный мост. null — мост его не ведёт вовсе; это ОТВЕТ, а не
+   ошибка, и отличать его от «записей нет» обязательно: в первом случае человеку нечего
+   ждать, во втором — есть. */
+export async function запросЖурнала(q: LogQuery): Promise<LogResult | null> {
+  const b = getBridge();
+  if (!b.logQuery) return null;
+  try {
+    return await b.logQuery(q);
+  } catch {
+    return null;
+  }
 }
 
 // Запрос истории через активный мост (undefined, если мост не поддерживает).
