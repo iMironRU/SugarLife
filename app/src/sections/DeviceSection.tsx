@@ -12,6 +12,7 @@ import { связь, меткаСвязи, предложениеСлияния,
 import { мостСлота } from '@/domain/slotStatus';
 import { железоДиспетчера } from '@/domain/nearby';
 import { устройствоДляПараметров, значенияПараметров } from '@/domain/deviceParams';
+import { писатьЛокально } from '@/domain/реестр';
 import { useSnapshot, sendIntent, type DeviceView } from '@/sources/bridge';
 
 import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
@@ -158,8 +159,11 @@ export default function DeviceSection({ onClose, cat, title }: {
   const адресат = устройствоДляПараметров(snap, cat);
   const params = значенияПараметров(адресат, cfg.deviceParams[cat] ?? {});
   const записатьПараметр = (k: string, v: string) => {
+    /* Адресат есть — пишем только ему. Дублировать в конфиг «на всякий случай» значит
+       завести вторую правду о серийнике: разойдясь, они дадут человеку экран, где всё
+       заполнено, и драйвер, который читать не может. */
     if (адресат) void sendIntent({ type: 'setParams', deviceId: адресат.id, params: { ...params, [k]: v } });
-    else setParam(cat, k, v);
+    else if (писатьЛокально('deviceParams', snap)) setParam(cat, k, v);
   };
   const paramsMissing = missingParams(spec, params);
 
@@ -237,7 +241,17 @@ export default function DeviceSection({ onClose, cat, title }: {
       },
     });
   };
-  const setBridge = (id: string) => setDeviceConfig(cat === 'pump' ? { bridgePumpId: id } : { bridgeSensorId: id });
+  /* Мост: при живом движке НЕ дублируем выбор у себя (#224).
+
+     Читать из снимка мы научились раньше, но продолжали писать рядом — а пока
+     пополняются обе записи, они разъедутся снова, и тихо: каждая по отдельности выглядит
+     правдой. Движок видит, за каким мостом стоит прибор, и помнит это сам.
+
+     Без движка (браузер) пишем к себе: иначе человеку негде хранить выбранное вовсе. */
+  const setBridge = (id: string) => {
+    if (!писатьЛокально('bridgePumpId', snap)) return;
+    setDeviceConfig(cat === 'pump' ? { bridgePumpId: id } : { bridgeSensorId: id });
+  };
   const pickerItems = hasModel ? modelItems(cat as 'pump' | 'sensor') : [];
 
   // реестр (docs/CONNECT-UX.md §2a): статус записи — только для категорий с моделью
