@@ -183,6 +183,17 @@ class SugarLifeBridgePlugin : Plugin() {
         call.resolve(JSObject().put("json", engine.query(call.getString("json") ?: "")))
     }
 
+    /**
+     * Журнал обмена с прибором (core#72): LogQuery JSON → LogResult JSON.
+     *
+     * Отдельный метод, а не поле снимка: записей тысячи, а снимок уходит на каждое изменение состояния.
+     * Без этого метода журнал существовал только внутри движка — то есть был не нужен никому.
+     */
+    @PluginMethod
+    fun logQuery(call: PluginCall) {
+        call.resolve(JSObject().put("json", engine.logQuery(call.getString("json") ?: "{}")))
+    }
+
     override fun handleOnDestroy() {
         // Только отписываемся. Движок НЕ останавливаем — он живёт в EngineHolder, процесс держит SugarLifeService.
         unsubscribe?.invoke()
