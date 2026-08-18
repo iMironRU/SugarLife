@@ -172,6 +172,16 @@ class SugarLifeBridgePlugin : Plugin() {
         call.resolve(JSObject().put("json", engine.query(call.getString("json") ?: "")))
     }
 
+    /* Журнал обмена по приборам (мост 1.25, SugarLife#354). Отдельным методом, а не полем
+       снимка: записей тысячи, а снимок уходит в вебвью целиком и каждые несколько секунд.
+
+       Прозрачная передача JSON, как и `query`: разбирать записи здесь нечего — их формат
+       знает движок, а показывает интерфейс. */
+    @PluginMethod
+    fun logQuery(call: PluginCall) {
+        call.resolve(JSObject().put("json", engine.logQuery(call.getString("json") ?: "{}")))
+    }
+
     override fun handleOnDestroy() {
         // Только отписываемся. Движок НЕ останавливаем — он живёт в EngineHolder, процесс держит SugarLifeService.
         unsubscribe?.invoke()

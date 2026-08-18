@@ -3,6 +3,7 @@ import { IonIcon, IonToggle } from '@ionic/react';
 import { shareOutline, checkmarkCircle } from 'ionicons/icons';
 import Sheet from '@/ui/Sheet';
 import { запросЖурнала, sendIntent, type HardwareView, type LogRecord } from '@/sources/bridge';
+import { isNative } from '@/platform/appUpdate';
 import {
   ОБЫЧНЫЙ_УРОВЕНЬ, важнее, естьИдентификаторы, подробноЕщёМинут, словоПустого,
   времяЗаписи, строкаПолей,
@@ -101,7 +102,7 @@ export default function DeviceLogSheet({ прибор, onClose }: {
         </div>
       ) : (
         <div className="sheet-note" style={{ marginTop: 12 }}>
-          {словоПустого({ журналЕсть, всегоЗаписей: все.length })}
+          {словоПустого({ журналЕсть, всегоЗаписей: все.length, вПриложении: isNative })}
         </div>
       )}
 
