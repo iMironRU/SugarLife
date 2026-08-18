@@ -348,6 +348,10 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "requestSnapshot", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "sendIntent", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "query", returnType: CAPPluginReturnPromise),
+        /* Без строки здесь метода для JS не существует, даже если он написан: Capacitor
+           отдаёт вебвью ровно то, что перечислено. Забыть её — получить «not implemented»
+           у работающего кода. */
+        CAPPluginMethod(name: "logQuery", returnType: CAPPluginReturnPromise),
     ]
 
     // Движок создаём ОТЛОЖЕННО — на следующем тике main-цикла (в load() через async), а не в property-init
@@ -449,4 +453,14 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func query(_ call: CAPPluginCall) { call.resolve(["json": engine?.query(json: call.getString("json") ?? "") ?? "{\"glucose\":[],\"treatments\":[]}"]) }
+
+    /* Журнал обмена по приборам (мост 1.25, SugarLife#354) — зеркало Android.
+
+       Отдельным методом, а не полем снимка: записей тысячи, а снимок уходит в вебвью
+       целиком и каждые несколько секунд. Движка нет — отвечаем ПУСТЫМ списком, а не
+       отказом: отказ у нас означает «эта сборка журнала не ведёт», и путать «движок ещё
+       не поднялся» с «метода не существует» нельзя. */
+    @objc func logQuery(_ call: CAPPluginCall) {
+        call.resolve(["json": engine?.logQuery(json: call.getString("json") ?? "{}") ?? "{\"records\":[]}"])
+    }
 }
