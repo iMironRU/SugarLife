@@ -6,6 +6,8 @@ import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS, plural } from '@/do
 import { addMeal, useMeals } from '@/sources/mealStore';
 import { необъяснённыеПодъёмы, времяМомента, СМЕЩЕНИЯ } from '@/domain/mealMoment';
 import { searchFoods, personalFoods, CAT_LABEL, CAT_ORDER, type Food } from '@/domain/foods';
+import { когоНазвать, вопрос, type Спросить } from '@/domain/mealNaming';
+import { useMealNames, nameGroup, skipGroup } from '@/settings/mealNames';
 import { подсказка, приёмПоЧасу } from '@/domain/foodNow';
 import Sheet from '@/ui/Sheet';
 import { падает } from '@/domain/trend';
@@ -57,7 +59,11 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
   const [развёрнуто, setРазвёрнуто] = useState<Record<string, boolean>>({});
 
   const meals = useMeals();
-  const своё = personalFoods(meals);
+  const имена = useMealNames();
+  const своё = personalFoods(meals, имена.names);
+  /* О чём спросить после записи. null — не о чем, и тогда шторка закрывается как прежде. */
+  const [спросить, setСпросить] = useState<Спросить | null>(null);
+  const [имя, setИмя] = useState('');
   const найдено = searchFoods(запрос);
   /* Коротко — только приёмы и купирование гипо: первое закрывает обычный день, второе
      нужно в моменте, когда листать некогда. Остальное по запросу. */
@@ -136,14 +142,58 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
 
   const сохранить = async () => {
     if (!годно) return;
-    await addMeal({
-      t: времяЕды(когда),
-      carbs,
-      kind: приёмПоЧасу(new Date(времяЕды(когда)).getHours()),
-    });
+    const kind = приёмПоЧасу(new Date(времяЕды(когда)).getHours());
+    await addMeal({ t: времяЕды(когда), carbs, kind });
     setСохранено(true);
+
+    /* Имя спрашиваем ЗДЕСЬ, сразу после записи, и только если приём повторился (#122).
+
+       Момент выбран не случайно: человек ещё думает о том, что съел, и вопрос про это же
+       не выглядит анкетой. Через час на главном экране он был бы прерыванием.
+
+       Правило «кого спросить» — в domain/mealNaming под тестами: три повтора, не старше
+       месяца, ещё не названо и не отказывались. Не подошло — молча закрываемся, как
+       раньше. */
+    const кого = когоНазвать(
+      personalFoods([...meals, { id: 'новый', t: времяЕды(когда), carbs, kind, createdAt: Date.now(), sync: 'local' }]),
+      { имена: имена.names, отказы: имена.skipped },
+    );
+    if (кого) { setСпросить(кого); return; }
     window.setTimeout(onClose, 700); // дать увидеть подтверждение, а не захлопнуть
   };
+
+  /* Вопрос про имя показываем ВМЕСТО формы, а не под ней: приём уже записан, форма
+     сделала своё дело, и оставлять её на экране значит намекать, что запись не завершена.
+     Выход из вопроса — всегда, и он ничего не отменяет: еда сохранена в любом случае. */
+  if (спросить) {
+    const закрыть = () => { setСпросить(null); setИмя(''); onClose(); };
+    return (
+      <Sheet isOpen={isOpen} onClose={закрыть} title="Записано" subtitle="приём сохранён">
+        <div className="sheet-note" style={{ marginTop: 0 }}>{вопрос(спросить)}</div>
+        <div className="param">
+          <div className="field-label">Название — необязательно</div>
+          <div className="field">
+            <IonInput value={имя} onIonInput={(e) => setИмя(e.detail.value ?? '')}
+              placeholder="например, гречка с курицей" autocapitalize="sentences" />
+          </div>
+          <div className="field-hint param-hint">
+            Пригодится, чтобы отличать два разных обеда по 55 г. Не назовёте — ничего не
+            сломается, приём уже записан.
+          </div>
+        </div>
+        <button className="food-save" disabled={!имя.trim()}
+          onClick={() => { nameGroup(спросить.id, имя); закрыть(); }}>
+          Назвать
+        </button>
+        {/* «Не называть» — отказ навсегда для этой группы, и об этом сказано прямо:
+            иначе человек нажмёт его как «потом» и удивится, что вопроса больше нет. */}
+        <button className="ob-skip" style={{ marginTop: 10 }}
+          onClick={() => { skipGroup(спросить.id); закрыть(); }}>
+          Не называть — и больше не спрашивать
+        </button>
+      </Sheet>
+    );
+  }
 
   return (
     <Sheet isOpen={isOpen} onClose={onClose} title="Еда" subtitle="Запись приёма пищи"
@@ -246,8 +296,14 @@ export default function FoodSheet({ isOpen, onClose }: { isOpen: boolean; onClos
               {своё.slice(0, 6).map((p) => (
                 <button key={p.id} className={'food-pick' + (выбрано === p.id ? ' on' : '')}
                   onClick={() => выбрать(p.id, p.carbs)}>
-                  <b>{p.kind}</b>
-                  <span>{toCarbs(p.carbs, cu)} {clabel} · {p.count} {plural(p.count, 'раз', 'раза', 'раз')}</span>
+                  {/* Имя, если человек его дал (#122): ради него всё и затевалось —
+                      отличить два разных обеда по 55 г. Нет имени — прежняя метка
+                      приёма: она хотя бы узнаётся. */}
+                  <b>{p.name ?? p.kind}</b>
+                  <span>
+                    {p.name ? `${p.kind.toLowerCase()} · ` : ''}
+                    {toCarbs(p.carbs, cu)} {clabel} · {p.count} {plural(p.count, 'раз', 'раза', 'раз')}
+                  </span>
                 </button>
               ))}
             </div>
