@@ -243,6 +243,17 @@
               connection: 'Disconnected', status: 'Disconnected' })
           : h;
       });
+      /* И запись прибора — со спекой драйвера: форму рисуем по ней, а не по догадкам.
+         Без этого «негде ввести код» не воспроизводится (SugarLife#362). */
+      снимок.devices = снимок.devices.map(function (d) {
+        return d.kind === 'sensor'
+          ? Object.assign({}, d, { params: {}, settings: { parameters: [
+              { key: 'sensorCode', title: 'Код сенсора', type: 'Text', required: true, default: null,
+                options: [], scan: 'qr',
+                hint: 'Код из QR на упаковке сенсора — отсканируйте камерой или введите вручную.' },
+            ] } })
+          : d;
+      });
       разослать(); return 'сенсор без кода';
     },
     /* Источник «догоняет», а показание свежее — случай с телефона (#358): круг показывал
@@ -325,6 +336,25 @@
       if (i.type === 'requestScanPermissions') {
         снимок.scanReadiness = { canScan: true, blockers: [] };
         снимок.scanning = true; разослать();
+        return Promise.resolve({ accepted: true });
+      }
+      /* setParams в демо действительно записывает: у ядра он до сегодняшнего дня молча
+         игнорировался (core#75), и повторять эту поломку у себя незачем. */
+      if (i.type === 'setParams') {
+        снимок.devices = снимок.devices.map(function (d) {
+          return d.id === i.deviceId
+            ? Object.assign({}, d, { params: Object.assign({}, d.params, i.params) })
+            : d;
+        });
+        var хватает = Object.keys(i.params || {}).some(function (k) { return (i.params[k] || '').trim(); });
+        if (хватает) {
+          снимок.hardware = снимок.hardware.map(function (h) {
+            return h.id === i.deviceId
+              ? Object.assign({}, h, { registryState: 'Configured', note: null })
+              : h;
+          });
+        }
+        разослать();
         return Promise.resolve({ accepted: true });
       }
       if (i.type === 'startScan') { снимок.scanning = true; разослать(); }
