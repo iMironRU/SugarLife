@@ -14,6 +14,7 @@ import { useSnapshot, sendIntent, эфирДоступен, type Discovered } fr
 import { лента } from '@/domain/deviceFeed';
 import { мешает, словоПустоты, ТЕРПЕНИЕ_МС } from '@/domain/scanReadiness';
 import Готовность from '@/ui/Готовность';
+import ВПриложении from '@/ui/ВПриложении';
 import { спроситьЛи } from '@/domain/deviceParams';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
 import {
@@ -282,6 +283,8 @@ export default function DevicesSection({ onClose, встроенный, толь
         {!мешаетСкан && строкиПусты && (
           <div className="sheet-note">
             {словоПустоты({ эфирЕсть: эфирДоступен(), сканирует, долгоЖдём })}
+            {/* Ссылка, а не совет: без приложения дальше отсюда действительно нельзя. */}
+            {!эфирДоступен() && <div><ВПриложении раздел="приборы" подпись="Открыть приборы в приложении" /></div>}
           </div>
         )}
 

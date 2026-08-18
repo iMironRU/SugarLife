@@ -19,6 +19,23 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Диплинк (SugarLife#315). До этого схема не была зарегистрирована нигде:
+                 строка custom_url_scheme в strings.xml лежала мёртвой, и ссылка вида
+                 sugarlife://… не открывала ничего.
+
+                 Схему берём из flavor'а (@string/deep_link_scheme): у Pro она своя, иначе
+                 одна ссылка открывала бы то одно приложение, то другое — а они управляют
+                 подачей инсулина по-разному (#296).
+
+                 BROWSABLE обязателен: без него ссылка из браузера не сработает, а ровно
+                 оттуда мы и ведём. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="@string/deep_link_scheme" />
+            </intent-filter>
         </activity>
 
         <!-- Foreground-сервис: держит процесс живым в фоне (иначе HyperOS убивает → потеря сенсора). -->

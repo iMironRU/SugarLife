@@ -4,4 +4,7 @@
     <string name="title_activity_main">SugarLife.Lite</string>
     <string name="package_name">ru.imiron.sugarlife</string>
     <string name="custom_url_scheme">ru.imiron.sugarlife</string>
+    <!-- Схема диплинка. Издание Pro переопределяет её в своём sourceSet: одна ссылка не
+         должна открывать то одно приложение, то другое (#315, #296). -->
+    <string name="deep_link_scheme">sugarlife</string>
 </resources>
