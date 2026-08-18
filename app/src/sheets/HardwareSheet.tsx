@@ -1,4 +1,6 @@
-import { playOutline, pauseOutline, refreshOutline, trashOutline } from 'ionicons/icons';
+import { useState } from 'react';
+import { IonIcon } from '@ionic/react';
+import { playOutline, pauseOutline, refreshOutline, trashOutline, checkmarkCircle } from 'ionicons/icons';
 import Sheet from '@/ui/Sheet';
 import Row from '@/ui/Row';
 import { sendIntent, type HardwareView, type UiSnapshot, type Intent } from '@/sources/bridge';
@@ -8,7 +10,10 @@ import {
   СЛОТ, мостЖелезки, имяЖелезки, адресВЭфире, звеноЦепочки, словоЦепочки,
 } from '@/domain/nearby';
 import { ходПопытки, почемуМолчит, type Попытка, type Цель } from '@/domain/connectAttempt';
-import { подписьСвежести } from '@/domain/freshness';
+import { подписьСвежести, чтоСПрибором } from '@/domain/freshness';
+import ParamsForm from '@/ui/ParamsForm';
+import ScanSheet from './ScanSheet';
+import { нехватает } from '@/domain/deviceParams';
 
 /* Карточка одного прибора (SugarLife#301).
 
@@ -49,10 +54,48 @@ export default function HardwareSheet({ прибор, снимок, попытк
   const мост = мостЖелезки(прибор, снимок);
   const адрес = адресВЭфире(прибор);
 
-  const строка = звено
+  /* «Не настроен» и «чем занят» — впереди слов о связи (мост 1.22/1.24). Именно эту
+     карточку открывают, когда прибор молчит, и именно здесь прежняя строка врала громче
+     всего: «устройство не отвечает» у прибора, который в этот момент работает. */
+  const занят = чтоСПрибором(прибор);
+  const строка = занят ?? (звено
     ? словоЦепочки(звено, мост ? имяЖелезки(мост) : null)
     : подписьСвежести(прибор, сейчас)
-      ?? sourceStatusLabel(прибор.status) ?? меткаСвязи[состояние];
+      ?? sourceStatusLabel(прибор.status) ?? меткаСвязи[состояние]);
+
+  /* НАСТРОЙКИ ПРИБОРА — ЗДЕСЬ, А НЕ ГДЕ-ТО ЕЩЁ (SugarLife#362).
+
+     С живого телефона: карточка честно сообщала «Не хватает настроек: Код сенсора» — и
+     не оставляла способа этот код дать. Ни поля, ни ссылки: только «Подключить», которое
+     заведомо не сработает, и «Забыть». Сказать человеку, чего от него хотят, и не дать
+     это сделать — хуже, чем промолчать: молчание хотя бы не обещает.
+
+     Спеку берём у ДВИЖКА (devices[]), а не выдумываем: какие поля нужны драйверу, знает
+     он один. Железо и запись сопоставляются по id — это тот же прибор, просто разные
+     проекции: hardware отвечает «на связи ли», device — «чем настроен».
+
+     Форма — общая с облачными учётками и мастером (ui/ParamsForm): третья копия того же
+     разошлась бы в первую же правку, как уже разошлись две. */
+  const запись = (снимок?.devices ?? []).find((d) => d.id === прибор.id) ?? null;
+  const поля = запись?.settings?.parameters ?? [];
+  const [правки, setПравки] = useState<Record<string, string>>({});
+  const [сохраняю, setСохраняю] = useState(false);
+  const [читаемДля, setЧитаемДля] = useState<string | null>(null);
+  /* Показываем то, что уже знает движок, поверх — свои правки. Иначе человек, открыв
+     карточку настроенного прибора, увидит пустые поля и решит, что настройки слетели. */
+  const значения: Record<string, string> = {
+    ...Object.fromEntries(поля.map((п) => [п.key, запись?.params?.[п.key] ?? п.default ?? ''])),
+    ...правки,
+  };
+  const мало = нехватает(запись ? { settings: { parameters: поля } } as never : null, значения);
+  const естьЧтоСохранить = Object.keys(правки).length > 0 && мало.length === 0;
+
+  const сохранить = async () => {
+    setСохраняю(true);
+    await sendIntent({ type: 'setParams', deviceId: прибор.id, params: значения });
+    setСохраняю(false);
+    setПравки({});
+  };
 
   const моё = попытка && попытка.id === прибор.id ? попытка : null;
   const ход = моё ? ходПопытки(моё, живой, сейчас) : null;
@@ -80,6 +123,39 @@ export default function HardwareSheet({ прибор, снимок, попытк
         )}
         {прибор.firmware && <Row title="Прошивка" value={прибор.firmware} chevron={false} />}
       </div>
+
+      {/* Чего не хватает — ПОЛНЫМ перечнем, а не усечённым заголовком (#362). В шапке
+          строка обрезается, и именно её хвост — список недостающего — там и терялся. */}
+      {прибор.registryState === 'NotConfigured' && прибор.note && (
+        <div className="today-alert" style={{ marginTop: 12 }}>
+          <div><span className="alert-title">{прибор.note}</span>
+            <span>Пока не заполнено, прибор в эфир не выходит — движок его не поднимает.</span>
+          </div>
+        </div>
+      )}
+
+      {поля.length > 0 && (
+        <>
+          <div className="section-label sec">Настройки прибора</div>
+          <ParamsForm spec={{ parameters: поля }} values={значения}
+            onChange={(k, v) => setПравки((с) => ({ ...с, [k]: v }))}
+            /* Кнопка чтения есть всегда: с фото она работает и там, где камеры нет. */
+            onScan={setЧитаемДля} />
+          <button className="food-save" disabled={сохраняю || !естьЧтоСохранить}
+            onClick={() => void сохранить()} style={{ marginTop: 12 }}>
+            <IonIcon icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
+            {сохраняю ? 'Сохраняю…' : 'Сохранить'}
+          </button>
+          {!!мало.length && (
+            <div className="metric-note" style={{ marginTop: 8 }}>
+              Без этого прибор не заработает: {мало.map((п) => п.title.toLowerCase()).join(', ')}.
+            </div>
+          )}
+          <ScanSheet isOpen={!!читаемДля} onClose={() => setЧитаемДля(null)}
+            подпись="Код с упаковки сенсора"
+            onВыбор={(r) => { if (читаемДля) setПравки((с) => ({ ...с, [читаемДля]: r.текст })); }} />
+        </>
+      )}
 
       {/* Итог прошлой попытки — словами, а не тишиной (#303). Держится до следующего
           нажатия: человек мог отвести взгляд, и мигнувшая надпись ничего бы не сказала. */}

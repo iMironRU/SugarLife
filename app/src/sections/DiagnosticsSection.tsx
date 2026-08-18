@@ -1,7 +1,11 @@
 import { IonIcon } from '@ionic/react';
 import { useState } from 'react';
-import { documentTextOutline, shareOutline, warningOutline } from 'ionicons/icons';
+import { documentTextOutline, shareOutline, warningOutline, qrCodeOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
+import Row from '@/ui/Row';
+import ScanSheet from '@/sheets/ScanSheet';
+import Готовность from '@/ui/Готовность';
+import { мешает } from '@/domain/scanReadiness';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import type { LoggingState } from '@/sources/bridge';
 
@@ -33,15 +37,54 @@ const УРОВНИ: { id: LoggingState['level']; name: string; цена: string 
 ];
 
 export default function DiagnosticsSection({ onClose }: { onClose: () => void }) {
+  const [читаем, setЧитаем] = useState(false);
   const snap = useSnapshot();
   const logging = snap?.logging ?? null;
   const [делюсь, setДелюсь] = useState(false);
+
+  /* Чтение кодов с фото живёт ВЫШЕ развилки про логи и намеренно.
+
+     Логи ведёт движок, и в браузере их нет — раздел там показывает заглушку. А чтение
+     кодов от движка не зависит вовсе и в браузере работает полностью; спрятав его за той
+     же развилкой, мы отняли бы его ровно у того места, где им и будут пользоваться:
+     разбирать присланный снимок чужой коробки удобнее за компьютером, а не с телефона. */
+  /* Сводка готовности — третий вход из #333, и он для тех, кто вернулся разбираться
+     позже. Здесь, в отличие от рабочих экранов, уместно сказать и «всё в порядке»:
+     сюда приходят именно с вопросом, а не мимо. */
+  const готовность = (
+    <>
+      <div className="section-label sec">Поиск приборов</div>
+      <Готовность помеха={мешает(snap)} спокойно />
+    </>
+  );
+
+  const коды = (
+    <>
+      {/* Это стенд, а не рабочий путь: рабочий живёт в поле «Код сенсора», где код и
+          спрашивают. Сюда приходят с другим вопросом — «что вообще написано на этой
+          коробке». */}
+      <div className="section-label sec">Коды на упаковке</div>
+      <div className="list">
+        <Row icon={qrCodeOutline} title="Прочитать код с фото"
+          sub="QR, DataMatrix, штрихкод — покажем строку как есть"
+          onClick={() => setЧитаем(true)} />
+      </div>
+      <div className="sheet-note">
+        Что напечатано на коробке, разбирает движок: у каждого производителя своё правило.
+        Здесь видно ровно то, что записано в самом коде, — это и нужно прислать, когда
+        сенсор не опознаётся.
+      </div>
+      <ScanSheet isOpen={читаем} onClose={() => setЧитаем(false)} подпись="Любой код с упаковки прибора" />
+    </>
+  );
 
   /* Движка нет — и логировать нечего: Nightscout-шим в браузере ничего не пишет.
      Экран с переключателями, которые ни на что не влияют, хуже его отсутствия. */
   if (!logging) {
     return (
       <Section title="Диагностика" описание="Записи о работе приложения и обмене с приборами. Нужны, когда что-то разбирают: сюда попадает то, чего не видно на экранах." onBack={onClose}>
+        {готовность}
+        {коды}
         <div className="loop-empty">
           <IonIcon icon={documentTextOutline} />
           <div className="loop-empty-t">Логов нет</div>
@@ -62,6 +105,9 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
 
   return (
     <Section title="Диагностика" описание="Записи о работе приложения и обмене с приборами. Нужны, когда что-то разбирают: сюда попадает то, чего не видно на экранах." onBack={onClose}>
+
+      {готовность}
+      {коды}
 
       <div className="section-label sec">Подробность</div>
       <div className="list">

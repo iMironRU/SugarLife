@@ -39,13 +39,13 @@ var telemetrySink: ((String) -> Unit)? = null
 /**
  * Канал BLE-слоя в ОБЩИЙ журнал (core#72).
  *
- * До сих пор эти строки уходили только в logcat: «запись отброшена: нет характеристики», «MTU 185»,
- * «нотификация 1 байт». Ровно они решили разбор помпы 2026-08-17 — и ровно их не увидит ни человек с
- * телефоном, ни тестировщик с железом. Дублируем в движок: Log.d остаётся для нас, журнал — для них.
+ * Эти строки жили только в logcat: «запись отброшена», «MTU 185», «нотификация». Ровно они решили разбор
+ * помпы — и ровно их не увидит ни человек с телефоном, ни тестировщик с железом. Log.d остаётся нам,
+ * журнал — им.
  */
 var logSink: ((level: String, event: String, deviceId: String?, fields: Map<String, String>, frame: Boolean) -> Unit)? = null
 
-/** Событие BLE в журнал прибора. `frame = true` — кадр обмена: он содержит идентификаторы прибора. */
+/** Событие BLE в журнал прибора. `frame = true` — кадр обмена: он несёт идентификаторы прибора. */
 internal fun bleLog(
     level: String,
     event: String,
@@ -67,6 +67,8 @@ private fun shortUuid(u: UUID): String {
 private val mainHandler = Handler(Looper.getMainLooper())
 /** Сколько ждём колбэк одной GATT-операции. Норма — доли секунды; это срок «стек потерял ответ». */
 private const val ОП_СРОК_МС = 8000L
+/** Сколько ждём discovery, прежде чем отпустить отложенные команды их обычным отказом (#348). */
+private const val DISCOVERY_СРОК_МС = 15000L
 
 // Sibionics
 private val SIB_SERVICE = uuid16("FF30")
@@ -109,38 +111,6 @@ class BleLink(
        операцию, следующая пошла, и тут приходит ответ на снятую. */
     private var opПоколение = 0
     private var opСторож: Runnable? = null
-
-    /* ГОТОВНОСТЬ К ОПЕРАЦИЯМ (SugarLife#348).
-
-       connectGatt асинхронный: соединение и discovery приходят колбэками. До discovery карта характеристик
-       пуста — значит любая запись в этот момент отбрасывается. Ядро же после connect() считает связь готовой
-       и шлёт первую команду сразу; у Medtronic это чтение прошивки моста. Промах — 4 мс, повторяется на каждом
-       переподключении, и помпа не читается никогда.
-
-       Поэтому операции с характеристиками КОПЯТСЯ до discovery и уходят пачкой, когда оно завершится. Это
-       знание нативного слоя: снаружи «до discovery писать нельзя» не видно никак.
-
-       Срок при этом никуда не девается: ждущая команда получит «нет ответа» по своему сроку в мосте
-       (SugarLife#344), а не повиснет — иначе мы вернули бы ту же поломку с другой стороны. */
-    private var готовность = false
-    private val доГотовности = ArrayDeque<() -> Unit>()
-
-    @Synchronized private fun приГотовности(op: () -> Unit) {
-        when {
-            готовность -> enqueue(op)
-            // Ждать имеет смысл, только когда сессия ОТКРЫВАЕТСЯ. Без GATT ждать нечего: пусть операция
-            // выполнится и честно скажет «нет GATT-сессии». Иначе команды копятся молча, а на экране это
-            // выглядит как «мост думает» — поймано на железе после обрыва посреди подбора частоты.
-            gatt == null -> enqueue(op)
-            else -> { доГотовности.add(op); Log.d(TAG, "операция ждёт discovery на $address") }
-        }
-    }
-
-    @Synchronized private fun готово() {
-        готовность = true
-        if (доГотовности.isNotEmpty()) Log.d(TAG, "discovery готов — выпускаю ${доГотовности.size} отложенных операций на $address")
-        while (доГотовности.isNotEmpty()) enqueue(доГотовности.removeFirst())
-    }
     @Synchronized private fun enqueue(op: () -> Unit) { opQueue.add(op); pump() }
     @Synchronized private fun opDone() {
         opСторож?.let(mainHandler::removeCallbacks); opСторож = null
@@ -166,55 +136,88 @@ class BleLink(
 
     fun subscribe(char: UUID, handler: (ByteArray) -> Unit) { notifyHandlers[char] = handler }
 
+    /* Операции ждут discovery (SugarLife#348).
+
+       `connect()` возвращается СРАЗУ: connectGatt асинхронный, соединение и discovery
+       приходят колбэками позже. А контракт транспорта читается как «связь готова», и
+       ядро сразу шлёт первую команду. На живом телефоне между ними было ЧЕТЫРЕ
+       МИЛЛИСЕКУНДЫ: запись уходила в пустой `chars`, отбрасывалась, драйвер уходил на
+       бэкофф, переподключался — и попадал в ту же щель снова. Бесконечно, при живом
+       блютусе и исправном мосте.
+
+       Сенсор не страдал по случайности: его драйвер сам ждёт состояния линка. То есть
+       поломка была не в помпе и не в OrangeLink, а в порядке действий — и снаружи, из
+       общего кода, её не видно никак: «до discovery писать нельзя» знает только натив.
+
+       Копим и отпускаем одной пачкой. Но НЕ НАВСЕГДА: не случилось discovery за срок —
+       отпускаем всё равно, и каждая операция уходит своим обычным путём отказа. Иначе
+       вернём ровно то бесконечное ожидание, которое чинили в #344. */
+    private var найдены = false
+    private val доГотовности = ArrayList<() -> Unit>()
+    private var сторожDiscovery: Runnable? = null
+
+    private fun приГотовности(op: () -> Unit) {
+        val ждём = synchronized(this) { if (найдены) false else { доГотовности.add(op); true } }
+        if (!ждём) op()
+    }
+    private fun отпуститьОтложенные(причина: String) {
+        val список = synchronized(this) {
+            сторожDiscovery?.let(mainHandler::removeCallbacks); сторожDiscovery = null
+            val l = ArrayList(доГотовности); доГотовности.clear(); l
+        }
+        if (список.isNotEmpty()) Log.d(TAG, "$address: отпускаю ${список.size} отложенных операций ($причина)")
+        список.forEach { it() }
+    }
+
     fun connect() {
         // Свежая GATT-сессия (реконнект): сбрасываем состояние старой, иначе застрявшая операция/характеристика мешает.
         chars.clear(); readHandlers.clear(); opQueue.clear(); opBusy = false
-        готовность = false; доГотовности.clear()   // новая сессия — старые ожидания не наследуем (#348)
-        val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
-        // Лог ДО getRemoteDevice: на неверном адресе он бросает, и запись «connect …» не появлялась вовсе —
-        // а «нет строки в логе» мы читали как «подключаться не пробовали». Разные вещи (SugarLife#347).
-        Log.d(TAG, "connect $address")
-        val device = try {
-            adapter.getRemoteDevice(address)
-        } catch (e: IllegalArgumentException) {
-            Log.e(TAG, "неверный BLE-адрес «$address» — подключаться некуда: ${e.message}")
-            onState?.invoke("Error"); return
+        synchronized(this) { найдены = false; доГотовности.clear() }
+        сторожDiscovery?.let(mainHandler::removeCallbacks)
+        val сд = Runnable {
+            Log.w(TAG, "$address: discovery не завершился за ${DISCOVERY_СРОК_МС}мс — отложенные команды пойдут своим отказом")
+            отпуститьОтложенные("сдались ждать discovery")
         }
+        сторожDiscovery = сд
+        mainHandler.postDelayed(сд, DISCOVERY_СРОК_МС)
+        val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
+        val device = adapter.getRemoteDevice(address)
         onState?.invoke("Connecting")
+        Log.d(TAG, "connect $address")
         gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
     }
 
     fun disconnect() {
         Log.d(TAG, "disconnect $address")
+        // Отложенное отпускаем: иначе чтение, начатое до разрыва, не ответит никогда.
+        отпуститьОтложенные("разрыв связи")
         gatt?.disconnect(); gatt?.close(); gatt = null
     }
 
-    fun write(char: UUID, bytes: ByteArray) = приГотовности {
+    fun write(char: UUID, bytes: ByteArray) = приГотовности { enqueue {
         val g = gatt; val c = chars[char]
-        /* Отказ записи — В ЛОГ, и с причиной (SugarLife#347). Молча выброшенная команда снаружи выглядит
-           как «прибор не отвечает», и это два РАЗНЫХ отказа, которые чинятся по-разному:
-             нет GATT           — не подключились или отвалились → лечится подключением;
-             нет характеристики — подключились, но пишем не туда → лечится разбором протокола.
-           На OrangeLink мы потеряли на этой неразличимости целый сеанс с железом. */
+        /* Два РАЗНЫХ отказа, и раньше они были неотличимы — оба выглядели как «прибор не
+           отвечает» (#347). Нет GATT — не подключились, чинится подключением. Нет
+           характеристики — подключились, но пишем не туда, чинится разбором протокола.
+           Молча выброшенная команда это потерянная улика: её искали дважды. */
         if (g == null) {
             Log.w(TAG, "запись ${shortUuid(char)} отброшена: нет GATT-сессии с $address")
-            bleLog("Warn", "запись отброшена: нет связи с прибором", address, "характеристика" to shortUuid(char))
-            opDone(); return@приГотовности
+            // Тот же отказ — в журнал прибора (core#72): logcat человеку и тестировщику недоступен.
+            bleLog("Warn", "команда не ушла: нет связи с прибором", address, "характеристика" to shortUuid(char))
+            opDone(); return@enqueue
         }
         if (c == null) {
             Log.w(TAG, "запись ${shortUuid(char)} отброшена: у $address нет такой характеристики; есть: ${chars.keys.joinToString { shortUuid(it) }}")
-            bleLog(
-                "Error", "прибор не принимает команду: у него нет такой характеристики", address,
-                "искали" to shortUuid(char), "есть" to chars.keys.joinToString { shortUuid(it) },
-            )
-            opDone(); return@приГотовности
+            bleLog("Error", "прибор не принимает команду: у него нет такой характеристики", address,
+                "искали" to shortUuid(char), "есть" to chars.keys.joinToString { shortUuid(it) })
+            opDone(); return@enqueue
         }
         c.writeType = if (c.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0)
             BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         else BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
         c.value = bytes
         g.writeCharacteristic(c)
-    }
+    } }
 
     // Телеметрия периферала (issue #38): частичная эмиссия — null-поле движок не затирает.
     private fun emitTelemetry(batteryPct: Int? = null, firmware: String? = null, rssi: Int? = null) {
@@ -230,54 +233,47 @@ class BleLink(
         g.readRemoteRssi()
     }
 
-    fun read(char: UUID, completion: (ByteArray?) -> Unit) = приГотовности {
+    fun read(char: UUID, completion: (ByteArray?) -> Unit) = приГотовности { enqueue {
         val g = gatt; val c = chars[char]
-        if (g == null || c == null) { completion(null); opDone(); return@приГотовности }
+        if (g == null) { Log.w(TAG, "чтение ${shortUuid(char)} отброшено: нет GATT-сессии с $address"); completion(null); opDone(); return@enqueue }
+        if (c == null) {
+            Log.w(TAG, "чтение ${shortUuid(char)} отброшено: у $address нет такой характеристики; есть: ${chars.keys.joinToString { shortUuid(it) }}")
+            completion(null); opDone(); return@enqueue
+        }
         readHandlers[char] = completion
         g.readCharacteristic(c)
-    }
+    } }
 
     private val callback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
             // issue #33: status ≠ 0 (напр. 133 GATT_ERROR) — виновник тихих сбоев коннекта; логируем всегда.
             Log.d(TAG, "connState addr=$address status=$status newState=$newState")
-            if (status != BluetoothGatt.GATT_SUCCESS) {
-                Log.w(TAG, "connState НЕ-успех status=$status (133=GATT_ERROR/недоступен) addr=$address")
-                bleLog(
-                    "Warn", "связь с прибором не установилась", address,
-                    "код" to status.toString(),
-                    "смысл" to when (status) {
-                        133 -> "прибор недоступен или занят"
-                        19 -> "прибор разорвал связь сам"
-                        else -> "код стека Android"
-                    },
-                )
-            }
+            if (status != BluetoothGatt.GATT_SUCCESS) Log.w(TAG, "connState НЕ-успех status=$status (133=GATT_ERROR/недоступен) addr=$address")
+            bleLog("Warn", "связь с прибором не установилась", address, "код" to status.toString(),
+                "смысл" to when (status) {
+                    133 -> "прибор недоступен или занят"
+                    19 -> "прибор разорвал связь сам"
+                    else -> "код стека Android"
+                })
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     onState?.invoke("Connected")
                     // Быстрый интервал связи (7.5мс) — стабильнее при потоке данных, меньше обрывов на Android.
                     g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
-                    // MTU (core#68). Умолчание — 23 байта, полезных 20; команда sendAndListen с пакетом помпы
-                    // длиннее, и остаток молча обрежется. На iOS MTU договаривается сам, на Android его просят.
-                    //
-                    // Порядок важен: два GATT-запроса разом стек не выполняет — discovery, запущенный рядом с
-                    // requestMtu, не отвечает вовсе (поймано на железе: связь есть, characteristics нет никогда).
-                    // Поэтому сначала MTU, а discovery — из его колбэка. Не согласился MTU — идём дальше с
-                    // умолчанием: короткие команды пройдут, и это лучше, чем не подключиться совсем.
-                    if (!g.requestMtu(185)) { Log.w(TAG, "MTU не запросился у $address — иду в discovery с умолчанием"); g.discoverServices() }
+                    g.discoverServices()
                 }
-                BluetoothProfile.STATE_DISCONNECTED -> {
-                    onState?.invoke("Disconnected"); opBusy = false; opQueue.clear()
-                    готовность = false; доГотовности.clear()   // писать некуда — ждущие не переживают разрыв (#348)
-                }
+                BluetoothProfile.STATE_DISCONNECTED -> { onState?.invoke("Disconnected"); opBusy = false; opQueue.clear() }
             }
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
             Log.d(TAG, "servicesDiscovered addr=$address status=$status services=${g.services.size}")
-            // ЧТО именно у прибора есть (SugarLife#347). «services=7» не отвечает на главный вопрос первых
-            // пяти минут с незнакомым мостом: те ли это характеристики, в которые мы собираемся писать.
+            bleLog("Info", "прибор изучен: характеристики найдены", address, "сервисов" to g.services.size.toString())
+            /* ЧТО именно у прибора есть — одной строкой на сервис, один раз за сессию
+               (#347). Раньше писали только количество, и для незнакомого моста это был
+               главный вопрос первых пяти минут: наши ли у него характеристики или мы всё
+               это время пишем в никуда. Догадку такой список превращает в факт — и он же
+               нужен каталогу устройств, потому что следующий мост приедет со своими. */
             for (s in g.services) {
                 Log.d(TAG, "  сервис ${shortUuid(s.uuid)}: ${s.characteristics.joinToString { shortUuid(it.uuid) }}")
             }
@@ -291,35 +287,19 @@ class BleLink(
                     }
                 }
             }
-            bleLog(
-                "Info", "прибор изучен: характеристики найдены", address,
-                "сервисов" to g.services.size.toString(),
-            )
-            готово()   // характеристики найдены — выпускаем всё, что ждало (#348)
             onState?.invoke("Streaming")   // discovery завершён — как в iOS (link=Streaming перед readMac)
+            // Теперь можно писать: всё, что пришло раньше времени, уходит здесь (#348).
+            synchronized(this@BleLink) { найдены = true }
+            отпуститьОтложенные("discovery завершён")
             readTelemetry(g)   // заряд/прошивка/rssi, если периферал их отдаёт (issue #38)
-        }
-
-        override fun onMtuChanged(g: BluetoothGatt, mtu: Int, status: Int) {
-            Log.d(TAG, "MTU для $address: $mtu (status=$status) → discovery")
-            bleLog("Info", "размер пакета согласован", address, "MTU" to mtu.toString())
-            g.discoverServices()
         }
 
         override fun onReadRemoteRssi(g: BluetoothGatt, rssi: Int, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) emitTelemetry(rssi = rssi)   // близость периферала (issue #38)
         }
 
-        override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) {
-            Log.d(TAG, "подписка на ${shortUuid(d.characteristic.uuid)}: status=$status")
-            opDone()
-        }
-        override fun onCharacteristicWrite(g: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) {
-            Log.d(TAG, "запись ${shortUuid(c.uuid)} ушла: status=$status тип=${c.writeType} байт=${c.value?.size}")
-            bleLog("Trace", "отправлено прибору", address, "байт" to (c.value?.size ?: 0).toString(),
-                "hex" to (c.value?.joinToString(" ") { b -> "%02X".format(b) } ?: ""), frame = true)
-            opDone()
-        }
+        override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) { opDone() }
+        override fun onCharacteristicWrite(g: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) { opDone() }
 
         override fun onCharacteristicRead(g: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) {
             val v = if (status == BluetoothGatt.GATT_SUCCESS) c.value else null
@@ -328,7 +308,6 @@ class BleLink(
         }
 
         override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic) {
-            Log.d(TAG, "нотификация ${shortUuid(c.uuid)}: ${c.value?.size ?: 0} байт")
             bleLog("Trace", "получено от прибора", address, "байт" to (c.value?.size ?: 0).toString(),
                 "hex" to (c.value?.joinToString(" ") { b -> "%02X".format(b) } ?: ""), frame = true)
             notifyHandlers[c.uuid]?.invoke(c.value ?: ByteArray(0))
@@ -367,10 +346,9 @@ class AndroidSensorBridge(context: Context, bleId: String) : SensorTransportBrid
 }
 
 /** Мост помпы Medtronic через OrangeLink/RileyLink → [PumpTransportBridge] (зеркало iOS PumpBridge). */
-class AndroidPumpBridge(context: Context, private val bleId: String) : PumpTransportBridge {
+class AndroidPumpBridge(context: Context, bleId: String) : PumpTransportBridge {
     private val link = BleLink(context, bleId, notifyChars = setOf(RL_RESP))
     private var pending: ((ByteArray) -> Unit)? = null
-    private var звалиConnect = false
     private var срок: Runnable? = null
 
     /* Ровно один ответ на команду — и он есть ВСЕГДА (SugarLife#344).
@@ -397,7 +375,6 @@ class AndroidPumpBridge(context: Context, private val bleId: String) : PumpTrans
 
     override fun onLink(callback: (String) -> Unit) { link.onState = callback }
     override fun connect() {
-        Log.d(TAG, "мост: connect() от ядра, адрес $bleId"); звалиConnect = true
         // Ответ приходит нотификацией respCount → читаем data → отдаём ожидающему.
         link.subscribe(RL_RESP) {
             link.read(RL_DATA) { data -> завершить(data ?: ByteArray(0)) }
@@ -405,10 +382,6 @@ class AndroidPumpBridge(context: Context, private val bleId: String) : PumpTrans
         link.connect()
     }
     override fun command(bytes: ByteArray, timeoutMs: Long, callback: (ByteArray) -> Unit) {
-        // В кадре первый байт — длина (core#68), опкод второй: печатаем именно его, иначе лог врёт.
-        Log.d(TAG, "мост: команда 0x%02X (%d байт) срок %dмс".format(
-            bytes.getOrNull(1)?.toInt()?.and(0xFF) ?: -1, bytes.size, timeoutMs))
-        if (!звалиConnect) { звалиConnect = true; Log.w(TAG, "команда БЕЗ connect() — кто зовёт:", Exception("стек")) }
         /* Предыдущая команда, если ещё висит, завершается здесь же. Раньше её колбэк
            просто затирался новым — то есть терялся вместе с корутиной, которая его ждала. */
         завершить(ByteArray(0))

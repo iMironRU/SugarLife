@@ -51,5 +51,7 @@
 	<string>Подключение к сенсору глюкозы и помпе по Bluetooth</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>Подключение к сенсору глюкозы и помпе по Bluetooth</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Чтобы прочитать код сенсора с коробки — вводить восемь символов руками легко с ошибкой</string>
 </dict>
 </plist>

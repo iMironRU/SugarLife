@@ -2,6 +2,14 @@ apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'   // Kotlin для нативного плагина-моста (KMP-движок)
 
 android {
+    /* Только ARM (#350). Сканер приносит модель распознавания нативной библиотекой на
+       четыре архитектуры, и x86/x86_64 — это 12 МБ ради эмулятора: телефонов на x86 в
+       обиходе нет. APK люди качают руками с релизов, и каждый мегабайт там настоящий.
+
+       Понадобится эмулятор — собирается локально без этого фильтра. */
+    defaultConfig {
+        ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }
+    }
     namespace = "ru.imiron.sugarlife"
     compileSdk = rootProject.ext.compileSdkVersion
     compileOptions {

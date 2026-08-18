@@ -82,7 +82,14 @@
         rssi: -68, needsMoreParams: false, isTransport: false, transportFor: [], knownDeviceId: null },
     ],
     availableDrivers: [
-      { id: 'sibionics', displayName: 'Sibionics', kind: 'sensor', roles: ['GlucoseSource'], settings: { parameters: [] }, available: true },
+      /* Код сенсора — обязательный и без значения по умолчанию, как у драйвера ядра
+         (SugarLife#349). Пока его в демо не было, мастер заводил сенсор одним тапом, и
+         поломка «завели без кода — молчит навсегда» не воспроизводилась вовсе. */
+      { id: 'sibionics', displayName: 'Sibionics', kind: 'sensor', roles: ['GlucoseSource'], available: true,
+        settings: { parameters: [
+          { key: 'sensorCode', title: 'Код сенсора', type: 'Text', required: true, default: null, options: [],
+            scan: 'qr', hint: 'На упаковке сенсора, рядом с QR-кодом.' },
+        ] } },
       /* Параметры — СЛОВО В СЛОВО как объявляет драйвер ядра (MedtronicDriver.parameterSpec).
          Списывать точно важнее, чем красиво: подсказки (hint) у этих двух полей нет, и
          демо не должно её выдумывать — иначе форма у нас выглядит понятнее, чем на
@@ -90,7 +97,10 @@
       { id: 'medtronic', displayName: 'Medtronic', kind: 'pump', roles: ['PumpStateSource'], available: true,
         settings: { parameters: [
           { key: 'serial', title: 'Серийный номер помпы', type: 'Text', required: true, default: null, options: [], keyboard: 'numeric' },
-          { key: 'region', title: 'Регион/частота', type: 'Enum', required: true, default: 'auto', options: ['auto', '868', '916'] },
+          { key: 'region', title: 'Регион/частота', type: 'Enum', required: true, default: 'auto',
+            options: ['auto', '868', '916'],
+            optionTitles: { auto: 'авто · найдём сами (дольше)', '868': '868 МГц · Европа и мир', '916': '916 МГц · США и Канада' },
+            hint: '«Авто» перебирает частоты и может занять пару минут при первом подключении.' },
         ] } },
       { id: 'orange', displayName: 'OrangeLink', kind: 'bridge', roles: [], settings: { parameters: [] }, available: true, providesTransportFor: ['medtronic'] },
     ],
@@ -215,6 +225,58 @@
       try { sessionStorage.removeItem('sl-демо-первый'); } catch (e) { /* ignore */ }
       location.reload(); return 'перезагружаюсь в обычное состояние';
     },
+    /* Два состояния, ради которых заводили progress и NotConfigured (мост 1.22/1.24).
+       Оба выглядели раньше одинаково — «устройство не отвечает», — и оба этим враньём и
+       были: помпа в это время работает, а сенсор просто не спрошен. */
+    подбирает: function () {
+      снимок.hardware = снимок.hardware.map(function (h) {
+        return h.kind === 'pump'
+          ? Object.assign({}, h, { progress: 'Подбираю частоту помпы — это может занять пару минут' })
+          : h;
+      });
+      разослать(); return 'помпа подбирает частоту';
+    },
+    неНастроен: function () {
+      снимок.hardware = снимок.hardware.map(function (h) {
+        return h.kind === 'sensor'
+          ? Object.assign({}, h, { registryState: 'NotConfigured', note: 'Не хватает настроек: Код сенсора',
+              connection: 'Disconnected', status: 'Disconnected' })
+          : h;
+      });
+      /* И запись прибора — со спекой драйвера: форму рисуем по ней, а не по догадкам.
+         Без этого «негде ввести код» не воспроизводится (SugarLife#362). */
+      снимок.devices = снимок.devices.map(function (d) {
+        return d.kind === 'sensor'
+          ? Object.assign({}, d, { params: {}, settings: { parameters: [
+              { key: 'sensorCode', title: 'Код сенсора', type: 'Text', required: true, default: null,
+                options: [], scan: 'qr',
+                hint: 'Код из QR на упаковке сенсора — отсканируйте камерой или введите вручную.' },
+            ] } })
+          : d;
+      });
+      разослать(); return 'сенсор без кода';
+    },
+    /* Источник «догоняет», а показание свежее — случай с телефона (#358): круг показывал
+       часики при живом списке измерений. */
+    догоняет: function () {
+      снимок.monitor = Object.assign({}, снимок.monitor, {
+        status: 'Acquiring', live: false,
+        /* Число и его отметка времени — именно то, чего раньше не хватало: круг решал
+           по статусу и не смотрел, есть ли вообще что показывать. */
+        glucose: '6,2', glucoseMmol: 6.2,
+        latestAtMs: Date.now() - 60000, updatedAtMs: Date.now() - 60000,
+      });
+      разослать(); return 'источник догоняет, показание минутной давности';
+    },
+    /* Тот же статус, но показание старое — часики обязаны остаться (SugarLifeCore#27:
+       при подключении в круг лезет догрузка истории). */
+    догоняетСтарое: function () {
+      снимок.monitor = Object.assign({}, снимок.monitor, {
+        status: 'Acquiring', live: false, glucose: '9,1', glucoseMmol: 9.1,
+        latestAtMs: Date.now() - 40 * 60000, updatedAtMs: Date.now() - 40 * 60000,
+      });
+      разослать(); return 'источник догоняет, показание сорокаминутной давности';
+    },
     сПриборами: function () { снимок.hardware = железоДемо.slice(); снимок.discovered = эфирДемо.slice(); разослать(); return 'ок'; },
   };
 
@@ -274,6 +336,25 @@
       if (i.type === 'requestScanPermissions') {
         снимок.scanReadiness = { canScan: true, blockers: [] };
         снимок.scanning = true; разослать();
+        return Promise.resolve({ accepted: true });
+      }
+      /* setParams в демо действительно записывает: у ядра он до сегодняшнего дня молча
+         игнорировался (core#75), и повторять эту поломку у себя незачем. */
+      if (i.type === 'setParams') {
+        снимок.devices = снимок.devices.map(function (d) {
+          return d.id === i.deviceId
+            ? Object.assign({}, d, { params: Object.assign({}, d.params, i.params) })
+            : d;
+        });
+        var хватает = Object.keys(i.params || {}).some(function (k) { return (i.params[k] || '').trim(); });
+        if (хватает) {
+          снимок.hardware = снимок.hardware.map(function (h) {
+            return h.id === i.deviceId
+              ? Object.assign({}, h, { registryState: 'Configured', note: null })
+              : h;
+          });
+        }
+        разослать();
         return Promise.resolve({ accepted: true });
       }
       if (i.type === 'startScan') { снимок.scanning = true; разослать(); }

@@ -97,4 +97,42 @@ for pair in "ldpi 36 81" "mdpi 48 108" "hdpi 72 162" "xhdpi 96 216" "xxhdpi 144 
   size bg   "$3" "$AND/mipmap-$1/ic_launcher_background.png"
 done
 
+# --- Проверка геометрии ------------------------------------------------------
+# Иконки — ровно тот случай, когда ошибка видна только на телефоне и только тому, у кого
+# этот телефон. Глазами мы её пропустили дважды: на Android капля упиралась в границу
+# безопасной зоны (66 %) и её срезала фирменная маска EMUI, а на iOS выглядела мелкой.
+#
+# Меряем долю ВЫСОТЫ капли от холста. Именно высоты: капля вытянутая, и по ширине она
+# всегда будет вдвое меньше — сравнивать с чужими иконками человек будет по высоте.
+#
+# Границы — не вкус, а три разные системы отсчёта:
+#   iOS и PWA any: не обрезаются вовсе, поля съедают видимый размер;
+#   Android foreground: слой 108 dp, гарантированно видны центральные 66 %, и оболочки
+#     вроде EMUI накладывают СВОЮ маску поверх — нужен запас;
+#   maskable: круг безопасности 80 % диаметра, и в него должна влезть ДИАГОНАЛЬ капли.
+check() { # <файл> <мин %> <макс %>
+  local w h dh
+  w=$(magick identify -format "%w" "$1")
+  h=$(magick "$1" -fuzz 22% -trim -format "%h" info: 2>/dev/null)
+  dh=$(python3 -c "print(round($h / $w * 100, 1))")
+  if python3 -c "import sys; sys.exit(0 if $2 <= $dh <= $3 else 1)"; then
+    printf "  ок   %-46s высота капли %s%% (норма %s–%s)\n" "$(basename "$1")" "$dh" "$2" "$3"
+  else
+    printf "  МИМО %-46s высота капли %s%% (норма %s–%s)\n" "$(basename "$1")" "$dh" "$2" "$3"
+    BAD=1
+  fi
+}
+
+BAD=0
+echo "Проверка геометрии:"
+if [ "$EDITION" = lite ]; then
+  check public/icon-512.png 80 88
+  check public/icon-maskable-512.png 58 66
+fi
+check "$IOS/AppIcon-512@2x.png" 80 88
+check "$IOS/AppIcon-dark.png" 80 88
+check "$AND/mipmap-xxxhdpi/ic_launcher_foreground.png" 54 62
+check "$AND/mipmap-xxxhdpi/ic_launcher.png" 58 66
+[ "$BAD" = 0 ] || { echo "Геометрия разъехалась — правь scale в resources/*.svg и перезапусти."; exit 1; }
+
 echo "Готово. Посмотри глазами: public/icon-512.png, $IOS/AppIcon-512@2x.png, $AND/mipmap-xxxhdpi/ic_launcher_foreground.png"
