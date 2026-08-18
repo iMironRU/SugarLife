@@ -88,6 +88,8 @@ class BleLink(
     private val context: Context,
     private val address: String,
     private val notifyChars: Set<UUID>,
+    /** true — «встань в очередь и держи» (мост); false — быстрый прямой коннект (сенсор). См. connect(). */
+    private val медленноеПодключение: Boolean = false,
 ) {
     var onState: ((String) -> Unit)? = null
     private val notifyHandlers = HashMap<UUID, (ByteArray) -> Unit>()
@@ -184,16 +186,20 @@ class BleLink(
         val device = adapter.getRemoteDevice(address)
         onState?.invoke("Connecting")
         Log.d(TAG, "connect $address")
-        // autoConnect = TRUE и без TRANSPORT_LE — как в AndroidAPS (RileyLinkBLE.connectGattInternal).
+        // РЕЖИМ ПОДКЛЮЧЕНИЯ — СВОЙСТВО ПРИБОРА, а не общая настройка. Источники дают РАЗНЫЕ ответы, и оба
+        // обоснованы:
         //
-        // Разница не косметическая. `false` означает «подключись немедленно и агрессивно»: стек занимает слот
-        // сканирования, конкурирует с другими соединениями и охотно отваливается кодами 133/8 при живом
-        // эфире — что мы и видели, когда рядом работал сенсор. `true` — «встань в очередь, подключись, когда
-        // сможешь, и держи»: первый коннект медленнее, зато соединение переживает соседей и восстанавливается
-        // само.
+        //   мост (AndroidAPS, RileyLinkBLE.connectGattInternal): connectGatt(ctx, true, cb) — без TRANSPORT_LE.
+        //     «Встань в очередь, подключись, когда сможешь, и держи». Мост наш собственный, живёт часами,
+        //     и такое соединение переживает соседей и восстанавливается само.
         //
-        // Приборы не мешают друг другу — мешает способ, которым мы к ним ломимся (core#77).
-        gatt = device.connectGatt(context, true, callback)
+        //   сенсор (Juggluco, SuperGattCallback): autoconnect=false + TRANSPORT_LE + CONNECTION_PRIORITY_HIGH.
+        //     Сенсор вещает постоянно и рядом; цепляться к нему надо быстро.
+        //
+        // Я сначала применил «мостовое» правило ко всем — и сломал сенсор: он подключался дольше двадцати
+        // секунд, драйвер сдавался по сроку и начинал заново, пять попыток подряд (core#77).
+        gatt = if (медленноеПодключение) device.connectGatt(context, true, callback)
+        else device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
     }
 
     fun disconnect() {
@@ -257,19 +263,24 @@ class BleLink(
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
             // issue #33: status ≠ 0 (напр. 133 GATT_ERROR) — виновник тихих сбоев коннекта; логируем всегда.
             Log.d(TAG, "connState addr=$address status=$status newState=$newState")
-            if (status != BluetoothGatt.GATT_SUCCESS) Log.w(TAG, "connState НЕ-успех status=$status (133=GATT_ERROR/недоступен) addr=$address")
-            bleLog("Warn", "связь с прибором не установилась", address, "код" to status.toString(),
-                // Коды BLE-стека — словами. Ровно они решают, куда идти дальше: чинить связь, искать прибор
-                // или разбирать протокол. «Код 8» не говорит человеку ничего, «связь потеряна» — говорит.
-                "смысл" to when (status) {
-                    8 -> "связь потеряна: прибор ушёл из зоны или эфир перегружен"
-                    19 -> "прибор разорвал связь сам"
-                    22 -> "связь разорвана локально"
-                    34, 62 -> "стек не смог установить соединение"
-                    133 -> "прибор недоступен или занят"
-                    147 -> "исчерпан лимит одновременных подключений"
-                    else -> "код стека Android"
-                })
+            // ЖАЛУЕМСЯ ТОЛЬКО НА НЕУДАЧУ. Эта запись стояла СНАРУЖИ проверки и срабатывала на каждое
+            // изменение состояния, включая успешное (status=0), подписывая его «связь не установилась».
+            // В журнале получалось восемь «обрывов» в одну секунду там, где обрыва не было ни одного —
+            // и по этим выдуманным событиям я строил выводы о железе. Лог, который врёт, хуже отсутствующего.
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.w(TAG, "connState НЕ-успех status=$status (133=GATT_ERROR/недоступен) addr=$address")
+                bleLog("Warn", "связь с прибором не установилась", address, "код" to status.toString(),
+                    // Коды BLE-стека — словами: именно код решает, куда идти дальше.
+                    "смысл" to when (status) {
+                        8 -> "связь потеряна: прибор ушёл из зоны или эфир перегружен"
+                        19 -> "прибор разорвал связь сам"
+                        22 -> "связь разорвана локально"
+                        34, 62 -> "стек не смог установить соединение"
+                        133 -> "прибор недоступен или занят"
+                        147 -> "исчерпан лимит одновременных подключений"
+                        else -> "код стека Android"
+                    })
+            }
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     onState?.invoke("Connected")
@@ -362,7 +373,8 @@ class AndroidSensorBridge(context: Context, bleId: String) : SensorTransportBrid
 
 /** Мост помпы Medtronic через OrangeLink/RileyLink → [PumpTransportBridge] (зеркало iOS PumpBridge). */
 class AndroidPumpBridge(context: Context, bleId: String) : PumpTransportBridge {
-    private val link = BleLink(context, bleId, notifyChars = setOf(RL_RESP))
+    // Мост держим долго — ему подходит «очередь и удержание» (как в AndroidAPS).
+    private val link = BleLink(context, bleId, notifyChars = setOf(RL_RESP), медленноеПодключение = true)
     private var pending: ((ByteArray) -> Unit)? = null
     private var срок: Runnable? = null
 
