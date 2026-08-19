@@ -38,10 +38,42 @@
             </intent-filter>
         </activity>
 
-        <!-- Foreground-сервис: держит процесс живым в фоне (иначе HyperOS убивает → потеря сенсора). -->
+        <!-- Foreground-сервис: держит процесс живым в фоне (иначе HyperOS убивает → потеря сенсора).
+
+             ТИП ОБЪЯВЛЕН ДВОЙНОЙ, А ВЫБИРАЕТСЯ В МОМЕНТ ЗАПУСКА (#380). Здесь перечислено то, чем
+             сервис ИМЕЕТ ПРАВО быть; чем он будет на самом деле — решает SugarLifeService.start.
+
+             connectedDevice — наш случай по существу: постоянный обмен с прибором по Bluetooth.
+             Ограничения по времени у него нет, и ровно его объявляют xDrip+ и Juggluco — оба
+             читают сенсоры круглосуточно годами.
+
+             dataSync остаётся запасным: предусловие connectedDevice — ВЫДАННОЕ разрешение на
+             Bluetooth, а человек на одном облаке (Nightscout, без единого BLE-прибора) его не
+             давал. Без запасного варианта мы починили бы одному и сломали другому.
+
+             Почему нельзя просто оставить dataSync: на Android 15 у него предел 6 часов в сутки
+             на всё приложение. Посмотрел на экран вечером, лёг спать — под утро мониторинг
+             выключен. Ровно в те часы, когда он нужнее всего. -->
         <service
             android:name=".SugarLifeService"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="connectedDevice|dataSync" />
+
+        <!-- После перезагрузки мониторинг сам не включался (#380): человек узнавал об этом по дырке
+             в графике. У xDrip+ и Juggluco приёмник загрузки есть, у нас не было.
+
+             QUICKBOOT_POWERON — «быстрая загрузка» вендорских прошивок (HTC/Xiaomi): при ней
+             BOOT_COMPLETED не приходит вовсе. Строка взята у Juggluco, там она с той же целью. -->
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -62,7 +94,20 @@
     <!-- Foreground-сервис фонового мониторинга + его уведомление (Android 13+). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Тип connectedDevice — основной для нас (#380): обмен с прибором по Bluetooth, без предела
+         в 6 часов, который есть у dataSync на Android 15. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Обмен с прибором нельзя прерывать посреди (#380): побудка помпы длится 12 секунд, за ней
+         шестнадцать кадров страницы истории. Foreground-сервис держит ПРОЦЕСС, но не мешает
+         процессору уснуть между событиями. AndroidAPS держит PARTIAL_WAKE_LOCK вокруг всей очереди
+         команд, xDrip — вокруг каждого сеанса. Прерывание посередине человек читает как «связь плохая». -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Автозапуск после перезагрузки и после обновления самого приложения (#380). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Просьба об исключении из оптимизации батареи. Просим ЯВНО и с объяснением — молча такое
+         не берут. Заявлено у xDrip+ и Juggluco с той же целью. -->
+    <uses-permission-sdk-23 android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- BLE: сканирование (без геолокации) + подключение к сенсору/помпе. Android 12+. -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" tools:targetApi="s" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" tools:targetApi="s" />
