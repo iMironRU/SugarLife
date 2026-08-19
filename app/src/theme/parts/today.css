@@ -385,11 +385,20 @@
   font-family: var(--font-body); font-size: 12.5px; line-height: 1.45;
 }
 
-/* «История» внизу «Сегодня» (#384). Тихая строка, а не кнопка: это дверь назад во
-   времени, и тянуть внимание там, где человек решает про инсулин, ей нечем. */
+/* «История» внизу «Сегодня» (#384).
+
+   Первая версия была «неброской» до невидимости: серый текст на тёмном фоне, без опоры и
+   без границы — человек, который её просил, сам её не нашёл. Неброско значит «не спорит
+   за внимание», а не «не видно»: у двери должна быть ручка.
+
+   Поэтому черта сверху (она же отделяет прошлое от настоящего), обычный цвет текста и
+   приглушённые значки. Фона нет намеренно: карточка тянула бы взгляд наравне с
+   обращениями, а это не событие, а дверь. */
 .сегодня-история {
-  display: flex; align-items: center; gap: 8px; width: 100%;
-  margin: 18px 0 4px; padding: 10px 4px;
-  background: none; border: 0; color: var(--color-neutral-500); font-size: 14px;
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  margin: 20px 0 6px; padding: 14px 4px 4px;
+  background: none; border: 0; border-top: 1px solid var(--color-neutral-800);
+  color: var(--color-text); font-size: 15px;
 }
-.сегодня-история-шеврон { margin-left: auto; opacity: .6; }
+.сегодня-история ion-icon { color: var(--color-neutral-500); font-size: 18px; }
+.сегодня-история-шеврон { margin-left: auto; }
