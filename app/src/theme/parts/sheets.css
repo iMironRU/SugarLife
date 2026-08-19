@@ -448,3 +448,12 @@ label.list-row { cursor: pointer; }
 /* Цветом только беду: раскрашенная лента перестаёт выделять что-либо вовсе. */
 .журнал-строка.у-warn .журнал-текст { color: var(--color-warning, #e0b050); }
 .журнал-строка.у-error .журнал-текст { color: var(--color-danger, #e07070); }
+
+/* «Сведения о приборе» — раскрывающийся блок в карточке (#378). Не кнопка-действие:
+   тихая строка, которая не спорит за внимание с ответом на главный вопрос. */
+.карта-ещё {
+  display: block; width: 100%; text-align: left; margin: 14px 0 6px;
+  padding: 0; border: 0; background: none;
+  color: var(--color-neutral-500); font-size: 13px; text-decoration: underline;
+  text-underline-offset: 3px;
+}
