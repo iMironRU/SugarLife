@@ -302,6 +302,12 @@
       }
       разослать(); return 'длинный: ' + (режим || 'действует');
     },
+    /* Сырое значение сенсора (SugarLifeCore#88) — состояние, в котором мы сейчас живём
+       на настоящем приборе: калибровки нет, число сырое. */
+    сырое: function (да) {
+      снимок.monitor = Object.assign({}, снимок.monitor, { glucoseCalibrated: да === false ? true : false });
+      разослать(); return да === false ? 'калибровано' : 'сырое';
+    },
     догоняет: function () {
       снимок.monitor = Object.assign({}, снимок.monitor, {
         status: 'Acquiring', live: false,
