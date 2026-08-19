@@ -1,6 +1,6 @@
 import { IonIcon } from '@ionic/react';
-import { MealsSection } from '@/sections/lazy';
-import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, chevronForward } from 'ionicons/icons';
+import { MealsSection, HistorySection } from '@/sections/lazy';
+import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, chevronForward, timeOutline } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore, refresh } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt, agoText } from '@/domain/units';
@@ -574,6 +574,21 @@ export default function Today() {
               искать его по разделам человек не будет. Само появляется, только когда
               есть что отпускать. */}
           <ReleaseBle />
+
+          {/* «История» — тихой строкой внизу и последней (#384).
+
+              Экран «Сегодня» живёт настоящим: обращения гаснут, лента подключения
+              исчезает, приём уезжает вверх. Это правильно — экран действия не архив. Но
+              вопрос «во сколько я ел» и «когда сенсор отвалился» возникает потом, и
+              отвечать на него было нечем, хотя данные лежат.
+
+              Неброско намеренно: это не действие, а дверь назад во времени. Заметная
+              кнопка тянула бы внимание там, где человек решает, колоть ли. */}
+          <button className="сегодня-история" onClick={() => push(<HistorySection onClose={pop} />)}>
+            <IonIcon icon={timeOutline} />
+            <span>История</span>
+            <IonIcon icon={chevronForward} className="сегодня-история-шеврон" />
+          </button>
 
           </DataGate>
         <FoodSheet isOpen={foodOpen} onClose={() => setFoodOpen(false)} />

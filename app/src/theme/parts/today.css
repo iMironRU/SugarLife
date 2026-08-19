@@ -384,3 +384,12 @@
   display: block; width: 100%; text-align: left; cursor: pointer;
   font-family: var(--font-body); font-size: 12.5px; line-height: 1.45;
 }
+
+/* «История» внизу «Сегодня» (#384). Тихая строка, а не кнопка: это дверь назад во
+   времени, и тянуть внимание там, где человек решает про инсулин, ей нечем. */
+.сегодня-история {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  margin: 18px 0 4px; padding: 10px 4px;
+  background: none; border: 0; color: var(--color-neutral-500); font-size: 14px;
+}
+.сегодня-история-шеврон { margin-left: auto; opacity: .6; }

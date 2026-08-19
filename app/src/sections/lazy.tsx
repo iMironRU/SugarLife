@@ -90,6 +90,8 @@ export const SourcesSection = ленивый<{ onClose?: () => void; встро�
 export const CloudAccountsSection = ленивый<{ onClose: () => void }>(
   () => import('./CloudAccountsSection'), 'Облачные учётки');
 
+export const HistorySection = ленивый<{ onClose: () => void }>(
+  () => import('./HistorySection'), 'История');
 export const AnalyticsSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
   () => import('./AnalyticsSection'), 'Аналитика');
 
