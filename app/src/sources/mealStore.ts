@@ -17,6 +17,21 @@ export async function addMeal(m: NewMeal): Promise<Meal> {
 
 export const deleteMeal = removeMeal;
 
+/* Правка записи (SugarLife#381).
+
+   Раньше единственным действием в строке была корзина: ошибся в граммах — стирай и вноси
+   заново. При этом терялось время внесения и id, а вместе с ними — идемпотентность:
+   отправитель, когда появится, увидел бы новую запись вместо исправленной и задвоил
+   приём. Задвоенные углеводы — задвоенная доза.
+
+   Поэтому правим НА МЕСТЕ, сохраняя id и createdAt, и сбрасываем состояние доставки:
+   отправленное когда-то придётся отправить снова, уже исправленным. */
+export async function updateMeal(m: Meal, правки: Partial<Pick<Meal, 't' | 'carbs' | 'kind' | 'note'>>): Promise<Meal> {
+  const новая: Meal = { ...m, ...правки, sync: m.sync === 'sent' ? 'local' : m.sync };
+  await putMeal(новая);
+  return новая;
+}
+
 export function useMeals(): Meal[] {
   const [meals, setMeals] = useState<Meal[]>([]);
   useEffect(() => {

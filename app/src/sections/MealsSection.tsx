@@ -1,9 +1,14 @@
 import { IonIcon } from '@ionic/react';
 import { useState } from 'react';
-import { restaurantOutline, cloudOutline, trashOutline } from 'ionicons/icons';
+import { restaurantOutline, cloudOutline, chevronForward } from 'ionicons/icons';
 import Section from '@/ui/Section';
-import { useTreatments } from '@/sources/db';
-import { useMeals, deleteMeal } from '@/sources/mealStore';
+import { useTreatments, useEntries } from '@/sources/db';
+import { useMeals } from '@/sources/mealStore';
+import { необъяснённыеПодъёмы } from '@/domain/mealMoment';
+import { подписьПриёма } from '@/domain/имяПриёма';
+import MealEditSheet from '@/sheets/MealEditSheet';
+import FoodSheet from '@/sheets/FoodSheet';
+import type { Meal } from '@/domain/meals';
 import { useCarbUnit, toCarbs, carbUnitLabel, plural } from '@/domain/units';
 import { onlyLocal } from '@/domain/meals';
 
@@ -32,7 +37,15 @@ const ЧАС = 3600e3;
 export default function MealsSection({ onClose }: { onClose: () => void }) {
   const meals = useMeals();
   const cu = useCarbUnit();
-  const [окно, setОкно] = useState<24 | 168>(24);
+  /* Неделя убрана (#381): недельный обзор нужен для разбора, и его место в «Метриках».
+     Здесь окно одно — сутки, а переключатель отдан на другое: подъёмы без записи. */
+  const окно = 24;
+  const [вкладка, setВкладка] = useState<'приёмы' | 'безЗаписи'>('приёмы');
+  const entries = useEntries(окно * ЧАС);
+  const [правим, setПравим] = useState<Meal | null>(null);
+  /* Куда записать еду по подъёму: время начала подъёма. Человек его как раз и не помнит
+     точно — а данные помнят. */
+  const [добавляем, setДобавляем] = useState<number | null>(null);
 
   const лечение = useTreatments(окно * ЧАС);
   const от = Date.now() - окно * ЧАС;
@@ -44,6 +57,10 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
     .map((t) => ({ id: 'ns' + t.t, t: t.t, carbs: t.carbs as number, kind: t.type, своё: false }));
 
   const все = [...свои, ...облачные].sort((a, b) => b.t - a.t);
+  /* Подъёмы без записи — уже написанное правило (domain/mealMoment): рост 2,2 ммоль за
+     45 минут, если рядом нет еды. Оно работало на подсказку «когда ели» при вводе задним
+     числом; здесь тот же ответ показан списком. */
+  const подъёмы = необъяснённыеПодъёмы(entries, все.map((x) => x.t));
   const сумма = Math.round(все.reduce((s, x) => s + x.carbs, 0));
 
   return (
@@ -53,12 +70,52 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
           : 'Пока пусто'}
         onBack={onClose}>
 
+      {/* «Без записи», а не «необъявленные приёмы» (#381). Второе утверждает, что человек
+          ел и не записал, — а причин больше: недоданный болюс, отвалившаяся канюля,
+          рассветный феномен, болезнь, нагрев сенсора (#376). Обвинительная рамка в
+          приложении для человека с хроническим диагнозом — худшее, что можно сделать.
+          «Без записи» — факт: подъём есть, записи нет. */}
       <div className="period">
-        <button className={'period-seg' + (окно === 24 ? ' on' : '')} onClick={() => setОкно(24)}>Сутки</button>
-        <button className={'period-seg' + (окно === 168 ? ' on' : '')} onClick={() => setОкно(168)}>Неделя</button>
+        <button className={'period-seg' + (вкладка === 'приёмы' ? ' on' : '')}
+          onClick={() => setВкладка('приёмы')}>Приёмы</button>
+        <button className={'period-seg' + (вкладка === 'безЗаписи' ? ' on' : '')}
+          onClick={() => setВкладка('безЗаписи')}>Без записи{подъёмы.length ? ` · ${подъёмы.length}` : ''}</button>
       </div>
 
-      {все.length === 0 ? (
+      {вкладка === 'безЗаписи' ? (
+        подъёмы.length === 0 ? (
+          <div className="loop-empty">
+            <IonIcon icon={restaurantOutline} />
+            <div className="loop-empty-t">Всё объяснено</div>
+            <div className="loop-empty-s">
+              За сутки не было подъёмов, под которыми нет записи. Это не оценка — просто
+              сейчас объяснять нечего.
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="meal-log">
+              {подъёмы.map((п) => (
+                <button key={п.at} className="meal-row" onClick={() => setДобавляем(п.at)}>
+                  <div className="meal-when"><b>{время(п.at)}</b><span>{день(п.at)}</span></div>
+                  <div className="meal-what">
+                    {/* Насколько поднялся — это и есть повод: «+3,4 ммоль» человек
+                        сопоставит со своей памятью лучше, чем слово «подъём». */}
+                    <b>+{п.rise.toFixed(1).replace('.', ',')} ммоль</b>
+                    <span>сахар пошёл вверх · записи нет</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            {/* Ни одного слова о том, что человек что-то скрыл: причин у подъёма больше
+                двух (#167), и выбирать за него мы не вправе. */}
+            <div className="metric-note">
+              Подъём мог быть от еды, недоданного болюса, отвалившейся канюли, болезни или
+              нагрева сенсора. Тапните — если это была еда, запишем её этим временем.
+            </div>
+          </>
+        )
+      ) : все.length === 0 ? (
         <div className="loop-empty">
           <IonIcon icon={restaurantOutline} />
           <div className="loop-empty-t">Записей нет</div>
@@ -70,7 +127,13 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
       ) : (
         <div className="meal-log">
           {все.map((x) => (
-            <div key={x.id} className="meal-row">
+            /* Тап по строке открывает правку (#381). Раньше единственным действием была
+               корзина: ошибся в граммах — стирай и вноси заново. Правим только своё:
+               облачное приедет снова при следующем обновлении, и правка, которую
+               перезапишут, хуже её отсутствия. */
+            <button key={x.id} className={'meal-row' + (x.своё ? '' : ' is-soon')}
+              disabled={!x.своё}
+              onClick={() => { const м = meals.find((m) => m.id === x.id); if (м) setПравим(м); }}>
               <div className="meal-when">
                 <b>{время(x.t)}</b>
                 <span>{день(x.t)}</span>
@@ -78,20 +141,20 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
               <div className="meal-what">
                 <b>{toCarbs(x.carbs, cu)} {carbUnitLabel(cu)}</b>
                 <span>
-                  {x.kind || 'приём'}
+                  {подписьПриёма({
+                    kind: x.kind, часЕды: new Date(x.t).getHours(), граммы: x.carbs,
+                  }).главное}
                   {!x.своё && <> · <IonIcon icon={cloudOutline} /> Nightscout</>}
                 </span>
               </div>
-              {/* Удалить можно только своё: облачное приедет снова при следующем
-                  обновлении, и кнопка, которая ничего не меняет, хуже её отсутствия. */}
-              {x.своё && (
-                <button className="meal-del" onClick={() => deleteMeal(x.id)} aria-label="Удалить">
-                  <IonIcon icon={trashOutline} />
-                </button>
-              )}
-            </div>
+              {x.своё && <IonIcon icon={chevronForward} className="list-chev" />}
+            </button>
           ))}
         </div>
+      )}
+      {правим && <MealEditSheet приём={правим} onClose={() => setПравим(null)} />}
+      {добавляем != null && (
+        <FoodSheet isOpen onClose={() => setДобавляем(null)} времяПодъёма={добавляем} />
       )}
     </Section>
   );
