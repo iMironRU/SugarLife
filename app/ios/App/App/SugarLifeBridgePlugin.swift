@@ -58,31 +58,94 @@ final class SharedCentral: NSObject, CBCentralManagerDelegate {
         return true
     }
 
-    override init() { super.init(); central = CBCentralManager(delegate: self, queue: nil) }
+    /// Приборы, соединение с которыми мы хотим ДЕРЖАТЬ. Заявка на подключение в CoreBluetooth бессрочна и
+    /// переживает приостановку приложения: система соединит сама, когда прибор появится в эфире, и разбудит
+    /// нас под это событие. Ровно так живёт Loop (`autoConnectDevices` при каждом разрыве) — и это
+    /// единственный способ вернуться на связь, пока приложение спит и своей петли переподключения крутить не
+    /// может (#379).
+    ///
+    /// В набор попадает то, что просил драйвер, и выбывает то, что он же сам отсоединил. Разница
+    /// принципиальная: свой разрыв — это решение (core#83), чужой — потеря связи, и только её мы чиним молча.
+    private var держим: Set<UUID> = []
+    /// Периферали, вернувшиеся от системы при восстановлении (см. `willRestoreState`).
+    private var восстановленные: [UUID: CBPeripheral] = [:]
+
+    override init() {
+        super.init()
+        /* ВОССТАНОВЛЕНИЕ СОСТОЯНИЯ (#379).
+
+           Без идентификатора восстановления выгруженное приложение не поднимется больше никогда — ни на
+           одно BLE-событие, пока человек не откроет его руками. А выгружает iOS обычно: по памяти, по сбою,
+           просто так. Идентификатор говорит системе «этот центральный менеджер мой, подними меня, когда по
+           нему что-то произойдёт».
+
+           Идентификатор обязан быть ПОСТОЯННЫМ между запусками — на том и держится вся затея. У нас общий
+           центральный на всё приложение (core#20), поэтому строка одна и записана здесь; у xDrip4iOS
+           менеджеров много, и они складывают адрес прибора в идентификатор, чтобы получить ту же
+           постоянство. Издания разведены: Pro и Lite не должны делить восстановление.
+
+           ShowPowerAlert — системная подсказка «включите Bluetooth». Отказ доступа на iOS выглядит как
+           «ничего не находится», молча (core#61), и одну из причин этой тишины система объяснит сама. */
+        let restoreId = (Bundle.main.bundleIdentifier ?? "ru.imiron.sugarlife") + ".central"
+        central = CBCentralManager(
+            delegate: self, queue: nil,
+            options: [
+                CBCentralManagerOptionRestoreIdentifierKey: restoreId,
+                CBCentralManagerOptionShowPowerAlertKey: true,
+            ]
+        )
+    }
 
     func register(_ link: BleLink, for uuid: UUID) { links[uuid] = link }
     // Снимаем маршрут только если он всё ещё НАШ: иначе disconnect старого линка стёр бы маршрут нового.
     func unregister(_ uuid: UUID, _ link: BleLink) { if links[uuid] === link { links.removeValue(forKey: uuid) } }
 
     func connect(_ uuid: UUID) {
+        держим.insert(uuid)
         guard central.state == .poweredOn else { if !pending.contains(uuid) { pending.append(uuid) }; return }
-        if let p = central.retrievePeripherals(withIdentifiers: [uuid]).first {
+        // Восстановленная периферь — та же самая: система вернула нам живой объект, заново искать нечего.
+        if let p = восстановленные[uuid] ?? central.retrievePeripherals(withIdentifiers: [uuid]).first {
             links[uuid]?.bind(p); central.connect(p, options: nil)
         }
     }
-    func cancel(_ p: CBPeripheral) { central.cancelPeripheralConnection(p) }
+    func cancel(_ p: CBPeripheral) {
+        держим.remove(p.identifier)   // отсоединил драйвер — держать больше не надо (#379)
+        central.cancelPeripheralConnection(p)
+    }
 
     func startScan() { wantScan = true; if central.state == .poweredOn { central.scanForPeripherals(withServices: nil) } }
     func stopScan() { wantScan = false; central.stopScan() }
+
+    /// Система подняла приложение и вернула ему свои периферали (#379). Пустой обработчик уже достаточен —
+    /// важен сам факт объявления, — но раз периферали дают, забираем: по ним `connect` соединится без поиска.
+    func centralManager(_ c: CBCentralManager, willRestoreState dict: [String: Any]) {
+        let список = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] ?? []
+        NSLog("SugarLifeBLE: восстановление состояния — периферали: \(список.count)")
+        for p in список { восстановленные[p.identifier] = p }
+    }
 
     func centralManagerDidUpdateState(_ c: CBCentralManager) {
         readinessHandler?()   // выключили/включили Bluetooth или ответили на запрос доступа — сказать движку
         guard c.state == .poweredOn else { return }
         let p = pending; pending = []; p.forEach { connect($0) }
+        // Приборы, которые мы держим, переподаём заявкой: Bluetooth могли выключить и включить, а заявка
+        // при этом теряется (#379).
+        держим.forEach { connect($0) }
         if wantScan { c.scanForPeripherals(withServices: nil) }
     }
     func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) { links[p.identifier]?.didConnect(p) }
-    func centralManager(_ c: CBCentralManager, didDisconnectPeripheral p: CBPeripheral, error: Error?) { links[p.identifier]?.didDisconnect() }
+    func centralManager(_ c: CBCentralManager, didDisconnectPeripheral p: CBPeripheral, error: Error?) {
+        links[p.identifier]?.didDisconnect()
+        /* ЧУЖОЙ РАЗРЫВ — ПЕРЕПОДАЁМ ЗАЯВКУ (#379).
+
+           Прибор ушёл из радиуса, мигнул питанием, iOS решила освободить эфир — своего решения тут нет
+           (наше сняло бы `cancel`, см. выше). Пока приложение на экране, переподключением займётся драйвер;
+           в фоне он не запустится вовсе — процесс приостановлен. Бессрочная заявка тем и хороша, что её
+           исполняет система: прибор появился — соединение поднято, приложение разбужено под это событие.
+
+           Так же поступает Loop: `autoConnectDevices()` вызывается прямо из обработчика разрыва. */
+        if держим.contains(p.identifier) { c.connect(p, options: nil) }
+    }
     func centralManager(_ c: CBCentralManager, didFailToConnect p: CBPeripheral, error: Error?) { links[p.identifier]?.didFail() }
     func centralManager(_ c: CBCentralManager, didDiscover p: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
         scanHandler?(p, advertisementData, RSSI)
