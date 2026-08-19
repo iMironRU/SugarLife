@@ -30,46 +30,60 @@ AVDS=("$@")
 [ ${#AVDS[@]} -eq 0 ] && AVDS=($("$EMU" -list-avds | grep '^sl-'))
 [ -f "$APK" ] || { echo "APK не собран: $APK"; exit 1; }
 
-итог=""
-ок()    { printf '  \033[32m✓\033[0m %s\n' "$1"; }
-плохо() { printf '  \033[31m✗\033[0m %s\n' "$1"; итог="$итог  ✗ $ВЕРСИЯ: $1\n"; }
+# Глушим ВСЕ живые эмуляторы и ДОЖИДАЕМСЯ их смерти. С двумя запущенными adb отказывается выбирать сам,
+# и прогон осыпается на «more than one device». Просто «убить и поспать» не годится: эмулятор умирает
+# неспешно, а мы за это время успеваем поднять следующий — и получаем ровно то, от чего убегали.
+kill_all() {
+    "$ADB" devices | grep emulator | cut -f1 | while read -r s; do "$ADB" -s "$s" emu kill >/dev/null 2>&1; done
+    i=0
+    while [ "$("$ADB" devices | grep -c emulator)" != "0" ] && [ $i -lt 30 ]; do sleep 2; i=$((i + 1)); done
+}
+
+SUMMARY=""
+ok()  { printf '  \033[32m✓\033[0m %s\n' "$1"; }
+bad() { printf '  \033[31m✗\033[0m %s\n' "$1"; SUMMARY="$SUMMARY  ✗ $VERSION: $1\n"; }
 
 # Тип foreground-сервиса числом: 0x10 connectedDevice, 0x01 dataSync. На Android 10 и старше система его
 # не печатает — там проверяем только сам факт «сервис на переднем плане».
-тип_сервиса() {
+fgs_type() {
     "$ADB" shell dumpsys activity services "$PKG" 2>/dev/null \
         | grep -a "isForeground=true" | grep -ao "types=0x[0-9a-f]*" | head -1 | cut -d= -f2
 }
-на_переднем() { "$ADB" shell dumpsys activity services "$PKG" 2>/dev/null | grep -ac "isForeground=true"; }
-перезапуск()  { "$ADB" shell am force-stop "$PKG"; "$ADB" shell am start -n "$ACT" >/dev/null 2>&1; sleep 12; }
+is_foreground() { "$ADB" shell dumpsys activity services "$PKG" 2>/dev/null | grep -ac "isForeground=true"; }
+restart()  { "$ADB" shell am force-stop "$PKG"; "$ADB" shell am start -n "$ACT" >/dev/null 2>&1; sleep 12; }
 
 for AVD in "${AVDS[@]}"; do
     printf '\n\033[1m▶ %s\033[0m\n' "$AVD"
-    "$ADB" emu kill >/dev/null 2>&1; sleep 3
+    kill_all
     nohup "$EMU" -avd "$AVD" -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect >"/tmp/$AVD.log" 2>&1 &
     "$ADB" wait-for-device >/dev/null 2>&1
     "$ADB" shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 3; done' >/dev/null 2>&1
-    ВЕРСИЯ="Android $("$ADB" shell getprop ro.build.version.release | tr -d '\r') (API $("$ADB" shell getprop ro.build.version.sdk | tr -d '\r'))"
+    VERSION="Android $("$ADB" shell getprop ro.build.version.release | tr -d '\r') (API $("$ADB" shell getprop ro.build.version.sdk | tr -d '\r'))"
     SDKV=$("$ADB" shell getprop ro.build.version.sdk | tr -d '\r')
-    echo "  $ВЕРСИЯ"
-    "$ADB" install -r -g "$APK" >/dev/null 2>&1 || { плохо "APK не установился"; continue; }
+    echo "  $VERSION"
+    "$ADB" install -r -g "$APK" >/dev/null 2>&1 || { bad "APK не установился"; continue; }
 
     # 1. С Bluetooth-разрешением сервис обязан быть connectedDevice — у него нет предела в 6 часов.
     "$ADB" shell pm grant "$PKG" android.permission.BLUETOOTH_CONNECT >/dev/null 2>&1
     "$ADB" shell pm grant "$PKG" android.permission.BLUETOOTH_SCAN >/dev/null 2>&1
-    перезапуск
-    T=$(тип_сервиса)
-    if [ "$(на_переднем)" = "0" ]; then плохо "сервис не поднялся"
-    elif [ -z "$T" ]; then ок "сервис на переднем плане (тип система не печатает)"
-    elif [ "$T" = "0x00000010" ]; then ок "тип connectedDevice — без предела по времени"
-    else плохо "тип $T вместо connectedDevice — на Android 15 это 6 часов в сутки"; fi
+    "$ADB" logcat -c
+    restart
+    T=$(fgs_type)
+    # До Android 14 система тип в dumpsys не печатает — тогда спрашиваем сам сервис: он пишет в журнал,
+    # чем стартовал. Без этого на старых версиях проверка вырождалась в «ну хоть поднялся».
+    SAID=$("$ADB" logcat -d 2>/dev/null | grep -a "SugarLifeService: старт: тип" | tail -1 | sed 's/.*тип //')
+    if [ "$(is_foreground)" = "0" ]; then bad "сервис не поднялся"
+    elif [ "$T" = "0x00000010" ]; then ok "тип connectedDevice — без предела по времени"
+    elif [ -n "$T" ]; then bad "тип $T вместо connectedDevice — на Android 15 это 6 часов в сутки"
+    elif echo "$SAID" | grep -q "^connectedDevice"; then ok "тип connectedDevice (по журналу сервиса)"
+    else bad "сервис стартовал как «$SAID» вместо connectedDevice"; fi
 
     # 2. Без разрешения — обязан УСТОЯТЬ, свалившись на dataSync. Слепая замена типа уронила бы облачный режим.
     "$ADB" shell pm revoke "$PKG" android.permission.BLUETOOTH_CONNECT >/dev/null 2>&1
     "$ADB" shell pm revoke "$PKG" android.permission.BLUETOOTH_SCAN >/dev/null 2>&1
-    перезапуск
-    if [ "$(на_переднем)" = "0" ]; then плохо "без Bluetooth-разрешения сервис не поднялся вовсе"
-    else ок "без Bluetooth-разрешения сервис жив (облачный режим не сломан)"; fi
+    restart
+    if [ "$(is_foreground)" = "0" ]; then bad "без Bluetooth-разрешения сервис не поднялся вовсе"
+    else ok "без Bluetooth-разрешения сервис жив (облачный режим не сломан)"; fi
 
     # 3. Перезагрузка. На Android 15 включаем системное ограничение явно: из BOOT_COMPLETED там
     #    разрешён connectedDevice и запрещён dataSync — проверяем, что мы по разрешённой стороне.
@@ -81,10 +95,10 @@ for AVD in "${AVDS[@]}"; do
     "$ADB" logcat -c
     "$ADB" shell am broadcast -a android.intent.action.BOOT_COMPLETED -p "$PKG" >/dev/null 2>&1
     sleep 8
-    if [ "$(на_переднем)" = "0" ]; then плохо "после перезагрузки мониторинг не поднялся"
-    else ок "после перезагрузки мониторинг поднялся сам"; fi
+    if [ "$(is_foreground)" = "0" ]; then bad "после перезагрузки мониторинг не поднялся"
+    else ok "после перезагрузки мониторинг поднялся сам"; fi
     if "$ADB" logcat -d 2>/dev/null | grep -aq "ForegroundServiceStartNotAllowed"; then
-        плохо "система запретила старт из загрузки — тип сервиса не тот"
+        bad "система запретила старт из загрузки — тип сервиса не тот"
     fi
 
     # 4. Doze: процесс и сервис обязаны пережить глубокий сон.
@@ -92,13 +106,13 @@ for AVD in "${AVDS[@]}"; do
     "$ADB" shell dumpsys deviceidle enable >/dev/null 2>&1
     "$ADB" shell dumpsys deviceidle force-idle >/dev/null 2>&1
     sleep 10
-    if [ "$(на_переднем)" = "0" ]; then плохо "в Doze сервис пропал"; else ок "Doze пережит"; fi
+    if [ "$(is_foreground)" = "0" ]; then bad "в Doze сервис пропал"; else ok "Doze пережит"; fi
     "$ADB" shell dumpsys deviceidle unforce >/dev/null 2>&1
     "$ADB" shell dumpsys battery reset >/dev/null 2>&1
 
-    if "$ADB" logcat -d 2>/dev/null | grep -aqE "FATAL EXCEPTION.*$PKG"; then плохо "падение в журнале"; fi
+    if "$ADB" logcat -d 2>/dev/null | grep -aqE "FATAL EXCEPTION.*$PKG"; then bad "падение в журнале"; fi
 done
 
-"$ADB" emu kill >/dev/null 2>&1
+kill_all
 printf '\n\033[1m== ИТОГ ==\033[0m\n'
-[ -z "$итог" ] && echo "  всё сошлось" || printf "$итог"
+[ -z "$SUMMARY" ] && echo "  всё сошлось" || printf "$SUMMARY"
