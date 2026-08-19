@@ -207,6 +207,21 @@ class BleLink(
         // Отложенное отпускаем: иначе чтение, начатое до разрыва, не ответит никогда.
         отпуститьОтложенные("разрыв связи")
         gatt?.disconnect(); gatt?.close(); gatt = null
+        /* О СВОЁМ РАЗРЫВЕ СООБЩАЕМ САМИ (core#83).
+        
+           Состояние связи Android присылает колбэком — но только пока GATT жив. Мы его здесь
+           закрываем, и после `close()` колбэка не будет: система считает, что рассказывать
+           больше некому. Раньше мы на это и полагались, поэтому свой собственный разрыв
+           оставался необъявленным.
+        
+           На железе это выглядело так: драйвер сам решил переподключиться, позвал disconnect и
+           стал ждать «связь упала» — события, которого уже никто не пришлёт. Сеанс завис
+           навсегда, а его опрос продолжал слать запросы в закрытую сессию, раз в секунду,
+           минутами. Прибор при этом числился «на связи».
+        
+           Разрыв — это факт, а не чужое мнение: кто его совершил, тот и объявляет. */
+        opBusy = false; opQueue.clear()
+        onState?.invoke("Disconnected")
     }
 
     fun write(char: UUID, bytes: ByteArray) = приГотовности { enqueue {
@@ -378,6 +393,17 @@ class AndroidPumpBridge(context: Context, bleId: String) : PumpTransportBridge {
     private var pending: ((ByteArray) -> Unit)? = null
     private var срок: Runnable? = null
 
+    /* ЗАПАС ПЛАТФОРМЫ поверх радио-времени команды (core#80).
+
+       Ядро знает, сколько мост будет держать приёмник, и не знает — сколько к этому добавит стек
+       Android между write и нотификацией. Знаем только мы, и число тут не выдуманное: AndroidAPS
+       живёт с `EXPECTED_MAX_BLUETOOTH_LATENCY_MS = 7500` на том же классе железа. У CoreBluetooth
+       это 2 с (rileylink_ios) — потому число и объявляет натив, а не общий код.
+
+       Отсюда же и наши прошлые «мост отвалился»: ядро отводило на всю команду 3–8 с «на глаз»,
+       и живой, но обычно-небыстрый Android BLE в них не укладывался. */
+    override val bleLatencyMs: Long = 7_500
+
     /* Ровно один ответ на команду — и он есть ВСЕГДА (SugarLife#344).
      
        Было так: колбэк складывался в `pending` и ждал нотификации моста. Не ответил мост —
@@ -435,6 +461,21 @@ class SugarLifeScanner(context: Context, private val onAdvertisement: (String) -
     private val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
     private var scanning = false
 
+    /**
+     * ГЛАВНЫЙ ПОТОК НЕ РАЗБИРАЕТ ЭФИР (core#82).
+     *
+     * `ScanCallback` без своего Handler'а Android доставляет на главный поток, а каждое объявление мы отдаём
+     * движку синхронным вызовом, который ждёт своей очереди. В людном месте объявлений — десяток в секунду,
+     * то есть главный поток стоит в очереди движка практически непрерывно. Так приложение и получало
+     * «не отвечает»: не от одной долгой операции, а от тысячи коротких ожиданий подряд.
+     *
+     * Разбор и передача — здесь, на своём потоке. Тот же приём, что у AndroidAPS и Juggluco: у BLE свой поток,
+     * с UI он не делится.
+     */
+    private val приём = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "SugarLifeScan").apply { isDaemon = true }
+    }
+
     private val callback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val dev = result.device
@@ -447,7 +488,8 @@ class SugarLifeScanner(context: Context, private val onAdvertisement: (String) -
                 .put("rssi", result.rssi)
             // issue #33: видно, ЧТО реально приходит в скан (T1: находится ли GS1 после extended-фикса #30).
             Log.d(TAG, "adv ${dev.address} name=${result.scanRecord?.deviceName} svc=$services rssi=${result.rssi}")
-            onAdvertisement(dto.toString())
+            val json = dto.toString()
+            приём.execute { onAdvertisement(json) }
         }
 
         override fun onScanFailed(errorCode: Int) { Log.w(TAG, "scan FAILED errorCode=$errorCode") }

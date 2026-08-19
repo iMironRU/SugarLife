@@ -33,6 +33,74 @@ import java.io.File
 class SugarLifeBridgePlugin : Plugin() {
     private val engine: SugarLifeEngine get() = EngineHolder.engine(context.applicationContext)
     private var unsubscribe: (() -> Unit)? = null
+
+    /**
+     * ПОТОК ДЛЯ РАЗГОВОРА С ДВИЖКОМ (core#82).
+     *
+     * Публичные методы движка синхронны и ждут своей очереди: внутри у него один поток, которым он защищает
+     * состояние от гонок. Ждать в этой очереди можно откуда угодно, кроме одного места — главного потока
+     * Android. Пять секунд ожидания там, и система показывает «приложение не отвечает» и убивает процесс.
+     *
+     * Ровно это мы и словили на железе 19 августа: три перезапуска за восемь минут, два ANR, приборы не
+     * подключились ни разу — движок стоял в очереди за UI-потоком, а на экране висело «ждём первое показание».
+     *
+     * Так делают все, у кого это работает: у очереди команд AndroidAPS свой `HandlerThread`, долгая работа
+     * с помпой уходит в `QueueWorker` на `Dispatchers.IO`; у `rileylink_ios` своя `sessionQueue`, и вход в неё
+     * охраняется `dispatchPrecondition`; Juggluco держит `HandlerThread` на каждый прибор. Никто не разговаривает
+     * с железом с главного потока.
+     *
+     * Поток ОДИН и последовательный: он не про параллельность, а про то, чтобы не занимать чужой.
+     */
+    private val engineThread = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "SugarLifeEngineCall").apply { isDaemon = true }
+    }
+
+    /**
+     * ОТДЕЛЬНЫЙ ПОТОК ДЛЯ ПОТОКА СОБЫТИЙ ОТ ЖЕЛЕЗА (core#82).
+     *
+     * Журнал обмена и телеметрию зовут из GATT-колбэков, а их Android доставляет на главный поток. Вызов
+     * движка синхронный: пока драйвер занимает очередь обменом с прибором, колбэк ждёт — и главный поток
+     * вместе с ним. Так мы получили второй ANR: вызовы из интерфейса при этом укладывались в десятки
+     * миллисекунд, то есть виноват был не интерфейс.
+     *
+     * Поток отдельный от [engineThread] намеренно: поток событий от железа плотный (в подробном режиме —
+     * каждый кадр), и он не должен стоять в одной очереди с тем, что человек нажал прямо сейчас.
+     * Один поток, а не пул: порядок записей в журнале — это и есть их смысл.
+     */
+    private val deviceEvents = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "SugarLifeDeviceEvents").apply { isDaemon = true }
+    }
+
+    /** Выполнить вызов движка вне главного потока и ответить в JS. `call.resolve` можно звать из любого потока. */
+    private fun onEngineThread(call: PluginCall, work: () -> JSObject) = onEngineThread(call.methodName ?: "call") {
+        try {
+            call.resolve(work())
+        } catch (t: Throwable) {
+            Log.e(TAG, "вызов движка не удался", t)
+            call.reject(t.message ?: "ошибка движка")
+        }
+    }
+
+    /**
+     * Любая работа, которую мы отдаём движку, — с отметками входа и выхода (core#82).
+     *
+     * Зависание очереди движка снаружи неотличимо от «ничего не происходит»: приложение живо, эфир идёт,
+     * а движок молчит. Отметки превращают это в конкретный вопрос: какой вызов вошёл и не вышел. Без них
+     * мы час гадали, что именно встало.
+     */
+    private fun onEngineThread(name: String, work: () -> Unit) {
+        engineThread.execute {
+            val startedAt = System.currentTimeMillis()
+            Log.d(TAG, "→ $name")
+            try {
+                work()
+            } catch (t: Throwable) {
+                Log.e(TAG, "✗ $name", t)
+            } finally {
+                Log.d(TAG, "← $name за ${System.currentTimeMillis() - startedAt} мс")
+            }
+        }
+    }
     private val scanner by lazy {
         SugarLifeScanner(context.applicationContext) { json -> engine.submitAdvertisement(json) }
     }
@@ -128,59 +196,73 @@ class SugarLifeBridgePlugin : Plugin() {
 
     override fun load() {
         Log.i(TAG, "load: attach to engine")
-        telemetrySink = { json -> engine.submitTelemetry(json) }   // натив→движок телеметрия (issue #38)
+        telemetrySink = { json -> deviceEvents.execute { engine.submitTelemetry(json) } }   // натив→движок телеметрия (issue #38)
         // BLE-слой → ОБЩИЙ журнал (core#72). Раньше эти строки жили только в logcat, то есть не доходили ни
         // до человека, ни до выгрузки диагностики — а именно они решили разбор помпы. deviceId отдаём MAC-ом:
         // сопоставление с логической записью прибора делает движок, у него для этого есть реестр.
         logSink = { level, event, deviceId, fields, frame ->
             val f = fields.entries.joinToString(",") { (k, v) -> "${jsonStr(k)}:${jsonStr(v)}" }
-            engine.sendIntent(
-                """{"type":"submitLog","level":${jsonStr(level)},"tag":"ble","event":${jsonStr(event)},""" +
-                    (if (deviceId != null) """"deviceId":${jsonStr(deviceId)},""" else "") +
-                    """"fields":{$f},"hasIdentifiers":$frame}""",
-            )
+            val json = """{"type":"submitLog","level":${jsonStr(level)},"tag":"ble","event":${jsonStr(event)},""" +
+                (if (deviceId != null) """"deviceId":${jsonStr(deviceId)},""" else "") +
+                """"fields":{$f},"hasIdentifiers":$frame}"""
+            // Строку собрали здесь (она про ЭТОТ момент), а отдаём движку с другого потока: запись в журнал
+            // не должна останавливать того, кто разговаривает с прибором, — и тем более главный поток.
+            deviceEvents.execute { engine.sendIntent(json) }
         }
         // Держим процесс живым в фоне (иначе HyperOS убьёт → потеря сенсора). Стартуем с переднего плана — ОК.
         SugarLifeService.start(context.applicationContext)
-        // Снимок из движка-синглтона (переживает пересоздание Activity) → в webview на UI-потоке.
-        unsubscribe = engine.subscribe { json ->
-            val data = JSObject().put("json", json)
-            activity?.runOnUiThread { notifyListeners("snapshot", data) }
+        // Подписка и boot-реконнект — тоже вызовы движка, то есть тоже мимо главного потока (core#82).
+        // Особенно они: `subscribe` отдаёт первый снимок сразу, а `ensureProvider` тянет за собой
+        // восстановление приборов из БД. Раньше это выполнялось в `load()` на UI-потоке, и первый же
+        // затянувшийся старт превращался в «приложение не отвечает».
+        val permitted = hasBlePermissions()   // спрашивать разрешения можно только с главного потока
+        onEngineThread("boot: subscribe+provider") {
+            // Снимок из движка-синглтона (переживает пересоздание Activity) → в webview на UI-потоке.
+            unsubscribe = engine.subscribe { json ->
+                val data = JSObject().put("json", json)
+                activity?.runOnUiThread { notifyListeners("snapshot", data) }
+            }
+            // Разрешения уже выданы — цепляем провайдер сразу, движок переподнимет сохранённые сенсор/помпу
+            // из БД (без ожидания скана). Нет — отложим до первого скана, чтобы не спамить запросом на старте.
+            if (permitted) EngineHolder.ensureProvider(context.applicationContext)
         }
-        // Boot-реконнект BLE: если разрешения уже выданы — цепляем провайдер сразу, движок переподнимет
-        // сохранённые сенсор/помпу из БД (без ожидания скана). Нет разрешений — отложим до первого скана
-        // (не спамим запрос на старте; restore всё равно сработает при первом attachDriverProvider).
-        if (hasBlePermissions()) EngineHolder.ensureProvider(context.applicationContext)
         reportScanReadiness()
         watchSystemState()
     }
 
     @PluginMethod
-    fun requestSnapshot(call: PluginCall) {
-        call.resolve(JSObject().put("json", engine.requestSnapshot()))
+    fun requestSnapshot(call: PluginCall) = onEngineThread(call) {
+        JSObject().put("json", engine.requestSnapshot())
     }
 
     @PluginMethod
     fun sendIntent(call: PluginCall) {
         val json = call.getString("json") ?: ""
-        // Скан/подключение реальных устройств — на нативной стороне (как iOS): поднимаем провайдер + сканер.
-        when {
-            json.contains("\"startScan\"") -> { ensureProvider(); scanner.start() }
-            json.contains("\"stopScan\"") -> scanner.stop()
-            json.contains("\"addDevice\"") || json.contains("\"addDiscovered\"") -> ensureProvider()
-            json.contains("\"exportLog\"") -> { exportAndShare(); return call.resolve(JSObject().put("json", """{"accepted":true}""")) }
+        // Разрешения и share sheet — дела главного потока (диалоги системы), их не уносим.
+        if (json.contains("\"startScan\"") || json.contains("\"addDevice\"") || json.contains("\"addDiscovered\"")) {
+            requestBlePermissions()
         }
-        val res = try {
-            engine.sendIntent(json)
-        } catch (t: Throwable) {
-            Log.e(TAG, "sendIntent error", t); """{"accepted":false,"error":"${t.message}"}"""
+        if (json.contains("\"exportLog\"")) { exportAndShare(); return call.resolve(JSObject().put("json", """{"accepted":true}""")) }
+        // Всё остальное — за очередью движка, то есть НЕ здесь (core#82).
+        onEngineThread(call) {
+            when {
+                json.contains("\"startScan\"") -> { EngineHolder.ensureProvider(context.applicationContext); scanner.start() }
+                json.contains("\"stopScan\"") -> scanner.stop()
+                json.contains("\"addDevice\"") || json.contains("\"addDiscovered\"") ->
+                    EngineHolder.ensureProvider(context.applicationContext)
+            }
+            val res = try {
+                engine.sendIntent(json)
+            } catch (t: Throwable) {
+                Log.e(TAG, "sendIntent error", t); """{"accepted":false,"error":"${t.message}"}"""
+            }
+            JSObject().put("json", res)
         }
-        call.resolve(JSObject().put("json", res))
     }
 
     @PluginMethod
-    fun query(call: PluginCall) {
-        call.resolve(JSObject().put("json", engine.query(call.getString("json") ?: "")))
+    fun query(call: PluginCall) = onEngineThread(call) {
+        JSObject().put("json", engine.query(call.getString("json") ?: ""))
     }
 
     /**
@@ -190,8 +272,8 @@ class SugarLifeBridgePlugin : Plugin() {
      * Без этого метода журнал существовал только внутри движка — то есть был не нужен никому.
      */
     @PluginMethod
-    fun logQuery(call: PluginCall) {
-        call.resolve(JSObject().put("json", engine.logQuery(call.getString("json") ?: "{}")))
+    fun logQuery(call: PluginCall) = onEngineThread(call) {
+        JSObject().put("json", engine.logQuery(call.getString("json") ?: "{}"))
     }
 
     override fun handleOnDestroy() {
