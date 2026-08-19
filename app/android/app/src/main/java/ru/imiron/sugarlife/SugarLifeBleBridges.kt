@@ -20,6 +20,8 @@ import android.os.PowerManager
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
+import ru.imiron.sugarlife.contract.LinkFailures
+import ru.imiron.sugarlife.contract.LinkPlatform
 import ru.imiron.sugarlife.drivers.medtronic.PumpTransportBridge
 import ru.imiron.sugarlife.drivers.sibionics.SensorTransportBridge
 import java.util.UUID
@@ -328,17 +330,18 @@ class BleLink(
             // и по этим выдуманным событиям я строил выводы о железе. Лог, который врёт, хуже отсутствующего.
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 Log.w(TAG, "connState НЕ-успех status=$status (133=GATT_ERROR/недоступен) addr=$address")
-                bleLog("Warn", "связь с прибором не установилась", address, "код" to status.toString(),
-                    // Коды BLE-стека — словами: именно код решает, куда идти дальше.
-                    "смысл" to when (status) {
-                        8 -> "связь потеряна: прибор ушёл из зоны или эфир перегружен"
-                        19 -> "прибор разорвал связь сам"
-                        22 -> "связь разорвана локально"
-                        34, 62 -> "стек не смог установить соединение"
-                        133 -> "прибор недоступен или занят"
-                        147 -> "исчерпан лимит одновременных подключений"
-                        else -> "код стека Android"
-                    })
+                // Причина и совет — ИЗ ЯДРА (core#94). Раньше словарь жил здесь, кодами Android, и на iOS
+                // его не было вовсе: там свои коды CBError, и человек с айфоном не видел ничего.
+                val беда = LinkFailures.of(LinkPlatform.Android, status)
+                bleLog(
+                    "Warn", "связь с прибором не установилась", address,
+                    "код" to status.toString(),
+                    "смысл" to беда.reason,
+                    // Диагноз без продолжения вреднее молчания: человек знает, что сломалось, и не знает,
+                    // его ли это дело.
+                    "что делать" to беда.whatToDo,
+                    "поможет повтор" to беда.retryHelps.toString(),
+                )
             }
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {

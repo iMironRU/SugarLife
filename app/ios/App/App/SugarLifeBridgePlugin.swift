@@ -135,6 +135,7 @@ final class SharedCentral: NSObject, CBCentralManagerDelegate {
     }
     func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) { links[p.identifier]?.didConnect(p) }
     func centralManager(_ c: CBCentralManager, didDisconnectPeripheral p: CBPeripheral, error: Error?) {
+        сообщитьОБеде("связь с прибором потеряна", p, error)
         links[p.identifier]?.didDisconnect()
         /* ЧУЖОЙ РАЗРЫВ — ПЕРЕПОДАЁМ ЗАЯВКУ (#379).
 
@@ -146,7 +147,38 @@ final class SharedCentral: NSObject, CBCentralManagerDelegate {
            Так же поступает Loop: `autoConnectDevices()` вызывается прямо из обработчика разрыва. */
         if держим.contains(p.identifier) { c.connect(p, options: nil) }
     }
-    func centralManager(_ c: CBCentralManager, didFailToConnect p: CBPeripheral, error: Error?) { links[p.identifier]?.didFail() }
+    func centralManager(_ c: CBCentralManager, didFailToConnect p: CBPeripheral, error: Error?) {
+        сообщитьОБеде("подключиться к прибору не удалось", p, error)
+        links[p.identifier]?.didFail()
+    }
+
+    /**
+     Причина и совет — ИЗ ЯДРА (core#94).
+
+     Словарь причин жил в Android-мосте и кодами Android; здесь не было ничего, и человек с айфоном видел
+     либо тишину, либо системную английскую строку. Теперь обе платформы берут ответ в одном месте: одна и
+     та же беда читается одинаково, и у каждой есть продолжение — что делать дальше.
+
+     Молчим только когда система молчит сама: разрыв без ошибки — это штатное завершение (мы сами позвали
+     cancel), и объявлять бедой его нельзя. Лог, который врёт, хуже отсутствующего.
+     */
+    private func сообщитьОБеде(_ событие: String, _ p: CBPeripheral, _ error: Error?) {
+        guard let error = error else { return }
+        let id = p.identifier.uuidString
+        guard let code = cbCode(error) else {
+            NSLog("SugarLifeBLE: \(событие) — \(error.localizedDescription)")
+            bleLog("Warn", событие, id, ["смысл": error.localizedDescription])
+            return
+        }
+        let беда = LinkFailures.shared.of(platform: .apple, code: code)
+        NSLog("SugarLifeBLE: \(событие) [код \(code)] — \(беда.reason); \(беда.whatToDo)")
+        bleLog("Warn", событие, id, [
+            "код": String(code),
+            "смысл": беда.reason,
+            "что делать": беда.whatToDo,
+            "поможет повтор": String(беда.retryHelps),
+        ])
+    }
     func centralManager(_ c: CBCentralManager, didDiscover p: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
         scanHandler?(p, advertisementData, RSSI)
     }
@@ -312,6 +344,34 @@ private let batteryChar  = CBUUID(string: "2A19")
 private let firmwareChar = CBUUID(string: "2A26")
 // Сток телеметрии натив→движок: плагин ставит engine.submitTelemetry; BleLink зовёт с json {bleId,batteryPct?,firmware?,rssi?}.
 var telemetrySink: ((String) -> Void)?
+
+/**
+ Канал BLE-слоя в ОБЩИЙ журнал — вторая половина core#72.
+
+ На Android это сделано давно: строки BLE-слоя уходят в журнал движка и попадают в выгрузку диагностики.
+ На iOS их не было вовсе — только NSLog, то есть видимые нам и невидимые ни человеку с телефоном, ни
+ тестировщику. Ровно эти строки решили разбор помпы.
+ */
+var logSink: ((_ level: String, _ event: String, _ deviceId: String?, _ fields: [String: String], _ frame: Bool) -> Void)?
+
+/// Событие BLE в журнал прибора. `frame = true` — кадр обмена: он несёт идентификаторы прибора.
+func bleLog(_ level: String, _ event: String, _ deviceId: String?, _ fields: [String: String] = [:], frame: Bool = false) {
+    logSink?(level, event, deviceId, fields, frame)
+}
+
+/// Строка в JSON — с экранированием: имя прибора и текст причины приходят снаружи и могут содержать что угодно.
+func jsonStr(_ s: String) -> String {
+    let data = try? JSONSerialization.data(withJSONObject: [s], options: [])
+    let arr = data.flatMap { String(data: $0, encoding: .utf8) } ?? "[\"\"]"
+    return String(arr.dropFirst().dropLast())
+}
+
+/// Код CoreBluetooth из ошибки: он и решает, что человеку делать дальше (core#94).
+func cbCode(_ error: Error?) -> Int32? {
+    guard let e = error as NSError? else { return nil }
+    guard e.domain == CBErrorDomain else { return nil }
+    return Int32(e.code)
+}
 
 final class SensorBridge: SensorTransportBridge {
     private let link: BleLink
@@ -506,6 +566,17 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             // на свою очередь — иначе поток событий от железа ждёт очереди движка (core#82).
             telemetrySink = { [weak self] json in
                 self?.engineQueue.async { _ = self?.engine?.submitTelemetry(json: json) }
+            }
+            // BLE-слой → ОБЩИЙ журнал (core#72, вторая половина): на Android так давно, здесь не было
+            // ничего. Строку собираем здесь — она про ЭТОТ момент, — а движку отдаём с его очереди:
+            // запись в журнал не должна останавливать того, кто разговаривает с прибором (core#82).
+            logSink = { [weak self] level, event, deviceId, fields, frame in
+                let f = fields.map { "\(jsonStr($0.key)):\(jsonStr($0.value))" }.joined(separator: ",")
+                var json = "{\"type\":\"submitLog\",\"level\":\(jsonStr(level)),\"tag\":\"ble\"," +
+                    "\"event\":\(jsonStr(event)),"
+                if let d = deviceId { json += "\"deviceId\":\(jsonStr(d))," }
+                json += "\"fields\":{\(f)},\"hasIdentifiers\":\(frame)}"
+                self?.engineQueue.async { _ = self?.engine?.sendIntent(json: json) }
             }
             self.unsubscribe = e.subscribe(onSnapshot: { [weak self] json in
                 DispatchQueue.main.async { self?.notifyListeners("snapshot", data: ["json": json]) }
