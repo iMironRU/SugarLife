@@ -4,13 +4,11 @@ import { playOutline, pauseOutline, refreshOutline, trashOutline, checkmarkCircl
 import Sheet from '@/ui/Sheet';
 import Row from '@/ui/Row';
 import { sendIntent, type HardwareView, type UiSnapshot, type Intent } from '@/sources/bridge';
-import { связь, меткаСвязи } from '@/domain/deviceState';
-import { sourceStatusLabel } from '@/domain/sourceStatus';
-import {
-  СЛОТ, мостЖелезки, имяЖелезки, адресВЭфире, звеноЦепочки, словоЦепочки,
-} from '@/domain/nearby';
+import { связь } from '@/domain/deviceState';
+import { мостЖелезки, имяЖелезки, звеноЦепочки, словоЦепочки } from '@/domain/nearby';
 import { ходПопытки, почемуМолчит, type Попытка, type Цель } from '@/domain/connectAttempt';
-import { подписьСвежести, чтоСПрибором } from '@/domain/freshness';
+import { чтоСПрибором } from '@/domain/freshness';
+import { картаПрибора } from '@/domain/картаПрибора';
 import ParamsForm from '@/ui/ParamsForm';
 import ScanSheet from './ScanSheet';
 import DeviceLogSheet from './DeviceLogSheet';
@@ -54,16 +52,13 @@ export default function HardwareSheet({ прибор, снимок, попытк
   const живой = состояние === 'live';
   const звено = звеноЦепочки(прибор, снимок);
   const мост = мостЖелезки(прибор, снимок);
-  const адрес = адресВЭфире(прибор);
 
-  /* «Не настроен» и «чем занят» — впереди слов о связи (мост 1.22/1.24). Именно эту
-     карточку открывают, когда прибор молчит, и именно здесь прежняя строка врала громче
-     всего: «устройство не отвечает» у прибора, который в этот момент работает. */
-  const занят = чтоСПрибором(прибор);
-  const строка = занят ?? (звено
+  /* Что показывать — решает domain/картаПрибора: приборы разные, и общий шаблон даёт
+     либо пустые строки, либо потерянные (#378). Здесь только раскладка. */
+  const карта = картаПрибора(прибор, снимок, сейчас);
+  const строка = звено && !чтоСПрибором(прибор)
     ? словоЦепочки(звено, мост ? имяЖелезки(мост) : null)
-    : подписьСвежести(прибор, сейчас)
-      ?? sourceStatusLabel(прибор.status) ?? меткаСвязи[состояние]);
+    : карта.состояние;
 
   /* НАСТРОЙКИ ПРИБОРА — ЗДЕСЬ, А НЕ ГДЕ-ТО ЕЩЁ (SugarLife#362).
 
@@ -84,6 +79,7 @@ export default function HardwareSheet({ прибор, снимок, попытк
   const [сохраняю, setСохраняю] = useState(false);
   const [читаемДля, setЧитаемДля] = useState<string | null>(null);
   const [журнал, setЖурнал] = useState(false);
+  const [справка, setСправка] = useState(false);
   /* Показываем то, что уже знает движок, поверх — свои правки. Иначе человек, открыв
      карточку настроенного прибора, увидит пустые поля и решит, что настройки слетели. */
   const значения: Record<string, string> = {
@@ -115,17 +111,15 @@ export default function HardwareSheet({ прибор, снимок, попытк
 
   return (
     <Sheet isOpen onClose={onClose} title={имяЖелезки(прибор)} subtitle={строка ?? undefined}>
-      <div className="list">
-        {/* Адрес в эфире — чтобы различать два одинаковых прибора. Нет — не выдумываем. */}
-        {адрес && <Row title="Адрес" value={адрес} chevron={false} oneLine />}
-        {прибор.inSlot && <Row title="Слот" value={СЛОТ[прибор.inSlot]} chevron={false} />}
-        {/* Телеметрия — только то, что прибор реально отдал (core#38). Пустых строк не
-            рисуем: «заряд —» ничем не лучше отсутствия строки. */}
-        {прибор.batteryPct != null && (
-          <Row title="Заряд" value={`${прибор.batteryPct}%`} chevron={false} />
-        )}
-        {прибор.firmware && <Row title="Прошивка" value={прибор.firmware} chevron={false} />}
-      </div>
+      {/* СНАЧАЛА — то, ради чего открыли: когда данные, что с сеансом (#378). Раньше
+          первой строкой стоял адрес в эфире: сведение, нужное раз в жизни. */}
+      {карта.сейчас.length > 0 && (
+        <div className="list">
+          {карта.сейчас.map((р) => (
+            <Row key={р.ключ} title={р.метка} value={р.значение} sub={р.подпись} chevron={false} oneLine />
+          ))}
+        </div>
+      )}
 
       {/* Чего не хватает — ПОЛНЫМ перечнем, а не усечённым заголовком (#362). В шапке
           строка обрезается, и именно её хвост — список недостающего — там и терялся. */}
@@ -173,6 +167,26 @@ export default function HardwareSheet({ прибор, снимок, попытк
           sub="живой обмен с прибором: что приложение ему говорит и что слышит в ответ"
           onClick={() => setЖурнал(true)} />
       </div>
+
+      {/* Справка о приборе — ниже и свёрнутая: её читают редко, а места она занимает
+          столько же, сколько ответ на главный вопрос. Пустой — не показываем вовсе. */}
+      {карта.оПриборе.length > 0 && (
+        <>
+          <button className="карта-ещё" onClick={() => setСправка((в) => !в)}>
+            {справка ? 'Скрыть сведения о приборе' : 'Сведения о приборе'}
+          </button>
+          {справка && (
+            <div className="list">
+              {карта.оПриборе.map((р) => (
+                <Row key={р.ключ} title={р.метка} value={р.значение} sub={р.подпись} chevron={false} oneLine />
+              ))}
+              {карта.черезМост && (
+                <Row title="Через мост" value={карта.черезМост} chevron={false} oneLine />
+              )}
+            </div>
+          )}
+        </>
+      )}
       {журнал && <DeviceLogSheet прибор={прибор} onClose={() => setЖурнал(false)} />}
 
       <div className="list" style={{ marginTop: 12 }}>
@@ -202,8 +216,15 @@ export default function HardwareSheet({ прибор, снимок, попытк
             onClick={() => void sendIntent({ type: 'readNow', deviceId: прибор.id })} />
         )}
 
+      </div>
+
+      {/* «Забыть» отделено намеренно: оно стирает запись целиком, а стояло соседней
+          строкой с «приостановить», у которого последствие несопоставимо меньше. Равный
+          вес у неравного по разрушительности — это приглашение промахнуться. */}
+      <div className="list" style={{ marginTop: 18 }}>
         <Row icon={trashOutline} chevron={false} disabled={ждём}
-          title="Забыть прибор" sub="убрать запись из приложения" onClick={забыть} />
+          title="Забыть прибор" sub="убрать запись из приложения; серийник и мост придётся вводить заново"
+          onClick={забыть} />
       </div>
     </Sheet>
   );
