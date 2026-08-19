@@ -230,6 +230,50 @@ class SugarLifeBridgePlugin : Plugin() {
         watchSystemState()
     }
 
+    /**
+     * Исключены ли мы из оптимизации батареи — и можно ли об этом попросить (#380).
+     *
+     * Это не косметика. В режиме Doze (экран выключен, телефон лежит неподвижно) система **игнорирует
+     * wake-lock'и** и **приостанавливает доступ в сеть** — всем, кроме приложений из списка исключений.
+     * То есть без исключения наш замок бодрствования вокруг обмена с помпой ночью не действует, а данные
+     * из облака приходят только в редкие «окна обслуживания», которые со временем становятся всё реже.
+     *
+     * Просить об этом обязано приложение, а показывать просьбу — экран готовности (#333): человек должен
+     * понимать, за что платит батареей, иначе такие разрешения снимают обратно.
+     */
+    @PluginMethod
+    fun batteryOptimization(call: PluginCall) {
+        val ctx = context.applicationContext
+        val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        call.resolve(
+            JSObject()
+                .put("ignoring", pm.isIgnoringBatteryOptimizations(ctx.packageName))
+                .put("packageName", ctx.packageName),
+        )
+    }
+
+    /**
+     * Показать системную просьбу об исключении из оптимизации батареи (#380).
+     *
+     * Сначала пробуем прямой диалог: одно нажатие вместо блужданий по настройкам. Его может не быть на
+     * прошивке или он может быть запрещён — тогда открываем сам список исключений, он есть везде. Молча
+     * не отказываем: экран, который «ничего не сделал», хуже честного «откройте настройки».
+     */
+    @PluginMethod
+    fun requestBatteryExemption(call: PluginCall) {
+        val ctx = context.applicationContext
+        val прямой = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+            .setData(android.net.Uri.parse("package:${ctx.packageName}"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val список = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val открыт = runCatching { ctx.startActivity(прямой); "dialog" }
+            .recoverCatching { ctx.startActivity(список); "settings" }
+            .getOrNull()
+        if (открыт == null) call.reject("не удалось открыть настройки энергосбережения")
+        else call.resolve(JSObject().put("opened", открыт))
+    }
+
     @PluginMethod
     fun requestSnapshot(call: PluginCall) = onEngineThread(call) {
         JSObject().put("json", engine.requestSnapshot())
