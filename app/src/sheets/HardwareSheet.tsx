@@ -13,6 +13,8 @@ import { ходПопытки, почемуМолчит, type Попытка, ty
 import { подписьСвежести, чтоСПрибором } from '@/domain/freshness';
 import ParamsForm from '@/ui/ParamsForm';
 import ScanSheet from './ScanSheet';
+import DeviceLogSheet from './DeviceLogSheet';
+import { pulseOutline } from 'ionicons/icons';
 import { нехватает } from '@/domain/deviceParams';
 
 /* Карточка одного прибора (SugarLife#301).
@@ -81,6 +83,7 @@ export default function HardwareSheet({ прибор, снимок, попытк
   const [правки, setПравки] = useState<Record<string, string>>({});
   const [сохраняю, setСохраняю] = useState(false);
   const [читаемДля, setЧитаемДля] = useState<string | null>(null);
+  const [журнал, setЖурнал] = useState(false);
   /* Показываем то, что уже знает движок, поверх — свои правки. Иначе человек, открыв
      карточку настроенного прибора, увидит пустые поля и решит, что настройки слетели. */
   const значения: Record<string, string> = {
@@ -162,6 +165,15 @@ export default function HardwareSheet({ прибор, снимок, попытк
       {ход === 'не ответил' && моё && (
         <div className="sheet-note" style={{ marginTop: 12 }}>{почемуМолчит(моё.цель)}</div>
       )}
+
+      {/* «Что происходит» — рядом с действиями, а не в настройках (#354). Сюда приходят
+          с вопросом «почему молчит», и ответ должен лежать здесь же. */}
+      <div className="list" style={{ marginTop: 12 }}>
+        <Row icon={pulseOutline} title="Что происходит"
+          sub="живой обмен с прибором: что приложение ему говорит и что слышит в ответ"
+          onClick={() => setЖурнал(true)} />
+      </div>
+      {журнал && <DeviceLogSheet прибор={прибор} onClose={() => setЖурнал(false)} />}
 
       <div className="list" style={{ marginTop: 12 }}>
         {живой ? (

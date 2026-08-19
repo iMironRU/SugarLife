@@ -51,6 +51,20 @@
 	<string>Подключение к сенсору глюкозы и помпе по Bluetooth</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>Подключение к сенсору глюкозы и помпе по Bluetooth</string>
+	<!-- Диплинк (SugarLife#315). Универсальные ссылки (https без окна выбора) требуют
+	     Associated Domains, а это платный аккаунт разработчика — поэтому схема.
+	     Издание Pro переопределяет её своим Info.plist. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>ru.imiron.sugarlife</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>sugarlife</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Чтобы прочитать код сенсора с коробки — вводить восемь символов руками легко с ошибкой</string>
 </dict>

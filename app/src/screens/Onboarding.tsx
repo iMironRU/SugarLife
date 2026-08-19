@@ -23,7 +23,12 @@ import { setOnboarded } from '@/settings/onboarding';
 import { toUnits, unitLabel } from '@/domain/units';
 
 
-const RELEASES_URL = 'https://github.com/iMironRU/SugarLife/releases';
+/* Ведём на СВОЮ страницу «где взять», а не на GitHub Releases (#316).
+
+   Там человек видел `android-latest`, список `.apk`, `Source code (zip)` и красный
+   `Pre-release`: не страшно, а непонятно — что качать, безопасно ли, что будет дальше.
+   И ссылка была одна на всех: с айфона она вела туда, где лежит только APK. */
+const ГДЕ_ВЗЯТЬ = 'https://imiron.ru/SugarLife/install.html';
 
 type Step = 'welcome' | 'ways' | 'доступ' | 'scan' | 'cloud' | 'streams';
 
@@ -188,7 +193,7 @@ export default function Onboarding() {
               onClick={() => setStep(готовность?.canScan ? 'scan' : 'доступ')} />
           ) : (
             <Row icon={downloadOutline} title="Найти рядом — в приложении"
-              sub="браузер не умеет Bluetooth · скачать сборку" href={RELEASES_URL} />
+              sub="браузер не умеет Bluetooth · как поставить на телефон" href={ГДЕ_ВЗЯТЬ} />
           )}
 
           <Row icon={cloudOutline} title="Через облако" sub="данные из Nightscout — работает уже сейчас"

@@ -43,6 +43,9 @@ export const ССЫЛКИ = {
   репозиторий: `https://github.com/${REPO}`,
   релизы: `https://github.com/${REPO}/releases`,
   задачи: `https://github.com/${REPO}/issues`,
+  /* Страница «где взять» (#316) — человеческий вход вместо страницы релизов. Туда ведём
+     всех, кому приложение советуют: на Releases непонятно, что качать и безопасно ли. */
+  гдеВзять: 'https://imiron.ru/SugarLife/install.html',
 };
 const ANDROID_TAG = 'android-latest';
 // Самохостинг OTA-бандла на GitHub Pages (канонический домен, без редиректа

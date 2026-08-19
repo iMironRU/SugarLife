@@ -1,8 +1,6 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Издание Pro (core#61): своё имя. Переопределяем ТОЛЬКО видимое человеку.
-         package_name и custom_url_scheme из общего strings.xml остаются как есть: Capacitor их не
-         переписывает, и в манифесте с кодом они не используются вовсе. -->
-    <string name="app_name">SugarLife.Pro</string>
-    <string name="title_activity_main">SugarLife.Pro</string>
+    <!-- У Pro своя схема: ссылка sugarlife:// обязана открывать Lite, даже когда на
+         телефоне стоят оба издания. Управление подачей — не то, куда попадают случайно. -->
+    <string name="deep_link_scheme">sugarlife.pro</string>
 </resources>

@@ -5,6 +5,7 @@ import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import ScanSheet from '@/sheets/ScanSheet';
 import Готовность from '@/ui/Готовность';
+import ВПриложении from '@/ui/ВПриложении';
 import { мешает } from '@/domain/scanReadiness';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import type { LoggingState } from '@/sources/bridge';
@@ -89,9 +90,12 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
           <IonIcon icon={documentTextOutline} />
           <div className="loop-empty-t">Логов нет</div>
           <div className="loop-empty-s">
-            Лог ведёт движок приложения, а в браузере он не работает. Открой раздел в
-            приложении на телефоне — там будет и уровень, и выгрузка.
+            Лог ведёт движок приложения, а в браузере он не работает. В приложении будет и
+            уровень подробности, и выгрузка.
           </div>
+          {/* Ссылка вместо совета (#315): человек и так знал, что делать, — он не мог
+              сделать это отсюда. */}
+          <ВПриложении раздел="диагностика" подпись="Открыть диагностику в приложении" />
         </div>
       </Section>
     );

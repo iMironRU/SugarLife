@@ -183,6 +183,31 @@
   железоДемо = снимок.hardware.slice();
   эфирДемо = снимок.discovered.slice();
 
+  /* Журнал демо-моста. Отдельным массивом, а не в снимке: у настоящего движка записей
+     тысячи, и снимок обязан оставаться маленьким. */
+  var журнал = [];
+  function записать(deviceId, level, event, fields, идент) {
+    журнал.push({ atMs: Date.now(), level: level, deviceId: deviceId, tag: 'демо',
+      event: event, fields: fields || null, hasIdentifiers: !!идент });
+    if (журнал.length > 500) журнал = журнал.slice(-500);
+  }
+  (function затравка() {
+    var сенсорId = снимок.hardware.filter(function (h) { return h.kind === 'sensor'; })[0];
+    var id = сенсорId ? сенсорId.id : null;
+    записать(id, 'Info', 'подключаюсь к прибору');
+    записать(id, 'Debug', 'кадр отправлен', { длина: 12, канал: 'FF32' }, true);
+    записать(id, 'Info', 'связь установлена');
+    записать(id, 'Warn', 'ответа нет 5 с — повторяю запрос');
+    записать(id, 'Info', 'показание получено', { 'ммоль/л': 7.8 });
+  })();
+  /* Тик: раз в несколько секунд что-нибудь происходит — иначе «живой обмен» на экране
+     неотличим от замершего. */
+  setInterval(function () {
+    var с = снимок.hardware.filter(function (h) { return h.kind === 'sensor'; })[0];
+    if (!с) return;
+    записать(с.id, 'Info', 'показание получено', { 'ммоль/л': (6 + Math.round(Math.random() * 30) / 10).toFixed(1) });
+  }, 5000);
+
   function разослать() {
     снимок = Object.assign({}, снимок);
     подписчики.forEach(function (cb) { cb(снимок); });
@@ -258,6 +283,25 @@
     },
     /* Источник «догоняет», а показание свежее — случай с телефона (#358): круг показывал
        часики при живом списке измерений. */
+    /* Длинный инсулин (#287): три состояния, ради которых правило и писалось —
+       действует, срок неизвестен, срок вышел. */
+    длинный: function (режим) {
+      var ч = 3600e3, сейчас = Date.now();
+      if (режим === 'нет') {
+        снимок.monitor = Object.assign({}, снимок.monitor,
+          { longActingUnits: null, longActingAtMs: null, longActingUntilMs: null });
+      } else if (режим === 'безСрока') {
+        снимок.monitor = Object.assign({}, снимок.monitor,
+          { longActingUnits: 24, longActingAtMs: сейчас - 3 * ч, longActingUntilMs: null });
+      } else if (режим === 'кончился') {
+        снимок.monitor = Object.assign({}, снимок.monitor,
+          { longActingUnits: 24, longActingAtMs: сейчас - 26 * ч, longActingUntilMs: сейчас - 2 * ч });
+      } else {
+        снимок.monitor = Object.assign({}, снимок.monitor,
+          { longActingUnits: 24, longActingAtMs: сейчас - 3 * ч, longActingUntilMs: сейчас + 21 * ч });
+      }
+      разослать(); return 'длинный: ' + (режим || 'действует');
+    },
     догоняет: function () {
       снимок.monitor = Object.assign({}, снимок.monitor, {
         status: 'Acquiring', live: false,
@@ -340,6 +384,25 @@
       }
       /* setParams в демо действительно записывает: у ядра он до сегодняшнего дня молча
          игнорировался (core#75), и повторять эту поломку у себя незачем. */
+      /* Запись длинного действительно меняет снимок: иначе «Записать» выглядит нажатием
+         в пустоту, а проверяем мы именно то, что после записи строка появилась. */
+      if (i.type === 'logInsulin' && i.long) {
+        снимок.monitor = Object.assign({}, снимок.monitor,
+          { longActingUnits: i.units, longActingAtMs: i.atMs, longActingUntilMs: null });
+        записать(null, 'Info', 'записан длинный инсулин', { 'ед': i.units });
+        разослать();
+        return Promise.resolve({ accepted: true });
+      }
+      if (i.type === 'setDeviceLogDetail') {
+        снимок.hardware = снимок.hardware.map(function (h) {
+          return h.id === i.deviceId
+            ? Object.assign({}, h, { logDetailUntilMs: i.detailed ? Date.now() + 15 * 60000 : null })
+            : h;
+        });
+        записать(i.deviceId, 'Info', i.detailed ? 'включён подробный обмен на 15 минут' : 'подробный обмен выключен');
+        разослать();
+        return Promise.resolve({ accepted: true });
+      }
       if (i.type === 'setParams') {
         снимок.devices = снимок.devices.map(function (d) {
           return d.id === i.deviceId
@@ -393,5 +456,20 @@
       return Promise.resolve({ accepted: true });
     },
     query: function () { return Promise.resolve({ entries: [], treatments: [] }); },
+
+    /* Журнал обмена (мост 1.25, SugarLife#354). Пишем сюда по-настоящему: без живой ленты
+       экран нечем проверить, а именно лента и есть весь его смысл — что приложение
+       говорит прибору и что слышит в ответ.
+
+       Записи копятся от каждого интента и сами тикают, чтобы было видно движение. */
+    logQuery: function (q) {
+      var из = журнал.filter(function (з) {
+        if (q && q.deviceId && з.deviceId !== q.deviceId) return false;
+        if (q && q.sinceMs && з.atMs < q.sinceMs) return false;
+        return true;
+      });
+      var лимит = (q && q.limit) || 200;
+      return Promise.resolve({ records: из.slice(-лимит), truncated: из.length > лимит });
+    },
   };
 })();

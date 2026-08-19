@@ -3,13 +3,19 @@
    сам подхватит Nightscout-шим. Импортировать РАНО (в main.tsx до рендера).
    ВАЖНО: sendIntent подтверждает лишь приём действия, не выполнение (см. bridge.ts). */
 import { registerPlugin, Capacitor } from '@capacitor/core';
-import type { SugarLifeBridge, UiSnapshot, Intent, HistoryQuery, HistoryResult } from '@/sources/bridge';
+import type {
+  SugarLifeBridge, UiSnapshot, Intent, HistoryQuery, HistoryResult, LogQuery, LogResult,
+} from '@/sources/bridge';
 import { getClouds } from '@/sources/clouds';
 
 interface NativePlugin {
   requestSnapshot(): Promise<{ json: string }>;
   sendIntent(o: { json: string }): Promise<{ json: string }>;
   query(o: { json: string }): Promise<{ json: string }>;
+  /* rev ≥ 1.25 — журнал обмена. Метод молодой: на телефоне с прошлой сборкой его нет, и
+     вызов уйдёт в отказ. Ловим это на уровне моста, чтобы экран сказал «сборка старше», а
+     не «журнала не бывает». */
+  logQuery(o: { json: string }): Promise<{ json: string }>;
   addListener(event: 'snapshot', cb: (e: { json: string }) => void): Promise<{ remove: () => void }>;
 }
 
@@ -48,6 +54,13 @@ if (Capacitor.isNativePlatform()) {
     },
     query(q: HistoryQuery): Promise<HistoryResult> {
       return Native.query({ json: JSON.stringify(q) }).then((r) => JSON.parse(r.json) as HistoryResult);
+    },
+    /* Журнал обмена. Метод появился в мосте 1.25, и на телефоне с прошлой сборкой его в
+       плагине нет — Capacitor ответит отказом «method not implemented». Пробрасываем
+       отказ наверх как есть: там он превращается в «журнала нет», а не в пустой список.
+       Разница важна — пустой список означает «пока ничего не происходило». */
+    logQuery(q: LogQuery): Promise<LogResult> {
+      return Native.logQuery({ json: JSON.stringify(q) }).then((r) => JSON.parse(r.json) as LogResult);
     },
   };
   window.SugarLifeBridge = bridge;

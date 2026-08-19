@@ -286,6 +286,12 @@ private let rlData      = CBUUID(string: "C842E849-5028-42E2-867C-016ADADA9155")
 private let rlRespCount = CBUUID(string: "6E6C7910-B89E-43A5-A0FE-50C5E2B81F4A")
 
 final class PumpBridge: PumpTransportBridge {
+    /* Запас на транспорт (SugarLifeCore#80). В Swift лишнее свойство сборку не ломает —
+       протокол его просто не требует, пока ядро не опубликовано, — поэтому здесь оно
+       остаётся: два часа спустя будет уже нужно. Ориентир rileylink_ios: две секунды. Не
+       «как на Android, но поменьше» — число должно быть измерено на своей платформе. */
+    let bleLatencyMs: Int64 = 2000
+
     private let link: BleLink
     private var pending: ((KotlinByteArray) -> Void)?
     private var срок: DispatchWorkItem?
@@ -368,6 +374,10 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "requestSnapshot", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "sendIntent", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "query", returnType: CAPPluginReturnPromise),
+        /* Без строки здесь метода для JS не существует, даже если он написан: Capacitor
+           отдаёт вебвью ровно то, что перечислено. Забыть её — получить «not implemented»
+           у работающего кода. */
+        CAPPluginMethod(name: "logQuery", returnType: CAPPluginReturnPromise),
     ]
 
     // Движок создаём ОТЛОЖЕННО — на следующем тике main-цикла (в load() через async), а не в property-init
@@ -495,4 +505,14 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func query(_ call: CAPPluginCall) { call.resolve(["json": engine?.query(json: call.getString("json") ?? "") ?? "{\"glucose\":[],\"treatments\":[]}"]) }
+
+    /* Журнал обмена по приборам (мост 1.25, SugarLife#354) — зеркало Android.
+
+       Отдельным методом, а не полем снимка: записей тысячи, а снимок уходит в вебвью
+       целиком и каждые несколько секунд. Движка нет — отвечаем ПУСТЫМ списком, а не
+       отказом: отказ у нас означает «эта сборка журнала не ведёт», и путать «движок ещё
+       не поднялся» с «метода не существует» нельзя. */
+    @objc func logQuery(_ call: CAPPluginCall) {
+        call.resolve(["json": engine?.logQuery(json: call.getString("json") ?? "{}") ?? "{\"records\":[]}"])
+    }
 }

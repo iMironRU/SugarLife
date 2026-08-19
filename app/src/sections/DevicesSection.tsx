@@ -12,8 +12,10 @@ import { useDeviceConfig, deviceStatus, deviceStatusLabel } from '@/settings/dev
 import { pumpById, sensorById } from '@/domain/catalog';
 import { useSnapshot, sendIntent, эфирДоступен, type Discovered } from '@/sources/bridge';
 import { лента } from '@/domain/deviceFeed';
+import { движокХозяин } from '@/domain/реестр';
 import { мешает, словоПустоты, ТЕРПЕНИЕ_МС } from '@/domain/scanReadiness';
 import Готовность from '@/ui/Готовность';
+import ВПриложении from '@/ui/ВПриложении';
 import { спроситьЛи } from '@/domain/deviceParams';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
 import {
@@ -89,7 +91,19 @@ export default function DevicesSection({ onClose, встроенный, толь
      «только через облако» одновременно — про одно и то же устройство. */
   const состояние = (роль: 'sensor' | 'pump') => {
     const изДвижка = слотПоСнимку(снимок, роль);
-    return изДвижка ? ПОДПИСЬ_СЛОТА[изДвижка] : deviceStatusLabel(deviceStatus(роль, devCfg));
+    if (изДвижка) return ПОДПИСЬ_СЛОТА[изДвижка];
+    /* Движок жив, но про слот молчит — МОЛЧИМ И МЫ (#224).
+
+       Здесь и была та самая пара из отчёта: подпись «по радио» приходила из снимка, а
+       значение «только через облако» — из локального конфига, и оба стояли в одной
+       строке про одно устройство. Локальный расчёт не знает про радио ничего: он помнит
+       наш давний выбор.
+
+       Прочерк вместо противоречия. Он честен: движок ещё не сказал, а сами мы не знаем.
+       Локальным отвечаем только там, где движка нет вовсе, — в браузере он единственный
+       источник, и там он прав. */
+    if (движокХозяин(снимок)) return null;
+    return deviceStatusLabel(deviceStatus(роль, devCfg));
   };
 
   /* Деталь-строка честна: показываем только то, что реально знаем. Канал — из
@@ -282,6 +296,8 @@ export default function DevicesSection({ onClose, встроенный, толь
         {!мешаетСкан && строкиПусты && (
           <div className="sheet-note">
             {словоПустоты({ эфирЕсть: эфирДоступен(), сканирует, долгоЖдём })}
+            {/* Ссылка, а не совет: без приложения дальше отсюда действительно нельзя. */}
+            {!эфирДоступен() && <div><ВПриложении раздел="приборы" подпись="Открыть приборы в приложении" /></div>}
           </div>
         )}
 

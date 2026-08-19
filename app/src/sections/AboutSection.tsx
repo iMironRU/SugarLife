@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { refreshOutline, downloadOutline, logoGithub, listOutline, cloudDownloadOutline } from 'ionicons/icons';
+import {
+  refreshOutline, downloadOutline, logoGithub, listOutline, cloudDownloadOutline,
+  phonePortraitOutline,
+} from 'ionicons/icons';
 import Section from '@/ui/Section';
 import { состояниеОболочки, словоОболочки, ПУСТО, type СостояниеОболочки } from '@/platform/offlineShell';
 import Row from '@/ui/Row';
@@ -198,6 +201,15 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
           {итог ?? ((толькоОбновились || приехало) ? `Обновлено до сборки ${APP_BUILD}.` : вебСтрока)}
         </div>
       )}
+
+      {/* «Где взять» — отдельной строкой и ВЫШЕ исходников (#316): её пересылают другому
+          человеку, и вести его надо на страницу, а не в репозиторий. */}
+      <div className="section-label sec">Поделиться</div>
+      <div className="list">
+        <Row icon={phonePortraitOutline} title="Где взять приложение"
+          sub="страница для того, кому вы его посоветуете: браузер, Android, iPhone"
+          href={ССЫЛКИ.гдеВзять} chevron={false} />
+      </div>
 
       <div className="section-label sec">Исходники</div>
       <div className="list">

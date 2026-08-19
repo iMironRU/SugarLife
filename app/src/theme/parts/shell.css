@@ -345,3 +345,11 @@ ion-content { --padding-top: 0; }
 /* Содержимого мало — панель стоит на середине, и отступ считается от неё же
    (ui/Screen.tsx решает, когда так). */
 .screen.is-mid { padding-top: var(--sl-content-top-mid); }
+
+/* Строки приборов на первом экране (SugarLifeCore#39): подключено ли, откуда цифры,
+   когда последние — по строке на прибор. Мелко и тихо: это фон, а не действие. */
+.nearby-строки { align-items: flex-start; }
+.nearby-список { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.nearby-строка { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; line-height: 1.35; }
+.nearby-строка b { font-weight: 600; white-space: nowrap; }
+.nearby-строка > span { color: var(--color-neutral-500); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

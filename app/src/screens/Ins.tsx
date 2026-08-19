@@ -1,13 +1,16 @@
 import { IonIcon } from '@ionic/react';
 import { useTab } from '@/app/nav';
 import { DeviceSection, LoopSetupSection } from '@/sections/lazy';
-import { flash, repeat, chevronForward } from 'ionicons/icons';
+import { flash, repeat, chevronForward, moonOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStorePart } from '@/sources/store';
 import { useTreatments } from '@/sources/db';
 import { detectTherapy } from '@/domain/therapy';
 import { activeInsulin } from '@/domain/loopValue';
-import { fmt } from '@/domain/units';
+import { fmt, agoText } from '@/domain/units';
+import { useSnapshot } from '@/sources/bridge';
+import { фонИнсулина, подписьФона } from '@/domain/longInsulin';
+import LongInsulinSheet from '@/sheets/LongInsulinSheet';
 import InsulinTimeChart from '@/charts/InsulinTimeChart';
 import { DataGate } from '@/ui/NotConfigured';
 import { useStack } from '@/app/stackCtx';
@@ -38,6 +41,40 @@ export default function Ins() {
   const baseBasal = dev?.baseBasal ?? profile?.basal ?? null;
   const pumpStatus = dev?.status || (therapy === 'loop' ? 'Замкнутый цикл' : 'Помпа');
   const ai = activeInsulin(dev);
+  /* Длинный инсулин — фоном и ОТДЕЛЬНО от активного (#287). Не сложением: 24 ед Туджео
+     рядом с 4 ед короткого — это не 28 «активных», и по такому числу решать нельзя. */
+  const снимок = useSnapshot();
+  const фон = фонИнсулина(снимок, Date.now());
+  const [пишуДлинный, setПишуДлинный] = useState(false);
+  const часы = (мс: number) => new Date(мс).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
+  const длиннаяСтрока = (
+    <div className="basal-card" style={{ marginTop: 12 }}>
+      <div className="basal-head">
+        <IonIcon icon={moonOutline} style={{ color: 'var(--c-ins)' }} /><span>Длинный инсулин</span>
+      </div>
+      <div className="basal-rows">
+        {фон ? (
+          <div className="basal-row">
+            <span>{подписьФона(фон, часы, (мс) => agoText(мс))}</span>
+            <button className="changed-btn is-undo" onClick={() => setПишуДлинный(true)}>Записать</button>
+          </div>
+        ) : (
+          <>
+            <div className="basal-row">
+              <span>Не записан</span>
+              <button className="changed-btn is-undo" onClick={() => setПишуДлинный(true)}>Записать</button>
+            </div>
+            {/* Молчать здесь нельзя: у человека на ручках базал — тоже инсулин, и если
+                его не записать, он не появится нигде. */}
+            <div className="basal-note">
+              Тот, что колют раз в сутки. Приложение о нём не узнает само — ни помпа, ни
+              сенсор его не видят.
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
   const baseBasalTxt = dev?.baseBasal != null ? fmt(dev.baseBasal) : profile?.basal != null ? fmt(profile.basal) : '—';
 
   return (
@@ -88,6 +125,8 @@ export default function Ins() {
               </div>
             </>
           )}
+          {длиннаяСтрока}
+          {пишуДлинный && <LongInsulinSheet onClose={() => setПишуДлинный(false)} />}
           </DataGate>
 
     </Screen>
