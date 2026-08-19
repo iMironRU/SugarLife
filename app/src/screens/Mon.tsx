@@ -1,3 +1,5 @@
+import { useSnapshot } from '@/sources/bridge';
+import { предупредитьОСыром, СЛОВО_СЫРОГО, ПОЯСНЕНИЕ_СЫРОГО } from '@/domain/сырое';
 import { IonIcon } from '@ionic/react';
 import { useTab } from '@/app/nav';
 import { DeviceSection } from '@/sections/lazy';
@@ -23,6 +25,7 @@ const fmtWhen = (ms: number) => {
 };
 
 export default function Mon() {
+  const сырое = предупредитьОСыром(useSnapshot());
   /* Вкладка видна? Все пять смонтированы разом ради свайпа, но читать базу
      невидимому экрану незачем — это и были рывки на соседних вкладках. */
   const активна = useTab() === 1;
@@ -71,6 +74,12 @@ export default function Mon() {
           <GlucoseTimeChart entries={entries} windowH={win} />
 
           {/* последние измерения */}
+          {/* Объяснение — здесь, а не у числа: у круга место только на короткую пометку,
+              а понять, что делать, человек приходит на этот экран (SugarLifeCore#88). */}
+          {сырое && <div className="today-alert" style={{ marginBottom: 12 }}>
+            <div><span className="alert-title">{СЛОВО_СЫРОГО}</span><span>{ПОЯСНЕНИЕ_СЫРОГО}</span></div>
+          </div>}
+
           <div className="section-label sec">Последние измерения</div>
           <div className="list">
             {readings.map((e, i) => (
