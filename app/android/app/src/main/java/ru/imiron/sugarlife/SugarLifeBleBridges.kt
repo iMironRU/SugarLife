@@ -36,6 +36,26 @@ private val FIRMWARE_CHAR = uuid16("2A26")
 /** Сток телеметрии натив→движок: плагин ставит engine.submitTelemetry; BleLink зовёт с json {bleId,batteryPct?,firmware?,rssi?}. */
 var telemetrySink: ((String) -> Unit)? = null
 
+/**
+ * Канал BLE-слоя в ОБЩИЙ журнал (core#72).
+ *
+ * Эти строки жили только в logcat: «запись отброшена», «MTU 185», «нотификация». Ровно они решили разбор
+ * помпы — и ровно их не увидит ни человек с телефоном, ни тестировщик с железом. Log.d остаётся нам,
+ * журнал — им.
+ */
+var logSink: ((level: String, event: String, deviceId: String?, fields: Map<String, String>, frame: Boolean) -> Unit)? = null
+
+/** Событие BLE в журнал прибора. `frame = true` — кадр обмена: он несёт идентификаторы прибора. */
+internal fun bleLog(
+    level: String,
+    event: String,
+    deviceId: String?,
+    vararg fields: Pair<String, String>,
+    frame: Boolean = false,
+) {
+    logSink?.invoke(level, event, deviceId, fields.toMap(), frame)
+}
+
 /** Короткая форма стандартного Bluetooth-UUID (как CBUUID на iOS): 0000FF30-0000-1000-8000-00805f9b34fb → "FF30".
  *  Каталог матчит короткие ("FF30"); Android же отдаёт полный 128-битный → без нормализации совпадения нет.
  *  Кастомные 128-битные (RileyLink) остаются полными. */
@@ -68,6 +88,8 @@ class BleLink(
     private val context: Context,
     private val address: String,
     private val notifyChars: Set<UUID>,
+    /** true — «встань в очередь и держи» (мост); false — быстрый прямой коннект (сенсор). См. connect(). */
+    private val медленноеПодключение: Boolean = false,
 ) {
     var onState: ((String) -> Unit)? = null
     private val notifyHandlers = HashMap<UUID, (ByteArray) -> Unit>()
@@ -164,7 +186,20 @@ class BleLink(
         val device = adapter.getRemoteDevice(address)
         onState?.invoke("Connecting")
         Log.d(TAG, "connect $address")
-        gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
+        // РЕЖИМ ПОДКЛЮЧЕНИЯ — СВОЙСТВО ПРИБОРА, а не общая настройка. Источники дают РАЗНЫЕ ответы, и оба
+        // обоснованы:
+        //
+        //   мост (AndroidAPS, RileyLinkBLE.connectGattInternal): connectGatt(ctx, true, cb) — без TRANSPORT_LE.
+        //     «Встань в очередь, подключись, когда сможешь, и держи». Мост наш собственный, живёт часами,
+        //     и такое соединение переживает соседей и восстанавливается само.
+        //
+        //   сенсор (Juggluco, SuperGattCallback): autoconnect=false + TRANSPORT_LE + CONNECTION_PRIORITY_HIGH.
+        //     Сенсор вещает постоянно и рядом; цепляться к нему надо быстро.
+        //
+        // Я сначала применил «мостовое» правило ко всем — и сломал сенсор: он подключался дольше двадцати
+        // секунд, драйвер сдавался по сроку и начинал заново, пять попыток подряд (core#77).
+        gatt = if (медленноеПодключение) device.connectGatt(context, true, callback)
+        else device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
     }
 
     fun disconnect() {
@@ -172,6 +207,21 @@ class BleLink(
         // Отложенное отпускаем: иначе чтение, начатое до разрыва, не ответит никогда.
         отпуститьОтложенные("разрыв связи")
         gatt?.disconnect(); gatt?.close(); gatt = null
+        /* О СВОЁМ РАЗРЫВЕ СООБЩАЕМ САМИ (core#83).
+        
+           Состояние связи Android присылает колбэком — но только пока GATT жив. Мы его здесь
+           закрываем, и после `close()` колбэка не будет: система считает, что рассказывать
+           больше некому. Раньше мы на это и полагались, поэтому свой собственный разрыв
+           оставался необъявленным.
+        
+           На железе это выглядело так: драйвер сам решил переподключиться, позвал disconnect и
+           стал ждать «связь упала» — события, которого уже никто не пришлёт. Сеанс завис
+           навсегда, а его опрос продолжал слать запросы в закрытую сессию, раз в секунду,
+           минутами. Прибор при этом числился «на связи».
+        
+           Разрыв — это факт, а не чужое мнение: кто его совершил, тот и объявляет. */
+        opBusy = false; opQueue.clear()
+        onState?.invoke("Disconnected")
     }
 
     fun write(char: UUID, bytes: ByteArray) = приГотовности { enqueue {
@@ -180,9 +230,16 @@ class BleLink(
            отвечает» (#347). Нет GATT — не подключились, чинится подключением. Нет
            характеристики — подключились, но пишем не туда, чинится разбором протокола.
            Молча выброшенная команда это потерянная улика: её искали дважды. */
-        if (g == null) { Log.w(TAG, "запись ${shortUuid(char)} отброшена: нет GATT-сессии с $address"); opDone(); return@enqueue }
+        if (g == null) {
+            Log.w(TAG, "запись ${shortUuid(char)} отброшена: нет GATT-сессии с $address")
+            // Тот же отказ — в журнал прибора (core#72): logcat человеку и тестировщику недоступен.
+            bleLog("Warn", "команда не ушла: нет связи с прибором", address, "характеристика" to shortUuid(char))
+            opDone(); return@enqueue
+        }
         if (c == null) {
             Log.w(TAG, "запись ${shortUuid(char)} отброшена: у $address нет такой характеристики; есть: ${chars.keys.joinToString { shortUuid(it) }}")
+            bleLog("Error", "прибор не принимает команду: у него нет такой характеристики", address,
+                "искали" to shortUuid(char), "есть" to chars.keys.joinToString { shortUuid(it) })
             opDone(); return@enqueue
         }
         c.writeType = if (c.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0)
@@ -221,7 +278,24 @@ class BleLink(
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
             // issue #33: status ≠ 0 (напр. 133 GATT_ERROR) — виновник тихих сбоев коннекта; логируем всегда.
             Log.d(TAG, "connState addr=$address status=$status newState=$newState")
-            if (status != BluetoothGatt.GATT_SUCCESS) Log.w(TAG, "connState НЕ-успех status=$status (133=GATT_ERROR/недоступен) addr=$address")
+            // ЖАЛУЕМСЯ ТОЛЬКО НА НЕУДАЧУ. Эта запись стояла СНАРУЖИ проверки и срабатывала на каждое
+            // изменение состояния, включая успешное (status=0), подписывая его «связь не установилась».
+            // В журнале получалось восемь «обрывов» в одну секунду там, где обрыва не было ни одного —
+            // и по этим выдуманным событиям я строил выводы о железе. Лог, который врёт, хуже отсутствующего.
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.w(TAG, "connState НЕ-успех status=$status (133=GATT_ERROR/недоступен) addr=$address")
+                bleLog("Warn", "связь с прибором не установилась", address, "код" to status.toString(),
+                    // Коды BLE-стека — словами: именно код решает, куда идти дальше.
+                    "смысл" to when (status) {
+                        8 -> "связь потеряна: прибор ушёл из зоны или эфир перегружен"
+                        19 -> "прибор разорвал связь сам"
+                        22 -> "связь разорвана локально"
+                        34, 62 -> "стек не смог установить соединение"
+                        133 -> "прибор недоступен или занят"
+                        147 -> "исчерпан лимит одновременных подключений"
+                        else -> "код стека Android"
+                    })
+            }
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     onState?.invoke("Connected")
@@ -235,6 +309,7 @@ class BleLink(
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
             Log.d(TAG, "servicesDiscovered addr=$address status=$status services=${g.services.size}")
+            bleLog("Info", "прибор изучен: характеристики найдены", address, "сервисов" to g.services.size.toString())
             /* ЧТО именно у прибора есть — одной строкой на сервис, один раз за сессию
                (#347). Раньше писали только количество, и для незнакомого моста это был
                главный вопрос первых пяти минут: наши ли у него характеристики или мы всё
@@ -274,6 +349,8 @@ class BleLink(
         }
 
         override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic) {
+            bleLog("Trace", "получено от прибора", address, "байт" to (c.value?.size ?: 0).toString(),
+                "hex" to (c.value?.joinToString(" ") { b -> "%02X".format(b) } ?: ""), frame = true)
             notifyHandlers[c.uuid]?.invoke(c.value ?: ByteArray(0))
         }
     }
@@ -311,23 +388,21 @@ class AndroidSensorBridge(context: Context, bleId: String) : SensorTransportBrid
 
 /** Мост помпы Medtronic через OrangeLink/RileyLink → [PumpTransportBridge] (зеркало iOS PumpBridge). */
 class AndroidPumpBridge(context: Context, bleId: String) : PumpTransportBridge {
-    /* ЗАПАС ВРЕМЕНИ НА ТРАНСПОРТ (SugarLifeCore#80) — ЖДЁТ ПУБЛИКАЦИИ ЯДРА.
-
-       Здесь стояло `override val bleLatencyMs = 7500`, и это ломало сборку APK: свойство
-       есть в РАБОЧЕЙ КОПИИ соседей и отсутствует в опубликованном ядре, откуда собирает
-       CI. «overrides nothing» — ровно про это.
-
-       Ошибка моя и по природе та же, что уже случалась дважды (наш #292, их #336): код
-       написан против интерфейса, которого никто, кроме автора, ещё не видит. Разница лишь
-       в том, что в прошлые разы отставала ветка по умолчанию, а тут — чужой рабочий стол,
-       случайно оказавшийся у нас под рукой.
-
-       Вернём одной строкой, как только core#80 окажется в main: 7500 мс — цифра AndroidAPS
-       (EXPECTED_MAX_BLUETOOTH_LATENCY_MS), проверенная на том же зоопарке телефонов. */
-
-    private val link = BleLink(context, bleId, notifyChars = setOf(RL_RESP))
+    // Мост держим долго — ему подходит «очередь и удержание» (как в AndroidAPS).
+    private val link = BleLink(context, bleId, notifyChars = setOf(RL_RESP), медленноеПодключение = true)
     private var pending: ((ByteArray) -> Unit)? = null
     private var срок: Runnable? = null
+
+    /* ЗАПАС ПЛАТФОРМЫ поверх радио-времени команды (core#80).
+
+       Ядро знает, сколько мост будет держать приёмник, и не знает — сколько к этому добавит стек
+       Android между write и нотификацией. Знаем только мы, и число тут не выдуманное: AndroidAPS
+       живёт с `EXPECTED_MAX_BLUETOOTH_LATENCY_MS = 7500` на том же классе железа. У CoreBluetooth
+       это 2 с (rileylink_ios) — потому число и объявляет натив, а не общий код.
+
+       Отсюда же и наши прошлые «мост отвалился»: ядро отводило на всю команду 3–8 с «на глаз»,
+       и живой, но обычно-небыстрый Android BLE в них не укладывался. */
+    override val bleLatencyMs: Long = 7_500
 
     /* Ровно один ответ на команду — и он есть ВСЕГДА (SugarLife#344).
      
@@ -386,6 +461,21 @@ class SugarLifeScanner(context: Context, private val onAdvertisement: (String) -
     private val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
     private var scanning = false
 
+    /**
+     * ГЛАВНЫЙ ПОТОК НЕ РАЗБИРАЕТ ЭФИР (core#82).
+     *
+     * `ScanCallback` без своего Handler'а Android доставляет на главный поток, а каждое объявление мы отдаём
+     * движку синхронным вызовом, который ждёт своей очереди. В людном месте объявлений — десяток в секунду,
+     * то есть главный поток стоит в очереди движка практически непрерывно. Так приложение и получало
+     * «не отвечает»: не от одной долгой операции, а от тысячи коротких ожиданий подряд.
+     *
+     * Разбор и передача — здесь, на своём потоке. Тот же приём, что у AndroidAPS и Juggluco: у BLE свой поток,
+     * с UI он не делится.
+     */
+    private val приём = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "SugarLifeScan").apply { isDaemon = true }
+    }
+
     private val callback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val dev = result.device
@@ -398,7 +488,8 @@ class SugarLifeScanner(context: Context, private val onAdvertisement: (String) -
                 .put("rssi", result.rssi)
             // issue #33: видно, ЧТО реально приходит в скан (T1: находится ли GS1 после extended-фикса #30).
             Log.d(TAG, "adv ${dev.address} name=${result.scanRecord?.deviceName} svc=$services rssi=${result.rssi}")
-            onAdvertisement(dto.toString())
+            val json = dto.toString()
+            приём.execute { onAdvertisement(json) }
         }
 
         override fun onScanFailed(errorCode: Int) { Log.w(TAG, "scan FAILED errorCode=$errorCode") }

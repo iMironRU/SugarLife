@@ -142,6 +142,15 @@ final class BleLink: NSObject, CBPeripheralDelegate {
         отпуститьОтложенные(всё: true, причина: "разрыв связи")
         if let p = peripheral { SharedCentral.shared.cancel(p) }
         SharedCentral.shared.unregister(peripheralUUID, self)   // линк отпущен — снять маршрут (и дать ARC освободить)
+        /* О СВОЁМ РАЗРЫВЕ СООБЩАЕМ САМИ (core#83).
+
+           Маршрут только что снят, значит `didDisconnect` от CoreBluetooth сюда уже не придёт — рассказывать
+           о разрыве больше некому. На Android ровно это подвешивало сеанс: драйвер сам звал disconnect и ждал
+           события «связь упала», которого никто не пришлёт; его опрос при этом продолжал слать запросы в
+           закрытую сессию минутами, а прибор числился «на связи».
+
+           Разрыв — факт, а не чужое мнение: кто его совершил, тот и объявляет. */
+        onState?("Disconnected")
     }
     func subscribe(_ char: CBUUID, handler: @escaping (Data) -> Void) { notifyHandlers[char] = handler }
 
@@ -286,6 +295,17 @@ final class PumpBridge: PumpTransportBridge {
     private let link: BleLink
     private var pending: ((KotlinByteArray) -> Void)?
     private var срок: DispatchWorkItem?
+
+    /* ЗАПАС ВРЕМЕНИ НА ТРАНСПОРТ поверх радио-времени команды (core#80).
+
+       Срок ответа складывается из двух частей: сколько мост держит приёмник — знает протокол в ядре;
+       сколько сверху добавит BLE-стек — знает только платформа. У CoreBluetooth это порядка двух секунд
+       (rileylink_ios, `expectedMaxBLELatency`), у Android — 7.5 с. Потому число и объявляет натив: одна
+       общая константа была бы либо мала для Android, либо избыточна здесь.
+
+       Раньше ядро отводило на команду 3–8 с «на глаз», и обычная задержка стека выглядела как «мост
+       молчит». */
+    var bleLatencyMs: Int64 { 2_000 }
     init(bleId: String) { link = BleLink(bleId: bleId, service: rlService, characteristics: [rlData, rlRespCount, batteryChar, firmwareChar]) }
     func onLink(callback: @escaping (String) -> Void) { link.onState = callback }
 
@@ -375,8 +395,21 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         "\"link\":\"Disconnected\",\"reservoir\":\"—\",\"battery\":\"—\",\"confirmedIOB\":0,\"assumedIOB\":0," +
         "\"conservativeIOB\":0},\"devices\":[],\"availableDrivers\":[]}"
 
+    /**
+     ОЧЕРЕДЬ ДЛЯ РАЗГОВОРА С ДВИЖКОМ (core#82).
+
+     Публичные методы движка синхронны и ждут своей очереди: внутри у него один поток, которым защищено
+     состояние. Ждать в этой очереди можно откуда угодно, кроме главной: на iOS зависший главный поток
+     убивает системный watchdog, на Android — показывает «приложение не отвечает». Второе мы уже получили
+     на железе: три перезапуска за восемь минут, приборы не подключились ни разу.
+
+     Очередь ПОСЛЕДОВАТЕЛЬНАЯ и своя — не про параллельность, а про то, чтобы не занимать чужую. Ровно так
+     же устроен `sessionQueue` у rileylink_ios: у железа своя очередь, и UI в ней не ждёт.
+     */
+    private let engineQueue = DispatchQueue(label: "ru.imiron.sugarlife.engine")
+
     override public func load() {
-        DispatchQueue.main.async { [weak self] in
+        engineQueue.async { [weak self] in
             guard let self else { return }
             // Персист-БД (нативный SQLite) → история переживает перезапуск. Фабрику собирает Swift (экспорт :persistence).
             /* Конструктор движка — три аргумента, и это теперь правило, а не совпадение
@@ -402,7 +435,11 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             SharedCentral.shared.readinessHandler = reportReadiness
             reportReadiness()
             self.engine = e
-            telemetrySink = { [weak self] json in _ = self?.engine?.submitTelemetry(json: json) }   // натив→движок телеметрия (issue #38)
+            // Телеметрия приходит из колбэков CoreBluetooth; вызов движка синхронный, поэтому уводим его
+            // на свою очередь — иначе поток событий от железа ждёт очереди движка (core#82).
+            telemetrySink = { [weak self] json in
+                self?.engineQueue.async { _ = self?.engine?.submitTelemetry(json: json) }
+            }
             self.unsubscribe = e.subscribe(onSnapshot: { [weak self] json in
                 DispatchQueue.main.async { self?.notifyListeners("snapshot", data: ["json": json]) }
             })
@@ -425,20 +462,29 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
                 sensorBridge: { bleId, _ in SensorBridge(bleId: bleId) },
                 pumpBridge: { bleId, _ in PumpBridge(bleId: bleId) }
             )
-            DispatchQueue.main.async { self?.engine?.attachDriverProvider(provider: provider) }
+            self?.engineQueue.async { self?.engine?.attachDriverProvider(provider: provider) }
         }
     }
 
-    @objc func requestSnapshot(_ call: CAPPluginCall) { call.resolve(["json": engine?.requestSnapshot() ?? Self.emptySnapshot]) }
+    @objc func requestSnapshot(_ call: CAPPluginCall) {
+        engineQueue.async { [weak self] in
+            call.resolve(["json": self?.engine?.requestSnapshot() ?? Self.emptySnapshot])
+        }
+    }
 
     @objc func sendIntent(_ call: CAPPluginCall) {
         let json = call.getString("json") ?? ""
         // Экспорт лога перехватываем ДО движка (как Android): редактированный NDJSON → share sheet ОС.
         if json.contains("\"exportLog\"") { exportAndShare(); return call.resolve(["json": "{\"accepted\":true}"]) }
-        if json.contains("\"startScan\"") { ensureProvider(); scanner.start() }
-        else if json.contains("\"stopScan\"") { scanner.stop() }
-        else if json.contains("\"addDevice\"") || json.contains("\"addDiscovered\"") { ensureProvider() }
-        call.resolve(["json": engine?.sendIntent(json: json) ?? "{\"accepted\":false,\"error\":\"engine not ready\"}"])
+        // Скан и провайдер — на своей очереди вместе с движком (core#82): `ensureProvider` тянет за собой
+        // восстановление приборов из базы, а это уже разговор с движком.
+        engineQueue.async { [weak self] in
+            guard let self else { return }
+            if json.contains("\"startScan\"") { self.ensureProvider(); self.scanner.start() }
+            else if json.contains("\"stopScan\"") { self.scanner.stop() }
+            else if json.contains("\"addDevice\"") || json.contains("\"addDiscovered\"") { self.ensureProvider() }
+            call.resolve(["json": self.engine?.sendIntent(json: json) ?? "{\"accepted\":false,\"error\":\"engine not ready\"}"])
+        }
     }
 
     /// Экспорт диагностического лога (редактированный NDJSON из движка) → UIActivityViewController
