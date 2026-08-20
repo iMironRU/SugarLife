@@ -54,6 +54,10 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>bluetooth-central</string>
+		<!-- Для облачного режима (#388): у человека на одном облаке прибора нет, и будить приложение
+		     нечем. Миллисекунда тишины раз в несколько секунд не даёт системе его приостановить.
+		     Включается ТОЛЬКО по выбору человека и ТОЛЬКО в фоне; по умолчанию выключено. -->
+		<string>audio</string>
 	</array>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Подключение к сенсору глюкозы и помпе по Bluetooth</string>

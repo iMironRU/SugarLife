@@ -580,7 +580,32 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
            отдаёт вебвью ровно то, что перечислено. Забыть её — получить «not implemented»
            у работающего кода. */
         CAPPluginMethod(name: "logQuery", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "backgroundKeepAlive", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setBackgroundKeepAlive", returnType: CAPPluginReturnPromise),
     ]
+
+    /**
+     Фоновое бодрствование для облачного режима (#388).
+
+     Читать и менять — из интерфейса: это выбор человека, а не наша настройка. Возвращаем и список
+     возможных значений, чтобы экран не хранил их у себя копией.
+     */
+    @objc func backgroundKeepAlive(_ call: CAPPluginCall) {
+        call.resolve([
+            "mode": ФоновоеБодрствование.shared.режим.rawValue,
+            "modes": ФоновоеБодрствование.Режим.allCases.map { $0.rawValue },
+        ])
+    }
+
+    @objc func setBackgroundKeepAlive(_ call: CAPPluginCall) {
+        guard let raw = call.getString("mode"),
+              let режим = ФоновоеБодрствование.Режим(rawValue: raw) else {
+            call.reject("неизвестный режим: \(call.getString("mode") ?? "—")")
+            return
+        }
+        ФоновоеБодрствование.shared.установить(режим)
+        call.resolve(["mode": режим.rawValue])
+    }
 
     // Движок создаём ОТЛОЖЕННО — на следующем тике main-цикла (в load() через async), а не в property-init
     // и не синхронно в load(). Инициализация KMP-графа на главном потоке ВО ВРЕМЯ синхронной фазы Capacitor
@@ -611,6 +636,8 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     private let engineQueue = DispatchQueue(label: "ru.imiron.sugarlife.engine")
 
     override public func load() {
+        // Уход в фон и возвращение — на них подписываемся сразу: без этого настройка была бы мёртвой (#388).
+        ФоновоеБодрствование.shared.начать()
         engineQueue.async { [weak self] in
             guard let self else { return }
             // Персист-БД (нативный SQLite) → история переживает перезапуск. Фабрику собирает Swift (экспорт :persistence).
