@@ -68,9 +68,13 @@ for ED in $EDITIONS; do
         step "iOS $ED (JDK 17, XCFramework + Swift)"
         # Издание на iOS выводится ИЗ BUNDLE ID (build-engine.sh) — поэтому его и переопределяем.
         BID="ru.imiron.sugarlife"; [ "$ED" = "pro" ] && BID="ru.imiron.sugarlife.pro"
+        # Имя издания — вместе с идентификатором (#392): в проекте оно прописано как SugarLife.Lite в обеих
+        # конфигурациях, и без этой строки Pro приезжает на телефон под чужим именем.
+        DNAME="SugarLife.Lite"; [ "$ED" = "pro" ] && DNAME="SugarLife.Pro"
         if ( cd ios/App && JAVA_HOME="$JDK17" xcodebuild -project App.xcodeproj -scheme App \
               -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath "$DD" \
               -allowProvisioningUpdates DEVELOPMENT_TEAM="$TEAM" APP_BUNDLE_ID="$BID" \
+              APP_DISPLAY_NAME="$DNAME" \
               build -quiet ); then
           note "iOS $ED: ✅  ($BID)"
         else
