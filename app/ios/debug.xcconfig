@@ -1,3 +1,11 @@
 CAPACITOR_DEBUG = true
 
 OTHER_LDFLAGS = $(inherited) -lsqlite3
+
+// ОБЩИЙ КОНТЕЙНЕР С ПЕТЛЁЙ (SugarLife#413).
+//
+// Имя то же, что вычисляет себе iAPS (`Config.xcconfig`: group.com.$(DEVELOPMENT_TEAM).loopkit.LoopGroup),
+// поэтому обе программы, собранные одной командой разработчика, оказываются в одной группе. Значение
+// подставляется и в подпись (App.entitlements), и в Info.plist — в одном месте, чтобы они не разъехались.
+APP_GROUP_ID = group.com.$(DEVELOPMENT_TEAM).loopkit.LoopGroup
+CODE_SIGN_ENTITLEMENTS = App/App.entitlements

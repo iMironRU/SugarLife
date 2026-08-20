@@ -584,6 +584,8 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setBackgroundKeepAlive", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "liveBanner", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setLiveBanner", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "loopFeed", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setLoopFeed", returnType: CAPPluginReturnPromise),
     ]
 
     /**
@@ -634,6 +636,29 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             }
         }
         call.resolve()
+    }
+
+    /**
+     Отдача показаний в петлю (SugarLife#413, ядро core#100): узнать состояние и переключить.
+
+     Отдельным выключателем, а не «включено, раз петля стоит рядом»: по этим числам она считает дозу
+     инсулина, и решение должно быть человеческим. Отвечаем и о доступности контейнера — человек должен
+     узнать «отдавать некуда» от нас, а не по молчанию петли.
+     */
+    @objc func loopFeed(_ call: CAPPluginCall) {
+        call.resolve([
+            "enabled": LoopFeed.включено,
+            "container": LoopFeed.контейнер as Any,
+            "problem": LoopFeed.доступность() as Any,
+        ])
+    }
+
+    @objc func setLoopFeed(_ call: CAPPluginCall) {
+        guard let on = call.getBool("enabled") else {
+            call.reject("не сказано, включать или выключать"); return
+        }
+        LoopFeed.включить(on)
+        call.resolve(["enabled": on, "problem": LoopFeed.доступность() as Any])
     }
 
     @objc func setBackgroundKeepAlive(_ call: CAPPluginCall) {
@@ -703,6 +728,9 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             SharedCentral.shared.readinessHandler = reportReadiness
             reportReadiness()
             self.engine = e
+            // Куда отдавать показания за пределы приложения (core#100): на iOS это общий контейнер, из
+            // которого читает петля. Ставим всегда — сама отдача включается человеком (SugarLife#413).
+            e.setGlucoseBroadcaster(b: LoopFeed.shared)
             // Телеметрия приходит из колбэков CoreBluetooth; вызов движка синхронный, поэтому уводим его
             // на свою очередь — иначе поток событий от железа ждёт очереди движка (core#82).
             telemetrySink = { [weak self] json in

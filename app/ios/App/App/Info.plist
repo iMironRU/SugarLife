@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Имя общего контейнера, через который петля читает наши показания (SugarLife#413).
+	     Читаем его тем же способом, каким iAPS читает своё, — из Info.plist. -->
+	<key>AppGroupID</key>
+	<string>$(APP_GROUP_ID)</string>
     <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
