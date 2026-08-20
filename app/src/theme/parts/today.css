@@ -19,20 +19,20 @@
 }
 .carb-now:active { background: color-mix(in srgb, var(--c-carb) 9%, transparent); }
 .carb-now-t { flex: 1; min-width: 0; }
-.carb-big { display: flex; align-items: baseline; gap: 4px; font-size: 38px; font-weight: 600; line-height: 1; letter-spacing: -.02em; color: var(--c-carb); }
-.carb-big span { font-size: 14px; font-weight: 500; color: var(--c-carb-2); }
+.carb-big { display: flex; align-items: baseline; gap: 4px; font-size: min(2.375rem, 47.5px); font-weight: 600; line-height: 1; letter-spacing: -.02em; color: var(--c-carb); }
+.carb-big span { font-size: 0.875rem; font-weight: 500; color: var(--c-carb-2); }
 /* Неизвестно ≠ ноль: прочерк цветом углеводов читался как настоящее значение,
    а огромный «—» — как жирная жёлтая черта. Приглушаем (см. domain/loopValue.ts). */
 .carb-big.is-unknown, .carb-big.is-unknown span { color: var(--color-neutral-500); }
-.carb-big.is-unknown { font-size: 30px; }
-.carb-lbl { font-size: 12.5px; line-height: 1.25; color: var(--color-neutral-300); }
-.carb-sub { font-size: 11px; color: var(--color-neutral-500); margin-top: 2px; }
+.carb-big.is-unknown { font-size: min(1.875rem, 37.5px); }
+.carb-lbl { font-size: 0.7812rem; line-height: 1.25; color: var(--color-neutral-300); }
+.carb-sub { font-size: 0.6875rem; color: var(--color-neutral-500); margin-top: 2px; }
 
 /* Действие глаголом: «Еда» была существительным, и что произойдёт по нажатию —
    ввод или журнал — приходилось угадывать. */
 .carb-add { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.carb-add ion-icon { font-size: 22px; color: var(--c-carb); }
-.carb-add span { font-size: 10px; color: var(--color-neutral-400); }
+.carb-add ion-icon { font-size: min(1.375rem, 27.5px); color: var(--c-carb); }
+.carb-add span { font-size: 0.625rem; color: var(--color-neutral-400); }
 
 /* Низ — что уже записано. Черта показывает границу «сейчас / было» и делит нажатия:
    верх вносит, низ открывает журнал. */
@@ -44,12 +44,12 @@
 }
 .carb-hist:active { background: color-mix(in srgb, var(--c-carb) 12%, transparent); }
 .carb-hist-l {
-  flex: 1; min-width: 0; text-align: left; font-size: 11.5px; color: var(--color-neutral-400);
+  flex: 1; min-width: 0; text-align: left; font-size: 0.7188rem; color: var(--color-neutral-400);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .carb-hist-l b { font-weight: 600; color: var(--color-text); }
-.carb-hist-r { flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--color-neutral-400); }
-.carb-hist-r ion-icon { font-size: 13px; color: var(--color-neutral-500); }
+.carb-hist-r { flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px; font-size: 0.7188rem; color: var(--color-neutral-400); }
+.carb-hist-r ion-icon { font-size: 0.8125rem; color: var(--color-neutral-500); }
 
 /* подсветки резервуара */
 .today-alert {
@@ -60,7 +60,7 @@
 }
 .today-alert.warn { border-left-color: var(--c-carb); background: color-mix(in srgb, var(--c-carb) 8%, var(--color-neutral-900)); }
 .today-alert.info { border-left-color: var(--color-accent); }
-.today-alert > ion-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.today-alert > ion-icon { font-size: 1.25rem; flex-shrink: 0; margin-top: 1px; }
 /* Крестик «пока не до этого» (ui/Notice.tsx). Сорок четыре пикселя касания при
    маленьком значке: попадать в него человек будет одной рукой и не глядя, а вот
    выглядеть он должен тише содержимого — это не действие карточки, а отказ от неё. */
@@ -69,15 +69,15 @@
   width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
   background: transparent; border: 0; cursor: pointer; color: var(--color-neutral-500);
 }
-.notice-close ion-icon { font-size: 18px; }
+.notice-close ion-icon { font-size: 1.125rem; }
 .notice-close:active { color: var(--color-text); }
 .today-alert.warn > ion-icon { color: var(--c-carb); }
 .today-alert.info > ion-icon { color: var(--color-accent-300); }
-.today-alert b { display: block; font-size: 14px; font-weight: 600; }
-.today-alert span { display: block; font-size: 12px; color: var(--color-neutral-400); line-height: 1.4; margin-top: 3px; text-wrap: pretty; }
+.today-alert b { display: block; font-size: 0.875rem; font-weight: 600; }
+.today-alert span { display: block; font-size: 0.75rem; color: var(--color-neutral-400); line-height: 1.4; margin-top: 3px; text-wrap: pretty; }
 .macros { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 14px 0 14px 18px; }
-.macros > div { font-size: 13px; font-weight: 600; }
-.macros span { color: var(--color-neutral-400); font-size: 11px; font-weight: 400; display: inline-block; width: 12px; }
+.macros > div { font-size: 0.8125rem; font-weight: 600; }
+.macros span { color: var(--color-neutral-400); font-size: 0.6875rem; font-weight: 400; display: inline-block; width: 12px; }
 .macros b { font-weight: 600; }
 .carbs { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 10px; }
 
@@ -96,8 +96,8 @@
   transition: background .16s;
 }
 .an-tile:active { background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 20%, transparent), color-mix(in srgb, var(--color-accent) 7%, transparent)); }
-.an-tile ion-icon { font-size: 24px; color: var(--color-accent); }
-.an-tile-t { font-size: 12px; font-weight: 600; }
+.an-tile ion-icon { font-size: min(1.5rem, 30px); color: var(--color-accent); }
+.an-tile-t { font-size: 0.75rem; font-weight: 600; }
 
 /* Значок непрочитанного. Жёлтый по умолчанию, красный — только когда среди нового
    есть bad: «данных мало для разбора» и «половина показаний не доехала» не одного
@@ -105,19 +105,19 @@
 .an-badge {
   position: absolute; top: 8px; right: 8px; min-width: 19px; height: 19px; padding: 0 5px;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 10px; font-size: 11px; font-weight: 700;
+  border-radius: 10px; font-size: 0.6875rem; font-weight: 700;
   background: var(--c-carb); color: var(--color-bg);
 }
 .an-badge.is-bad { background: var(--c-danger); color: #fff; }
 
 /* Выключенный разбор — строкой, а не плиткой: место в ряду стоит дорого, а сообщение
    «вы это выключили» не стоит ничего. Прятать всё же нельзя. */
-.an-off-note { margin-top: 8px; font-size: 11.5px; color: var(--color-neutral-500); }
+.an-off-note { margin-top: 8px; font-size: 0.7188rem; color: var(--color-neutral-500); }
 
 /* Проактивный вопрос внутри подсветки: спросить дешевле, чем заставлять искать,
    где это исправить (принцип «проактивные вопросы вместо ретроактивных правок»). */
 .alert-ask { display: block; margin-top: 8px; }
-.alert-ask .changed-btn { margin-top: 6px; min-height: 44px; padding: 0 16px; font-size: 13px; }
+.alert-ask .changed-btn { margin-top: 6px; min-height: 44px; padding: 0 16px; font-size: 0.8125rem; }
 
 /* Ответы в строку. Переносятся, а не сжимаются: «Картридж и набор» на узком экране
    должен уехать на вторую строку целиком, а не превратиться в «Картридж и…». */
@@ -138,9 +138,9 @@
   background: var(--color-neutral-900);
   border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
-.release-ble ion-icon { font-size: 22px; color: var(--color-accent); flex-shrink: 0; }
-.release-ble b { display: block; font-size: 14px; font-weight: 600; }
-.release-ble i { display: block; margin-top: 3px; font-size: 12px; font-style: normal; color: var(--color-neutral-400); line-height: 1.4; }
+.release-ble ion-icon { font-size: min(1.375rem, 27.5px); color: var(--color-accent); flex-shrink: 0; }
+.release-ble b { display: block; font-size: 0.875rem; font-weight: 600; }
+.release-ble i { display: block; margin-top: 3px; font-size: 0.75rem; font-style: normal; color: var(--color-neutral-400); line-height: 1.4; }
 .release-ble:active { background: var(--color-neutral-800); }
 .release-ble.is-done { border-color: color-mix(in srgb, var(--c-glu) 45%, transparent); }
 .release-ble.is-done ion-icon { color: var(--c-glu); }
@@ -159,20 +159,20 @@
   background: color-mix(in srgb, var(--color-accent) 10%, var(--color-neutral-900));
   border: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
-.nearby-tile > ion-icon:first-child { font-size: 22px; color: var(--color-accent); flex-shrink: 0; }
+.nearby-tile > ion-icon:first-child { font-size: min(1.375rem, 27.5px); color: var(--color-accent); flex-shrink: 0; }
 .nearby-tile div { flex: 1; min-width: 0; }
-.nearby-tile b { display: block; font-size: 14px; font-weight: 600; }
-.nearby-tile span { display: block; margin-top: 3px; font-size: 12px; color: var(--color-neutral-400); line-height: 1.4; }
+.nearby-tile b { display: block; font-size: 0.875rem; font-weight: 600; }
+.nearby-tile span { display: block; margin-top: 3px; font-size: 0.75rem; color: var(--color-neutral-400); line-height: 1.4; }
 .nearby-tile:active { background: color-mix(in srgb, var(--color-accent) 18%, var(--color-neutral-900)); }
 
 .nearby-quiet {
   width: 100%; display: flex; align-items: center; gap: 8px; text-align: left;
   margin-top: 10px; padding: 9px 4px; cursor: pointer; background: none; border: 0;
-  font-family: var(--font-body); font-size: 12px; color: var(--color-neutral-500);
+  font-family: var(--font-body); font-size: 0.75rem; color: var(--color-neutral-500);
 }
-.nearby-quiet ion-icon { font-size: 15px; flex-shrink: 0; }
+.nearby-quiet ion-icon { font-size: 0.9375rem; flex-shrink: 0; }
 .nearby-quiet span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nearby-chev { font-size: 14px; opacity: .6; }
+.nearby-chev { font-size: 0.875rem; opacity: .6; }
 
 /* Журнал приёмов */
 .meal-log { margin-top: 12px; border-radius: 18px; overflow: hidden; background: var(--color-neutral-900); }
@@ -188,17 +188,17 @@
 .meal-row:disabled { opacity: 1; }   /* облачную строку не правим, но и не гасим: она читается */
 .meal-row:last-child { border-bottom: 0; }
 .meal-when { flex: 0 0 58px; }
-.meal-when b { display: block; font-size: 15px; font-weight: 600; }
-.meal-when span { display: block; font-size: 10px; color: var(--color-neutral-500); margin-top: 2px; }
+.meal-when b { display: block; font-size: 0.9375rem; font-weight: 600; }
+.meal-when span { display: block; font-size: 0.625rem; color: var(--color-neutral-500); margin-top: 2px; }
 .meal-what { flex: 1; min-width: 0; }
-.meal-what b { display: block; font-size: 15px; font-weight: 600; color: var(--c-carb); }
-.meal-what span { display: block; font-size: 11px; color: var(--color-neutral-400); margin-top: 2px; }
-.meal-what span ion-icon { font-size: 11px; vertical-align: -1px; }
+.meal-what b { display: block; font-size: 0.9375rem; font-weight: 600; color: var(--c-carb); }
+.meal-what span { display: block; font-size: 0.6875rem; color: var(--color-neutral-400); margin-top: 2px; }
+.meal-what span ion-icon { font-size: 0.6875rem; vertical-align: -1px; }
 .meal-del {
   flex: 0 0 auto; width: 38px; height: 38px; border-radius: 12px; cursor: pointer;
   border: 0; background: transparent; color: var(--color-neutral-500);
 }
-.meal-del ion-icon { font-size: 17px; }
+.meal-del ion-icon { font-size: 1.0625rem; }
 .meal-del:active { background: var(--color-neutral-800); color: var(--c-danger-2); }
 
 /* Лента подключения. Тонкие строки, а не карточки: это временные сообщения, и место
@@ -206,11 +206,11 @@
 .connect-feed { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
 .connect-line {
   display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px;
-  background: var(--color-neutral-900); font-size: 12px; color: var(--color-neutral-300);
+  background: var(--color-neutral-900); font-size: 0.75rem; color: var(--color-neutral-300);
 }
-.connect-line ion-icon { font-size: 15px; flex-shrink: 0; }
+.connect-line ion-icon { font-size: 0.9375rem; flex-shrink: 0; }
 .connect-line span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.connect-line i { font-style: normal; font-size: 11px; color: var(--color-neutral-500); flex-shrink: 0; }
+.connect-line i { font-style: normal; font-size: 0.6875rem; color: var(--color-neutral-500); flex-shrink: 0; }
 .connect-line.is-captured ion-icon { color: var(--c-glu); }
 /* Потеря связи заметна цветом: её нужно увидеть, а успех можно и пропустить. */
 .connect-line.is-released { color: var(--c-danger-2); }
@@ -226,13 +226,13 @@
   margin-top: 12px; padding: 12px 14px; border-radius: 16px;
   background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
 }
-.upd-row > ion-icon { font-size: 20px; color: var(--color-accent-300); flex-shrink: 0; }
+.upd-row > ion-icon { font-size: 1.25rem; color: var(--color-accent-300); flex-shrink: 0; }
 /* Заголовок не должен ломаться пополам ради кнопок. При min-width 140px на 393-м
    экране кнопки вставали рядом и ужимали текст до двух строк — проверено на телефоне.
    200px гарантируют перенос: либо строка целиком, либо кнопки ниже. */
 .upd-text { flex: 1; min-width: 200px; }
-.upd-text b { display: block; font-size: 14px; font-weight: 600; }
-.upd-text i { display: block; margin-top: 3px; font-size: 12px; font-style: normal; color: var(--color-neutral-400); line-height: 1.4; }
+.upd-text b { display: block; font-size: 0.875rem; font-weight: 600; }
+.upd-text i { display: block; margin-top: 3px; font-size: 0.75rem; font-style: normal; color: var(--color-neutral-400); line-height: 1.4; }
 /* Перенеслись на свою строку — занимают её целиком, а не жмутся к левому краю.
 
    Ряд из двух кнопок, начинающийся под текстом и обрывающийся на середине карточки,
@@ -245,7 +245,7 @@
    пикселя это ширина подушечки пальца, и всё, что меньше, требует прицеливания. А
    целятся тут одной рукой, часто на ходу и нередко при плохом самочувствии — то есть
    ровно тогда, когда промах дороже всего. */
-.upd-actions .changed-btn { min-height: 44px; padding: 0 18px; font-size: 13px; margin-top: 0; }
+.upd-actions .changed-btn { min-height: 44px; padding: 0 18px; font-size: 0.8125rem; margin-top: 0; }
 
 /* «Потом» у подсветки (#147). Тише соседнего действия намеренно: «Поменял батарейку»
    меняет данные, а «Потом» ничего не меняет — и претендовать на то же внимание не
@@ -253,7 +253,7 @@
 .snooze-btn {
   margin-top: 8px; min-height: 44px; padding: 0 18px; border-radius: 14px; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
-  font-family: var(--font-body); font-size: 13px;
+  font-family: var(--font-body); font-size: 0.8125rem;
   background: transparent; color: var(--color-neutral-400);
   border: 1px solid var(--color-neutral-800);
 }
@@ -265,7 +265,7 @@
    два одинаковых, и в остальное время не должен спорить с именем за внимание. */
 .dev-addr {
   display: block; margin-top: 2px;
-  font-size: 11px; letter-spacing: .02em;
+  font-size: 0.6875rem; letter-spacing: .02em;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-dim, #6f7285);
 }
@@ -277,7 +277,7 @@
   position: absolute; top: 4px; left: 50%; margin-left: 4px;
   min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 600; line-height: 1;
+  font-size: 0.625rem; font-weight: 600; line-height: 1;
   background: var(--color-accent); color: var(--color-neutral-950, #12131c);
 }
 .tab { position: relative; }
@@ -302,7 +302,7 @@
   flex: 1 1 0; min-width: 0; white-space: nowrap;
   min-height: 44px; padding: 0 6px; border-radius: 0;
   background: none; border: 0; box-shadow: none;
-  font-size: 14px; font-weight: 500; color: var(--color-neutral-400);
+  font-size: 0.875rem; font-weight: 500; color: var(--color-neutral-400);
   border-bottom: 2px solid transparent; margin-bottom: -1px;
 }
 .sec-switch .period-seg.on {
@@ -316,7 +316,7 @@
 .sec-badge {
   margin-left: 6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 600; line-height: 1;
+  font-size: 0.625rem; font-weight: 600; line-height: 1;
   background: var(--color-accent); color: var(--color-neutral-950, #12131c);
 }
 
@@ -332,11 +332,14 @@
   background: none; border: 0; cursor: pointer; text-align: left;
   font-family: var(--font-body); color: var(--color-text);
 }
-.slot-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+/* Та же азбука форм, что у точек потоков (#325): сплошной — напрямую, кольцо —
+   обходным путём, пунктир — не идёт. Одна форма означает одно и то же везде, иначе
+   выучивать пришлось бы каждый экран отдельно. */
+.slot-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; box-sizing: border-box; }
 .slot-dot.ok { background: var(--c-glu); }
-.slot-dot.cloud { background: var(--color-accent); }
-.slot-dot.off { background: var(--color-neutral-600); }
-.slot-chev { color: var(--color-neutral-500); font-size: 15px; transition: transform .18s; }
+.slot-dot.cloud { background: transparent; border: 2px solid var(--color-accent); }
+.slot-dot.off { background: transparent; border: 1.5px dotted var(--color-neutral-500); }
+.slot-chev { color: var(--color-neutral-500); font-size: 0.9375rem; transition: transform .18s; }
 .slot-chev.on { transform: rotate(90deg); }
 /* Шапка слота перестала быть кнопкой: слоты переключаются вкладками, а не раскрытием.
    Курсор и отклик на нажатие у неподвижной строки обещали бы действие, которого нет. */
@@ -354,13 +357,13 @@
   background: none; border: 0; border-radius: 0; padding: 0;
   border-bottom: 1px solid var(--color-neutral-800); margin-top: 2px;
 }
-.sec-switch.слоты .period-seg { font-size: 13.5px; min-height: 40px; }
+.sec-switch.слоты .period-seg { font-size: 0.8438rem; min-height: 40px; }
 
 /* Причина — рядом с ответом, а не сноской. Приглушённая рамка вместо красной: это не
    поломка, а объяснение, почему выбран обходной путь. */
 .slot-why {
   margin: 0 14px 12px; padding: 9px 11px; border-radius: 12px;
-  font-size: 12.5px; line-height: 1.45; color: var(--color-neutral-300);
+  font-size: 0.7812rem; line-height: 1.45; color: var(--color-neutral-300);
   background: color-mix(in srgb, var(--c-carb) 9%, transparent);
   border: 1px solid color-mix(in srgb, var(--c-carb) 26%, transparent);
 }
@@ -372,7 +375,7 @@
    .metric-note нет — они рассчитаны на страницу, и у края карточки текст прилипал. */
 .list > .metric-note { margin: 0; padding: 12px 14px; }
 .src-tag {
-  flex: 0 0 auto; font-size: 10.5px; padding: 3px 7px; border-radius: 7px;
+  flex: 0 0 auto; font-size: 0.6562rem; padding: 3px 7px; border-radius: 7px;
   color: var(--color-neutral-400); border: 1px solid var(--color-neutral-700);
 }
 .src-tag.now { color: var(--c-glu); border-color: color-mix(in srgb, var(--c-glu) 45%, transparent); }
@@ -382,7 +385,7 @@
    отдельная тревога. */
 .слот-учётка {
   display: block; width: 100%; text-align: left; cursor: pointer;
-  font-family: var(--font-body); font-size: 12.5px; line-height: 1.45;
+  font-family: var(--font-body); font-size: 0.7812rem; line-height: 1.45;
 }
 
 /* «История» внизу «Сегодня» (#384).
@@ -398,7 +401,7 @@
   display: flex; align-items: center; gap: 10px; width: 100%;
   margin: 20px 0 6px; padding: 14px 4px 4px;
   background: none; border: 0; border-top: 1px solid var(--color-neutral-800);
-  color: var(--color-text); font-size: 15px;
+  color: var(--color-text); font-size: 0.9375rem;
 }
-.сегодня-история ion-icon { color: var(--color-neutral-500); font-size: 18px; }
+.сегодня-история ion-icon { color: var(--color-neutral-500); font-size: 1.125rem; }
 .сегодня-история-шеврон { margin-left: auto; }

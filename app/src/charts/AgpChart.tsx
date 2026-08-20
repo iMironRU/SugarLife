@@ -1,5 +1,5 @@
 import EChart from './Chart';
-import { cssVar } from './cssVar';
+import { cssVar, размерПодписи } from './cssVar';
 import { agp, LOW, HIGH } from '@/domain/agp';
 import { useUnit, gluValue } from '@/domain/units';
 import type { Entry } from '@/sources/nightscout';
@@ -30,13 +30,13 @@ export default function AgpChart({ entries }: { entries: Entry[] }) {
     grid: { left: 26, right: 8, top: 10, bottom: 22 },
     xAxis: {
       type: 'value', min: 0, max: 24, interval: 6,
-      axisLabel: { color: axis, fontSize: 10, formatter: (v: number) => `${v}:00` },
+      axisLabel: { color: axis, fontSize: размерПодписи(10), formatter: (v: number) => `${v}:00` },
       axisLine: { lineStyle: { color: grid, opacity: 0.4 } }, axisTick: { show: false },
       splitLine: { show: false },
     },
     yAxis: {
       type: 'value', min: yMin, max: vmax, interval: yInterval,
-      axisLabel: { color: axis, fontSize: 10 },
+      axisLabel: { color: axis, fontSize: размерПодписи(10) },
       axisLine: { show: false }, axisTick: { show: false },
       splitLine: { lineStyle: { color: grid, opacity: 0.25 } },
     },

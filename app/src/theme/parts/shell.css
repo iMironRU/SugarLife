@@ -44,8 +44,8 @@ ion-content { --background: var(--color-bg); }
   padding: 8px 0 7px; background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
   color: var(--color-neutral-500);
 }
-.tab ion-icon { font-size: 22px; }
-.tab span { font-size: 10px; }
+.tab ion-icon { font-size: min(1.375rem, 27.5px); }
+.tab span { font-size: 0.625rem; }
 .tab.on { color: var(--color-accent); }
 
 /* ===== Геометрия панели: одна формула вместо трёх состояний =====
@@ -158,13 +158,13 @@ ion-content { --background: var(--color-bg); }
   display: flex; align-items: center; justify-content: center;
   gap: 10px; height: 30px; padding: 0 0 10px; min-width: 0;
 }
-.hp-status .hp-synctext { min-width: 0; font-size: 11px; gap: 5px; }
+.hp-status .hp-synctext { min-width: 0; font-size: 0.6875rem; gap: 5px; }
 .hp-status .hp-batteries { gap: 9px; }
 /* связь ужимается первой — заряды короткие и должны остаться целыми */
 .hp-status .hp-synctext > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hp-status .hp-batteries { flex-shrink: 0; }
-.hp-synctext { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-400); min-width: 0; }
-.hp-synctext .sync-ico { font-size: 13px; flex-shrink: 0; }
+.hp-synctext { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--color-neutral-400); min-width: 0; }
+.hp-synctext .sync-ico { font-size: 0.8125rem; flex-shrink: 0; }
 .hp-synctext .sync-reading { color: var(--color-neutral-500); white-space: nowrap; }
 .hp-synctext.warn { color: var(--c-danger-2); }
 .hp-synctext.warn .sync-ico { color: var(--c-danger-2); }
@@ -174,8 +174,8 @@ ion-content { --background: var(--color-bg); }
    что реально известно. Компактно намеренно: связь и три заряда должны уместиться
    даже на 320px. */
 .hp-batteries { display: flex; justify-content: center; gap: 14px; }
-.hp-batt-item { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; }
-.hp-batt-item ion-icon { font-size: 13px; color: currentColor; }
+.hp-batt-item { display: inline-flex; align-items: center; gap: 3px; font-size: 0.625rem; font-weight: 600; }
+.hp-batt-item ion-icon { font-size: 0.8125rem; color: currentColor; }
 
 .hp-row { position: relative; height: calc(150px - 88px * var(--p)); }
 
@@ -212,30 +212,33 @@ ion-content { --background: var(--color-bg); }
 .hp-head, .hp-name, .hp-sub, .hp-val { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hp-head { display: flex; align-items: center; gap: 5px; }
 .hp-ico { display: flex; line-height: 1; color: var(--color-accent); }
-.hp-ico, .hp-ico ion-icon { font-size: calc(24px - 10px * var(--p)); }
+.hp-ico, .hp-ico ion-icon { font-size: min(calc(1.5rem - 0.625rem * var(--p)), calc(30px - 12.5px * var(--p))); }
 .hp-ico { margin-bottom: calc(5px * (1 - var(--p))); }
 .hp-ico ion-icon { color: var(--color-accent); }
-.hp-name { font-size: calc(14px - 2px * var(--p)); line-height: 1.2; font-weight: 600; color: var(--color-text); flex-shrink: 0; }
+/* Имя крыла УМЕЮЩЕЕ сжиматься (#325). При системном крупном шрифте «Помпа» занимала
+   всю строку и выталкивала точку связи за край панели — а точка тут и есть сообщение,
+   имя же и так известно. Что сжимать первым, решает важность, а не порядок в вёрстке. */
+.hp-name { font-size: calc(0.875rem - 0.125rem * var(--p)); line-height: 1.2; font-weight: 600; color: var(--color-text); flex: 0 1 auto; min-width: 0; }
 /* Через что живёт крыло — «облако» / «мост» (domain/deviceState.ts, черезЧтоСпорное).
    Приглушённое и мелкое намеренно: это не состояние, а уточнение к точке рядом.
    Ужимается первым — имя роли важнее пути, по которому она сейчас достаётся. */
 .hp-chan {
-  font-size: 10px; line-height: 1.2; color: var(--color-neutral-400);
+  font-size: 0.625rem; line-height: 1.2; color: var(--color-neutral-400);
   min-width: 0; overflow: hidden; text-overflow: ellipsis;
 }
-.hp-val { font-size: calc(15px - 4px * var(--p)); font-weight: 600; color: var(--color-text); line-height: 1; margin-top: calc(3px * (1 - var(--p))); }
+.hp-val { font-size: calc(0.9375rem - 0.25rem * var(--p)); font-weight: 600; color: var(--color-text); line-height: 1; margin-top: calc(3px * (1 - var(--p))); }
 /* подписи-детали (обновлено / резервуар / статус) — уходят первыми и по ширине тоже:
    max-height их только сплющивает, место в ряду они продолжают занимать (в отличие от
    display:none) — иначе «НМГ день 6» ужималось бы до «Н… де…». */
 .hp-sub {
-  display: block; font-size: 10px; color: var(--color-neutral-400); line-height: 1.4;
+  display: block; font-size: 0.625rem; color: var(--color-neutral-400); line-height: 1.4;
   overflow: hidden;
   max-height: calc(16px * (1 - var(--k-sub)));
   max-width: calc(100% * (1 - var(--k-sub)));
   opacity: calc(1 - var(--k-sub));
 }
 /* часики: значение из кеша, идёт обновление */
-.hp-stale { font-size: 10px; vertical-align: -1px; margin-left: 3px; opacity: 0.55; color: currentColor; }
+.hp-stale { font-size: 0.625rem; vertical-align: -1px; margin-left: 3px; opacity: 0.55; color: currentColor; }
 
 .hp-gap { flex-shrink: 0; width: calc(146px - 88px * var(--p)); }
 
@@ -252,10 +255,10 @@ ion-content { --background: var(--color-bg); }
 .hp-circle .circle-spark { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 .hp-circle-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
 .hp-circle-val { display: flex; align-items: center; gap: calc(6px - 3px * var(--p)); }
-.hp-value { font-size: calc(44px - 27px * var(--p)); font-weight: 600; letter-spacing: -.02em; line-height: 1; color: var(--color-text); }
-.hp-arrow { font-size: calc(22px - 11px * var(--p)); color: var(--c-glu); font-weight: 700; }
+.hp-value { font-size: min(calc(2.75rem - 1.6875rem * var(--p)), calc(55px - 33.75px * var(--p))); font-weight: 600; letter-spacing: -.02em; line-height: 1; color: var(--color-text); }
+.hp-arrow { font-size: min(calc(1.375rem - 0.6875rem * var(--p)), calc(27.5px - 13.75px * var(--p))); color: var(--c-glu); font-weight: 700; }
 .hp-unit {
-  font-size: calc(12px - 3px * var(--p)); color: var(--color-neutral-300); overflow: hidden;
+  font-size: calc(0.75rem - 0.1875rem * var(--p)); color: var(--color-neutral-300); overflow: hidden;
   max-height: calc(18px * (1 - var(--k-late)));
   margin-top: calc(4px * (1 - var(--k-late)));
   opacity: calc(1 - var(--k-late));
@@ -264,10 +267,10 @@ ion-content { --background: var(--color-bg); }
    янтарный в теме, и им же помечены подсветки-предупреждения: заводить второй жёлтый
    ради одного значка значило бы, что у нас два разных «внимание». */
 .hp-raw-ico {
-  color: var(--c-carb); font-size: 11px; vertical-align: -1.5px; margin-right: 3px;
+  color: var(--c-carb); font-size: 0.6875rem; vertical-align: -1.5px; margin-right: 3px;
 }
 .hp-ago {
-  font-size: 10px; color: var(--color-neutral-400); overflow: hidden;
+  font-size: 0.625rem; color: var(--color-neutral-400); overflow: hidden;
   max-height: calc(16px * (1 - var(--k-sub)));
   margin-top: calc(5px * (1 - var(--k-sub)));
   opacity: calc(1 - var(--k-sub));
@@ -276,7 +279,7 @@ ion-content { --background: var(--color-bg); }
    на месте, но становится прочерком приглушённого цвета: пустота на её месте
    читалась как «инсулина нет», а это разные вещи (domain/loopValue.ts). */
 .hp-iob {
-  font-size: calc(11px - 1px * var(--p)); font-weight: 600; color: var(--c-ins); overflow: hidden;
+  font-size: calc(0.6875rem - 0.0625rem * var(--p)); font-weight: 600; color: var(--c-ins); overflow: hidden;
   max-height: calc(15px * (1 - var(--k-late)));
   margin-top: calc(4px * (1 - var(--k-late)));
   opacity: calc(1 - var(--k-late));
@@ -290,12 +293,12 @@ ion-content { --background: var(--color-bg); }
 .hp-value.is-stale { color: var(--color-neutral-500); }
 .hp-arrow.hp-wait { color: var(--color-neutral-500); }
 /* Часики вместо числа: занимают его место, поэтому и размер числа. */
-.hp-arrow.hp-wait-big { font-size: calc(38px - 22px * var(--p)); }
+.hp-arrow.hp-wait-big { font-size: min(calc(2.375rem - 1.375rem * var(--p)), calc(47.5px - 27.5px * var(--p))); }
 @media (prefers-reduced-motion: no-preference) {
   .hp-arrow.hp-wait { animation: hp-wait-pulse 1.8s ease-in-out infinite; }
 }
 @keyframes hp-wait-pulse { 0%, 100% { opacity: .45 } 50% { opacity: 1 } }
-.sync { font-size: 12px; color: var(--color-neutral-400); }
+.sync { font-size: 0.75rem; color: var(--color-neutral-400); }
 .heart { color: var(--c-danger); }
 /* Метка связи у названия крыла — уходит вместе с мелочью, когда панель уже узкая.
    Зелёная: источник отдаёт данные. Красная: связи нет — это не «мелочь», но и не
@@ -305,10 +308,15 @@ ion-content { --background: var(--color-bg); }
   width: calc(6px * (1 - var(--k-late))); height: 6px; border-radius: 50%; flex-shrink: 0;
   background: var(--c-glu); box-shadow: 0 0 6px var(--c-glu); opacity: calc(1 - var(--k-late));
 }
-.live-dot.is-off { background: var(--c-danger); box-shadow: 0 0 6px var(--c-danger); }
+/* Обрыв — не только красным (#325). Зелёный и красный на глаз различают не все, а
+   заметить надо именно обрыв. Кольцо: середина пустая — данных нет. */
+.live-dot.is-off {
+  background: transparent; box-sizing: border-box;
+  border: 2px solid var(--c-danger); box-shadow: 0 0 6px color-mix(in srgb, var(--c-danger) 60%, transparent);
+}
 /* Ожидание — те же часики, что в круге вместо стрелки (один знак на один смысл). */
 .hp-link-wait {
-  font-size: calc(11px * (1 - var(--k-late))); flex-shrink: 0;
+  font-size: calc(0.6875rem * (1 - var(--k-late))); flex-shrink: 0;
   color: var(--color-neutral-500); opacity: calc(1 - var(--k-late));
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -334,7 +342,7 @@ ion-content { --background: var(--color-bg); }
 .pl-card-sm { height: 62px; }
 .pl-spin {
   display: flex; align-items: center; justify-content: center; gap: 10px;
-  margin-top: 22px; font-size: 13px; color: var(--color-neutral-400);
+  margin-top: 22px; font-size: 0.8125rem; color: var(--color-neutral-400);
 }
 .pl-spin ion-spinner { width: 18px; height: 18px; color: var(--color-accent); }
 
@@ -356,6 +364,6 @@ ion-content { --padding-top: 0; }
    когда последние — по строке на прибор. Мелко и тихо: это фон, а не действие. */
 .nearby-строки { align-items: flex-start; }
 .nearby-список { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
-.nearby-строка { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; line-height: 1.35; }
+.nearby-строка { display: flex; align-items: baseline; gap: 6px; font-size: 0.7812rem; line-height: 1.35; }
 .nearby-строка b { font-weight: 600; white-space: nowrap; }
 .nearby-строка > span { color: var(--color-neutral-500); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -207,11 +207,11 @@
   width: 100%; min-height: 48px; border-radius: 16px; cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 6px;
   border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
-  color: var(--color-text); font-size: 15px; font-weight: 600; font-family: inherit;
+  color: var(--color-text); font-size: 0.9375rem; font-weight: 600; font-family: inherit;
 }
 .page-back:active, .page-btn:active { background: var(--color-neutral-800); }
-.page-back ion-icon, .page-btn ion-icon { font-size: 18px; }
-.sheet-title { font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
+.page-back ion-icon, .page-btn ion-icon { font-size: 1.125rem; }
+.sheet-title { font-size: 1.1875rem; font-weight: 600; letter-spacing: -.01em; }
 /* 44px — минимальный удобный размер касания (рекомендация iOS/Android). Сама иконка
    крупнее пропорционально: раньше в круге 36px сидел значок ~16px и терялся. */
 .sheet-close {
@@ -219,17 +219,17 @@
   border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
   color: var(--color-neutral-200); cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
-.sheet-close ion-icon { font-size: 24px; }
+.sheet-close ion-icon { font-size: min(1.5rem, 30px); }
 .sheet-close:active { background: var(--color-neutral-800); }
-.sheet-desc { font-size: 13px; color: var(--color-neutral-400); line-height: 1.5; margin: 8px 0 16px; }
-.sheet-subtitle { font-size: 11px; color: var(--color-neutral-400); margin-top: 3px; }
+.sheet-desc { font-size: 0.8125rem; color: var(--color-neutral-400); line-height: 1.5; margin: 8px 0 16px; }
+.sheet-subtitle { font-size: 0.6875rem; color: var(--color-neutral-400); margin-top: 3px; }
 
 
 /* Описание раздела — «что это». Крупнее сносок: его читают один раз и внимательно, а
    одиннадцатым кеглем набирают то, что пробегают глазами. Четыре класса под эту роль
    (sheet-note, metric-note, sheet-desc, wz-lede) свелись сюда (#311). */
 .page-lede {
-  font-size: 13px; line-height: 1.5; color: var(--color-neutral-400);
+  font-size: 0.8125rem; line-height: 1.5; color: var(--color-neutral-400);
   margin: 0 2px; text-wrap: pretty;
 }
 /* Между описанием и тем, что за ним, — тот же зазор, что под шапкой: описание
@@ -290,7 +290,7 @@
 .sheet-cancel {
   flex: 0 0 auto; padding: 0 18px; min-height: 48px; border-radius: 16px; cursor: pointer;
   border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
-  color: var(--color-neutral-300); font-size: 15px; font-family: var(--font-body);
+  color: var(--color-neutral-300); font-size: 0.9375rem; font-family: var(--font-body);
 }
 .sheet-cancel:active { background: var(--color-neutral-800); }
 
@@ -407,12 +407,12 @@ body.скан-идёт ion-modal { display: none !important; }
   box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .45);
 }
 .скан-подпись {
-  font-size: 15px; color: #fff; text-align: center; max-width: 78vw;
+  font-size: 0.9375rem; color: #fff; text-align: center; max-width: 78vw;
   text-shadow: 0 1px 6px rgba(0, 0, 0, .9);
 }
 .скан-отмена {
   margin-top: 6px; padding: 13px 34px; border-radius: 999px; border: 0;
-  font-size: 16px; font-weight: 600; color: #fff; background: rgba(0, 0, 0, .62);
+  font-size: 1rem; font-weight: 600; color: #fff; background: rgba(0, 0, 0, .62);
   backdrop-filter: blur(6px);
 }
 
@@ -420,7 +420,7 @@ body.скан-идёт ion-modal { display: none !important; }
    посимвольно с напечатанным на коробке и пересылают в переписку. */
 .скан-текст {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 14px; line-height: 1.5; word-break: break-all;
+  font-size: 0.875rem; line-height: 1.5; word-break: break-all;
   padding: 10px 12px; border-radius: 10px;
   background: var(--color-surface-2); color: var(--color-text);
   user-select: text; -webkit-user-select: text;
@@ -440,11 +440,11 @@ label.list-row { cursor: pointer; }
 .журнал { margin-top: 10px; display: flex; flex-direction: column; gap: 2px; max-height: 46vh; overflow-y: auto; }
 .журнал-строка {
   display: flex; gap: 8px; padding: 6px 8px; border-radius: 8px;
-  background: var(--color-surface-2); font-size: 12.5px; line-height: 1.4;
+  background: var(--color-surface-2); font-size: 0.7812rem; line-height: 1.4;
 }
 .журнал-время { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--color-neutral-500); flex: 0 0 auto; }
 .журнал-текст { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.журнал-поля { color: var(--color-neutral-500); font-size: 11.5px; word-break: break-word; }
+.журнал-поля { color: var(--color-neutral-500); font-size: 0.7188rem; word-break: break-word; }
 /* Цветом только беду: раскрашенная лента перестаёт выделять что-либо вовсе. */
 .журнал-строка.у-warn .журнал-текст { color: var(--color-warning, #e0b050); }
 .журнал-строка.у-error .журнал-текст { color: var(--color-danger, #e07070); }
@@ -454,6 +454,6 @@ label.list-row { cursor: pointer; }
 .карта-ещё {
   display: block; width: 100%; text-align: left; margin: 14px 0 6px;
   padding: 0; border: 0; background: none;
-  color: var(--color-neutral-500); font-size: 13px; text-decoration: underline;
+  color: var(--color-neutral-500); font-size: 0.8125rem; text-decoration: underline;
   text-underline-offset: 3px;
 }
