@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  gluValue, toUnits, fmt, unitLabel, toCarbs, carbUnitLabel, XE_GRAMS,
-  agoText, daysHoursText, plural,
-} from './units';
+import { сколькоНазад, дниЧасы } from '@/слова/время';
+import { gluValue, toUnits, fmt, unitLabel, toCarbs, carbUnitLabel, XE_GRAMS, plural } from '@/domain/units';
 import { MGDL_PER_MMOL } from './types';
 
 /* Единицы измерения. Модуль маленький, но ошибка здесь портит сахар СРАЗУ на всех
@@ -67,21 +65,21 @@ describe('время', () => {
   const сейчас = Date.now();
 
   it('свежесть: минуты, потом часы', () => {
-    expect(agoText(сейчас - 30e3, сейчас)).toMatch(/только что|сек|мин/);
-    expect(agoText(сейчас - 5 * 60e3, сейчас)).toMatch(/5/);
-    expect(agoText(сейчас - 3 * 3600e3, сейчас)).toMatch(/ч/);
+    expect(сколькоНазад(сейчас - 30e3, сейчас)).toMatch(/только что|сек|мин/);
+    expect(сколькоНазад(сейчас - 5 * 60e3, сейчас)).toMatch(/5/);
+    expect(сколькоНазад(сейчас - 3 * 3600e3, сейчас)).toMatch(/ч/);
   });
 
   it('остаток инсулина: дни и часы, а не десятичный хвост', () => {
     /* Просили именно так: «1 д 18 ч» вместо «1,75 дн» — часы из десятичной дроби
        человек в уме не считает. */
-    expect(daysHoursText(1.75)).toMatch(/1\s*д/);
-    expect(daysHoursText(1.75)).toMatch(/18\s*ч/);
+    expect(дниЧасы(1.75)).toMatch(/1\s*д/);
+    expect(дниЧасы(1.75)).toMatch(/18\s*ч/);
   });
 
   it('меньше суток — только часы', () => {
-    expect(daysHoursText(0.5)).not.toMatch(/д/);
-    expect(daysHoursText(0.5)).toMatch(/12\s*ч/);
+    expect(дниЧасы(0.5)).not.toMatch(/д/);
+    expect(дниЧасы(0.5)).toMatch(/12\s*ч/);
   });
 });
 

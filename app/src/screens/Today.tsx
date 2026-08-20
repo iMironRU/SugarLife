@@ -1,9 +1,12 @@
 import { IonIcon } from '@ionic/react';
+/* Импорт под другим именем: местное «часы» — это длительность в часах, а не время
+   на циферблате. Одно слово на два смысла в одном файле — заготовка для ошибки. */
+import { сколькоНазад, часы as наЧасах } from '@/слова/время';
 import { MealsSection, HistorySection } from '@/sections/lazy';
 import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, chevronForward, timeOutline } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore, refresh } from '@/sources/store';
-import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt, agoText } from '@/domain/units';
+import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt } from '@/domain/units';
 import { activeCarbs } from '@/domain/loopValue';
 import ChangedButton from '@/ui/ChangedButton';
 import ReleaseBle from '@/ui/ReleaseBle';
@@ -175,7 +178,7 @@ export default function Today() {
     const h = e.getHours();
     if (h >= 23 || h < 8) nightEmpty = e;
   }
-  const emptyTime = nightEmpty?.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  const emptyTime = nightEmpty ? наЧасах(nightEmpty.getTime()) : undefined;
 
   /* Дневное окончание. Ночной случай выше строже (14 ч) — во сне человек не заметит.
      Но днём окончание тоже пропускается, если занят, а прерывание подачи одинаково
@@ -190,7 +193,7 @@ export default function Today() {
     && прогнозРезервуара.прогноз !== 'кончается сейчас'
     && прогнозРезервуара.прогноз !== 'не хватит до утра';
   const emptyAt = soonEmpty
-    ? new Date(Date.now() + (hoursLeft as number) * 3600e3).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    ? наЧасах(Date.now() + (hoursLeft as number) * 3600e3)
     : null;
 
   /* Батарея помпы на дне. Порог 5%, а не 20%: по истории замен видно, что шкала грубая
@@ -390,7 +393,7 @@ export default function Today() {
                   единственное, ради чего строку читают. */}
               <span className="carb-hist-l">
                 {последний
-                  ? <>Последний <b>{toCarbs(последний.carbs, cu)} {carbUnitLabel(cu)}</b> · {agoText(последний.t).replace(' назад', '')}</>
+                  ? <>Последний <b>{toCarbs(последний.carbs, cu)} {carbUnitLabel(cu)}</b> · {сколькоНазад(последний.t).replace(' назад', '')}</>
                   : 'За сутки не вносили'}
               </span>
               <span className="carb-hist-r">
@@ -534,7 +537,7 @@ export default function Today() {
                   <button className="changed-btn" onClick={() => markRefillAsked(заправка.at)}>Нет</button>
                 </>
               )}>
-              Остаток поднялся с {Math.round(заправка.from)} до {Math.round(заправка.to)} ед {agoText(заправка.at)}.
+              Остаток поднялся с {Math.round(заправка.from)} до {Math.round(заправка.to)} ед {сколькоНазад(заправка.at)}.
               В Nightscout события об этом нет, поэтому спрашиваем.
             </Notice>
           )}

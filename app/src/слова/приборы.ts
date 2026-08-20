@@ -2,6 +2,7 @@ import type { ChannelView } from '@/sources/bridge';
 import type { Связь } from '@/domain/deviceState';
 import type { Обрыв } from '@/domain/однаПравда';
 import type { Свежесть, Занятие } from '@/domain/freshness';
+import { сколькоНет } from './время';
 
 /* Как называется путь, которым данные попадают в приложение (#324).
 
@@ -59,14 +60,6 @@ export function словоОбрыва(о: Обрыв | null): string | null {
     : `Нет связи и данных: ${совсем.map((с) => с.имя).join(', ')}`;
 }
 
-/* Длительность, а не момент. «данных нет 7 мин назад» — не по-русски и не про то:
-   вопрос не «когда было последнее», а «сколько уже нет». Поэтому своё слово, а не
-   agoText, который отвечает на первый вопрос и нужен в других местах. */
-export function сколькоНет(мс: number): string {
-  const м = Math.max(0, Math.round(мс / 60000));
-  if (м < 60) return `${м} мин`;
-  return `${Math.floor(м / 60)} ч`;
-}
 
 /** Подпись про свежесть. null — говорить нечего, состояние скажет обычная метка. */
 export function подписьСвежести(с: Свежесть): string | null {

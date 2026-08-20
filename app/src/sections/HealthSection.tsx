@@ -1,4 +1,5 @@
 import { IonIcon, IonInput } from '@ionic/react';
+import { датаПолная } from '@/слова/время';
 import {
   bodyOutline, heartOutline, flaskOutline, calendarOutline, checkmarkOutline, trashOutline,
   sunnyOutline, moonOutline,
@@ -29,7 +30,7 @@ const СЛОВО: Record<СостояниеПроверки, string> = {
   'в сроке': 'в сроке', 'ещё рано': 'ещё рано',
 };
 
-const дата = (t: number) => new Date(t).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+const дата = датаПолная;
 /** Дата — сегодняшняя? Сравниваем по календарному дню, а не по миллисекундам. */
 const сегодняЛи = (t: number | null | undefined) =>
   t != null && new Date(t).toDateString() === new Date().toDateString();

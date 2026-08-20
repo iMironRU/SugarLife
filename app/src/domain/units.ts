@@ -65,24 +65,9 @@ export function toCarbs(grams: number, u: CarbUnit = carbUnit): string {
   return u === 'xe' ? fmt(Math.round((grams / XE_GRAMS) * 10) / 10) : String(Math.round(grams));
 }
 
-export function agoText(t: number, now = Date.now()) {
-  const m = Math.max(0, Math.round((now - t) / 60000));
-  if (m < 1) return 'только что';
-  if (m < 60) return m + ' мин назад';
-  return Math.floor(m / 60) + ' ч назад';
-}
-
-/* Длительность в днях → «1 д 18 ч». Дробные дни («≈ 1,8 дн») человеку приходится
-   пересчитывать в уме, а решение принимается именно в часах: хватит ли до утра,
-   доживу ли до замены. Часы округляем вниз: «осталось не меньше», а не наоборот. */
-export function daysHoursText(days: number): string {
-  const totalH = Math.max(0, Math.floor(days * 24));
-  const d = Math.floor(totalH / 24);
-  const h = totalH % 24;
-  if (d === 0) return h + ' ч';
-  if (h === 0) return d + ' д';
-  return d + ' д ' + h + ' ч';
-}
+/* «Сколько назад» и «дни и часы» уехали в слова/время.ts (#408): это формулировки, а не
+   счёт. Здесь остаются единицы измерения — они настройка человека и конвертация, а не
+   слова. */
 
 
 /* Русские окончания по числу. Заводится один раз и на всё: «2 раз» вместо «2 раза»

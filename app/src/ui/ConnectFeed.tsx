@@ -1,8 +1,8 @@
 import { IonIcon } from '@ionic/react';
+import { сколькоНазад } from '@/слова/время';
 import { bluetoothOutline, checkmarkCircleOutline, alertCircleOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { useBleActivity, фразаСобытия, type BlePhase } from '@/sources/bleActivity';
-import { agoText } from '@/domain/units';
 
 /* Лента подключения на «Сегодня».
 
@@ -56,7 +56,7 @@ export default function ConnectFeed() {
           <IonIcon icon={e.phase === 'captured' ? checkmarkCircleOutline
             : e.phase === 'released' ? alertCircleOutline : bluetoothOutline} />
           <span>{фразаСобытия(e)}</span>
-          <i>{agoText(e.at).replace(' назад', '')}</i>
+          <i>{сколькоНазад(e.at).replace(' назад', '')}</i>
         </div>
       ))}
     </div>

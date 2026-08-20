@@ -1,4 +1,5 @@
 import { IonIcon } from '@ionic/react';
+import { имяДня, часы } from '@/слова/время';
 import { useState } from 'react';
 import { restaurantOutline, cloudOutline, chevronForward } from 'ionicons/icons';
 import Section from '@/ui/Section';
@@ -160,14 +161,5 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
   );
 }
 
-const время = (t: number) => {
-  const d = new Date(t);
-  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
-};
-const день = (t: number) => {
-  const d = new Date(t), сегодня = new Date();
-  if (d.toDateString() === сегодня.toDateString()) return 'сегодня';
-  сегодня.setDate(сегодня.getDate() - 1);
-  if (d.toDateString() === сегодня.toDateString()) return 'вчера';
-  return d.toLocaleDateString('ru', { day: 'numeric', month: 'short' });
-};
+const время = часы;
+const день = (t: number) => имяДня(t, { коротко: true });

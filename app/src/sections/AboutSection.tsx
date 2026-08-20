@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { датаИВремя } from '@/слова/время';
 import {
   refreshOutline, downloadOutline, logoGithub, listOutline, cloudDownloadOutline,
   phonePortraitOutline,
@@ -105,7 +106,7 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
     if (!iso) return null;
     const д = new Date(iso);
     return Number.isNaN(д.getTime()) ? null
-      : д.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      : датаИВремя(д.getTime());
   };
 
   /* Веб-состояние словами — то же, что было в Профиле: четыре ответа на три вопроса,

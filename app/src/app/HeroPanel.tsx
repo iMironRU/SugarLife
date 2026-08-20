@@ -1,9 +1,10 @@
 import { IonIcon } from '@ionic/react';
+import { сколькоНазад, дниЧасы } from '@/слова/время';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline, warningOutline } from 'ionicons/icons';
 import { useTab, setTab } from '@/app/nav';
 import { useStore } from '@/sources/store';
-import { toUnits, agoText, unitLabel, useUnit, fmt, daysHoursText } from '@/domain/units';
+import { toUnits, unitLabel, useUnit, fmt } from '@/domain/units';
 import { getCfg } from '@/sources/nightscout';
 import { deviceAges } from '@/domain/treatmentStats';
 import { useChanges } from '@/settings/changes';
@@ -138,7 +139,7 @@ export default function HeroPanel() {
      когда сенсор читается напрямую. */
   const arrow = СТРЕЛКА[направление(историяЧаса)] ?? '';
   const латест = latestAt;
-  const ago = latestAt != null ? agoText(latestAt) : DASH;
+  const ago = latestAt != null ? сколькоНазад(latestAt) : DASH;
   const minsAgo = latestAt != null ? Math.round((Date.now() - latestAt) / 60000) : null;
   const fresh = minsAgo == null ? DASH : minsAgo < 1 ? 'сейчас' : minsAgo + ' мин';
 
@@ -167,7 +168,7 @@ export default function HeroPanel() {
   // последнего значения в Nightscout, чтобы видеть задержку. + офлайн.
   // Короткая форма: строка статуса теперь всегда в одну линию рядом с зарядами,
   // и «назад» в ней — лишние ~35px, из-за которых текст обрезался на узких экранах.
-  const readingAge = latestAt != null ? agoText(latestAt).replace(' назад', '') : null;
+  const readingAge = latestAt != null ? сколькоНазад(latestAt).replace(' назад', '') : null;
   /* Живость — тоже из монитора, когда он её присылает: у ядра «живой» значит «основной
      источник отдаёт свежее», а у стора — «сокет подключён». Второе слабее: сокет может
      висеть подключённым и молчать. */
@@ -230,7 +231,7 @@ export default function HeroPanel() {
        «реальное время» перестаёт отвечать на вопрос «откуда это число». Сердечко
        рядом и так говорит, что поток живой. */
     : syncState === 'live' ? (m?.source || 'реальное время')
-    : data ? 'обновлено ' + agoText(data.updatedAt)
+    : data ? 'обновлено ' + сколькоНазад(data.updatedAt)
     : 'нет данных';
   const syncWarn = syncState === 'offline' || syncState === 'stale';
 
@@ -259,7 +260,7 @@ export default function HeroPanel() {
   const nmgSub = sensorDay != null ? 'датчик' : 'обновлено';
   const nmgVal = sensorDay != null ? 'день ' + sensorDay : fresh;
   const daysLeft = расх.остаток != null && extras.tdd ? расх.остаток / extras.tdd : null;
-  const resSub2 = daysLeft != null ? '≈ ' + daysHoursText(daysLeft) : 'резервуар';
+  const resSub2 = daysLeft != null ? '≈ ' + дниЧасы(daysLeft) : 'резервуар';
   // часики на значениях из кеша, пока идёт свежая загрузка (текст не подменяем)
   const staleSensor = extras.stale && sensorDay != null;
   const staleDays = extras.stale && daysLeft != null;

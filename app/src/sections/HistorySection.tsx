@@ -1,4 +1,5 @@
 import { IonIcon } from '@ionic/react';
+import { часы, имяДня } from '@/слова/время';
 import { restaurantOutline, bluetoothOutline, warningOutline, timeOutline, trendingUpOutline, refreshOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import { useMeals } from '@/sources/mealStore';
@@ -70,7 +71,7 @@ export default function HistorySection({ onClose }: { onClose: () => void }) {
       ) : (
         дни.map(({ день, события: сег }) => (
           <div key={день}>
-            <div className="section-label sec">{имяДня(день)}</div>
+            <div className="section-label sec">{имяДня(день, { заглавно: true })}</div>
             <div className="meal-log">
               {сег.map((с) => (
                 <div key={с.ключ} className={'meal-row' + (с.вид === 'тревога' ? ' ист-тревога' : '')}>
@@ -106,14 +107,4 @@ export default function HistorySection({ onClose }: { onClose: () => void }) {
   );
 }
 
-function часы(t: number): string {
-  return new Date(t).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
-}
 
-function имяДня(t: number): string {
-  const сегодня = new Date(); сегодня.setHours(0, 0, 0, 0);
-  const разница = Math.round((сегодня.getTime() - t) / 86400e3);
-  if (разница === 0) return 'Сегодня';
-  if (разница === 1) return 'Вчера';
-  return new Date(t).toLocaleDateString('ru', { day: 'numeric', month: 'long' });
-}
