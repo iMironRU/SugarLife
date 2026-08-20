@@ -7,6 +7,7 @@
      нужна лишь при смене нативного кода/зависимостей.
    iOS-нативка через APK обновляться не может (только App Store), но OTA работает и на iOS. */
 import { Capacitor } from '@capacitor/core';
+import { прочитать, записать, убрать, прочитатьJson, записатьJson } from '@/settings/storage';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { этоНашПерезапуск } from '@/app/местоStore';
 
@@ -118,15 +119,13 @@ export async function спроситьСервер(): Promise<ОтаБандл |
 const КЛЮЧ_ПРИМЕНЕНО = 'sl.ota.applied.v1';
 
 export function отметитьПрименение(build: string): void {
-  try { localStorage.setItem(КЛЮЧ_ПРИМЕНЕНО, build); } catch { /* приватный режим */ }
+  записать(КЛЮЧ_ПРИМЕНЕНО, build);
 }
 
 function забратьПрименение(): string | null {
-  try {
-    const b = localStorage.getItem(КЛЮЧ_ПРИМЕНЕНО);
-    if (b) localStorage.removeItem(КЛЮЧ_ПРИМЕНЕНО);
-    return b;
-  } catch { return null; }
+  const b = прочитать(КЛЮЧ_ПРИМЕНЕНО);
+  if (b) убрать(КЛЮЧ_ПРИМЕНЕНО);
+  return b;
 }
 
 /* Читается ОДИН раз при загрузке модуля, а не по запросу.
@@ -227,12 +226,9 @@ const КЛЮЧ_НАТИВНОЙ = 'sl.native.v1';
 export interface НативнаяСборка { build: string; builtAt: string }
 
 export function нативнаяСборка(): НативнаяСборка | null {
-  try {
-    const s = localStorage.getItem(КЛЮЧ_НАТИВНОЙ);
-    if (!s) return null;
-    const о = JSON.parse(s);
-    return typeof о?.build === 'string' && typeof о?.builtAt === 'string' ? о : null;
-  } catch { return null; }
+  const о = прочитатьJson<{ build?: unknown; builtAt?: unknown } | null>(КЛЮЧ_НАТИВНОЙ, null);
+  return typeof о?.build === 'string' && typeof о?.builtAt === 'string'
+    ? (о as НативнаяСборка) : null;
 }
 
 /* Откуда взялся тот JS, который сейчас работает.
@@ -259,7 +255,7 @@ export async function запомнитьНативнуюСборку(): Promise<
     /* 'builtin' — тот бандл, что приехал внутри APK. Любое другое имя означает, что
        поверх уже лёг OTA, и текущий JS про APK ничего не говорит. */
     if (с?.bundle?.version !== 'builtin') return;
-    localStorage.setItem(КЛЮЧ_НАТИВНОЙ, JSON.stringify({ build: APP_BUILD, builtAt: APP_BUILT_AT }));
+    записатьJson(КЛЮЧ_НАТИВНОЙ, { build: APP_BUILD, builtAt: APP_BUILT_AT });
   } catch { /* приватный режим, старый плагин — тогда сравним по бандлу, как раньше */ }
 }
 

@@ -2,6 +2,7 @@ import { IonIcon } from '@ionic/react';
 import { arrowUndoOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '@/sources/store';
+import { прочитатьJson, записатьJson } from '@/settings/storage';
 import { useSnapshot } from '@/sources/bridge';
 import {
   type Seg, PARTS, STEP, fmtH, roundRate, toSegs, rateAt, daily,
@@ -31,9 +32,9 @@ const KEY = 'sl.basal.v1';
 
 type LogEntry = { at: number; segs: Seg[] };
 const readLog = (): LogEntry[] => {
-  try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; }
+  return прочитатьJson<LogEntry[]>(KEY, []);
 };
-const writeLog = (l: LogEntry[]) => { try { localStorage.setItem(KEY, JSON.stringify(l.slice(-40))); } catch { /* переполнение хранилища не должно ронять экран */ } };
+const writeLog = (l: LogEntry[]) => записатьJson(KEY, l.slice(-40));
 
 const W = 300, H = 110;
 function path(segs: Seg[], max: number): string {

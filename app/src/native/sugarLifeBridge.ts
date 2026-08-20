@@ -3,6 +3,7 @@
    сам подхватит Nightscout-шим. Импортировать РАНО (в main.tsx до рендера).
    ВАЖНО: sendIntent подтверждает лишь приём действия, не выполнение (см. bridge.ts). */
 import { registerPlugin, Capacitor } from '@capacitor/core';
+import { прочитать, записать } from '@/settings/storage';
 import type {
   SugarLifeBridge, UiSnapshot, Intent, HistoryQuery, HistoryResult, LogQuery, LogResult,
 } from '@/sources/bridge';
@@ -97,7 +98,7 @@ async function передатьОблакаДвижку(bridge: SugarLifeBridge)
   if (!облака.length) return;
 
   const отпечаток = JSON.stringify(облака.map((c) => [c.url, c.token ?? '', c.sourceGlucose, c.sourcePumpStatus]));
-  try { if (localStorage.getItem(КЛЮЧ_ПЕРЕДАННОГО) === отпечаток) return; } catch { /* ignore */ }
+  if (прочитать(КЛЮЧ_ПЕРЕДАННОГО) === отпечаток) return;
 
   for (const c of облака) {
     /* Потоки — по тому, что человек включил у этого источника. Зеркало может отдавать
@@ -110,5 +111,5 @@ async function передатьОблакаДвижку(bridge: SugarLifeBridge)
     if (!streams.length) continue;
     await bridge.sendIntent({ type: 'addCloudSource', url: c.url, token: c.token || null, streams });
   }
-  try { localStorage.setItem(КЛЮЧ_ПЕРЕДАННОГО, отпечаток); } catch { /* ignore */ }
+  записать(КЛЮЧ_ПЕРЕДАННОГО, отпечаток);
 }

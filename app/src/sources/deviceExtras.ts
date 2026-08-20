@@ -3,6 +3,7 @@
    инсулина за 90 дн. Грузится ОДИН раз (владелец — постоянная HeroPanel),
    оба потребителя читают через useDeviceExtras() — без дублирования запросов. */
 import { useSyncExternalStore } from 'react';
+import { прочитатьJson, записатьJson } from '@/settings/storage';
 import {
   getCfg, loadEventsRange, loadDeviceStatusRange, loadTreatmentsRange,
   type Treatment, type DevPoint,
@@ -24,13 +25,11 @@ export interface DeviceExtras {
 // только на экране инсулина, где догрузится обычным обновлением.
 const CACHE_KEY = 'sl.extras.cache.v1';
 function loadCache(): { events: Treatment[]; tdd: number | null } | null {
-  try {
-    const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-    return c && Array.isArray(c.events) ? c : null;
-  } catch { return null; }
+  const c = прочитатьJson<{ events?: unknown; tdd?: number | null } | null>(CACHE_KEY, null);
+  return c && Array.isArray(c.events) ? (c as { events: Treatment[]; tdd: number | null }) : null;
 }
 function saveCache() {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ events: extras.events, tdd: extras.tdd })); } catch { /* ignore */ }
+  записатьJson(CACHE_KEY, { events: extras.events, tdd: extras.tdd });
 }
 
 const cached = loadCache();

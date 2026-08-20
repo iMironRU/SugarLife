@@ -7,6 +7,7 @@
    объединение всех источников (аддитивно, дедуп по времени+типу). Без конфига —
    данных нет, экраны показывают демо. */
 import { useSyncExternalStore } from 'react';
+import { прочитатьJson, записатьJson } from '@/settings/storage';
 import { loadAll, checkWrite, mergeDevice, type NsData, type Entry, type Treatment, type Device } from './nightscout';
 import { getClouds, type CloudConfig } from './clouds';
 import { connectSocket, disconnectSocket, type SocketData } from './nsSocket';
@@ -40,10 +41,8 @@ function loadCache() {
   // Без настроенного источника кэш не поднимаем вовсе — иначе на старте успевал
   // мелькнуть экран со старыми цифрами, пока refresh не сотрёт их
   if (!getClouds().some((c) => c.enabled && c.url)) return;
-  try {
-    const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-    if (c && c.entries) set({ data: c, status: 'stale' });
-  } catch { /* ignore */ }
+  const c = прочитатьJson<{ entries?: unknown } | null>(CACHE_KEY, null);
+  if (c && c.entries) set({ data: c as StoreState['data'], status: 'stale' });
 }
 /* Кэш пишем не чаще раза в полминуты. Он нужен, чтобы при следующем запуске экран
    не был пустым, — для этого достаточно «примерно последнего» состояния. Раньше
@@ -54,7 +53,7 @@ function saveCache(force = false) {
   const now = Date.now();
   if (!force && now - cacheAt < 30000) return;
   cacheAt = now;
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify(state.data)); } catch { /* ignore */ }
+  записатьJson(CACHE_KEY, state.data);
 }
 
 function emptyData(): NsData & { latest: Entry | null; updatedAt: number } {
