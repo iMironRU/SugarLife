@@ -11,11 +11,11 @@
   color: var(--color-text);
 }
 .pump-btn:active { background: color-mix(in srgb, var(--color-accent) 16%, var(--color-neutral-900)); }
-.pump-btn-ico { font-size: 26px; color: var(--c-ins); flex-shrink: 0; }
+.pump-btn-ico { font-size: min(1.625rem, 32.5px); color: var(--c-ins); flex-shrink: 0; }
 .pump-btn-txt { flex: 1; min-width: 0; }
-.pump-btn-title { font-size: 20px; font-weight: 600; }
-.pump-btn-sub { font-size: 12px; color: var(--color-neutral-400); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pump-btn-chev { font-size: 16px; color: var(--color-neutral-600); flex-shrink: 0; }
+.pump-btn-title { font-size: 1.25rem; font-weight: 600; }
+.pump-btn-sub { font-size: 0.75rem; color: var(--color-neutral-400); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pump-btn-chev { font-size: 1rem; color: var(--color-neutral-600); flex-shrink: 0; }
 
 .loop-btn {
   flex-shrink: 0; width: 72px; border-radius: 20px; cursor: pointer;
@@ -23,44 +23,44 @@
   border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900); color: var(--color-accent);
 }
 .loop-btn:active { background: color-mix(in srgb, var(--color-accent) 14%, var(--color-neutral-900)); }
-.loop-btn ion-icon { font-size: 26px; }
+.loop-btn ion-icon { font-size: min(1.625rem, 32.5px); }
 
 /* заглушка шторки «Петля» */
 .loop-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 40px 20px; }
-.loop-empty ion-icon { font-size: 40px; color: var(--color-neutral-700); }
-.loop-empty-t { font-size: 15px; font-weight: 500; color: var(--color-neutral-300); }
-.loop-empty-s { font-size: 13px; color: var(--color-neutral-500); }
+.loop-empty ion-icon { font-size: min(2.5rem, 50px); color: var(--color-neutral-700); }
+.loop-empty-t { font-size: 0.9375rem; font-weight: 500; color: var(--color-neutral-300); }
+.loop-empty-s { font-size: 0.8125rem; color: var(--color-neutral-500); }
 
 .win-chips { display: flex; gap: 6px; margin-top: 18px; }
 .win-chip {
   flex: 1; height: 34px; border-radius: 12px; border: 1px solid var(--color-neutral-800);
-  background: transparent; color: var(--color-neutral-400); font-size: 13px; font-weight: 500;
+  background: transparent; color: var(--color-neutral-400); font-size: 0.8125rem; font-weight: 500;
   cursor: pointer; font-family: var(--font-body);
 }
 .win-chip.on { background: color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-900)); border-color: color-mix(in srgb, var(--color-accent) 60%, transparent); color: var(--color-text); }
 
 /* легенда графика подачи инсулина */
 .chart-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; padding: 0 2px; }
-.lg-item { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--color-neutral-400); }
+.lg-item { display: inline-flex; align-items: center; gap: 6px; font-size: 0.6875rem; color: var(--color-neutral-400); }
 .lg-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
 .lg-dash { width: 12px; height: 0; border-top: 1.5px dashed color-mix(in srgb, var(--c-ins) 70%, transparent); flex-shrink: 0; }
 
 .reading-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--color-neutral-800); }
 .reading-row:last-child { border-bottom: 0; }
-.reading-time { font-size: 14px; flex: 1; }
-.reading-val { font-size: 15px; margin-right: 14px; }
-.reading-arrow { font-size: 15px; color: var(--color-neutral-400); }
-.mon-empty { padding: 16px; font-size: 13px; color: var(--color-neutral-500); text-align: center; }
+.reading-time { font-size: 0.875rem; flex: 1; }
+.reading-val { font-size: 0.9375rem; margin-right: 14px; }
+.reading-arrow { font-size: 0.9375rem; color: var(--color-neutral-400); }
+.mon-empty { padding: 16px; font-size: 0.8125rem; color: var(--color-neutral-500); text-align: center; }
 
 /* ===== Инсулин ===== */
 .basal-card { margin-top: 16px; border-radius: 20px; padding: 16px; background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900)); }
-.basal-head { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
-.basal-head ion-icon { font-size: 20px; }
+.basal-head { display: flex; align-items: center; gap: 8px; font-size: 0.9375rem; font-weight: 600; }
+.basal-head ion-icon { font-size: 1.25rem; }
 .basal-rows { margin-top: 12px; }
 .basal-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--color-neutral-800); }
 .basal-row:last-child { border-bottom: 0; }
-.basal-row span { font-size: 13px; color: var(--color-neutral-400); }
-.basal-row b { font-size: 14px; font-weight: 600; }
+.basal-row span { font-size: 0.8125rem; color: var(--color-neutral-400); }
+.basal-row b { font-size: 0.875rem; font-weight: 600; }
 /* «Неизвестно» — прочерк приглушённым цветом, чтобы не путать с нулём (см. domain/loopValue.ts) */
 .val-unknown { color: var(--color-neutral-500); font-weight: 600; }
 /* Значение, требующее внимания: связь отстаёт или пропала */
@@ -68,20 +68,20 @@
 /* Улучшение в записке к приёму. Зелёным — только то, что действительно стало лучше:
    если красить им «изменилось», человек перестанет отличать хорошее от любого. */
 .val-good { color: var(--c-glu); font-weight: 600; }
-.basal-note { font-size: 11px; color: var(--color-neutral-500); padding: 0 0 4px; }
+.basal-note { font-size: 0.6875rem; color: var(--color-neutral-500); padding: 0 0 4px; }
 .stepper { display: flex; align-items: center; gap: 14px; }
 .stepper button {
   width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--color-neutral-700);
   background: transparent; color: var(--color-accent); cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
-.stepper button ion-icon { font-size: 18px; }
-.stepper b { font-size: 22px; font-weight: 600; min-width: 54px; text-align: center; }
-.stepper b i { font-size: 12px; font-weight: 400; color: var(--color-neutral-400); font-style: normal; margin-left: 2px; }
+.stepper button ion-icon { font-size: 1.125rem; }
+.stepper b { font-size: min(1.375rem, 27.5px); font-weight: 600; min-width: 54px; text-align: center; }
+.stepper b i { font-size: 0.75rem; font-weight: 400; color: var(--color-neutral-400); font-style: normal; margin-left: 2px; }
 
 /* Заглушка */
 .placeholder {
   height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 12px; color: var(--color-neutral-500); text-align: center; padding: 40px;
 }
-.placeholder h2 { font-size: 20px; font-weight: 600; color: var(--color-text); margin: 0; }
-.placeholder p { font-size: 13px; margin: 0; max-width: 260px; }
+.placeholder h2 { font-size: 1.25rem; font-weight: 600; color: var(--color-text); margin: 0; }
+.placeholder p { font-size: 0.8125rem; margin: 0; max-width: 260px; }

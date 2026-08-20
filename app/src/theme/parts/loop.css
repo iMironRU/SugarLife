@@ -11,16 +11,16 @@
 .wz-dot { flex: 1; height: 3px; border-radius: 2px; background: var(--color-neutral-800); }
 .wz-dot.passed { background: var(--c-glu); }
 .wz-dot.on { background: var(--color-accent); }
-.wz-h { font-size: 30px; font-weight: 700; letter-spacing: -.02em; margin: 4px 0 6px; }
-.wz-lede { font-size: 14px; color: var(--color-neutral-400); line-height: 1.5; margin: 0 0 16px; }
+.wz-h { font-size: min(1.875rem, 37.5px); font-weight: 700; letter-spacing: -.02em; margin: 4px 0 6px; }
+.wz-lede { font-size: 0.875rem; color: var(--color-neutral-400); line-height: 1.5; margin: 0 0 16px; }
 
 .wz-l0 {
   display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 14px;
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
-  font-size: 11px; color: var(--color-neutral-300); line-height: 1.4;
+  font-size: 0.6875rem; color: var(--color-neutral-300); line-height: 1.4;
 }
-.wz-l0 ion-icon { font-size: 15px; color: var(--color-accent); flex-shrink: 0; margin-top: 1px; }
+.wz-l0 ion-icon { font-size: 0.9375rem; color: var(--color-accent); flex-shrink: 0; margin-top: 1px; }
 
 .wz-card {
   display: block; width: 100%; text-align: left; padding: 14px 16px; margin-bottom: 10px;
@@ -28,90 +28,90 @@
   font-family: inherit; color: inherit;
 }
 .wz-hw { display: flex; gap: 12px; align-items: flex-start; }
-.wz-ic { font-size: 19px; flex-shrink: 0; margin-top: 1px; }
+.wz-ic { font-size: 1.1875rem; flex-shrink: 0; margin-top: 1px; }
 .wz-ic.yes { color: var(--c-glu); }
 .wz-ic.no { color: var(--c-danger); }
 .wz-ic.maybe { color: var(--c-carb); }
-.wz-hw-n { display: block; font-size: 15px; font-weight: 600; line-height: 1.3; }
-.wz-hw-d { display: block; font-size: 13px; color: var(--color-neutral-400); line-height: 1.4; margin-top: 2px; }
+.wz-hw-n { display: block; font-size: 0.9375rem; font-weight: 600; line-height: 1.3; }
+.wz-hw-d { display: block; font-size: 0.8125rem; color: var(--color-neutral-400); line-height: 1.4; margin-top: 2px; }
 
 .wz-mode { cursor: pointer; }
 .wz-mode.on { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 10%, var(--color-neutral-900)); }
 .wz-mode.locked { opacity: .45; cursor: default; }
 .wz-mrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.wz-code { font-size: 15px; font-weight: 700; color: var(--color-accent); font-family: ui-monospace, monospace; }
-.wz-lock, .wz-warn { font-size: 11px; padding: 3px 9px; border-radius: 9px; }
+.wz-code { font-size: 0.9375rem; font-weight: 700; color: var(--color-accent); font-family: ui-monospace, monospace; }
+.wz-lock, .wz-warn { font-size: 0.6875rem; padding: 3px 9px; border-radius: 9px; }
 .wz-lock { background: var(--color-neutral-800); color: var(--color-neutral-400); }
 .wz-warn { background: color-mix(in srgb, var(--c-carb) 22%, transparent); color: var(--c-carb); }
-.wz-mname { display: block; font-size: 18px; font-weight: 700; margin-top: 4px; }
-.wz-mdesc { display: block; font-size: 14px; color: var(--color-neutral-300); line-height: 1.45; margin-top: 4px; }
-.wz-mneed { display: block; font-size: 12px; color: var(--color-neutral-500); margin-top: 8px; font-family: ui-monospace, monospace; }
+.wz-mname { display: block; font-size: 1.125rem; font-weight: 700; margin-top: 4px; }
+.wz-mdesc { display: block; font-size: 0.875rem; color: var(--color-neutral-300); line-height: 1.45; margin-top: 4px; }
+.wz-mneed { display: block; font-size: 0.75rem; color: var(--color-neutral-500); margin-top: 8px; font-family: ui-monospace, monospace; }
 
 .wz-lim.open { border-color: var(--color-accent); }
 .wz-lim.warn { border-color: color-mix(in srgb, var(--c-carb) 60%, transparent); }
 .wz-limtop { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.wz-limname { font-size: 16px; font-weight: 700; }
+.wz-limname { font-size: 1rem; font-weight: 700; }
 .wz-edit-btn {
   display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; cursor: pointer;
-  padding: 7px 12px; border-radius: 11px; border: 0; font-family: inherit; font-size: 13px;
+  padding: 7px 12px; border-radius: 11px; border: 0; font-family: inherit; font-size: 0.8125rem;
   background: color-mix(in srgb, var(--color-accent) 16%, transparent); color: var(--color-accent);
 }
-.wz-why { font-size: 14px; color: var(--color-neutral-300); line-height: 1.45; margin-top: 6px; }
-.wz-why2 { font-size: 12px; color: var(--color-neutral-500); line-height: 1.45; margin-top: 10px; }
+.wz-why { font-size: 0.875rem; color: var(--color-neutral-300); line-height: 1.45; margin-top: 6px; }
+.wz-why2 { font-size: 0.75rem; color: var(--color-neutral-500); line-height: 1.45; margin-top: 10px; }
 
 .wz-stepper { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
 .wz-stepper > button {
   width: 62px; height: 62px; border-radius: 16px; border: 0; cursor: pointer;
-  background: var(--color-neutral-800); color: var(--color-text); font-size: 30px; font-family: inherit;
+  background: var(--color-neutral-800); color: var(--color-text); font-size: min(1.875rem, 37.5px); font-family: inherit;
 }
 .wz-big { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.wz-big b { font-size: 40px; font-weight: 700; font-family: ui-monospace, monospace; letter-spacing: -.02em; }
+.wz-big b { font-size: min(2.5rem, 50px); font-weight: 700; font-family: ui-monospace, monospace; letter-spacing: -.02em; }
 .wz-big b.warn { color: var(--c-carb); }
-.wz-big i { font-style: normal; font-size: 12px; color: var(--color-neutral-500); font-family: ui-monospace, monospace; }
+.wz-big i { font-style: normal; font-size: 0.75rem; color: var(--color-neutral-500); font-family: ui-monospace, monospace; }
 .wz-big.collapsed { flex-direction: row; align-items: baseline; gap: 6px; margin-top: 6px; }
-.wz-big.collapsed b { font-size: 32px; }
+.wz-big.collapsed b { font-size: min(2rem, 40px); }
 
 .wz-impact {
-  font-size: 14px; line-height: 1.45; margin-top: 14px; padding: 11px 13px; border-radius: 13px;
+  font-size: 0.875rem; line-height: 1.45; margin-top: 14px; padding: 11px 13px; border-radius: 13px;
   background: var(--color-neutral-800); color: var(--color-neutral-200);
 }
 .wz-impact b { color: var(--color-accent); }
 .wz-done {
   width: 100%; min-height: 46px; margin-top: 14px; border-radius: 14px; border: 0; cursor: pointer;
-  background: var(--color-neutral-800); color: var(--color-text); font-size: 15px; font-weight: 600; font-family: inherit;
+  background: var(--color-neutral-800); color: var(--color-text); font-size: 0.9375rem; font-weight: 600; font-family: inherit;
 }
 
 .wz-fixed { border: 1px dashed var(--color-neutral-700); border-radius: 16px; padding: 13px 15px; margin-top: 12px; }
 .wz-fixed.ok { border-color: color-mix(in srgb, var(--c-glu) 55%, transparent); }
-.wz-fixed-n { font-size: 12px; color: var(--color-neutral-500); }
-.wz-fixed-v { font-size: 15px; font-weight: 700; margin-top: 3px; }
+.wz-fixed-n { font-size: 0.75rem; color: var(--color-neutral-500); }
+.wz-fixed-v { font-size: 0.9375rem; font-weight: 700; margin-top: 3px; }
 .wz-fixed-v.ok { color: var(--c-glu); }
 
 .wz-rule { display: flex; flex-direction: column; gap: 3px; padding: 12px 0; border-bottom: 1px solid var(--color-neutral-800); }
-.wz-rule-a { font-size: 14px; font-weight: 700; }
-.wz-rule-b { font-size: 13px; color: var(--color-neutral-400); line-height: 1.45; }
+.wz-rule-a { font-size: 0.875rem; font-weight: 700; }
+.wz-rule-b { font-size: 0.8125rem; color: var(--color-neutral-400); line-height: 1.45; }
 
 .wz-sum { padding: 4px 16px; }
 .wz-srow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--color-neutral-800); }
 .wz-srow:last-child { border-bottom: 0; }
-.wz-srow span { font-size: 14px; color: var(--color-neutral-400); }
+.wz-srow span { font-size: 0.875rem; color: var(--color-neutral-400); }
 /* Значение переносится, а не уезжает за край. «L1 · Остановка при низкой · PLGS» не
    влезает в строку ни на одном телефоне, и с nowrap хвост просто обрезался — вместе с
    названием алгоритма, то есть с половиной ответа на вопрос «что я включаю». */
 .wz-srow { flex-wrap: wrap; }
-.wz-srow b { font-size: 15px; font-family: ui-monospace, monospace; text-align: right; }
+.wz-srow b { font-size: 0.9375rem; font-family: ui-monospace, monospace; text-align: right; }
 .wz-srow > span { flex: 0 0 auto; }
 .wz-srow > b { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .wz-srow b.warn { color: var(--c-carb); }
 
 .wz-gate {
   display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; margin-top: 12px;
-  padding: 13px 15px; border-radius: 16px; cursor: pointer; font-family: inherit; font-size: 13px;
+  padding: 13px 15px; border-radius: 16px; cursor: pointer; font-family: inherit; font-size: 0.8125rem;
   line-height: 1.45; background: var(--color-neutral-900);
   border: 1.5px solid color-mix(in srgb, var(--c-carb) 55%, transparent); color: var(--color-neutral-300);
 }
 .wz-gate.on { border-color: var(--c-glu); color: var(--color-text); }
-.wz-gate ion-icon { font-size: 19px; flex-shrink: 0; }
+.wz-gate ion-icon { font-size: 1.1875rem; flex-shrink: 0; }
 
 /* Применение в теле последнего шага: под сводкой, а не в закреплённом низу. */
 .wz-apply { margin-top: 12px; }
@@ -121,13 +121,13 @@
    это навигация, а не поступок. */
 .head-next {
   flex: 0 0 auto; min-height: 40px; padding: 0 16px; border-radius: 14px; border: 0;
-  cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 600;
+  cursor: pointer; font-family: inherit; font-size: 0.9375rem; font-weight: 600;
   background: var(--color-accent); color: #fff;
 }
 .head-next:disabled { opacity: .4; cursor: default; }
 .page-next {
   min-height: 48px; border-radius: 16px; border: 0; cursor: pointer;
-  background: var(--color-accent); color: #fff; font-size: 15px; font-weight: 600; font-family: inherit;
+  background: var(--color-accent); color: #fff; font-size: 0.9375rem; font-weight: 600; font-family: inherit;
 }
 .page-next:disabled { opacity: .4; cursor: default; }
 
@@ -135,7 +135,7 @@
 .hold-btn {
   position: relative; overflow: hidden; min-height: 48px; border-radius: 16px; border: 0;
   cursor: pointer; background: var(--color-accent); color: #fff; font-family: inherit;
-  font-size: 15px; font-weight: 600; touch-action: none; user-select: none;
+  font-size: 0.9375rem; font-weight: 600; touch-action: none; user-select: none;
 }
 .hold-btn.off { opacity: .4; cursor: default; }
 .hold-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: rgba(255,255,255,.28); }
@@ -143,14 +143,14 @@
 
 /* Карточка лимита: пределы, диапазон и выход «вернуть рекомендованное» (из прототипа) */
 .wz-edge {
-  font-size: 13px; line-height: 1.45; margin-top: 10px; padding: 10px 12px; border-radius: 12px;
+  font-size: 0.8125rem; line-height: 1.45; margin-top: 10px; padding: 10px 12px; border-radius: 12px;
   background: color-mix(in srgb, var(--c-carb) 14%, transparent);
   border: 1px solid color-mix(in srgb, var(--c-carb) 40%, transparent); color: var(--color-neutral-200);
 }
 .wz-edge b { color: var(--c-carb); }
 .wz-edge.hard { background: var(--color-neutral-800); border-color: var(--color-neutral-700); }
 .wz-edge.hard b { color: var(--color-neutral-300); }
-.wz-range { font-size: 12px; color: var(--color-neutral-500); margin-top: 10px; font-family: ui-monospace, monospace; }
+.wz-range { font-size: 0.75rem; color: var(--color-neutral-500); margin-top: 10px; font-family: ui-monospace, monospace; }
 .wz-stepper > button.off { opacity: .3; cursor: default; }
 .wz-erow { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
 .wz-erow .wz-done { margin-top: 0; }
@@ -165,8 +165,8 @@
   border: 1.5px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
 }
 .nocfg:active { background: color-mix(in srgb, var(--color-accent) 20%, var(--color-neutral-900)); }
-.nocfg-ico { font-size: 26px; color: var(--color-accent); flex-shrink: 0; }
+.nocfg-ico { font-size: min(1.625rem, 32.5px); color: var(--color-accent); flex-shrink: 0; }
 .nocfg-txt { flex: 1; min-width: 0; }
-.nocfg-t { display: block; font-size: 16px; font-weight: 600; }
-.nocfg-d { display: block; font-size: 12.5px; color: var(--color-neutral-400); line-height: 1.4; margin-top: 3px; }
-.nocfg-chev { font-size: 18px; color: var(--color-neutral-500); flex-shrink: 0; }
+.nocfg-t { display: block; font-size: 1rem; font-weight: 600; }
+.nocfg-d { display: block; font-size: 0.7812rem; color: var(--color-neutral-400); line-height: 1.4; margin-top: 3px; }
+.nocfg-chev { font-size: 1.125rem; color: var(--color-neutral-500); flex-shrink: 0; }

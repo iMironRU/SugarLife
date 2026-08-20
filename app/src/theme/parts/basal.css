@@ -3,15 +3,15 @@
 /* ===== Базальный профиль (docs/prototypes/basal-profile.html) ===== */
 .bas-card { background: var(--color-neutral-900); border-radius: 16px; padding: 14px 15px; margin-top: 10px; }
 .bas-chart { width: 100%; height: 152px; display: block; }
-.bas-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--color-neutral-400); margin-top: 8px; }
+.bas-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.7188rem; color: var(--color-neutral-400); margin-top: 8px; }
 .bas-legend i { display: inline-block; width: 16px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
 .bas-tot {
   display: flex; justify-content: space-between; align-items: baseline;
   margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--color-neutral-800);
-  font-size: 12.5px; color: var(--color-neutral-400);
+  font-size: 0.7812rem; color: var(--color-neutral-400);
 }
-.bas-tot b { font-size: 17px; color: var(--color-text); }
-.bas-unit { font-size: 11px; color: var(--color-neutral-400); font-weight: 400; }
+.bas-tot b { font-size: 1.0625rem; color: var(--color-text); }
+.bas-unit { font-size: 0.6875rem; color: var(--color-neutral-400); font-weight: 400; }
 
 /* строка части суток: в режиме «как есть» — просто строка, в правке — кнопка */
 .bas-part-box { background: var(--color-neutral-900); border-radius: 16px; margin-bottom: 8px; overflow: hidden; }
@@ -23,11 +23,11 @@
 .bas-part-box .bas-part { margin-bottom: 0; border-radius: 0; }
 .bas-part-btn { cursor: pointer; }
 .bas-part-btn:active { background: var(--color-neutral-800); }
-.bas-cx { font-size: 13px; color: var(--color-neutral-500); flex: 0 0 12px; }
-.bas-part-nm { font-size: 15px; font-weight: 600; flex: 1; }
-.bas-part-hr { display: block; font-size: 11px; color: var(--color-neutral-500); font-weight: 400; margin-top: 2px; }
-.bas-part-av { font-size: 16px; font-weight: 700; text-align: right; }
-.bas-part-du { display: block; font-size: 11px; color: var(--color-neutral-400); font-weight: 400; }
+.bas-cx { font-size: 0.8125rem; color: var(--color-neutral-500); flex: 0 0 12px; }
+.bas-part-nm { font-size: 0.9375rem; font-weight: 600; flex: 1; }
+.bas-part-hr { display: block; font-size: 0.6875rem; color: var(--color-neutral-500); font-weight: 400; margin-top: 2px; }
+.bas-part-av { font-size: 1rem; font-weight: 700; text-align: right; }
+.bas-part-du { display: block; font-size: 0.6875rem; color: var(--color-neutral-400); font-weight: 400; }
 
 .bas-ivs { padding: 0 10px 10px; }
 .bas-iv {
@@ -38,23 +38,23 @@
 .bas-iv:active { background: var(--color-neutral-800); }
 .bas-iv.chg { outline: 1px solid color-mix(in srgb, var(--c-glu) 55%, transparent); }
 .bas-iv.chg .bas-iv-v { color: var(--c-glu); }
-.bas-iv-t { font-size: 12.5px; color: var(--color-neutral-400); flex: 0 0 92px; }
-.bas-iv-v { font-size: 15px; font-weight: 700; flex: 1; }
-.bas-iv-f { font-size: 11px; color: var(--color-neutral-500); }
+.bas-iv-t { font-size: 0.7812rem; color: var(--color-neutral-400); flex: 0 0 92px; }
+.bas-iv-v { font-size: 0.9375rem; font-weight: 700; flex: 1; }
+.bas-iv-f { font-size: 0.6875rem; color: var(--color-neutral-500); }
 
 .bas-tools { display: flex; gap: 8px; margin: 12px 0 4px; }
 .bas-tool {
   flex: 1; background: var(--color-neutral-900); border: 0; border-radius: 13px; padding: 12px 8px;
-  text-align: center; font-size: 12.5px; color: var(--color-neutral-300);
+  text-align: center; font-size: 0.7812rem; color: var(--color-neutral-300);
   font-family: var(--font-body); cursor: pointer;
 }
 .bas-tool:active { background: var(--color-neutral-800); }
-.bas-tool b { display: block; font-size: 17px; margin-bottom: 3px; color: var(--color-text); }
+.bas-tool b { display: block; font-size: 1.0625rem; margin-bottom: 3px; color: var(--color-text); }
 
 .bas-mini { display: flex; gap: 8px; margin: 2px 0 4px; }
 .bas-mb {
   flex: 1; background: var(--color-neutral-800); border: 0; border-radius: 12px; padding: 11px;
-  text-align: center; font-size: 13px; color: var(--color-text); font-family: var(--font-body); cursor: pointer;
+  text-align: center; font-size: 0.8125rem; color: var(--color-text); font-family: var(--font-body); cursor: pointer;
 }
 .bas-mb:disabled { opacity: .4; cursor: default; }
 
@@ -62,13 +62,13 @@
 .bas-stepper { display: flex; align-items: center; gap: 12px; margin: 14px 0 4px; }
 .bas-pm {
   width: 60px; height: 60px; border-radius: 18px; background: var(--color-neutral-800);
-  border: 0; font-size: 28px; line-height: 1; color: var(--color-text); cursor: pointer;
+  border: 0; font-size: min(1.75rem, 35px); line-height: 1; color: var(--color-text); cursor: pointer;
   display: flex; align-items: center; justify-content: center; flex: none;
 }
 .bas-pm:disabled { opacity: .35; cursor: default; }
-.bas-stepval { flex: 1; text-align: center; font-size: 32px; font-weight: 700; }
-.bas-stepval small { display: block; font-size: 11px; color: var(--color-neutral-400); font-weight: 400; margin-top: 3px; }
-.bas-under { text-align: center; font-size: 11px; color: var(--color-neutral-500); margin-top: 6px; }
+.bas-stepval { flex: 1; text-align: center; font-size: min(2rem, 40px); font-weight: 700; }
+.bas-stepval small { display: block; font-size: 0.6875rem; color: var(--color-neutral-400); font-weight: 400; margin-top: 3px; }
+.bas-under { text-align: center; font-size: 0.6875rem; color: var(--color-neutral-500); margin-top: 6px; }
 
 /* Число в степпере — поле, а не текст (ui/NumberStepper.tsx, #203): степпером нельзя
    ввести первое значение, поэтому по цифре можно ткнуть и набрать её целиком.
@@ -77,12 +77,12 @@
 .num-field ion-input {
   --padding-start: 0; --padding-end: 0; --padding-top: 0; --padding-bottom: 0;
   --background: transparent; --color: var(--color-text);
-  font-size: 32px; font-weight: 700; text-align: center; min-height: 38px;
+  font-size: min(2rem, 40px); font-weight: 700; text-align: center; min-height: 38px;
 }
 .num-field ion-input input { text-align: center; }
 /* Дата в том же виде, что число, но чуть мельче: «13 августа 2026 г.» длиннее любого
    числа и в 32 пункта не помещается на узком телефоне. */
-.num-date ion-input { font-size: 22px; }
+.num-date ion-input { font-size: min(1.375rem, 27.5px); }
 
 .bas-chk {
   display: flex; gap: 12px; align-items: flex-start; width: 100%; margin-bottom: 8px;
@@ -91,11 +91,11 @@
 }
 .bas-box {
   width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--color-neutral-500);
-  flex: none; display: flex; align-items: center; justify-content: center; font-size: 14px; color: transparent;
+  flex: none; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; color: transparent;
 }
 .bas-chk.on .bas-box { background: var(--c-glu); border-color: var(--c-glu); color: var(--color-bg); }
-.bas-chk-n { font-size: 12px; color: var(--color-neutral-400); flex: 0 0 78px; }
-.bas-chk-t { font-size: 14px; }
+.bas-chk-n { font-size: 0.75rem; color: var(--color-neutral-400); flex: 0 0 78px; }
+.bas-chk-t { font-size: 0.875rem; }
 
 /* подвал: отмена узкой кнопкой рядом с основной */
 .bas-act { display: flex; gap: 8px; }

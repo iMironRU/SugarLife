@@ -4,65 +4,65 @@
 .food-warn {
   display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 4px; padding: 10px 12px; border-radius: 12px;
   background: color-mix(in srgb, var(--c-carb) 12%, transparent); border: 1px solid color-mix(in srgb, var(--c-carb) 40%, transparent);
-  font-size: 11px; line-height: 1.4; color: var(--c-carb-2);
+  font-size: 0.6875rem; line-height: 1.4; color: var(--c-carb-2);
 }
-.food-warn ion-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+.food-warn ion-icon { font-size: 0.9375rem; flex-shrink: 0; margin-top: 1px; }
 
 .food-summary {
   display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 16px;
   border-radius: 20px; border: 1px solid color-mix(in srgb, var(--c-carb) 45%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--c-carb) 16%, var(--color-neutral-900)), color-mix(in srgb, var(--c-carb) 6%, var(--color-neutral-900)));
 }
-.fs-cap { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-400); }
-.fs-carbs { display: flex; align-items: baseline; gap: 5px; margin-top: 8px; font-size: 36px; font-weight: 600; line-height: 1; color: var(--c-carb); }
-.fs-carbs span { font-size: 14px; font-weight: 500; color: var(--c-carb-2); }
+.fs-cap { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-400); }
+.fs-carbs { display: flex; align-items: baseline; gap: 5px; margin-top: 8px; font-size: min(2.25rem, 45px); font-weight: 600; line-height: 1; color: var(--c-carb); }
+.fs-carbs span { font-size: 0.875rem; font-weight: 500; color: var(--c-carb-2); }
 .fs-macros { display: flex; gap: 14px; }
 .fs-macros > div { text-align: right; }
-.fs-mk { display: block; font-size: 10px; color: var(--color-neutral-500); }
-.fs-mv { display: block; font-size: 17px; font-weight: 600; margin-top: 3px; }
-.food-bolus { font-size: 11px; color: var(--color-neutral-400); margin: 10px 2px 0; }
+.fs-mk { display: block; font-size: 0.625rem; color: var(--color-neutral-500); }
+.fs-mv { display: block; font-size: 1.0625rem; font-weight: 600; margin-top: 3px; }
+.food-bolus { font-size: 0.6875rem; color: var(--color-neutral-400); margin: 10px 2px 0; }
 
 .food-modes { display: flex; gap: 6px; background: var(--color-neutral-900); border-radius: 16px; padding: 5px; margin-top: 14px; }
 .food-mode {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; height: 40px; border-radius: 12px; cursor: pointer;
-  background: transparent; border: 1px solid transparent; color: var(--color-neutral-400); font-size: 13px; font-weight: 500; font-family: var(--font-body);
+  background: transparent; border: 1px solid transparent; color: var(--color-neutral-400); font-size: 0.8125rem; font-weight: 500; font-family: var(--font-body);
 }
-.food-mode ion-icon { font-size: 16px; }
+.food-mode ion-icon { font-size: 1rem; }
 .food-mode.on { background: color-mix(in srgb, var(--c-carb) 20%, var(--color-neutral-900)); border-color: color-mix(in srgb, var(--c-carb) 55%, transparent); color: var(--color-text); }
 
-.food-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-500); margin: 18px 2px 8px; }
+.food-label { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-500); margin: 18px 2px 8px; }
 .food-meals { display: flex; flex-wrap: wrap; gap: 8px; }
 .food-meal {
-  padding: 10px 14px; border-radius: 14px; cursor: pointer; font-size: 13px; font-weight: 500; font-family: var(--font-body);
+  padding: 10px 14px; border-radius: 14px; cursor: pointer; font-size: 0.8125rem; font-weight: 500; font-family: var(--font-body);
   background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800); color: var(--color-neutral-300);
 }
 .food-meal.on { background: color-mix(in srgb, var(--c-carb) 18%, transparent); border-color: color-mix(in srgb, var(--c-carb) 55%, transparent); color: var(--color-text); }
 
 .food-stepper { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding: 12px 16px; border-radius: 16px; background: var(--color-neutral-900); }
-.food-stepper > span { font-size: 14px; color: var(--color-neutral-300); }
+.food-stepper > span { font-size: 0.875rem; color: var(--color-neutral-300); }
 
 .food-save {
   width: 100%; margin-top: 20px; padding: 15px; border-radius: 16px; border: 0; cursor: pointer;
-  background: var(--c-carb); color: #1a1200; font-size: 15px; font-weight: 600; font-family: var(--font-body);
+  background: var(--c-carb); color: #1a1200; font-size: 0.9375rem; font-weight: 600; font-family: var(--font-body);
 }
 .food-save:disabled { background: var(--color-neutral-800); color: var(--color-neutral-500); cursor: default; }
-.food-save-note { font-size: 11px; color: var(--color-neutral-500); text-align: center; margin: 8px 0 4px; }
-.field-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-500); margin: 0 2px 6px; }
+.food-save-note { font-size: 0.6875rem; color: var(--color-neutral-500); text-align: center; margin: 8px 0 4px; }
+.field-label { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-500); margin: 0 2px 6px; }
 .field {
   display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
   border: 1px solid var(--color-neutral-800); border-radius: 14px; padding: 4px 14px;
   background: var(--color-neutral-900);
 }
-.field-ico { font-size: 17px; color: var(--color-neutral-500); flex-shrink: 0; }
-.field-hint { font-size: 11px; color: var(--color-neutral-500); margin: -8px 0 12px; }
-.field ion-input { --padding-start: 0; --padding-end: 0; font-size: 14px; }
+.field-ico { font-size: 1.0625rem; color: var(--color-neutral-500); flex-shrink: 0; }
+.field-hint { font-size: 0.6875rem; color: var(--color-neutral-500); margin: -8px 0 12px; }
+.field ion-input { --padding-start: 0; --padding-end: 0; font-size: 0.875rem; }
 .field-copy {
   flex-shrink: 0; display: flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; border-radius: 9px; border: none; cursor: pointer;
   background: var(--color-neutral-800); color: var(--color-neutral-300);
   transition: background .15s, color .15s;
 }
-.field-copy ion-icon { font-size: 17px; }
+.field-copy ion-icon { font-size: 1.0625rem; }
 /* Видимый кружок остаётся 30×30 — он и так на своём месте, — а палец получает 44×44
    через невидимую подложку. Так же было бы правильно сделать сразу: 30px по краю
    поля промахиваешь. Правило общее, поэтому чинится заодно и кнопка QR в форме
@@ -71,17 +71,17 @@
 .field-copy::after { content: ''; position: absolute; inset: -7px; }
 .field-copy.ok { color: var(--c-glu); }
 .connect-btn { --border-radius: 16px; margin-top: 4px; font-weight: 600; }
-.sheet-msg { min-height: 18px; font-size: 13px; color: var(--color-neutral-300); text-align: center; margin: 12px 0; }
-.sheet-subtitle { font-size: 11px; color: var(--color-neutral-400); margin-top: 3px; }
-.sheet-note { font-size: 11px; color: var(--color-neutral-500); margin-top: 14px; text-wrap: pretty; }
+.sheet-msg { min-height: 18px; font-size: 0.8125rem; color: var(--color-neutral-300); text-align: center; margin: 12px 0; }
+.sheet-subtitle { font-size: 0.6875rem; color: var(--color-neutral-400); margin-top: 3px; }
+.sheet-note { font-size: 0.6875rem; color: var(--color-neutral-500); margin-top: 14px; text-wrap: pretty; }
 .sheet-danger {
   width: 100%; margin-top: 18px; padding: 12px; border-radius: 14px; cursor: pointer;
   border: 1px solid color-mix(in srgb, var(--c-danger) 45%, transparent); background: transparent;
-  color: var(--c-danger-2); font-size: 13px; font-weight: 500; font-family: var(--font-body);
+  color: var(--c-danger-2); font-size: 0.8125rem; font-weight: 500; font-family: var(--font-body);
   display: flex; align-items: center; justify-content: center; gap: 6px;
 }
 .sheet-danger:active { background: color-mix(in srgb, var(--c-danger) 14%, transparent); }
-.sheet-danger ion-icon { font-size: 15px; }
+.sheet-danger ion-icon { font-size: 0.9375rem; }
 
 /* Карточки выбора единиц — как в макете */
 .unit-opts { display: flex; flex-direction: column; gap: 10px; }
@@ -97,18 +97,18 @@
 }
 .unit-opt-head { display: flex; align-items: center; gap: 10px; }
 .unit-opt-head > div { flex: 1; min-width: 0; }
-.unit-opt-title { font-size: 15px; font-weight: 600; color: var(--color-text); }
-.unit-opt-sub { font-size: 11px; color: var(--color-neutral-400); margin-top: 3px; }
-.unit-opt-check { font-size: 22px; flex-shrink: 0; }
+.unit-opt-title { font-size: 0.9375rem; font-weight: 600; color: var(--color-text); }
+.unit-opt-sub { font-size: 0.6875rem; color: var(--color-neutral-400); margin-top: 3px; }
+.unit-opt-check { font-size: min(1.375rem, 27.5px); flex-shrink: 0; }
 .unit-opt-ex {
   display: flex; align-items: flex-end; gap: 16px;
   margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--color-neutral-800);
 }
 .unit-ex { display: flex; flex-direction: column; }
-.unit-ex-lbl { font-size: 10px; color: var(--color-neutral-500); margin-bottom: 4px; }
-.unit-ex-val { font-size: 24px; font-weight: 600; line-height: 1; display: flex; align-items: baseline; gap: 3px; }
-.unit-ex-val i { font-size: 10px; font-style: normal; color: var(--color-neutral-400); }
-.unit-opt-scale { font-size: 11px; color: var(--color-neutral-500); margin-top: 10px; text-wrap: pretty; }
+.unit-ex-lbl { font-size: 0.625rem; color: var(--color-neutral-500); margin-bottom: 4px; }
+.unit-ex-val { font-size: min(1.5rem, 30px); font-weight: 600; line-height: 1; display: flex; align-items: baseline; gap: 3px; }
+.unit-ex-val i { font-size: 0.625rem; font-style: normal; color: var(--color-neutral-400); }
+.unit-opt-scale { font-size: 0.6875rem; color: var(--color-neutral-500); margin-top: 10px; text-wrap: pretty; }
 .sync-toggle {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 16px; border-radius: 16px; background: var(--color-neutral-900);
@@ -122,11 +122,11 @@
 /* мост — вложен в «прямое чтение»: сдвиг и отсутствие верхней границы показывают
    подчинённость, а не соседство */
 .meth-in { padding-left: 40px; border-top: 0; }
-.meth-in .list-ico { font-size: 16px; }
+.meth-in .list-ico { font-size: 1rem; }
 /* откуда данные идут прямо сейчас */
 .meth-on { background: color-mix(in srgb, var(--color-accent) 7%, transparent); }
 .meth-now {
-  flex-shrink: 0; font-size: 10px; letter-spacing: .04em; text-transform: uppercase;
+  flex-shrink: 0; font-size: 0.625rem; letter-spacing: .04em; text-transform: uppercase;
   padding: 3px 8px; border-radius: 999px; color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 16%, transparent);
 }
@@ -148,7 +148,7 @@
 .token-hint {
   display: block; width: 100%; text-align: left; margin: 12px 0 12px; padding: 0;
   background: none; border: 0; cursor: pointer;
-  font-size: 12px; color: var(--color-neutral-400); text-wrap: pretty;
+  font-size: 0.75rem; color: var(--color-neutral-400); text-wrap: pretty;
 }
 .token-hint u { color: var(--color-accent); text-underline-offset: 2px; }
 
@@ -157,8 +157,8 @@
    переключатели в списке параметров (ui/ParamsForm), где они идут стопкой намеренно. */
 .connect-btn + .sync-toggle,
 .sheet-msg + .sync-toggle { margin-top: 14px; }
-.sync-toggle-title { font-size: 14px; }
-.sync-toggle-sub { font-size: 11px; color: var(--color-neutral-400); margin-top: 2px; }
+.sync-toggle-title { font-size: 0.875rem; }
+.sync-toggle-sub { font-size: 0.6875rem; color: var(--color-neutral-400); margin-top: 2px; }
 
 /* режим доступа Nightscout (чтение / чтение+запись) */
 
@@ -173,19 +173,19 @@
   padding: 13px 14px; background: none; border: none; cursor: pointer;
   font-family: var(--font-body); text-align: left; color: var(--color-text);
 }
-.insight-sev { font-size: 18px; flex-shrink: 0; }
-.insight-title { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; }
-.insight-chev { font-size: 16px; color: var(--color-neutral-500); flex-shrink: 0; transition: transform .2s; }
+.insight-sev { font-size: 1.125rem; flex-shrink: 0; }
+.insight-title { font-size: 0.875rem; font-weight: 600; flex: 1; min-width: 0; }
+.insight-chev { font-size: 1rem; color: var(--color-neutral-500); flex-shrink: 0; transition: transform .2s; }
 .insight-chev.open { transform: rotate(90deg); }
 .insight-body { padding: 0 14px 13px; }
-.insight-msg { font-size: 12px; color: var(--color-neutral-400); line-height: 1.45; text-wrap: pretty; }
+.insight-msg { font-size: 0.75rem; color: var(--color-neutral-400); line-height: 1.45; text-wrap: pretty; }
 .insight-q {
   display: flex; align-items: center; gap: 7px; margin-top: 10px;
   padding: 9px 11px; border-radius: 12px;
   background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  font-size: 12.5px; font-weight: 500; color: var(--color-accent-300);
+  font-size: 0.7812rem; font-weight: 500; color: var(--color-accent-300);
 }
-.insight-q ion-icon { font-size: 16px; flex-shrink: 0; }
+.insight-q ion-icon { font-size: 1rem; flex-shrink: 0; }
 
 /* индикатор «считаю аналитику» */
 .ins-loading {
@@ -198,8 +198,8 @@
   border: 3px solid var(--color-neutral-800); border-top-color: var(--color-accent);
   animation: bspin .8s linear infinite;
 }
-.ins-loading b { display: block; font-size: 14px; font-weight: 600; }
-.ins-loading span { display: block; font-size: 12px; color: var(--color-neutral-400); margin-top: 2px; }
+.ins-loading b { display: block; font-size: 0.875rem; font-weight: 600; }
+.ins-loading span { display: block; font-size: 0.75rem; color: var(--color-neutral-400); margin-top: 2px; }
 
 /* Разделы находок вместо вкладок (SugarLife#149). Вкладки показывали одну группу из
    трёх и прятали остальные — человек видел «Внимание» и не знал, что объяснение, за
@@ -207,7 +207,7 @@
    раньше был чип, но ничего не переключает и ничего не скрывает. */
 .ins-head {
   display: flex; align-items: baseline; gap: 8px;
-  margin: 18px 2px 8px; font-size: 12px;
+  margin: 18px 2px 8px; font-size: 0.75rem;
 }
 .ins-head-l { font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
 .ins-head-n { color: var(--color-neutral-500); font-weight: 600; }
@@ -218,9 +218,9 @@
   display: flex; align-items: center; gap: 9px; margin-top: 12px;
   padding: 11px 13px; border-radius: 14px;
   background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
-  font-size: 13px; color: var(--color-neutral-300);
+  font-size: 0.8125rem; color: var(--color-neutral-300);
 }
-.ins-calm ion-icon { font-size: 18px; flex-shrink: 0; }
+.ins-calm ion-icon { font-size: 1.125rem; flex-shrink: 0; }
 ion-toggle {
   --track-background: var(--color-neutral-800);
   --track-background-checked: var(--color-accent);
@@ -232,7 +232,9 @@ ion-toggle {
    те же .field-label/.field, что и везде; отдельный класс нужен только ради отступа
    между параметрами, чтобы форма из четырёх полей не слипалась в один блок. */
 .param { margin-bottom: 12px; }
-.param-req { text-transform: none; letter-spacing: 0; color: var(--color-neutral-600); }
+/* Подпись «обязательно» — это ТЕКСТ, и норма для него 4.5, а не 3.0 как у шевронов.
+   neutral-600 приглушён до предела элементов интерфейса, буквам им набирать нельзя (#325). */
+.param-req { text-transform: none; letter-spacing: 0; color: var(--color-neutral-500); }
 
 /* Выбор вместо пустого поля (sheets/FoodSheet.tsx).
 
@@ -245,14 +247,14 @@ ion-toggle {
   padding: 10px 12px; border-radius: 14px; font-family: var(--font-body);
   background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
 }
-.food-pick b { display: block; font-size: 13px; font-weight: 600; color: var(--color-text); }
-.food-pick span { display: block; margin-top: 3px; font-size: 11px; color: var(--color-neutral-400); }
+.food-pick b { display: block; font-size: 0.8125rem; font-weight: 600; color: var(--color-text); }
+.food-pick span { display: block; margin-top: 3px; font-size: 0.6875rem; color: var(--color-neutral-400); }
 /* «жирное — усвоится позже» это наблюдение, а не указание по болюсу: назначений мы
    не даём, поэтому и подаётся приглушённой строкой, а не предупреждением. */
-.food-pick .food-slow { display: block; margin-top: 4px; font-size: 10px; font-style: normal; color: var(--c-carb-2); }
+.food-pick .food-slow { display: block; margin-top: 4px; font-size: 0.625rem; font-style: normal; color: var(--c-carb-2); }
 .food-pick.on { border-color: var(--c-carb); background: color-mix(in srgb, var(--c-carb) 14%, var(--color-neutral-900)); }
 .food-pick:active { background: color-mix(in srgb, var(--c-carb) 20%, var(--color-neutral-900)); }
-.food-cat-cap { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-500); margin: 4px 2px 8px; }
+.food-cat-cap { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: .08em; color: var(--color-neutral-500); margin: 4px 2px 8px; }
 
 /* Раскрыть/свернуть справочник. Кнопка-строка, а не заметный блок: справочник — путь
    на редкий случай, когда своего ещё нет или ешь непривычное. */
@@ -260,20 +262,20 @@ ion-toggle {
   width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
   margin: 10px 0 2px; padding: 11px; border-radius: 14px; cursor: pointer;
   border: 1px dashed var(--color-neutral-800); background: transparent;
-  color: var(--color-neutral-300); font-size: 13px; font-family: var(--font-body);
+  color: var(--color-neutral-300); font-size: 0.8125rem; font-family: var(--font-body);
 }
-.food-toggle ion-icon { font-size: 15px; }
+.food-toggle ion-icon { font-size: 0.9375rem; }
 .food-toggle:active { background: var(--color-neutral-900); }
 
 /* Подсказка «сейчас». Гипо красим иначе не для драмы: в этот момент человек ищет
    глазами, а не читает, и цвет — единственное, что работает быстрее текста. */
-.food-label.is-hypo { color: var(--c-danger-2); text-transform: none; letter-spacing: 0; font-size: 12px; }
+.food-label.is-hypo { color: var(--c-danger-2); text-transform: none; letter-spacing: 0; font-size: 0.75rem; }
 .food-pick.is-hypo { border-color: color-mix(in srgb, var(--c-danger) 40%, transparent); }
 .food-pick.is-hypo b { color: var(--c-danger-2); }
 .food-more {
   display: block; margin: -4px 2px 12px; padding: 6px 2px; cursor: pointer;
   background: none; border: 0; font-family: var(--font-body);
-  font-size: 12px; color: var(--color-neutral-400); text-decoration: underline dotted;
+  font-size: 0.75rem; color: var(--color-neutral-400); text-decoration: underline dotted;
 }
 
 /* Правка углеводов прямо на плитке: одно место, самое крупное, попадает пальцем без
@@ -285,7 +287,7 @@ ion-toggle {
   border: 1px solid color-mix(in srgb, var(--c-carb) 45%, transparent);
   background: color-mix(in srgb, var(--c-carb) 12%, transparent); color: var(--c-carb);
 }
-.fs-step button ion-icon { font-size: 20px; }
+.fs-step button ion-icon { font-size: 1.25rem; }
 .fs-step button:active { background: color-mix(in srgb, var(--c-carb) 26%, transparent); }
 /* Момент из данных длиннее обычной кнопки — пусть занимает строку целиком. */
 .food-meal-wide { flex: 1 1 100%; }
@@ -305,7 +307,7 @@ ion-toggle {
    помещался (415px против 339 доступных) и переносился. Уменьшены обе части. */
 .fs-steps button {
   position: relative; min-width: 32px; height: 36px; padding: 0 5px; border-radius: 11px;
-  cursor: pointer; font-family: var(--font-body); font-size: 11px; font-weight: 600;
+  cursor: pointer; font-family: var(--font-body); font-size: 0.6875rem; font-weight: 600;
   border: 1px solid color-mix(in srgb, var(--c-carb) 40%, transparent);
   background: color-mix(in srgb, var(--c-carb) 10%, transparent); color: var(--c-carb);
 }
@@ -318,10 +320,10 @@ ion-toggle {
    а руками одним. */
 .fs-input ion-input {
   --padding-start: 0; --padding-end: 0; --padding-top: 0; --padding-bottom: 0;
-  max-width: 3.6ch; font-size: 30px; font-weight: 600; letter-spacing: -.02em;
+  max-width: 3.6ch; font-size: min(1.875rem, 37.5px); font-weight: 600; letter-spacing: -.02em;
   color: var(--c-carb); text-align: center;
 }
-.fs-input span { font-size: 14px; font-weight: 500; color: var(--c-carb-2); }
+.fs-input span { font-size: 0.875rem; font-weight: 500; color: var(--c-carb-2); }
 
 @media (max-width: 359px) {
   .fs-value { flex: 1 1 100%; order: -1; }
@@ -330,7 +332,7 @@ ion-toggle {
 
 /* Величина подъёма в фишке момента: приглушённая, потому что выбирают время, а
    «+5,2» лишь помогает узнать свой приём. */
-.fm-rise { font-style: normal; font-size: 12px; color: var(--color-neutral-400); margin-left: 2px; }
+.fm-rise { font-style: normal; font-size: 0.75rem; color: var(--color-neutral-400); margin-left: 2px; }
 .food-meal.on .fm-rise { color: var(--c-carb-2); }
 
 /* Подсказка под полем параметра: не предупреждение и не ошибка, поэтому обычным

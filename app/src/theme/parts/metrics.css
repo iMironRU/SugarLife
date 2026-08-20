@@ -27,7 +27,7 @@
 .period { display: flex; background: var(--color-neutral-900); border-radius: 12px; padding: 4px; gap: 2px; }
 .period-seg {
   flex: 1; text-align: center; padding: 9px 0; border-radius: 9px; border: 0; cursor: pointer;
-  background: transparent; color: var(--color-neutral-400); font-size: 13px; font-family: var(--font-body);
+  background: transparent; color: var(--color-neutral-400); font-size: 0.8125rem; font-family: var(--font-body);
 }
 .period-seg.on { background: var(--color-neutral-100); color: var(--color-neutral-900); font-weight: 600; }
 
@@ -66,30 +66,47 @@
   cursor: pointer; font-family: var(--font-body); background: transparent;
   border: 1px solid var(--color-neutral-800); color: var(--color-neutral-400);
 }
-.metric-chip ion-icon { font-size: 15px; }
-.metric-chip span { font-size: 13px; font-weight: 500; white-space: nowrap; }
+.metric-chip ion-icon { font-size: 0.9375rem; }
+.metric-chip span { font-size: 0.8125rem; font-weight: 500; white-space: nowrap; }
 .metric-chip.on span { color: var(--color-text); }
 /* Точка состояния у названия потока: пусто · идёт обходным путём · всё хорошо.
    Нужна там, где переключатель показывает один поток, а знать про остальные надо не
    открывая их (источники). В «Метриках» состояния нет — точки там и не будет. */
-.поток-точка { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+/* ФОРМА, А НЕ ТОЛЬКО ЦВЕТ (#325).
+
+   Три состояния различались между собой яркостью на 1.01–1.10 — то есть при дальтонизме
+   не различались вовсе: разной у них была только цветность. А различие тут не
+   декоративное: «сахар идёт с прибора» и «сахар идёт через облако, потому что прибор
+   молчит» — это разные новости, ради них точка и заведена.
+
+   Форма выбрана не произвольно, она говорит то же, что цвет:
+   • сплошной круг — идёт напрямую, полно;
+   • кольцо — идёт, но не отсюда: середина пустая, путь обходной;
+   • пунктирное кольцо — не идёт вовсе.
+
+   Заодно это чинит чёрно-белую печать отчёта врачу и экран на солнце, где цвета
+   выцветают, а форма остаётся. */
+.поток-точка {
+  width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto;
+  box-sizing: border-box;
+}
 .поток-точка.хорошо { background: var(--c-glu); }
-.поток-точка.обход { background: var(--color-accent); }
-.поток-точка.пусто { background: var(--color-neutral-600); }
+.поток-точка.обход { background: transparent; border: 2px solid var(--color-accent); }
+.поток-точка.пусто { background: transparent; border: 1.5px dotted var(--color-neutral-500); }
 
 .metric-title { display: flex; align-items: center; gap: 10px; margin-top: 22px; }
-.metric-title span { font-size: 24px; font-weight: 600; }
+.metric-title span { font-size: min(1.5rem, 30px); font-weight: 600; }
 
 .hero-tile {
   position: relative; overflow: hidden; height: 170px; border-radius: 20px; margin-top: 14px;
   background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900)); padding: 16px; box-sizing: border-box;
 }
 .hero-tile-top { display: flex; align-items: flex-start; justify-content: space-between; }
-.hero-tile-label { font-size: 14px; color: var(--color-neutral-300); }
-.hero-tile-top ion-icon { font-size: 18px; color: var(--color-neutral-300); }
+.hero-tile-label { font-size: 0.875rem; color: var(--color-neutral-300); }
+.hero-tile-top ion-icon { font-size: 1.125rem; color: var(--color-neutral-300); }
 .hero-tile-val { margin-top: 4px; display: flex; align-items: baseline; gap: 4px; }
-.hero-tile-val b { font-size: 42px; font-weight: 700; line-height: 1; }
-.hero-tile-val span { font-size: 16px; font-weight: 500; color: var(--color-neutral-300); }
+.hero-tile-val b { font-size: min(2.625rem, 52.5px); font-weight: 700; line-height: 1; }
+.hero-tile-val span { font-size: 1rem; font-weight: 500; color: var(--color-neutral-300); }
 .hero-svg { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 96px; }
 
 .metric-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
@@ -99,17 +116,17 @@
 }
 .metric-card { height: 150px; }
 .metric-card-top { display: flex; align-items: flex-start; justify-content: space-between; }
-.metric-card-top span { font-size: 13px; color: var(--color-neutral-300); }
-.metric-card-top ion-icon { font-size: 16px; color: var(--color-neutral-300); }
+.metric-card-top span { font-size: 0.8125rem; color: var(--color-neutral-300); }
+.metric-card-top ion-icon { font-size: 1rem; color: var(--color-neutral-300); }
 .metric-card-val { margin-top: 6px; display: flex; align-items: baseline; gap: 4px; }
-.metric-card-val b { font-size: 32px; font-weight: 700; line-height: 1; }
-.metric-card-val span { font-size: 13px; color: var(--color-neutral-300); }
+.metric-card-val b { font-size: min(2rem, 40px); font-weight: 700; line-height: 1; }
+.metric-card-val span { font-size: 0.8125rem; color: var(--color-neutral-300); }
 
-.metric-note { font-size: 11px; color: var(--color-neutral-500); margin: 16px 2px 0; line-height: 1.5; }
+.metric-note { font-size: 0.6875rem; color: var(--color-neutral-500); margin: 16px 2px 0; line-height: 1.5; }
 /* индикатор фоновой докачки: честно, что данные ещё пополняются */
 .gather-note {
   display: flex; align-items: center; gap: 9px; margin: 14px 0 2px; padding: 10px 14px;
-  border-radius: 14px; font-size: 12px; line-height: 1.4;
+  border-radius: 14px; font-size: 0.75rem; line-height: 1.4;
   color: color-mix(in srgb, var(--c-carb) 70%, var(--color-neutral-200));
   background: color-mix(in srgb, var(--c-carb) 8%, var(--color-neutral-900));
   border: 1px solid color-mix(in srgb, var(--c-carb) 30%, transparent);
@@ -118,16 +135,16 @@
 
 /* AGP / TIR */
 .agp-card { border-radius: 20px; padding: 12px; margin-top: 12px; background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900)); }
-.agp-empty { padding: 30px; text-align: center; color: var(--color-neutral-500); font-size: 13px; }
+.agp-empty { padding: 30px; text-align: center; color: var(--color-neutral-500); font-size: 0.8125rem; }
 .tir { display: flex; gap: 16px; align-items: stretch; padding: 6px 4px; }
 .tir-bar { width: 38px; height: 180px; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; background: var(--color-neutral-800); flex-shrink: 0; }
 .tir-seg { width: 100%; min-height: 0; }
 .tir-legend { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 11px; }
 .tir-row { display: flex; align-items: center; gap: 8px; }
 .tir-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-.tir-name { font-size: 13px; flex: 1; min-width: 0; }
-.tir-range { font-size: 11px; color: var(--color-neutral-500); margin-right: 6px; }
-.tir-pct { font-size: 15px; font-weight: 600; min-width: 40px; text-align: right; }
+.tir-name { font-size: 0.8125rem; flex: 1; min-width: 0; }
+.tir-range { font-size: 0.6875rem; color: var(--color-neutral-500); margin-right: 6px; }
+.tir-pct { font-size: 0.9375rem; font-weight: 600; min-width: 40px; text-align: right; }
 .stat-grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
 .sensor-ages { display: flex; gap: 8px; margin-top: 14px; }
 .sensor-ages-solo { margin-top: 10px; }
@@ -149,23 +166,23 @@
   display: flex; align-items: center; justify-content: center;
   background: color-mix(in srgb, var(--color-accent) 30%, transparent);
 }
-.install-ico ion-icon { font-size: 22px; color: var(--color-accent-300); }
+.install-ico ion-icon { font-size: min(1.375rem, 27.5px); color: var(--color-accent-300); }
 .install-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.install-text b { font-size: 14px; font-weight: 600; }
-.install-text span { font-size: 11.5px; color: var(--color-neutral-400); line-height: 1.35; }
-.install-text span ion-icon { vertical-align: -2px; font-size: 14px; color: var(--color-accent-300); }
+.install-text b { font-size: 0.875rem; font-weight: 600; }
+.install-text span { font-size: 0.7188rem; color: var(--color-neutral-400); line-height: 1.35; }
+.install-text span ion-icon { vertical-align: -2px; font-size: 0.875rem; color: var(--color-accent-300); }
 .install-btn {
   flex: none; padding: 9px 16px; border-radius: 12px; border: none;
-  background: var(--color-accent); color: #fff; font-weight: 600; font-size: 13px; cursor: pointer;
+  background: var(--color-accent); color: #fff; font-weight: 600; font-size: 0.8125rem; cursor: pointer;
 }
 .install-close { flex: none; background: none; border: none; color: var(--color-neutral-400); padding: 4px; cursor: pointer; display: flex; }
-.install-close ion-icon { font-size: 18px; }
+.install-close ion-icon { font-size: 1.125rem; }
 .age-pill {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
   padding: 10px 6px; border-radius: 14px; background: var(--color-neutral-900);
 }
-.age-pill span { font-size: 10px; color: var(--color-neutral-400); }
-.age-pill b { font-size: 15px; font-weight: 600; }
+.age-pill span { font-size: 0.625rem; color: var(--color-neutral-400); }
+.age-pill b { font-size: 0.9375rem; font-weight: 600; }
 /* «Поменял» прямо в плитке расходника: замена случается руками в расходниках, и
    отдельный экран подтверждения — ровно та причина, по которой человек перестаёт
    логировать замены вообще. Защита от промаха не спереди (вопрос), а сзади (отмена). */
@@ -177,9 +194,9 @@
   margin-top: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
   padding: 8px 13px; min-height: 38px; border-radius: 11px; cursor: pointer;
   border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900);
-  color: var(--color-neutral-300); font-size: 12px; font-weight: 600; font-family: inherit;
+  color: var(--color-neutral-300); font-size: 0.75rem; font-weight: 600; font-family: inherit;
 }
-.changed-btn ion-icon { font-size: 15px; }
+.changed-btn ion-icon { font-size: 0.9375rem; }
 .changed-btn:active { background: var(--color-neutral-800); }
 .changed-btn.is-undo { color: var(--c-glu); border-color: color-mix(in srgb, var(--c-glu) 40%, transparent); }
 
@@ -190,12 +207,12 @@
   background: var(--color-neutral-900);
   border-radius: 0 14px 14px 0; padding: 12px 14px; margin: 12px 0 4px;
 }
-.rd-top { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 600; }
-.rd-top ion-icon { font-size: 18px; flex-shrink: 0; }
-.rd-why { font-size: 12px; color: var(--color-neutral-400); margin-top: 6px; text-wrap: pretty; }
+.rd-top { display: flex; align-items: center; gap: 9px; font-size: 0.875rem; font-weight: 600; }
+.rd-top ion-icon { font-size: 1.125rem; flex-shrink: 0; }
+.rd-why { font-size: 0.75rem; color: var(--color-neutral-400); margin-top: 6px; text-wrap: pretty; }
 /* счётчик находок в чипе-фильтре */
 .chip-n {
-  margin-left: 6px; font-size: 11px; color: var(--color-neutral-400);
+  margin-left: 6px; font-size: 0.6875rem; color: var(--color-neutral-400);
   background: color-mix(in srgb, var(--color-neutral-500) 22%, transparent);
   border-radius: 999px; padding: 1px 6px;
 }

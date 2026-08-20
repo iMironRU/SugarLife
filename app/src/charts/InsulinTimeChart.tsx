@@ -1,6 +1,6 @@
 import EChart from './Chart';
 import { осьВремени, ширинаГрафика } from './timeAxis';
-import { cssVar } from './cssVar';
+import { cssVar, размерПодписи } from './cssVar';
 import type { Treatment } from '@/sources/nightscout';
 
 /* График подачи инсулина: ступенчатая кривая базала (ед/ч) из temp basal +
@@ -43,20 +43,20 @@ export default function InsulinTimeChart({
          формат «каждая точка» превращал ось в сплошной ряд чисел. hideOverlap — на
          случай, когда наша оценка ширины разойдётся с настоящей: лучше пропущенная
          подпись, чем две наложенные. */
-      axisLabel: { color: axis, fontSize: 10, hideOverlap: true, ...осьВремени(t0, now, ширинаГрафика(64)) },
+      axisLabel: { color: axis, fontSize: размерПодписи(10), hideOverlap: true, ...осьВремени(t0, now, ширинаГрафика(64)) },
       axisLine: { lineStyle: { color: grid, opacity: 0.4 } }, axisTick: { show: false },
       splitLine: { show: false },
     },
     yAxis: [
       {
         type: 'value', min: 0, max: rateMax,
-        axisLabel: { color: axis, fontSize: 10, formatter: '{value}' },
+        axisLabel: { color: axis, fontSize: размерПодписи(10), formatter: '{value}' },
         axisLine: { show: false }, axisTick: { show: false },
         splitLine: { lineStyle: { color: grid, opacity: 0.25 } },
       },
       {
         type: 'value', min: 0, max: Math.ceil(maxBolus) + 1, position: 'right', show: hasBolus,
-        axisLabel: { color: axis, fontSize: 10, formatter: '{value}' },
+        axisLabel: { color: axis, fontSize: размерПодписи(10), formatter: '{value}' },
         axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false },
       },
     ],
@@ -77,7 +77,7 @@ export default function InsulinTimeChart({
         name: 'болюс', type: 'scatter', yAxisIndex: 1, data: bolusPts, symbol: 'circle',
         symbolSize: (v: [number, number]) => Math.max(7, Math.min(20, 6 + v[1] * 2.2)),
         itemStyle: { color: carb, opacity: 0.9 },
-        label: { show: true, position: 'top', color: carb, fontSize: 9, formatter: (p: { value: [number, number] }) => p.value[1] },
+        label: { show: true, position: 'top', color: carb, fontSize: размерПодписи(9), formatter: (p: { value: [number, number] }) => p.value[1] },
       },
     ],
   };

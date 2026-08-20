@@ -6,3 +6,20 @@ export function cssVar(name: string, fallback = '#888') {
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return v || fallback;
 }
+
+/* Подписи графиков рисует canvas, и системную настройку размера они не слышат вовсе
+   (#325). CSS с его rem сюда не достаёт: echarts получает число.
+
+   Поэтому пересчитываем сами — от текущего корневого размера, того же, который меняет
+   и весь остальной текст. Ось графика, оставшаяся десятипиксельной, когда всё вокруг
+   выросло, — это не «мелкий шрифт», это цифры, которых человек не прочтёт: именно по
+   ним он сверяет время подъёма с тем, что помнит.
+
+   Потолок тот же полуторный, что и у крупного текста: подписи оси, раздутые втрое,
+   перекрывают друг друга и сам график. */
+export function размерПодписи(base: number): number {
+  const корень = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  if (!Number.isFinite(корень) || корень <= 0) return base;
+  const во = Math.min(Math.max(корень / 16, 1), 1.5);
+  return Math.round(base * во * 10) / 10;
+}
