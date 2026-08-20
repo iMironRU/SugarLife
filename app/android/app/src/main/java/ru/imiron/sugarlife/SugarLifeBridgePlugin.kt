@@ -245,10 +245,25 @@ class SugarLifeBridgePlugin : Plugin() {
     fun batteryOptimization(call: PluginCall) {
         val ctx = context.applicationContext
         val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        val исключены = pm.isIgnoringBatteryOptimizations(ctx.packageName)
+        // ЧТО СКАЗАТЬ ЧЕЛОВЕКУ — РЕШАЕТ ЯДРО (SugarLife#380). Здесь только факты платформы: выдано ли
+        // исключение и что за прошивка. Слова одни на обе платформы и на оба издания — иначе на один и
+        // тот же вопрос человек получит разные ответы.
+        val совет = ru.imiron.sugarlife.contract.BackgroundReadiness.advise(
+            manufacturer = android.os.Build.MANUFACTURER,
+            exemptFromBatteryOptimization = исключены,
+        )
         call.resolve(
             JSObject()
-                .put("ignoring", pm.isIgnoringBatteryOptimizations(ctx.packageName))
-                .put("packageName", ctx.packageName),
+                .put("ignoring", исключены)
+                .put("packageName", ctx.packageName)
+                .put("manufacturer", android.os.Build.MANUFACTURER)
+                // Готовый ответ для экрана готовности: проблема ли это, что происходит, что делать и
+                // можем ли мы открыть нужный экран сами.
+                .put("problem", совет.problem)
+                .put("reason", совет.reason)
+                .put("whatToDo", совет.whatToDo)
+                .put("weCanOpenSettings", совет.weCanOpenSettings),
         )
     }
 
