@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { прочитать, записать } from '@/settings/storage';
 import { IonIcon } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
 import { downloadOutline, shareOutline, addOutline, close } from 'ionicons/icons';
@@ -27,7 +28,7 @@ export default function InstallPrompt() {
   useEffect(() => {
     if (Capacitor.isNativePlatform()) return; // в нативном приложении баннер не нужен
     if (isStandalone()) return;
-    const raw = localStorage.getItem(KEY);
+    const raw = прочитать(KEY);
     if (raw === 'installed') return;
     if (raw && Date.now() - Number(raw) < SNOOZE_MS) return;
 
@@ -45,7 +46,7 @@ export default function InstallPrompt() {
     window.addEventListener('bip-ready', onReady);
     window.addEventListener('beforeinstallprompt', onBIP);
 
-    const onInstalled = () => { localStorage.setItem(KEY, 'installed'); setMode(null); };
+    const onInstalled = () => { записать(KEY, 'installed'); setMode(null); };
     window.addEventListener('appinstalled', onInstalled);
 
     if (isIosSafari()) t = window.setTimeout(() => setMode('ios'), 2200);
@@ -60,12 +61,12 @@ export default function InstallPrompt() {
 
   if (!mode) return null;
 
-  const dismiss = () => { localStorage.setItem(KEY, String(Date.now())); setMode(null); };
+  const dismiss = () => { записать(KEY, String(Date.now())); setMode(null); };
 
   const install = async () => {
     if (!evt) return dismiss();
     try { await evt.prompt(); await evt.userChoice; } catch { /* ignore */ }
-    localStorage.setItem(KEY, String(Date.now()));
+    записать(KEY, String(Date.now()));
     setMode(null);
   };
 

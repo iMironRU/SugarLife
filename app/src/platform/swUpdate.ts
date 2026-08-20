@@ -8,6 +8,7 @@
    Проверяем в фоне: при запуске, при возврате из фона и раз в час — чтобы
    «актуально» означало «только что проверено», а не «когда-то спрашивали». */
 import { useSyncExternalStore } from 'react';
+import { прочитать, записать, убрать } from '@/settings/storage';
 import { APP_BUILD, isNative, спроситьСервер } from './appUpdate';
 import { отсталиЛи, ключОтказа, КЛЮЧ_ОТКАЗА } from './отставание';
 import { этоНашПерезапуск } from '@/app/местоStore';
@@ -53,12 +54,10 @@ export function useUpdateState(): UpdateState {
 /* «Мы только что обновились до X» — сообщение должно пережить перезагрузку,
    иначе человек не узнает, применилось ли: перезагрузка стирает всё на экране. */
 function consumeJustUpdated(): boolean {
-  try {
-    const from = localStorage.getItem(JUST_UPDATED);
-    if (!from) return false;
-    localStorage.removeItem(JUST_UPDATED);
-    return from !== APP_BUILD; // сборка действительно сменилась
-  } catch { return false; }
+  const from = прочитать(JUST_UPDATED);
+  if (!from) return false;
+  убрать(JUST_UPDATED);
+  return from !== APP_BUILD; // сборка действительно сменилась
 }
 
 /* Читается ОДИН раз при загрузке модуля, а не по запросу (#398).
@@ -160,16 +159,16 @@ async function спроситьМанифест(): Promise<void> {
 export async function перечитатьВсё(): Promise<void> {
   этоНашПерезапуск();
   set({ applying: true });
-  try {
-    localStorage.setItem(JUST_UPDATED, APP_BUILD);
+  {
+    записать(JUST_UPDATED, APP_BUILD);
     /* Одна попытка на релиз, а не бесконечная просьба.
 
        Если после перезагрузки сборка осталась прежней — значит помогло не это, и
        повторять предложение бессмысленно: человек будет жать одну и ту же кнопку с
        одним и тем же исходом. Ставим ту же отметку, что и «Потом»: сменится сборка
        (у нас или на сервере) — предложение вернётся само. */
-    localStorage.setItem(КЛЮЧ_ОТКАЗА, ключОтказа(APP_BUILD, state.serverBuild));
-  } catch { /* ignore */ }
+    записать(КЛЮЧ_ОТКАЗА, ключОтказа(APP_BUILD, state.serverBuild));
+  }
   try {
     const рег = await navigator.serviceWorker.getRegistrations();
     await Promise.all(рег.map((r) => r.unregister()));
@@ -191,7 +190,7 @@ export function applyUpdate(): void {
   этоНашПерезапуск();
   if (!reg?.waiting) { location.reload(); return; }
   set({ applying: true });
-  try { localStorage.setItem(JUST_UPDATED, APP_BUILD); } catch { /* ignore */ }
+  записать(JUST_UPDATED, APP_BUILD);
   let reloaded = false;
   const go = () => { if (!reloaded) { reloaded = true; location.reload(); } };
   navigator.serviceWorker.addEventListener('controllerchange', go, { once: true });
