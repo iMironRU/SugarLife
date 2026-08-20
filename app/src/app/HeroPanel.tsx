@@ -1,6 +1,6 @@
 import { IonIcon } from '@ionic/react';
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline } from 'ionicons/icons';
+import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline, warningOutline } from 'ionicons/icons';
 import { useTab, setTab } from '@/app/nav';
 import { useStore } from '@/sources/store';
 import { toUnits, agoText, unitLabel, useUnit, fmt, daysHoursText } from '@/domain/units';
@@ -11,7 +11,7 @@ import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
 import { syncToActiveScreen, сразу } from '@/app/panel';
 import { связь, связьГлюкозы, источникПомпы, устройствоРоли, меткаСвязи, видКруга, черезЧтоСпорное, type Связь } from '@/domain/deviceState';
 import { СТРЕЛКА, направление } from '@/domain/trend';
-import { предупредитьОСыром, СЛОВО_СЫРОГО } from '@/domain/сырое';
+import { предупредитьОСыром, МЕТКА_СЫРОГО, ПОЯСНЕНИЕ_СЫРОГО } from '@/domain/сырое';
 import { useEntries } from '@/sources/db';
 import { выбратьПоказание, ОТСТАВАНИЕ_МС } from '@/domain/latestGlucose';
 import { activeInsulin } from '@/domain/loopValue';
@@ -352,8 +352,13 @@ export default function HeroPanel() {
                 сырьё, калибровки у нас пока нет, и на живом приборе разница с
                 калиброванным была заметной. Оговорка в другом месте экрана не работает —
                 смотрят сюда. */}
-            <span className="hp-ago">
-              {кругЖдёт ? 'догоняю…' : сырое ? `${СЛОВО_СЫРОГО} · ${ago}` : ago}
+            <span className="hp-ago" title={сырое ? ПОЯСНЕНИЕ_СЫРОГО : undefined}>
+              {кругЖдёт ? 'догоняю…' : сырое ? (
+                <>
+                  <IonIcon icon={warningOutline} className="hp-raw-ico" />
+                  {МЕТКА_СЫРОГО} · {ago}
+                </>
+              ) : ago}
             </span>
           </span>
         </button>
