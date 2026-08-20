@@ -34,12 +34,14 @@ object EngineHolder {
     fun ensureProvider(appContext: Context) {
         if (providerAttached) return
         providerAttached = true
-        engine(appContext).attachDriverProvider(
-            DefaultDriverProvider(
-                nowMs = { System.currentTimeMillis() },
-                sensorBridge = { bleId, _ -> AndroidSensorBridge(appContext, bleId) },
-                pumpBridge = { bleId, _ -> AndroidPumpBridge(appContext, bleId) },
-            ),
+        val provider = DefaultDriverProvider(
+            nowMs = { System.currentTimeMillis() },
+            sensorBridge = { bleId, _ -> AndroidSensorBridge(appContext, bleId) },
+            pumpBridge = { bleId, _ -> AndroidPumpBridge(appContext, bleId) },
         )
+        // Долгие паузы отмеряет будильник, а не корутина (core#93): в Doze процессор ради `delay` не будят,
+        // и пятиминутный цикл помпы превращается в «когда система разрешит».
+        provider.setWakeups(AlarmWakeups(appContext))
+        engine(appContext).attachDriverProvider(provider)
     }
 }
