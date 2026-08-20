@@ -4,7 +4,8 @@ import { useSnapshot } from '@/sources/bridge';
 import Notice from './Notice';
 import { движокЖивой } from '@/domain/deviceState';
 import { железоДиспетчера, потерянаСвязь, имяЖелезки } from '@/domain/nearby';
-import { однаПравда, словоОбрыва } from '@/domain/однаПравда';
+import { однаПравда, разборОбрыва } from '@/domain/однаПравда';
+import { названиеКанала, словоОбрыва, подписьЗанятия } from '@/слова/приборы';
 import { agoText } from '@/domain/units';
 import { useStack } from '@/app/stackCtx';
 import { DataDevicesSection } from '@/sections/lazy';
@@ -82,9 +83,9 @@ export default function NearbyTile() {
             <span key={с.id} className="nearby-строка">
               <i className={'поток-точка ' + (с.состояние === 'подключено' ? 'хорошо' : с.откуда ? 'обход' : 'пусто')} />
               <b>{с.имя}</b>
-              <span>{с.вместоСостояния ?? [
+              <span>{подписьЗанятия(с.вместоСостояния) ?? [
                 с.состояние,
-                с.откуда,
+                названиеКанала(с.откуда),
                 с.когдаМс ? agoText(с.когдаМс) : null,
               ].filter(Boolean).join(' · ')}</span>
             </span>
@@ -109,7 +110,7 @@ export default function NearbyTile() {
          именно оборвалось и чем это компенсировано. Радио молчит, а цифры идут облаком —
          это состояние, а не тревога. */
       заголовок={железо.length === 0 ? 'Подключить устройство'
-        : словоОбрыва(правда)
+        : словоОбрыва(разборОбрыва(правда))
         ?? (потеряно.length === 1 ? `«${имяЖелезки(потеряно[0])}» не на связи`
         : `Не на связи: ${потеряно.map(имяЖелезки).join(', ')}`)}
       действия={(

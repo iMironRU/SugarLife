@@ -1,6 +1,7 @@
 import type { HardwareView, UiSnapshot, DeviceView } from '@/sources/bridge';
-import { связь, меткаСвязи, активныйКанал } from './deviceState';
-import { чтоСПрибором, подписьСвежести } from './freshness';
+import { связь, активныйКанал } from './deviceState';
+import { меткаСвязи, подписьСвежести, подписьЗанятия } from '@/слова/приборы';
+import { чтоСПрибором, свежесть } from './freshness';
 import { sourceStatusLabel } from './sourceStatus';
 import { СЛОТ, заМостомЛи, мостЖелезки, имяЖелезки } from './nearby';
 
@@ -47,9 +48,9 @@ export function картаПрибора(
   h: HardwareView, snap: UiSnapshot | null | undefined, сейчасМс: number,
 ): КартаПрибора {
   const свой = (snap?.devices ?? []).find((d) => d.id === h.id) ?? null;
-  const занят = чтоСПрибором(h);
+  const занят = подписьЗанятия(чтоСПрибором(h));
   const состояние = занят
-    ?? подписьСвежести(h, сейчасМс)
+    ?? подписьСвежести(свежесть(h, сейчасМс))
     ?? sourceStatusLabel(h.status)
     ?? меткаСвязи[связь(h)]
     ?? 'нет связи';

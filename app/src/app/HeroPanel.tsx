@@ -9,7 +9,8 @@ import { deviceAges } from '@/domain/treatmentStats';
 import { useChanges } from '@/settings/changes';
 import { useDeviceExtras, loadDeviceExtras } from '@/sources/deviceExtras';
 import { syncToActiveScreen, сразу } from '@/app/panel';
-import { связь, связьГлюкозы, источникПомпы, устройствоРоли, меткаСвязи, видКруга, черезЧтоСпорное, type Связь } from '@/domain/deviceState';
+import { связь, связьГлюкозы, источникПомпы, устройствоРоли, видКруга, спорныйКанал, type Связь } from '@/domain/deviceState';
+import { меткаСвязи, короткоКанал } from '@/слова/приборы';
 import { СТРЕЛКА, направление } from '@/domain/trend';
 import { предупредитьОСыром, МЕТКА_СЫРОГО, ПОЯСНЕНИЕ_СЫРОГО } from '@/domain/сырое';
 import { useEntries } from '@/sources/db';
@@ -246,8 +247,8 @@ export default function HeroPanel() {
   /* Через что живёт крыло — но только когда путей несколько (SugarLifeCore#34).
      Именно здесь человек читал «Помпа на связи» и шёл искать поломку в мосте, хотя
      состояние всё это время приходило из облака. */
-  const каналНмг = черезЧтоСпорное(устройствоРоли(снимок, 'sensor'));
-  const каналПомпы = черезЧтоСпорное(устройствоРоли(снимок, 'pump'));
+  const каналНмг = короткоКанал(спорныйКанал(устройствоРоли(снимок, 'sensor')));
+  const каналПомпы = короткоКанал(спорныйКанал(устройствоРоли(снимок, 'pump')));
 
   // датчик (день N) — слева; запас инсулина (≈N дн) — справа
   const ages = deviceAges(extras.events, changes);
