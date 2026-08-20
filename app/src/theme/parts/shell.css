@@ -260,6 +260,12 @@ ion-content { --background: var(--color-bg); }
   margin-top: calc(4px * (1 - var(--k-late)));
   opacity: calc(1 - var(--k-late));
 }
+/* Пометка «сырое» у числа (domain/сырое.ts). Знак цветом углеводов — это единственный
+   янтарный в теме, и им же помечены подсветки-предупреждения: заводить второй жёлтый
+   ради одного значка значило бы, что у нас два разных «внимание». */
+.hp-raw-ico {
+  color: var(--c-carb); font-size: 11px; vertical-align: -1.5px; margin-right: 3px;
+}
 .hp-ago {
   font-size: 10px; color: var(--color-neutral-400); overflow: hidden;
   max-height: calc(16px * (1 - var(--k-sub)));
