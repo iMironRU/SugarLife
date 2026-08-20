@@ -323,7 +323,7 @@ export default function VisitNoteSection({ onClose, встроенный }: {
           }} />
       </div>
       {своё.trim() && (
-        <button className="changed-btn" style={{ marginTop: 8 }}
+        <button className="changed-btn во-всю" style={{ marginTop: 8 }}
           onClick={() => { добавитьВопрос(своё.trim()); setСвоё(''); }}>
           Добавить вопрос
         </button>
@@ -345,7 +345,7 @@ export default function VisitNoteSection({ onClose, встроенный }: {
         <IonInput value={имя} placeholder="Имя в файле (можно не указывать)"
           onIonInput={(e) => setИмя(e.detail.value ?? '')} />
       </div>
-      <button className="changed-btn is-undo" style={{ marginTop: 10 }}
+      <button className="changed-btn is-undo во-всю" style={{ marginTop: 10 }}
         onClick={() => window.print()}>
         <IonIcon icon={printOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
         Сохранить PDF или напечатать
