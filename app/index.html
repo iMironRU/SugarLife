@@ -67,7 +67,20 @@
           <path d="M176 344 h34 l16 -40 l22 78 l20 -58 l14 20 h30" fill="none" stroke="#161826" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />
         </svg>
         <div class="b-spin"></div>
-        <div class="b-title">СладкаЯ жизнь</div>
+        <div class="b-title" id="b-title">СладкаЯ жизнь</div>
+        <!-- Перезапуск ради обновления выглядел как обычный старт: экран моргал, появлялась
+             заставка, и человек оказывался не там, где был, — без единого слова о том, что
+             произошло (#398). Отметку ставит приложение ПЕРЕД перезагрузкой; читаем её здесь,
+             до бандла, потому что бандла в этот момент ещё нет. -->
+        <script>
+          (function () {
+            try {
+              if (localStorage.getItem('sl.justUpdated.v1')) {
+                document.getElementById('b-title').textContent = 'Обновляюсь…';
+              }
+            } catch (e) { /* приватный режим — просто обычная заставка */ }
+          })();
+        </script>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
