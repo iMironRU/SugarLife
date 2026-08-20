@@ -8,7 +8,8 @@ import { useDeviceConfig, setDeviceConfig, setParam, forgetDevice, isRecorded, i
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
-import { связь, меткаСвязи, предложениеСлияния, своиЖелезки, черезЧто, СЛОВО_КАНАЛА } from '@/domain/deviceState';
+import { связь, предложениеСлияния, своиЖелезки, каналРоли } from '@/domain/deviceState';
+import { меткаСвязи, названиеКанала, СЛОВО_КАНАЛА } from '@/слова/приборы';
 import { мостСлота } from '@/domain/slotStatus';
 import { железоДиспетчера } from '@/domain/nearby';
 import { устройствоДляПараметров, значенияПараметров } from '@/domain/deviceParams';
@@ -298,7 +299,7 @@ export default function DeviceSection({ onClose, cat, title }: {
   const bleStatus = sourceStatusLabel(ble?.status);
   /* Через что пришло это состояние (SugarLifeCore#34). Без него «на связи» отвечает
      только на половину вопроса, и вторая половина — та, из-за которой чинят не то. */
-  const bleКанал = черезЧто(ble);
+  const bleКанал = названиеКанала(каналРоли(ble));
   const bleAge = ble?.latestAtMs != null ? agoText(ble.latestAtMs) : null;
 
   const activeMeth: 'direct' | 'cloud' | null = bleLive ? 'direct' : nsFeed ? 'cloud' : null;

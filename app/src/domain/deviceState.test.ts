@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { связь, источникГлюкозы, источникПомпы, связьГлюкозы, предложениеСлияния, серийникИз, своиЖелезки, видКруга, черезЧто, активныйКанал, черезЧтоСпорное, устройствоРоли, рольСнимка, лучшийИсточник, движокЖивой, ОТСТАВАНИЕ_КРУГА_МС } from './deviceState';
+import { связь, источникГлюкозы, источникПомпы, связьГлюкозы, предложениеСлияния, серийникИз, своиЖелезки, видКруга, каналРоли, активныйКанал, спорныйКанал, устройствоРоли, рольСнимка, лучшийИсточник, движокЖивой, ОТСТАВАНИЕ_КРУГА_МС } from './deviceState';
 import type { DeviceView, RoleView, UiSnapshot } from '@/sources/bridge';
 
 /* Правило состояния связи проверяем тестами, потому что именно в нём живёт баг, с
@@ -222,7 +222,7 @@ describe('вид круга глюкозы', () => {
 /* «Через что» — половина ответа на вопрос «почему помпа на связи, а мост нет»
    (SugarLifeCore#34). Ошибка здесь не видна глазами: строка есть, читается складно и
    врёт — человек идёт менять батарейку в мосте, который ни при чём. */
-describe('через какой канал пришло состояние', () => {
+describe('каким путём пришло состояние', () => {
   const кан = (p: Partial<NonNullable<DeviceView['channels']>[number]>) => ({
     id: 'c', kind: 'direct' as const, priority: 0, connection: 'Streaming' as const,
     status: 'Live' as const, live: true, latestAtMs: null, ...p,
@@ -233,42 +233,42 @@ describe('через какой канал пришло состояние', () 
       кан({ id: 'ble', kind: 'direct', status: 'Disconnected', live: false, connection: 'Disconnected' }),
       кан({ id: 'ns', kind: 'cloud' }),
     ] });
-    expect(черезЧто(d)).toBe('через Nightscout');
+    expect(каналРоли(d)).toBe('cloud');
     expect(активныйКанал(d)?.id).toBe('ns');
   });
 
-  it('прямой канал — «по радио», мост — «через мост»', () => {
-    expect(черезЧто(dev({ status: 'Live', activeChannel: 'ble', channels: [кан({ id: 'ble' })] }))).toBe('по радио');
-    expect(черезЧто(dev({ status: 'Live', activeChannel: 'br', channels: [кан({ id: 'br', kind: 'bridged' })] })))
-      .toBe('через мост');
+  it('прямой канал и мост различаются видом, а не словом', () => {
+    expect(каналРоли(dev({ status: 'Live', activeChannel: 'ble', channels: [кан({ id: 'ble' })] }))).toBe('direct');
+    expect(каналРоли(dev({ status: 'Live', activeChannel: 'br', channels: [кан({ id: 'br', kind: 'bridged' })] })))
+      .toBe('bridged');
   });
 
   /* Связи нет — путь называть незачем: «нет связи по радио» звучит как «попробуйте
      другой путь», а другого нет, движок взял бы его сам. */
   it('нет связи — про канал молчим', () => {
-    expect(черезЧто(dev({ status: 'Disconnected', activeChannel: 'ble', channels: [кан({ id: 'ble' })] }))).toBe(null);
+    expect(каналРоли(dev({ status: 'Disconnected', activeChannel: 'ble', channels: [кан({ id: 'ble' })] }))).toBe(null);
   });
 
   it('каналов нет — не выдумываем', () => {
-    expect(черезЧто(dev({ status: 'Live' }))).toBe(null);
-    expect(черезЧто(null)).toBe(null);
+    expect(каналРоли(dev({ status: 'Live' }))).toBe(null);
+    expect(каналРоли(null)).toBe(null);
   });
 
   /* Движок может не проставить activeChannel — берём первый, а не молчим: канал
      всё равно один из перечисленных, и это ближе к правде, чем пустота. */
   it('активный не назван — берём первый', () => {
-    expect(черезЧто(dev({ status: 'Live', channels: [кан({ id: 'ns', kind: 'cloud' })] }))).toBe('через Nightscout');
+    expect(каналРоли(dev({ status: 'Live', channels: [кан({ id: 'ns', kind: 'cloud' })] }))).toBe('cloud');
   });
 
   /* На панели слово стоит места, и платить им за «радио» у одноканального сенсора
      нечем: выбора там нет, объяснять нечего. */
   it('канал один — на панели про него молчим', () => {
-    expect(черезЧтоСпорное(dev({ status: 'Live', activeChannel: 'ble', channels: [кан({ id: 'ble' })] }))).toBe(null);
+    expect(спорныйКанал(dev({ status: 'Live', activeChannel: 'ble', channels: [кан({ id: 'ble' })] }))).toBe(null);
   });
 
-  it('каналов два — панель называет активный коротко', () => {
+  it('каналов два — активный назван, чтобы панель могла его показать', () => {
     const d = dev({ status: 'Live', activeChannel: 'ns', channels: [кан({ id: 'ble' }), кан({ id: 'ns', kind: 'cloud' })] });
-    expect(черезЧтоСпорное(d)).toBe('облако');
+    expect(спорныйКанал(d)).toBe('cloud');
   });
 
   /* Ровно тот случай, ради которого всё это затевалось: помпу видно только через
@@ -279,7 +279,7 @@ describe('через какой канал пришло состояние', () 
       channels: [кан({ id: 'ns', kind: 'cloud' })] });
     const s = snap([p]);
     expect(источникПомпы(s)).toBe(null);
-    expect(черезЧто(устройствоРоли(s, 'pump'))).toBe('через Nightscout');
+    expect(каналРоли(устройствоРоли(s, 'pump'))).toBe('cloud');
   });
 
   it('сенсор роли — тот же, что источник глюкозы', () => {
@@ -324,8 +324,8 @@ describe('роль из снимка движка', () => {
 
   it('via с роли главнее собственного разбора каналов', () => {
     const d = dev({ status: 'Live' });
-    expect(черезЧто(d, 'bridged')).toBe('через мост');
-    expect(черезЧто(dev({ status: 'Disconnected' }), 'bridged')).toBe(null);
+    expect(каналРоли(d, 'bridged')).toBe('bridged');
+    expect(каналРоли(dev({ status: 'Disconnected' }), 'bridged')).toBe(null);
   });
 });
 
