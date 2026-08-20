@@ -1,4 +1,5 @@
 import type { LogRecord, LogLevel } from '@/sources/bridge';
+import { часыСек } from '@/слова/время';
 
 /* Журнал обмена с прибором — правила показа (SugarLife#354).
 
@@ -66,7 +67,7 @@ export function словоПустого(
 
 /** Время записи — часы:минуты:секунды. Секунды здесь не педантизм: события идут пачками. */
 export function времяЗаписи(atMs: number): string {
-  return new Date(atMs).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return часыСек(atMs);
 }
 
 /* Поля записи — одной строкой. Показываем как есть: имена придумал тот, кто знает

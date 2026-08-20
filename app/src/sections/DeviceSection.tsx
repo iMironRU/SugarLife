@@ -1,4 +1,5 @@
 import { IonIcon, IonToggle } from '@ionic/react';
+import { датаИВремя, сколькоНазад } from '@/слова/время';
 import { BasalProfileSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
 import Section from '@/ui/Section';
@@ -18,7 +19,7 @@ import { useSnapshot, sendIntent, type DeviceView } from '@/sources/bridge';
 
 import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
 import { sourceStatusLabel, sourceStatusWarn } from '@/domain/sourceStatus';
-import { agoText, toUnits, unitLabel } from '@/domain/units';
+import { toUnits, unitLabel } from '@/domain/units';
 import { useStore } from '@/sources/store';
 import { useChanges, type Consumable } from '@/settings/changes';
 import ChangedButton from '@/ui/ChangedButton';
@@ -300,7 +301,7 @@ export default function DeviceSection({ onClose, cat, title }: {
   /* Через что пришло это состояние (SugarLifeCore#34). Без него «на связи» отвечает
      только на половину вопроса, и вторая половина — та, из-за которой чинят не то. */
   const bleКанал = названиеКанала(каналРоли(ble));
-  const bleAge = ble?.latestAtMs != null ? agoText(ble.latestAtMs) : null;
+  const bleAge = ble?.latestAtMs != null ? сколькоНазад(ble.latestAtMs) : null;
 
   const activeMeth: 'direct' | 'cloud' | null = bleLive ? 'direct' : nsFeed ? 'cloud' : null;
   const needsBridge = cat === 'pump' ? pumpNeedsBridge(pump) : !!sensor?.needsBridge;
@@ -480,7 +481,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                       <span className="list-title">Ручной ввод</span>
                       <span className="pick-sub">
                         {последнее
-                          ? `последнее: ${toUnits(последнее.mmol)} ${unitLabel()} · ${agoText(последнее.t)}`
+                          ? `последнее: ${toUnits(последнее.mmol)} ${unitLabel()} · ${сколькоНазад(последнее.t)}`
                           : 'внести показание глюкометра'}
                       </span>
                     </span>
@@ -613,7 +614,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                           <span className="pick-sub">
                             {c.label ? c.label + ' · ' : ''}
                             {меткаСвязи[с] ?? 'состояние неизвестно'}
-                            {c.latestAtMs != null ? ' · ' + agoText(c.latestAtMs) : ''}
+                            {c.latestAtMs != null ? ' · ' + сколькоНазад(c.latestAtMs) : ''}
                           </span>
                         </span>
                         {c.id === ble!.activeChannel && <span className="meth-now">сейчас</span>}
@@ -744,7 +745,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                 <div className="basal-rows">
                   {[...smbg].reverse().slice(0, 8).map((x) => (
                     <div key={x.t} className="basal-row">
-                      <span>{new Date(x.t).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>{датаИВремя(x.t)}</span>
                       <b>{toUnits(x.mmol)} {unitLabel()}</b>
                     </div>
                   ))}

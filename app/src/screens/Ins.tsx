@@ -1,4 +1,5 @@
 import { IonIcon } from '@ionic/react';
+import { сколькоНазад, часы } from '@/слова/время';
 import { useTab } from '@/app/nav';
 import { DeviceSection, LoopSetupSection } from '@/sections/lazy';
 import { flash, repeat, chevronForward, moonOutline } from 'ionicons/icons';
@@ -7,7 +8,7 @@ import { useStorePart } from '@/sources/store';
 import { useTreatments } from '@/sources/db';
 import { detectTherapy } from '@/domain/therapy';
 import { activeInsulin } from '@/domain/loopValue';
-import { fmt, agoText } from '@/domain/units';
+import { fmt } from '@/domain/units';
 import { useSnapshot } from '@/sources/bridge';
 import { фонИнсулина, подписьФона } from '@/domain/longInsulin';
 import LongInsulinSheet from '@/sheets/LongInsulinSheet';
@@ -46,7 +47,6 @@ export default function Ins() {
   const снимок = useSnapshot();
   const фон = фонИнсулина(снимок, Date.now());
   const [пишуДлинный, setПишуДлинный] = useState(false);
-  const часы = (мс: number) => new Date(мс).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
   const длиннаяСтрока = (
     <div className="basal-card" style={{ marginTop: 12 }}>
       <div className="basal-head">
@@ -55,7 +55,7 @@ export default function Ins() {
       <div className="basal-rows">
         {фон ? (
           <div className="basal-row">
-            <span>{подписьФона(фон, часы, (мс) => agoText(мс))}</span>
+            <span>{подписьФона(фон, часы, (мс) => сколькоНазад(мс))}</span>
             <button className="changed-btn is-undo" onClick={() => setПишуДлинный(true)}>Записать</button>
           </div>
         ) : (

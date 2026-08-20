@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { часы } from '@/слова/время';
 import Row from '@/ui/Row';
 import { IonIcon, IonInput, IonButton } from '@ionic/react';
 import {
@@ -371,7 +372,7 @@ export default function Onboarding() {
   }
 
   // ---------- streams: что нашли → чьё это ----------
-  const glucoseAt = probe?.glucose?.at ? new Date(probe.glucose.at).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }) : null;
+  const glucoseAt = probe?.glucose?.at ? часы(probe.glucose.at) : null;
   const pumpBits = [
     probe?.pump?.reservoir != null ? Math.round(probe.pump.reservoir) + ' ед' : null,
     probe?.pump?.battery != null ? probe.pump.battery + '%' : null,

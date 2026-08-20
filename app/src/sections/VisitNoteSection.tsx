@@ -1,4 +1,5 @@
 import { IonIcon, IonInput, IonToggle } from '@ionic/react';
+import { деньМесяц } from '@/слова/время';
 import { checkmarkCircle, ellipseOutline, addOutline, helpCircleOutline } from 'ionicons/icons';
 import { useMemo, useState } from 'react';
 import Section from '@/ui/Section';
@@ -71,7 +72,7 @@ export default function VisitNoteSection({ onClose, встроенный }: {
   const просрочены = поВажности(h.проверки, сейчас, h.дебют)
     .filter((с) => с.состояние === 'просрочено' || с.состояние === 'скоро');
 
-  const дата = (t: number) => new Date(t).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  const дата = деньМесяц;
 
   const тело = (
     <>

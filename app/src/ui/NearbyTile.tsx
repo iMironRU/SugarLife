@@ -1,4 +1,5 @@
 import { IonIcon } from '@ionic/react';
+import { сколькоНазад } from '@/слова/время';
 import { bluetoothOutline, chevronForward } from 'ionicons/icons';
 import { useSnapshot } from '@/sources/bridge';
 import Notice from './Notice';
@@ -6,7 +7,7 @@ import { движокЖивой } from '@/domain/deviceState';
 import { железоДиспетчера, потерянаСвязь, имяЖелезки } from '@/domain/nearby';
 import { однаПравда, разборОбрыва } from '@/domain/однаПравда';
 import { названиеКанала, словоОбрыва, подписьЗанятия } from '@/слова/приборы';
-import { agoText } from '@/domain/units';
+
 import { useStack } from '@/app/stackCtx';
 import { DataDevicesSection } from '@/sections/lazy';
 
@@ -86,7 +87,7 @@ export default function NearbyTile() {
               <span>{подписьЗанятия(с.вместоСостояния) ?? [
                 с.состояние,
                 названиеКанала(с.откуда),
-                с.когдаМс ? agoText(с.когдаМс) : null,
+                с.когдаМс ? сколькоНазад(с.когдаМс) : null,
               ].filter(Boolean).join(' · ')}</span>
             </span>
           ))}

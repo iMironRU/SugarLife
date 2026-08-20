@@ -1,4 +1,5 @@
 import { IonIcon } from '@ionic/react';
+import { сколькоНазад } from '@/слова/время';
 import Section from '@/ui/Section';
 import { DeviceSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
@@ -27,7 +28,7 @@ import { связь } from '@/domain/deviceState';
 import { меткаСвязи, подписьСвежести, подписьЗанятия } from '@/слова/приборы';
 import { свежесть, чтоСПрибором } from '@/domain/freshness';
 import { расходка, подписьРасходки } from '@/domain/supplies';
-import { agoText } from '@/domain/units';
+
 import { sourceStatusLabel } from '@/domain/sourceStatus';
 import { слотПоСнимку, путьСлота, ПОДПИСЬ_СЛОТА } from '@/domain/slotStatus';
 import type { DeviceCatKey } from './DeviceSection';
@@ -119,7 +120,7 @@ export default function DevicesSection({ onClose, встроенный, толь
     расх.заряд != null ? расх.заряд + '%' : null,
     /* Возраст и путь — рядом с числом, а не в карточке: строка списка и есть то место,
        где человек его читает, а «37 ед» часовой давности выглядят как свежие (#183). */
-    подписьРасходки(расх, Date.now(), (мс) => agoText(мс))]
+    подписьРасходки(расх, Date.now(), (мс) => сколькоНазад(мс))]
     .filter(Boolean).join(' · ') || (pump ? 'нет данных о резервуаре/батарее' : null);
 
   const titles: Record<DeviceCatKey, string> = {
