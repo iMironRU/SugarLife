@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -46,13 +47,7 @@ class SugarLifeService : Service() {
                 },
             )
         }
-        val notif: Notification = NotificationCompat.Builder(this, CHANNEL)
-            .setContentTitle("SugarLife")
-            .setContentText("Мониторинг активен")
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
+        val notif: Notification = уведомление()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val тип = if (bluetoothРазрешён(this)) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
             else ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
@@ -97,12 +92,68 @@ class SugarLifeService : Service() {
         )
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Нажали «Отдать приборы» прямо в уведомлении (#395) — не открывая приложение.
+        if (intent?.action == ОТДАТЬ) отдатьПриборы("нажали в уведомлении")
+        return START_STICKY
+    }
+
+    /**
+     * Приложение убрали из недавних (#395).
+     *
+     * Для системы оно живо — его держит этот сервис, а вместе с ним и соединения с приборами. Для человека
+     * оно закрыто. Пока эти два понимания расходились, случалось вот что: на одном телефоне приложение
+     * «закрыли», а мост к помпе остался занят — и на ДРУГОМ телефоне настоящая петля не смогла подключиться,
+     * пока не выключили Bluetooth руками. Догадаться до причины нельзя: занятость прибора со стороны не
+     * видна, второй телефон просто получает «помпа не отвечает».
+     *
+     * Поэтому приборы отпускаем. Вред несимметричен: занятый мост ломает чужую петлю, а отпущенный сенсор
+     * всего лишь прерывает наш сбор. Осознанная фоновая работа при этом остаётся — она видна уведомлением, и
+     * приборы держатся, пока приложение не убрали с глаз.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        отдатьПриборы("приложение убрали из недавних")
+        super.onTaskRemoved(rootIntent)
+    }
+
+    private fun отдатьПриборы(причина: String) {
+        Log.i(TAG, "отдаём приборы: $причина")
+        runCatching {
+            EngineHolder.engine(applicationContext).sendIntent("""{"type":"releaseBle"}""")
+        }.onFailure { Log.w(TAG, "не удалось отдать приборы: $it") }
+    }
     override fun onBind(intent: Intent?): IBinder? = null
+
+    /**
+     * Постоянное уведомление — единственное, что человек видит, когда приложение закрыто. Значит оно должно
+     * говорить правду о состоянии и давать выход (#395): раньше здесь стояло «Мониторинг активен», и отдать
+     * приборы можно было только открыв приложение.
+     */
+    private fun уведомление(): Notification {
+        val отдать = PendingIntent.getService(
+            this, 1, Intent(this, SugarLifeService::class.java).setAction(ОТДАТЬ),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        return NotificationCompat.Builder(this, CHANNEL)
+            .setContentTitle("SugarLife: мониторинг идёт")
+            .setContentText("Приборы заняты этим телефоном")
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(
+                    "Приборы заняты этим телефоном: пока они здесь, другой телефон к ним не подключится.",
+                ),
+            )
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .addAction(0, "Отдать приборы", отдать)
+            .build()
+    }
 
     companion object {
         private const val TAG = "SugarLifeService"
         private const val CHANNEL = "sugarlife-monitor"
+        /** Действие уведомления «Отдать приборы» (#395). */
+        private const val ОТДАТЬ = "ru.imiron.sugarlife.RELEASE_DEVICES"
         private const val NOTIF_ID = 4711
         private const val PREFS = "sugarlife-service"
         private const val KEY_ВКЛЮЧЁН = "monitoring-on"
