@@ -8,7 +8,8 @@
    Проверяем в фоне: при запуске, при возврате из фона и раз в час — чтобы
    «актуально» означало «только что проверено», а не «когда-то спрашивали». */
 import { useSyncExternalStore } from 'react';
-import { APP_BUILD, isNative } from './appUpdate';
+import { APP_BUILD, isNative, спроситьСервер } from './appUpdate';
+import { отсталиЛи, ключОтказа, КЛЮЧ_ОТКАЗА } from './отставание';
 
 /* 'unsupported' — воркера нет вовсе (dev-сборка, приватный режим, отключён в браузере).
    Без этого состояния подпись навсегда зависала на «Проверяю…» и врала. */
@@ -18,12 +19,19 @@ export interface UpdateState {
   status: UpdateStatus;
   checkedAt: number | null;  // когда последний раз реально проверяли
   applying: boolean;         // идёт применение — дальше будет перезагрузка
+  /* Что выложено на сервере, по манифесту (#386). Второй, независимый от воркера
+     источник правды: он отвечает на вопрос «я отстал?» даже когда цепочка service
+     worker'а по любой причине молчит. null — не спрашивали или не ответили. */
+  serverBuild: string | null;
+  /* Отстали, но ждущего воркера нет. Значит обычная кнопка «Обновить» ничего не
+     переключит — нужен путь пожёстче (перечитатьВсё). */
+  застряли: boolean;
 }
 
 const JUST_UPDATED = 'sl.justUpdated.v1';
 const HOUR = 3600e3;
 
-let state: UpdateState = { status: 'idle', checkedAt: null, applying: false };
+let state: UpdateState = { status: 'idle', checkedAt: null, applying: false, serverBuild: null, застряли: false };
 const subs = new Set<() => void>();
 let reg: ServiceWorkerRegistration | null = null;
 let started = false;
@@ -79,7 +87,7 @@ const CHECK_TIMEOUT = 8000;
 
 export async function checkNow(): Promise<void> {
   if (isNative) return;
-  if (!('serviceWorker' in navigator)) { set({ status: 'unsupported' }); return; }
+  if (!('serviceWorker' in navigator)) { set({ status: 'unsupported' }); await спроситьМанифест(); return; }
   if (checking) return; // не копим параллельные проверки (фон + кнопка)
   checking = true;
   set({ status: 'checking' });
@@ -97,15 +105,66 @@ export async function checkNow(): Promise<void> {
       work,
       new Promise((resolve) => setTimeout(() => resolve(timedOut), CHECK_TIMEOUT)),
     ]);
-    if (res === timedOut) { set({ status: 'error' }); return; }
-    if (res === 'none') { set({ status: 'unsupported' }); return; }
+    if (res === timedOut) { set({ status: 'error' }); await спроситьМанифест(); return; }
+    if (res === 'none') { set({ status: 'unsupported' }); await спроситьМанифест(); return; }
     set({ status: hasWaiting() ? 'available' : 'current', checkedAt: Date.now() });
+    await спроситьМанифест();
   } catch {
     // офлайн и «обновлений нет» — разные вещи, не выдаём одно за другое
     set({ status: 'error' });
+    await спроситьМанифест();
   } finally {
     checking = false;
   }
+}
+
+/* Спросить сервер напрямую — и в успехе, и в неудаче проверки воркера (#386).
+
+   Именно неудача важнее всего: пока «не смог спросить воркера» означало конец разговора,
+   застрявшее приложение выглядело точно так же, как свежее. Манифест весит 115 байт и
+   идёт мимо всех кэшей, поэтому спрашиваем его в любом случае. */
+async function спроситьМанифест(): Promise<void> {
+  const б = await спроситьСервер();
+  const наСервере = б === 'нет' ? APP_BUILD : (б === 'ошибка' ? null : б.build);
+  set({
+    serverBuild: наСервере,
+    застряли: отсталиЛи(APP_BUILD, наСервере) && !hasWaiting(),
+    checkedAt: наСервере ? Date.now() : state.checkedAt,
+  });
+}
+
+/* Выход из тупика: снести воркера и кэши и загрузиться заново (#386).
+
+   Обычный путь — разбудить ждущего воркера — работает, только если он есть. А человек
+   может оказаться там, где его нет: сборка на телефоне отстала на две версии, новая
+   лежит на сервере, и ни одна кнопка в приложении её оттуда не достаёт. Тогда единственно
+   честный ответ — перестать доверять сохранённой оболочке и взять всё заново.
+
+   ТОЛЬКО когда мы ТОЛЬКО ЧТО достучались до сервера. Снести оболочку офлайн значило бы
+   собственными руками сделать тот самый белый экран, от которого она и спасает: назад бы
+   уже ничего не загрузилось. Поэтому зовётся это лишь из состояния «застряли», а оно
+   выставляется по успешному ответу манифеста. */
+export async function перечитатьВсё(): Promise<void> {
+  set({ applying: true });
+  try {
+    localStorage.setItem(JUST_UPDATED, APP_BUILD);
+    /* Одна попытка на релиз, а не бесконечная просьба.
+
+       Если после перезагрузки сборка осталась прежней — значит помогло не это, и
+       повторять предложение бессмысленно: человек будет жать одну и ту же кнопку с
+       одним и тем же исходом. Ставим ту же отметку, что и «Потом»: сменится сборка
+       (у нас или на сервере) — предложение вернётся само. */
+    localStorage.setItem(КЛЮЧ_ОТКАЗА, ключОтказа(APP_BUILD, state.serverBuild));
+  } catch { /* ignore */ }
+  try {
+    const рег = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(рег.map((r) => r.unregister()));
+    if ('caches' in window) {
+      const имена = await caches.keys();
+      await Promise.all(имена.map((k) => caches.delete(k)));
+    }
+  } catch { /* не смогли убрать — перезагрузимся как есть, хуже не станет */ }
+  location.reload();
 }
 
 /* Применить: разбудить ждущий воркер и перезагрузиться, когда он возьмёт управление.
@@ -124,8 +183,17 @@ export function applyUpdate(): void {
 
 function start(): void {
   if (started || isNative) return;
-  if (!('serviceWorker' in navigator)) { set({ status: 'unsupported' }); return; }
+  if (!('serviceWorker' in navigator)) { set({ status: 'unsupported' }); void спроситьМанифест(); return; }
   started = true;
+  /* Спросить сервер СРАЗУ и отдельно от воркера (#386).
+
+     Дальше идут четыре ветки, и в трёх из них разговор раньше заканчивался молчанием:
+     воркера нет и зарегистрировать не вышло, регистрация упала, браузер его не даёт.
+     Каждая означает «механика доставки сломана» — то есть ровно тот случай, когда
+     человек и застревает на старой сборке. Отвечать на это молчанием нельзя: вопрос
+     «я отстал?» решается сравнением двух строк и одним запросом на 115 байт, и он не
+     обязан зависеть от того, работает ли service worker. */
+  void спроситьМанифест();
   navigator.serviceWorker.getRegistration().then(async (r) => {
     /* Воркера нет — РЕГИСТРИРУЕМ САМИ, а не объявляем «не поддерживается» (#359).
 

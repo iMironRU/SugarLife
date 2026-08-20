@@ -7,7 +7,7 @@ import Section from '@/ui/Section';
 import { состояниеОболочки, словоОболочки, ПУСТО, type СостояниеОболочки } from '@/platform/offlineShell';
 import Row from '@/ui/Row';
 import { useSnapshot } from '@/sources/bridge';
-import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated } from '@/platform/swUpdate';
+import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated, перечитатьВсё } from '@/platform/swUpdate';
 import {
   APP_EDITION, APP_VERSION, APP_BUILD, APP_BUILT_AT, isNative, platform,
   узнатьOta, применитьOta, checkNativeUpdate, openApkDownload, installApk, откудаБандл,
@@ -110,7 +110,12 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
 
   /* Веб-состояние словами — то же, что было в Профиле: четыре ответа на три вопроса,
      которые иначе остаются без ответа. */
-  const вебСтрока = веб.status === 'available' ? 'Новая версия скачана — применится после перезагрузки.'
+  /* «Отстали» идёт ПЕРВЫМ, раньше всех остальных ответов (#386). Иначе приложение,
+     застрявшее на позавчерашней сборке, говорило про себя «Актуально» — не потому что
+     врало намеренно, а потому что спрашивало только воркера и верило его молчанию.
+     Сравнение с манифестом сильнее: оно про сборки, а не про механику доставки. */
+  const вебСтрока = веб.застряли ? `Вы на сборке ${APP_BUILD}, а выложена ${веб.serverBuild}.`
+    : веб.status === 'available' ? 'Новая версия скачана — применится после перезагрузки.'
     : веб.status === 'checking' ? 'Спрашиваю сервер…'
     : веб.status === 'error' ? 'Не удалось проверить — похоже, нет сети.'
     : веб.status === 'unsupported' ? 'Автообновление недоступно — обновите страницу вручную.'
@@ -178,7 +183,16 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
               void применитьOta(найдено).then((ок) => { if (!ок) { setСтавлю(false); setИтог('Не удалось скачать — похоже, нет сети.'); } });
             }} />
         )}
-        {!isNative && веб.status === 'available' && (
+        {/* Путь для застрявших: переключать нечего, поэтому берём оболочку заново (#386).
+            Отдельной строкой и другими словами — это не «применить скачанное», а «не верить
+            сохранённому», и цена другая: без сети не сработает. */}
+        {!isNative && веб.застряли && (
+          <Row icon={refreshOutline} chevron={false} disabled={веб.applying}
+            title={веб.applying ? 'Загружаю заново…' : 'Загрузить приложение заново'}
+            sub={`сборка ${веб.serverBuild} · нужна сеть · незаписанное в шторках пропадёт`}
+            onClick={() => void перечитатьВсё()} />
+        )}
+        {!isNative && !веб.застряли && веб.status === 'available' && (
           <Row icon={refreshOutline} chevron={false} disabled={веб.applying}
             title={веб.applying ? 'Обновляю…' : 'Обновить и перезагрузить'}
             sub="страница перезагрузится — незаписанное в открытых шторках пропадёт"
