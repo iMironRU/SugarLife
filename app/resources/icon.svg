@@ -1,17 +1,27 @@
 <!-- Иконка приложения. Источник для iOS, Android и PWA — рисуется скриптом scripts/make-icons.sh.
      Без скруглений: углы срезает сама система, и своё скругление поверх системного даёт
-     двойную рамку. Капля занимает ~79 % высоты плитки — на домашнем экране она стоит рядом
-     с чужими иконками, и глыф меньше соседских читается как «приложение поменьше» (SugarLife#160). -->
+     двойную рамку.
+
+     ПОДЛОЖКА ФИОЛЕТОВАЯ, а не почти чёрная (SugarLife#389). Каплю мы уже увеличивали
+     ровно за этим (#160), и она всё равно читалась мельче соседних — потому что дело было
+     не в ней. Плитка одного размера со всеми, но #161826 на тёмных обоях сливается с ними
+     без остатка: границ не видно, и глаз считает иконкой только каплю. У соседей краской
+     залито 100 % плитки, у нас — 57 % её ширины. Мерить надо не глыф, а то, сколько от
+     плитки ВИДНО.
+
+     Цвет из палитры приложения, приглушённый: рядом с ядовито-зелёными соседями наша
+     не должна кричать — она должна быть видна целиком. Тёмный вариант никуда не делся,
+     он живёт в icon-dark.svg, где систему просят нарисовать плитку самой. -->
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="drop" x1="256" y1="104" x2="256" y2="412" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#e6e2ff"/>
-      <stop offset="0.45" stop-color="#b7aef0"/>
-      <stop offset="1" stop-color="#8375d3"/>
+      <stop offset="0" stop-color="#f4f1ff"/>
+      <stop offset="0.45" stop-color="#ddd6ff"/>
+      <stop offset="1" stop-color="#b9adf5"/>
     </linearGradient>
     <radialGradient id="bg" cx="256" cy="200" r="320" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#22243a"/>
-      <stop offset="1" stop-color="#161826"/>
+      <stop offset="0" stop-color="#5b4ca6"/>
+      <stop offset="1" stop-color="#3a2f6e"/>
     </radialGradient>
     <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
       <feGaussianBlur stdDeviation="16" result="b"/>
@@ -19,11 +29,11 @@
     </filter>
   </defs>
   <rect width="512" height="512" fill="url(#bg)"/>
-  <g transform="translate(256 256) scale(1.257) translate(-256 -275)">
-    <path d="M256 104 C256 104 372 250 372 330 a116 116 0 1 1 -232 0 C140 250 256 104 256 104 Z" fill="#9184d9" opacity="0.22" filter="url(#glow)"/>
+  <g transform="translate(256 256) scale(1.30) translate(-256 -275)">
+    <path d="M256 104 C256 104 372 250 372 330 a116 116 0 1 1 -232 0 C140 250 256 104 256 104 Z" fill="#e7e1ff" opacity="0.20" filter="url(#glow)"/>
     <path d="M256 104 C256 104 372 250 372 330 a116 116 0 1 1 -232 0 C140 250 256 104 256 104 Z" fill="url(#drop)"/>
     <ellipse cx="212" cy="292" rx="30" ry="52" fill="#ffffff" opacity="0.28" transform="rotate(-24 212 292)"/>
-    <path d="M176 344 h34 l16 -40 l22 78 l20 -58 l14 20 h30" fill="none" stroke="#161826" stroke-width="15"
+    <path d="M176 344 h34 l16 -40 l22 78 l20 -58 l14 20 h30" fill="none" stroke="#241f42" stroke-width="15"
           stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
   </g>
 </svg>
