@@ -1,0 +1,86 @@
+/* Записка к приёму на бумаге (#156).
+
+   Экран печатать нельзя: он тёмный, узкий, с кнопками и переключателями, которые на
+   листе превращаются в мусор. Поэтому на печати мы прячем приложение целиком и
+   показываем отдельный документ, свёрстанный под лист.
+
+   Всё здесь — внутри @media print. На экране этого документа не существует: он не
+   мигает, не занимает места и не участвует в раскладке. */
+
+.печать { display: none; }
+
+@media print {
+  /* Приложение целиком уходит. Оно висит на fixed-позициях во весь экран, и оставить
+     его хоть частично значит получить пустые страницы и обрезанный текст. */
+  body > #root { display: none !important; }
+
+  /* Цвета печатаем как есть: пометки «мимо» несут смысл, и потерять их в чёрно-белом
+     значило бы отдать врачу отчёт, где не видно, что именно вне цели. Форма при этом
+     дублирует цвет — жирным и пометкой, — чтобы документ читался и на ч/б принтере. */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  @page { size: A4; margin: 16mm 14mm; }
+
+  html, body {
+    background: #fff; color: #111;
+    font-family: var(--font-body);
+    /* Печать меряет в пунктах, а не в наших rem: системный крупный шрифт к бумаге
+       отношения не имеет, а вот читаемость листа — имеет. */
+    font-size: 10.5pt; line-height: 1.45;
+  }
+
+  .печать { display: block; }
+
+  .печать-шапка h1 {
+    margin: 0 0 2mm; font-size: 18pt; font-weight: 700; letter-spacing: -0.01em;
+  }
+  /* Оговорка про происхождение — сразу под заголовком и заметная. Внизу мелким её
+     прочитают уже после того, как сделают вывод. */
+  .печать-кто {
+    margin: 0 0 4mm; padding: 2.5mm 3mm;
+    border-left: 2pt solid #111; background: #f3f3f5;
+    font-size: 9pt; line-height: 1.4;
+  }
+  .печать-оговорка {
+    margin: 3mm 0 0; padding: 2.5mm 3mm; border: 0.7pt solid #111;
+    font-size: 9pt; font-weight: 600;
+  }
+
+  .печать table { width: 100%; border-collapse: collapse; }
+  .печать th, .печать td {
+    text-align: left; vertical-align: baseline;
+    padding: 1.4mm 0; border-bottom: 0.4pt solid #d5d5dd;
+  }
+  .печать th { font-weight: 400; color: #444; width: 48%; }
+  .печать td { font-weight: 400; }
+  .печать-шапка-таблица { margin-bottom: 2mm; }
+
+  .печать-блок { margin-top: 6mm; break-inside: avoid; }
+  .печать-блок h2 {
+    margin: 0 0 1.5mm; font-size: 8.5pt; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em; color: #444;
+    border-bottom: 1pt solid #111; padding-bottom: 1mm;
+  }
+
+  /* «Мимо цели» — не только цветом: приложение вообще так не делает (#325), а на
+     чёрно-белом принтере цвет исчезает совсем. */
+  .печать-знач { font-weight: 600; }
+  .печать .мимо { color: #a3253a; }
+  .печать-метка { font-size: 8pt; font-weight: 700; white-space: nowrap; }
+  .печать-тихо { font-weight: 400; color: #666; font-size: 9pt; }
+
+  /* Вопросы — с местом для ответа. Лист печатают ради этого: с приёма уносят не
+     память, а бумагу с пометками. */
+  .печать-вопросы ol { margin: 0; padding-left: 6mm; }
+  .печать-вопросы li { margin-bottom: 4mm; break-inside: avoid; }
+  .печать-вопрос { display: block; font-weight: 600; }
+  .печать-линейка {
+    display: block; margin-top: 5mm;
+    border-bottom: 0.4pt solid #b9b9c6;
+  }
+
+  .печать-подвал {
+    margin-top: 8mm; padding-top: 2mm; border-top: 0.4pt solid #d5d5dd;
+    font-size: 8pt; color: #666;
+  }
+}
