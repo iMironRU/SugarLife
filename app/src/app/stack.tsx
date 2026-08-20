@@ -4,6 +4,8 @@ import { StackCtx, type StackApi } from './stackCtx';
 import { syncToActiveScreen, плавно } from './panel';
 import { useGoHome } from './nav';
 import { canStartBack, shouldGoBack } from './backGesture';
+import { собрать, type Метка } from './разделы';
+import { местоВкладки, сохранитьМесто } from './местоStore';
 
 /* Стек страниц внутри вкладки.
 
@@ -22,8 +24,10 @@ import { canStartBack, shouldGoBack } from './backGesture';
    Стек свой у каждой вкладки: уходя на другую и возвращаясь, человек ожидает застать
    то же место, где был. */
 
+type Страница = { key: number; node: ReactNode; метка?: Метка };
+
 export function StackHost({ tab, children }: { tab: number; children: ReactNode }) {
-  const [pages, setPages] = useState<{ key: number; node: ReactNode }[]>([]);
+  const [pages, setPages] = useState<Страница[]>([]);
 
   /* Уходящая страница живёт ещё четверть секунды после того, как снята со стека.
 
@@ -44,13 +48,13 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
   const [въезжает, setВъезжает] = useState(0);
   const таймерВъезда = useRef(0);
 
-  const push = useCallback((node: ReactNode) => {
+  const push = useCallback((node: ReactNode, метка?: Метка) => {
     setPages((p) => {
       const key = (p[p.length - 1]?.key ?? 0) + 1;
       setВъезжает(key);
       window.clearTimeout(таймерВъезда.current);
       таймерВъезда.current = window.setTimeout(() => setВъезжает(0), 260);
-      return [...p, { key, node }];
+      return [...p, { key, node, метка }];
     });
   }, []);
 
@@ -93,6 +97,42 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
   }, []);
 
   const api = useMemo<StackApi>(() => ({ push, pop, depth: pages.length }), [push, pop, pages.length]);
+
+  /* Вернуть человека туда, где он был (#400).
+
+     Собираем стек ОДИН раз при монтировании и без анимации: страницы не «открываются
+     заново» — они там были. Въезд справа тут был бы враньём про действие, которого
+     человек не совершал.
+
+     Останавливаемся на первой метке, которой нет в реестре: пропустить её и открыть то,
+     что было выше, значит подсунуть человеку экран без родителя — кнопка «назад» увела
+     бы его не туда, откуда он пришёл. */
+  const восстановлено = useRef(false);
+  useEffect(() => {
+    if (восстановлено.current) return;
+    восстановлено.current = true;
+    const метки = местоВкладки(tab);
+    if (!метки.length) return;
+    const собранные: Страница[] = [];
+    for (const м of метки) {
+      const node = собрать(м, pop);
+      if (!node) break;
+      собранные.push({ key: собранные.length + 1, node, метка: м });
+    }
+    if (собранные.length) setPages(собранные);
+  }, [tab, pop]);
+
+  /* И запоминаем, где он сейчас. Только помеченные разделы: непомеченный восстановить
+     нечем, и записать его значило бы обещать возврат, которого не будет. */
+  useEffect(() => {
+    if (!восстановлено.current) return;
+    const метки: Метка[] = [];
+    for (const с of pages) {
+      if (!с.метка) break;
+      метки.push(с.метка);
+    }
+    сохранитьМесто(tab, метки);
+  }, [pages, tab]);
 
   /* Панель должна знать про открытую страницу и слышать её прокрутку.
 

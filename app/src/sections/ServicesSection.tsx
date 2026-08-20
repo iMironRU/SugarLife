@@ -18,7 +18,7 @@ export default function ServicesSection({ onClose, встроенный }: {
   const { push, pop } = useStack();
   const снимок = useSnapshot();
 
-  const openCloud = (id: string) => push(<CloudSection cloudId={id} onClose={pop} />);
+  const openCloud = (id: string) => push(<CloudSection cloudId={id} onClose={pop} />, { id: 'облако', cloudId: id });
 
   const onAdd = () => {
     const c = addCloud({
@@ -83,7 +83,7 @@ export default function ServicesSection({ onClose, встроенный }: {
             <div className="list">
               <Row icon={personCircleOutline} title="Учётные записи"
                 sub="LibreLinkUp, Dexcom Share и другие"
-                onClick={() => push(<CloudAccountsSection onClose={pop} />)} />
+                onClick={() => push(<CloudAccountsSection onClose={pop} />, { id: 'учётки' })} />
             </div>
           </>
         )}

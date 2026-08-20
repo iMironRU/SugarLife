@@ -53,7 +53,7 @@ export default function Mon() {
           <DataGate>
           {/* сахар/тренд/свежесть — в верхней панели; здесь кнопка датчика + график */}
           {ages.sensor && (
-            <button className="pump-btn" style={{ marginTop: 0 }} onClick={() => push(<DeviceSection cat="sensor" title="Сенсор (НМГ)" onClose={pop} />)}>
+            <button className="pump-btn" style={{ marginTop: 0 }} onClick={() => push(<DeviceSection cat="sensor" title="Сенсор (НМГ)" onClose={pop} />, { id: 'категория', cat: 'sensor', title: 'Сенсор (НМГ)' })}>
               <IonIcon icon={hardwareChipOutline} className="pump-btn-ico" style={{ color: 'var(--color-accent)' }} />
               <div className="pump-btn-txt">
                 <div className="pump-btn-title">Датчик</div>

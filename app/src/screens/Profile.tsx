@@ -50,8 +50,8 @@ export default function Profile() {
         if (!раздел) return;
         открытоПо.current = url;
         setTab(4);
-        if (раздел === 'диагностика') push(<DiagnosticsSection onClose={pop} />);
-        else push(<DataDevicesSection onClose={pop} вкладка="приборы" />);
+        if (раздел === 'диагностика') push(<DiagnosticsSection onClose={pop} />, { id: 'диагностика' });
+        else push(<DataDevicesSection onClose={pop} вкладка="приборы" />, { id: 'приборы', вкладка: 'приборы' });
       }).then((h) => { снять = () => void h.remove(); });
     });
     return () => { снять?.(); };
@@ -160,15 +160,15 @@ export default function Profile() {
                 понял, что ищет. Внутри — две вкладки, потому что вопросы разные. */}
             <Row icon={hardwareChipOutline} title="Устройства и данные"
               sub={устройства} value={нуженМост ? 'нужен мост' : undefined}
-              onClick={() => push(<DataDevicesSection onClose={pop} />)} />
+              onClick={() => push(<DataDevicesSection onClose={pop} />, { id: 'приборы' })} />
             {/* профиль петли: только настройка — подача не включается (решение 0004) */}
             <Row icon={repeat} title="Петля" sub={loopSub}
-              onClick={() => push(<LoopSection onClose={pop} />)} />
+              onClick={() => push(<LoopSection onClose={pop} />, { id: 'петля' })} />
             {/* Здоровье — рядом с железом и петлёй по той же причине: это «моё,
                 работающее», просто не про приборы, а про то, что знает сам человек
                 и записывает врач (#156). */}
             <Row icon={heartOutline} title="Здоровье" sub={здоровьеПодпись}
-              onClick={() => push(<HealthSection onClose={pop} />)} />
+              onClick={() => push(<HealthSection onClose={pop} />, { id: 'здоровье' })} />
           </div>
 
           {/* настройки */}
@@ -192,7 +192,7 @@ export default function Profile() {
           <div className="list">
             <Row icon={documentTextOutline} title="Логи работы"
               sub="уровень подробности, запись в файл, выгрузка"
-              onClick={() => push(<DiagnosticsSection onClose={pop} />)} />
+              onClick={() => push(<DiagnosticsSection onClose={pop} />, { id: 'диагностика' })} />
           </div>
 
           {/* о приложении: версия + сборка + обновление */}
@@ -212,7 +212,7 @@ export default function Profile() {
             <Row icon={colorPaletteOutline} title="Тема"
               sub={theme === 'system' ? 'как в настройках телефона' : theme === 'light' ? 'светлая' : 'тёмная'}
               value={theme === 'system' ? 'системная' : undefined}
-              onClick={() => push(<AppearanceSection onClose={pop} />)} />
+              onClick={() => push(<AppearanceSection onClose={pop} />, { id: 'оформление' })} />
           </div>
 
           <div className="section-label sec">О приложении</div>
@@ -220,7 +220,7 @@ export default function Profile() {
             <Row icon={informationCircleOutline}
               title={`${издание === 'pro' ? 'SugarLife.Pro' : APP_EDITION} ${APP_VERSION}`}
               sub={`сборка ${APP_BUILD}${isNative ? ' · нативное' : ' · PWA'}`}
-              onClick={() => push(<AboutSection onClose={pop} />)} />
+              onClick={() => push(<AboutSection onClose={pop} />, { id: 'оПриложении' })} />
           </div>
 
           {/* оформление */}

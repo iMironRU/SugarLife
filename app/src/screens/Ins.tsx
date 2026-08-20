@@ -98,7 +98,7 @@ export default function Ins() {
             <>
               {/* помпа (шторка) + петля (шторка) */}
               <div className="pump-row">
-                <button className="pump-btn" onClick={() => push(<DeviceSection cat="pump" title="Ввод инсулина" onClose={pop} />)}>
+                <button className="pump-btn" onClick={() => push(<DeviceSection cat="pump" title="Ввод инсулина" onClose={pop} />, { id: 'категория', cat: 'pump', title: 'Ввод инсулина' })}>
                   <IonIcon icon={flash} className="pump-btn-ico" />
                   <div className="pump-btn-txt">
                     <div className="pump-btn-title">Помпа</div>
@@ -106,7 +106,7 @@ export default function Ins() {
                   </div>
                   <IonIcon icon={chevronForward} className="pump-btn-chev" />
                 </button>
-                <button className="loop-btn" onClick={() => push(<LoopSetupSection onClose={pop} />)} aria-label="Петля">
+                <button className="loop-btn" onClick={() => push(<LoopSetupSection onClose={pop} />, { id: 'настройкаПетли' })} aria-label="Петля">
                   <IonIcon icon={repeat} />
                 </button>
               </div>

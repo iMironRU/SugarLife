@@ -188,7 +188,7 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
               не указана» — это ровно то место, где хочется на неё нажать. Переключатель
               вынесен из кнопки: он про источник данных, а не про переход. */}
           <div className="list-row src-row">
-            <button className="src-main" onClick={() => push(<DeviceSection cat="sensor" title="Сенсор (НМГ)" onClose={pop} />)}>
+            <button className="src-main" onClick={() => push(<DeviceSection cat="sensor" title="Сенсор (НМГ)" onClose={pop} />, { id: 'категория', cat: 'sensor', title: 'Сенсор (НМГ)' })}>
               <IonIcon icon={hardwareChipOutline} className="list-ico" />
               <span className="pick-main">
                 <span className={'list-title' + (sensorRecorded ? '' : ' muted')}>{sensorLabel}</span>
@@ -199,7 +199,7 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
             <IonToggle checked={cloud.sourceGlucose} disabled={!sensorRecorded} onIonChange={(e) => onToggleSensor(e.detail.checked)} />
           </div>
           <div className="list-row src-row">
-            <button className="src-main" onClick={() => push(<DeviceSection cat="pump" title="Помпа" onClose={pop} />)}>
+            <button className="src-main" onClick={() => push(<DeviceSection cat="pump" title="Помпа" onClose={pop} />, { id: 'категория', cat: 'pump', title: 'Помпа' })}>
               <IonIcon icon={flash} className="list-ico" />
               <span className="pick-main">
                 <span className={'list-title' + (pumpRecorded ? '' : ' muted')}>{pumpLabel}</span>
