@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
 import { IonIcon } from '@ionic/react';
-import { restaurantOutline, bluetoothOutline, warningOutline, timeOutline } from 'ionicons/icons';
+import { restaurantOutline, bluetoothOutline, warningOutline, timeOutline, trendingUpOutline, refreshOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import { useMeals } from '@/sources/mealStore';
 import { useMealNames } from '@/settings/mealNames';
-import { запросЖурнала, type LogRecord } from '@/sources/bridge';
-import { изЖурнала, изПриёмов, лентаИстории, поДням, свернутьПовторы, type ВидСобытия } from '@/domain/история';
-import { isNative } from '@/platform/appUpdate';
+import { useДневник } from '@/sources/дневникStore';
+import { useEntries, useTreatments } from '@/sources/db';
+import { onlyLocal } from '@/domain/meals';
+import { необъяснённыеПодъёмы } from '@/domain/mealMoment';
+import { изДневника, изПодъёмов, изПриёмов, лентаИстории, поДням, свернутьПовторы, type ВидСобытия } from '@/domain/история';
 
 /* «История» — что ушло с экрана, но осталось в данных (SugarLife#384).
 
@@ -15,13 +16,16 @@ import { isNative } from '@/platform/appUpdate';
    потом человек спрашивает «во сколько я ел» и «когда сенсор отвалился», и ответить
    нечем, хотя данные лежат.
 
-   ДВА ИСТОЧНИКА, И ОБА НАСТОЯЩИЕ: приёмы из нашей базы и события приборов из журнала
-   движка. Ничего третьего не выдумываем: то, что живёт только в памяти экрана (вибро,
-   мигнувшее обращение), до истории не доживает, и заводить ему хранилище ради ленты мы
-   не станем. */
+   ЛЕНТА — ИЗ ТОГО, ЧТО ЧЕЛОВЕК ВИДЕЛ, а не из журнала движка (#396). Журнал — переписка
+   с прибором, он про технику и живёт в «Что происходит» у прибора. Здесь три источника,
+   и все про человека: дневник экрана (связь, обновления), приёмы и подъёмы без записи.
+
+   Дневник ведём сами и с момента установки этой сборки — прошлое не восстановить, и об
+   этом сказано прямо, а не показано пустотой. */
 
 const ЗНАЧОК: Record<ВидСобытия, string> = {
-  еда: restaurantOutline, прибор: bluetoothOutline, тревога: warningOutline,
+  еда: restaurantOutline, прибор: bluetoothOutline, подъём: trendingUpOutline,
+  сборка: refreshOutline, тревога: warningOutline,
 };
 
 const ОКНО_МС = 48 * 3600e3;
@@ -29,36 +33,38 @@ const ОКНО_МС = 48 * 3600e3;
 export default function HistorySection({ onClose }: { onClose: () => void }) {
   const meals = useMeals();
   const имена = useMealNames();
-  const [журнал, setЖурнал] = useState<LogRecord[] | null>(null);
-  const [естьЖурнал, setЕстьЖурнал] = useState(true);
-
-  useEffect(() => {
-    let жив = true;
-    void запросЖурнала({ sinceMs: Date.now() - ОКНО_МС, minLevel: 'Info', limit: 300 }).then((r) => {
-      if (!жив) return;
-      if (!r) { setЕстьЖурнал(false); setЖурнал([]); return; }
-      setЖурнал(r.records);
-    });
-    return () => { жив = false; };
-  }, []);
+  const записи = useДневник();
+  const entries = useEntries(ОКНО_МС);
+  const лечение = useTreatments(ОКНО_МС);
 
   const от = Date.now() - ОКНО_МС;
+  const свои = meals.filter((m) => m.t >= от);
+  /* Времена ВСЕХ известных углеводов, а не только своих: еда из AAPS приходит через
+     Nightscout, и без неё мы объявили бы объяснённый подъём необъяснённым. */
+  const всяЕда = [
+    ...onlyLocal(meals, лечение).map((m) => m.t),
+    ...лечение.filter((t) => (t.carbs ?? 0) > 0).map((t) => t.t),
+  ];
+
   const события = свернутьПовторы(лентаИстории([
-    изПриёмов(meals.filter((m) => m.t >= от), имена.names),
-    изЖурнала(журнал ?? []),
+    изДневника(записи.filter((з) => з.когдаМс >= от)),
+    изПриёмов(свои, имена.names),
+    изПодъёмов(необъяснённыеПодъёмы(entries, всяЕда)),
   ]));
   const дни = поДням(события);
+  const пусто = дни.length === 0;
 
   return (
     <Section title="История" onBack={onClose}
-      описание="Что уже произошло: еда, подключения, обрывы связи. Экран «Сегодня» показывает настоящее и стирает прошедшее — здесь оно остаётся.">
+      описание="Что уже произошло: еда, подключения и обрывы связи, подъёмы без записи. Экран «Сегодня» показывает настоящее и стирает прошедшее — здесь оно остаётся.">
 
       {дни.length === 0 ? (
         <div className="loop-empty">
           <IonIcon icon={timeOutline} />
           <div className="loop-empty-t">Пока нечего вспоминать</div>
           <div className="loop-empty-s">
-            За двое суток не записано ни приёмов, ни событий приборов.
+            За двое суток ничего не записано. Дневник ведётся с момента установки этой
+            сборки — то, что было раньше, в него не попало.
           </div>
         </div>
       ) : (
@@ -87,12 +93,13 @@ export default function HistorySection({ onClose }: { onClose: () => void }) {
         ))
       )}
 
-      {/* Про отсутствие журнала говорим прямо: в браузере движка нет, и события приборов
-          там не появятся никогда — а человек будет ждать. */}
-      {!естьЖурнал && (
+      {/* Скажем прямо, откуда лента и с какого момента. Без этого молчание читается как
+          «больше ничего и не было», а это неправда: до установки сборки дневника просто
+          не существовало. */}
+      {!пусто && (
         <div className="metric-note">
-          Здесь только еда: события приборов ведёт движок приложения, а в браузере его нет.
-          {!isNative && ' В приложении на телефоне лента будет полной.'}
+          Здесь то, что показывалось на «Сегодня»: связь с приборами, еда, подъёмы без
+          записи. Переписка с прибором — в карточке прибора, «Что происходит».
         </div>
       )}
     </Section>

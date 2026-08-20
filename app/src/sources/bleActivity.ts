@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import type { DeviceView } from './bridge';
+import { вДневник } from './дневникStore';
 
 /* Ощущение подключения: вибро и лента событий.
 
@@ -67,7 +68,16 @@ function вибро(phase: BlePhase): void {
 }
 
 function записать(id: string, name: string, phase: BlePhase): void {
-  лента = [{ id, name, phase, at: Date.now() }, ...лента].slice(0, ПАМЯТЬ);
+  const событие: BleEvent = { id, name, phase, at: Date.now() };
+  лента = [событие, ...лента].slice(0, ПАМЯТЬ);
+  /* И в дневник — теми же словами, что на экране (#396). Лента живёт минуты и шесть
+     записей, а вопрос «когда сенсор отвалился» человек задаёт назавтра. Пишем ЗДЕСЬ, в
+     одной точке с показом: любая другая точка однажды разойдётся с экраном, и в истории
+     появится событие, которого человек не видел, — или пропадёт то, которое видел.
+
+     «Подключаюсь…» в дневник не идёт: это не событие, а обещание. В истории строка
+     «подключаюсь к сенсору» без ответа читается как «так и не подключился». */
+  if (phase !== 'capturing') вДневник('прибор', фразаСобытия(событие));
   вибро(phase);
   subs.forEach((f) => f());
 }
