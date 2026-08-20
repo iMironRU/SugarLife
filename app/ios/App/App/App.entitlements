@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- ОБЩИЙ КОНТЕЙНЕР С ПЕТЛЁЙ (SugarLife#413).
+
+	     Через него iAPS читает наши показания: на iOS приложения не разговаривают вещанием, как на Android,
+	     и общий контейнер — единственный местный путь (облако не считается: оно не местное).
+
+	     Имя вычисляется из команды разработчика, ровно как у iAPS (`group.com.$(DEVELOPMENT_TEAM).loopkit.LoopGroup`),
+	     поэтому обе программы, собранные одним человеком, попадают в одну группу. Собранные разными — не попадут,
+	     и это не наша прихоть, а правило подписи Apple. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>$(APP_GROUP_ID)</string>
+	</array>
+</dict>
+</plist>
