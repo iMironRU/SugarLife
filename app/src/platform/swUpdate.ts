@@ -10,6 +10,7 @@
 import { useSyncExternalStore } from 'react';
 import { APP_BUILD, isNative, спроситьСервер } from './appUpdate';
 import { отсталиЛи, ключОтказа, КЛЮЧ_ОТКАЗА } from './отставание';
+import { этоНашПерезапуск } from '@/app/местоStore';
 
 /* 'unsupported' — воркера нет вовсе (dev-сборка, приватный режим, отключён в браузере).
    Без этого состояния подпись навсегда зависала на «Проверяю…» и врала. */
@@ -157,6 +158,7 @@ async function спроситьМанифест(): Promise<void> {
    уже ничего не загрузилось. Поэтому зовётся это лишь из состояния «застряли», а оно
    выставляется по успешному ответу манифеста. */
 export async function перечитатьВсё(): Promise<void> {
+  этоНашПерезапуск();
   set({ applying: true });
   try {
     localStorage.setItem(JUST_UPDATED, APP_BUILD);
@@ -183,6 +185,10 @@ export async function перечитатьВсё(): Promise<void> {
    Перезагрузка ЯВНАЯ и только по кнопке — в медицинском приложении дёргать экран
    под человеком нельзя. */
 export function applyUpdate(): void {
+  /* Помечаем перезапуск своим — тогда после перезагрузки человек вернётся туда, где
+     был, а не на «Сегодня» (#400). Ставим ДО reload в обеих ветках: ветка без ждущего
+     воркера тоже перезагружает, и терять место там ровно так же неприятно. */
+  этоНашПерезапуск();
   if (!reg?.waiting) { location.reload(); return; }
   set({ applying: true });
   try { localStorage.setItem(JUST_UPDATED, APP_BUILD); } catch { /* ignore */ }

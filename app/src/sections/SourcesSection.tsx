@@ -79,7 +79,7 @@ export default function SourcesSection({ onClose, встроенный }: {
                 подходит ближе, снимает и ставит заново. А чинить надо вход в облако, и
                 сам он эти две вещи не свяжет. */}
             {учёткаСлота(snap, слот) && (
-              <button className="slot-why слот-учётка" onClick={() => push(<CloudAccountsSection onClose={pop} />)}>
+              <button className="slot-why слот-учётка" onClick={() => push(<CloudAccountsSection onClose={pop} />, { id: 'учётки' })}>
                 Источник читает данные через учётную запись, и она сейчас не отвечает.
                 Открыть учётные записи →
               </button>

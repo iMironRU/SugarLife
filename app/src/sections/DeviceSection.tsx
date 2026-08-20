@@ -514,7 +514,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                   <Row icon={pulseOutline} title="Базальный профиль"
                     value={basalTotal != null ? basalTotal.toFixed(2) + ' ЕД/сут' : 'нет данных'}
                     valueMuted={basalTotal == null}
-                    onClick={() => push(<BasalProfileSection onClose={pop} />)} />
+                    onClick={() => push(<BasalProfileSection onClose={pop} />, { id: 'базал' })} />
                 )}
               </div>
             ) : (

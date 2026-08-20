@@ -58,7 +58,7 @@ export default function LoopSection({ onClose }: { onClose: () => void }) {
       <div className="list">
         <Row icon={repeat} title="Профиль петли"
           sub={профиль.savedAt ? `${режим.code} · ${режим.name.toLowerCase()}` : 'не настроен'}
-          onClick={() => push(<LoopSetupSection onClose={pop} />)} />
+          onClick={() => push(<LoopSetupSection onClose={pop} />, { id: 'настройкаПетли' })} />
       </div>
 
       {профиль.savedAt && лимиты.length > 0 && (

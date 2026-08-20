@@ -383,7 +383,7 @@ export default function Today() {
                 человек задаёт себе чаще всего. Раньше проверить было негде: просить
                 точное время и не показывать результат — нечестно. */}
             <button className="carb-hist"
-              onClick={() => push(<MealsSection onClose={pop} />)}>
+              onClick={() => push(<MealsSection onClose={pop} />, { id: 'приёмы' })}>
               {/* Коротко, потому что плитка отдала четверть ширины разбору (#148).
                   «5 ч» вместо «5 ч назад» и цифра вместо «3 приёма»: длинная форма
                   обрезалась многоточием — и обрезалось на ней как раз число, то
@@ -584,7 +584,7 @@ export default function Today() {
 
               Неброско намеренно: это не действие, а дверь назад во времени. Заметная
               кнопка тянула бы внимание там, где человек решает, колоть ли. */}
-          <button className="сегодня-история" onClick={() => push(<HistorySection onClose={pop} />)}>
+          <button className="сегодня-история" onClick={() => push(<HistorySection onClose={pop} />, { id: 'история' })}>
             <IonIcon icon={timeOutline} />
             <span>История</span>
             <IonIcon icon={chevronForward} className="сегодня-история-шеврон" />

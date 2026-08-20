@@ -124,7 +124,7 @@ export default function DevicesSection({ onClose, встроенный, толь
   const titles: Record<DeviceCatKey, string> = {
     sensor: 'Сенсор (НМГ)', pump: 'Ввод инсулина', loop: 'Петля', meter: 'Глюкометр',
   };
-  const openCat = (c: DeviceCatKey) => push(<DeviceSection cat={c} title={titles[c]} onClose={pop} />);
+  const openCat = (c: DeviceCatKey) => push(<DeviceSection cat={c} title={titles[c]} onClose={pop} />, { id: 'категория', cat: c, title: titles[c] });
 
   /* Диспетчер: наши экземпляры железа отдельно от ролей (SugarLifeCore#34).
 

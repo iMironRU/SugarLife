@@ -8,6 +8,7 @@
    iOS-нативка через APK обновляться не может (только App Store), но OTA работает и на iOS. */
 import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import { этоНашПерезапуск } from '@/app/местоStore';
 
 /* Как называется то, что стоит у человека (SugarLife#235).
 
@@ -137,6 +138,10 @@ export const ПРИЕХАЛО_ПРИ_СТАРТЕ = забратьПримене
 
 /** Скачать и переключиться. Перезагружает webview — зовётся только по решению человека. */
 export async function применитьOta(б: ОтаБандл): Promise<boolean> {
+  /* Перезапуск наш — человек должен вернуться туда, где стоял (#400). Отметка ставится
+     до загрузки: она переживает и перезапуск webview, и неудачу — во втором случае
+     просто истечёт по времени. */
+  этоНашПерезапуск();
   отметитьПрименение(б.build);
   try {
     const bundle = await CapacitorUpdater.download({ url: б.url, version: б.version });
