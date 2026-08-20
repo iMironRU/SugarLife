@@ -425,7 +425,11 @@ body.скан-идёт ion-modal { display: none !important; }
   background: var(--color-surface-2); color: var(--color-text);
   user-select: text; -webkit-user-select: text;
 }
+/* Кнопки прочитанного кода — тем же правилом, что и действия обращений (#416): ряд во
+   всю ширину, кнопки делят её поровну. «Скопировать» и «Вставить в поле» — то, ради чего
+   шторку открыли, и целиться в них приходится, держа телефон над коробкой. */
 .скан-кнопки { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.скан-кнопки .changed-btn { flex: 1 1 45%; min-height: 44px; }
 
 /* Поле выбора файла прячем размером, а не display:none.
 

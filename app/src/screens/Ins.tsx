@@ -56,13 +56,13 @@ export default function Ins() {
         {фон ? (
           <div className="basal-row">
             <span>{подписьФона(фон, часы, (мс) => сколькоНазад(мс))}</span>
-            <button className="changed-btn is-undo" onClick={() => setПишуДлинный(true)}>Записать</button>
+            <button className="changed-btn is-undo во-всю" onClick={() => setПишуДлинный(true)}>Записать</button>
           </div>
         ) : (
           <>
             <div className="basal-row">
               <span>Не записан</span>
-              <button className="changed-btn is-undo" onClick={() => setПишуДлинный(true)}>Записать</button>
+              <button className="changed-btn is-undo во-всю" onClick={() => setПишуДлинный(true)}>Записать</button>
             </div>
             {/* Молчать здесь нельзя: у человека на ручках базал — тоже инсулин, и если
                 его не записать, он не появится нигде. */}

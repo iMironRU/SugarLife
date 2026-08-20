@@ -629,7 +629,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                     настраивать в нём нечего, а вот убедиться, что он отвечает, нужно
                     ровно тогда, когда помпа молчит и непонятно, кто виноват. */}
                 {bleМост?.testable && (
-                  <button className="changed-btn" style={{ marginTop: 10 }}
+                  <button className="changed-btn во-всю" style={{ marginTop: 10 }}
                     onClick={() => { setПроверка('идёт'); void sendIntent({ type: 'testDevice', deviceId: bleМост.id })
                       .then((r) => setПроверка(r.accepted ? 'принято' : 'ошибка')); }}>
                     {проверка === 'идёт' ? 'Проверяю…' : проверка === 'принято' ? 'Запрос отправлен' : 'Проверить связь'}
