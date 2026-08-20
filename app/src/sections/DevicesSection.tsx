@@ -15,6 +15,7 @@ import { лента } from '@/domain/deviceFeed';
 import { движокХозяин } from '@/domain/реестр';
 import { мешает, словоПустоты, ТЕРПЕНИЕ_МС } from '@/domain/scanReadiness';
 import Готовность from '@/ui/Готовность';
+import ФонГотовность from '@/ui/ФонГотовность';
 import ВПриложении from '@/ui/ВПриложении';
 import { спроситьЛи } from '@/domain/deviceParams';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
@@ -226,6 +227,7 @@ export default function DevicesSection({ onClose, встроенный, толь
             прибора нет кнопки «Подключить», а неслышный не исчезает — важнее самой
             ленты, и проверять их надо не глазами. */}
         <Готовность помеха={мешаетСкан} />
+        <ФонГотовность />
 
         {строки.length > 0 && (
           <>
