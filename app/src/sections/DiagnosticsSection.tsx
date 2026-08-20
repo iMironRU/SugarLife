@@ -5,6 +5,7 @@ import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import ScanSheet from '@/sheets/ScanSheet';
 import Готовность from '@/ui/Готовность';
+import ФонГотовность from '@/ui/ФонГотовность';
 import ВПриложении from '@/ui/ВПриложении';
 import { мешает } from '@/domain/scanReadiness';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
@@ -56,6 +57,7 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
     <>
       <div className="section-label sec">Поиск приборов</div>
       <Готовность помеха={мешает(snap)} спокойно />
+      <ФонГотовность спокойно />
     </>
   );
 
