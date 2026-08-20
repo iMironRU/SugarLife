@@ -7,7 +7,7 @@ import Section from '@/ui/Section';
 import { состояниеОболочки, словоОболочки, ПУСТО, type СостояниеОболочки } from '@/platform/offlineShell';
 import Row from '@/ui/Row';
 import { useSnapshot } from '@/sources/bridge';
-import { useUpdateState, checkNow, applyUpdate, consumeJustUpdated, перечитатьВсё } from '@/platform/swUpdate';
+import { useUpdateState, checkNow, applyUpdate, ОБНОВИЛИСЬ_ПРИ_СТАРТЕ, перечитатьВсё } from '@/platform/swUpdate';
 import {
   APP_EDITION, APP_VERSION, APP_BUILD, APP_BUILT_AT, isNative, platform,
   узнатьOta, применитьOta, checkNativeUpdate, openApkDownload, installApk, откудаБандл,
@@ -64,7 +64,7 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
   /* Что именно произошло при последнем запуске: веб перезагрузился ради обновления
      (флаг service worker'а) или мы сами перезапустили webview ради OTA. Забирается
      один раз — иначе сообщение висело бы всю сессию. */
-  const [толькоОбновились] = useState(consumeJustUpdated);
+  const [толькоОбновились] = useState(ОБНОВИЛИСЬ_ПРИ_СТАРТЕ);
   const приехало = ПРИЕХАЛО_ПРИ_СТАРТЕ;
 
   const проверить = async () => {
