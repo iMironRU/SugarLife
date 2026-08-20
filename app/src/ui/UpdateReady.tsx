@@ -1,8 +1,9 @@
 import { refreshOutline } from 'ionicons/icons';
 import Notice from './Notice';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUpdateState, applyUpdate, перечитатьВсё } from '@/platform/swUpdate';
 import { ключОтказа, КЛЮЧ_ОТКАЗА as КЛЮЧ } from '@/platform/отставание';
+import { вДневник } from '@/sources/дневникStore';
 import { APP_BUILD, isNative, применитьOta } from '@/platform/appUpdate';
 import { useОтаОбновление } from '@/platform/otaWatch';
 import { прочитать, записать } from '@/settings/storage';
@@ -62,6 +63,16 @@ export default function UpdateReady() {
      точно так же, как у свежего. Молчание тут хуже лишней строки: человек уверен, что
      видит сегодняшнее приложение, и принимает решения по нему. */
   const застряли = !isNative && upd.застряли;
+
+  /* В дневник — то же, что человек видит здесь (#396). Один раз на сборку: обращение
+     висит, пока его не применят, и без этого каждый запуск дописывал бы новую строку. */
+  const есть = isNative ? !!ota : (upd.status === 'available' || застряли);
+  const сборка = isNative ? ota?.build : upd.serverBuild;
+  useEffect(() => {
+    if (!есть) return;
+    вДневник('сборка', застряли ? 'Приложение отстало от сервера' : 'Обновление ждёт перезапуска',
+      сборка ? `сборка ${сборка}` : null, true);
+  }, [есть, застряли, сборка]);
   const скрыто = отказ === ключОтказа(APP_BUILD, upd.serverBuild) || отложено(upd.serverBuild);
 
   if (скрыто) return null;

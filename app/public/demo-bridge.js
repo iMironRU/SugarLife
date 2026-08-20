@@ -245,6 +245,24 @@
        надо чаще, чем кажется: именно на пустом экране видно, объясняет ли приложение
        себя или молчит. */
     безПриборов: function () { снимок.hardware = []; снимок.discovered = []; разослать(); return 'ок'; },
+    /* Обрыв и возврат связи с сенсором — БЕЗ перезагрузки страницы.
+
+       Ровно этот переход рисует ленту подключения на «Сегодня» и пишет строку в дневник
+       («История»), а достать его иначе в браузере нечем: прочие ручки перезагружают
+       страницу, и приложение видит новое состояние как первый снимок, то есть перехода
+       не замечает вовсе. */
+    связьПропала: function () {
+      снимок.devices = снимок.devices.map(function (d) {
+        return d.kind === 'sensor' ? Object.assign({}, d, { connection: 'Disconnected', status: 'Disconnected' }) : d;
+      });
+      разослать(); return 'сенсор отключён';
+    },
+    связьВернулась: function () {
+      снимок.devices = снимок.devices.map(function (d) {
+        return d.kind === 'sensor' ? Object.assign({}, d, { connection: 'Streaming', status: 'Live' }) : d;
+      });
+      разослать(); return 'сенсор на связи';
+    },
     первыйЗапуск: function () {
       try { sessionStorage.setItem('sl-демо-первый', '1'); localStorage.removeItem('sl.onboarded.v1'); } catch (e) { /* ignore */ }
       location.reload(); return 'перезагружаюсь в чистый запуск';

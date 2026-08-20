@@ -20,7 +20,8 @@ import './theme/variables.css'
 import './theme/app.css'
 
 import App from '@/app/App'
-import { notifyAppReady, запомнитьНативнуюСборку } from '@/platform/appUpdate'
+import { notifyAppReady, запомнитьНативнуюСборку, APP_BUILD } from '@/platform/appUpdate'
+import { отметитьСборку } from '@/sources/дневникStore'
 import { завестиСторожа } from '@/platform/rescue'
 
 setupIonicReact({ mode: 'ios' })
@@ -36,6 +37,10 @@ notifyAppReady()
 
 // И себе — из какой сборки собран установленный APK: после OTA это уже не узнать (#238).
 запомнитьНативнуюСборку()
+
+/* В дневник — если сборка сменилась с прошлого запуска (#396). «Запрос на обновление»
+   человек видел на «Сегодня», и в истории он ищет ответ на «когда же оно приехало». */
+отметитьСборку(APP_BUILD)
 
 /* И сторожу запуска — что приложение ожило (public/boot-guard.js, #131). Отсюда, а не
    из App: пока эта строка выполнилась, первый кадр уже нарисован, а любое место внутри
