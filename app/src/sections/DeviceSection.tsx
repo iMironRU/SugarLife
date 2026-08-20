@@ -5,29 +5,31 @@ import Row from '@/ui/Row';
 import Section from '@/ui/Section';
 import { chevronForward, batteryHalfOutline, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
-import { useDeviceConfig, setDeviceConfig, setParam, forgetDevice, isRecorded, isModelKnown } from '@/settings/deviceConfig';
+import { useDeviceConfig, setDeviceConfig, setParam, forgetDevice } from '@/settings/deviceConfig';
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
 import { связь, предложениеСлияния, своиЖелезки, каналРоли } from '@/domain/deviceState';
-import { меткаСвязи, названиеКанала, СЛОВО_КАНАЛА } from '@/слова/приборы';
+import { чтоЗаПрибор, ageText } from './прибор/поКатегории';
+import { СейчасНаУстройстве, Расходники } from './прибор/Состояние';
+import Каналы from './прибор/Каналы';
+import { названиеКанала, подсказкаПроМост } from '@/слова/приборы';
 import { мостСлота } from '@/domain/slotStatus';
 import { железоДиспетчера } from '@/domain/nearby';
 import { устройствоДляПараметров, значенияПараметров } from '@/domain/deviceParams';
 import { писатьЛокально } from '@/domain/реестр';
-import { useSnapshot, sendIntent, type DeviceView } from '@/sources/bridge';
+import { useSnapshot, sendIntent } from '@/sources/bridge';
 
 import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
 import { sourceStatusLabel, sourceStatusWarn } from '@/domain/sourceStatus';
 import { toUnits, unitLabel } from '@/domain/units';
 import { useStore } from '@/sources/store';
 import { useChanges, type Consumable } from '@/settings/changes';
-import ChangedButton from '@/ui/ChangedButton';
 import { useDeviceExtras } from '@/sources/deviceExtras';
 import { deviceAges, type Age } from '@/domain/treatmentStats';
 import { fmt } from '@/domain/units';
 import { Capacitor } from '@capacitor/core';
-import { pumpById, sensorById, bridgeById, pumpNeedsBridge, insulinById } from '@/domain/catalog';
+import { pumpById, sensorById, insulinById } from '@/domain/catalog';
 
 // В браузере прямого BLE нет и не будет — это свойство платформы, а не «пока не сделали»
 const isNative = Capacitor.isNativePlatform();
@@ -42,11 +44,9 @@ import { toSegs, daily } from '@/domain/basal';
 /* Заголовок строки канала — тот же словарь, что и везде (domain/deviceState.ts), с
    заглавной. Свой словарь здесь уже был, и он разошёлся с остальным приложением:
    в списке каналов писалось «Через облако», а человеку нужно знать, через какое. */
-const сЗаглавной = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export type DeviceCatKey = 'sensor' | 'pump' | 'meter' | 'loop';
 
-const ageText = (a: Age) => (a.days >= 1 ? a.days + ' дн' : a.hours + ' ч');
 
 /* ЕДИНАЯ карточка устройства (docs/CONNECT-UX.md §7): состояние + способ подключения
    в одном месте. Сюда ведут все входы — и «Профиль → Устройства», и плитки на экранах
@@ -67,13 +67,16 @@ export default function DeviceSection({ onClose, cat, title }: {
   const smbg = useSmbg();
   const последнее = smbg.length ? smbg[smbg.length - 1] : null;
 
-  const hasModel = cat === 'sensor' || cat === 'pump';
-  // Модель не указана (§2b) — мы не знаем, нужен ли мост и вещает ли железка сама,
-  // поэтому ни «Мост», ни BLE не показываем: честно доступно только облако.
-  const modelId = cat === 'pump' ? cfg.pumpId : cat === 'sensor' ? cfg.sensorId : null;
-  const modelKnown = isModelKnown(modelId);
-  const recordedNoModel = hasModel && isRecorded(modelId) && !modelKnown;
-  const hasBridge = (cat === 'sensor' || cat === 'pump') && modelKnown;
+  /* Что значит эта категория — одним ответом (sections/прибор/поКатегории.ts, #406).
+     Сорок веток «а если помпа» жили по всему файлу; теперь они собраны, и поправить
+     поведение можно, не держа в голове все четыре прибора сразу. */
+  const это = чтоЗаПрибор(cat, cfg);
+  const hasModel = это.естьМодель;
+  const modelKnown = это.модельИзвестна;
+  const recordedNoModel = это.записанБезМодели;
+  const hasBridge = это.естьМост;
+  const modelName = это.имяМодели;
+  const bridgeId = это.bridgeId;
 
   // реальное BLE-подключение показываем ТОЛЬКО когда мост действительно предлагает
   // драйвер для этой категории (прямой или через мост) — иначе секции нет вообще
@@ -82,31 +85,16 @@ export default function DeviceSection({ onClose, cat, title }: {
   const driverKind = (id: string) => drivers.find((d) => d.id === id)?.kind;
   const hasBleDriver = modelKnown && drivers.some((d) => d.kind === cat || (d.providesTransportFor ?? []).some((t) => driverKind(t) === cat));
 
-  // выбранная модель
   const pump = cat === 'pump' ? pumpById(cfg.pumpId) : null;
-  const sensor = cat === 'sensor' ? sensorById(cfg.sensorId) : null;
-  const modelName = recordedNoModel ? 'не указана'
-    : cat === 'pump' ? pump?.model : cat === 'sensor' ? sensor?.name : null;
 
-  // выбранный мост
   /* Мост спрашиваем у снимка, локальный выбор оставляем запасным (#281, шаг 2).
 
      Движок знает, за каким мостом стоит железка, — он это видит, а не помнит с наших
      слов. Наш `bridgePumpId` был нужен, пока спросить было некого; теперь он отвечает
-     только там, где движка нет вовсе (браузер) или он ещё не опознал прибор.
-
-     Показываем при этом РАЗНОЕ по смыслу: движок отдаёт экземпляр моста, который реально
-     обслуживает прибор, а локальный выбор — модель моста из справочника, которую человек
-     назвал. Совпадать они обязаны, но первый вернее. */
+     только там, где движка нет вовсе (браузер) или он ещё не опознал прибор. */
   const мостИзСнимка = (cat === 'pump' || cat === 'sensor') ? мостСлота(snap, cat) : null;
-  const bridgeId = cat === 'pump' ? cfg.bridgePumpId : cat === 'sensor' ? cfg.bridgeSensorId : null;
-  const bridge = bridgeById(bridgeId);
-  const имяМоста = мостИзСнимка?.name || bridge?.name || null;
-
-  // подсказка про мост
-  const bridgeHint = cat === 'pump'
-    ? (pumpNeedsBridge(pump) ? 'Эта помпа управляется по радио — нужен мост (RileyLink/OrangeLink).' : 'Старые Medtronic (Paradigm, 5xx/7xx) — по радио, требуют RileyLink/OrangeLink. Современные — напрямую/через аплоадер.')
-    : (sensor?.needsBridge ? 'Этот сенсор не вещает BLE сам — нужен мост (MiaoMiao/Bubble).' : 'Libre 1 и старые сенсоры подключаются через мост (MiaoMiao/Bubble). Современные — напрямую.');
+  const имяМоста = мостИзСнимка?.name || это.имяМостаИзНастроек || null;
+  const bridgeHint = подсказкаПроМост(cat === 'pump' ? 'pump' : 'sensor', это.мостОбязателен);
 
   /* --- Состояние: то, что реально известно прямо сейчас (было в SensorSheet/PumpSheet) ---
      Считаем ТОЛЬКО когда шторка открыта и только при смене данных. Инстансов
@@ -191,7 +179,7 @@ export default function DeviceSection({ onClose, cat, title }: {
      молчащем цикле пропадает вместе с ним. Чего не знаем — не рисуем: пустая строка
      «Прошивка —» выглядит как поломка, а не как отсутствие данных. */
   const bridgeTelemetry: { k: string; v: string }[] = [];
-  const зарядМоста = bleМост?.batteryPct ?? (bridge ? dev?.mountBattery ?? null : null);
+  const зарядМоста = bleМост?.batteryPct ?? (это.имяМостаИзНастроек ? dev?.mountBattery ?? null : null);
   if (зарядМоста != null) bridgeTelemetry.push({ k: 'Заряд моста', v: зарядМоста + '%' });
   if (bleМост?.firmware) bridgeTelemetry.push({ k: 'Прошивка', v: bleМост.firmware });
   /* RSSI в дБм — отрицательное число, и меньше значит хуже. Человеку это ни о чём не
@@ -304,7 +292,7 @@ export default function DeviceSection({ onClose, cat, title }: {
   const bleAge = ble?.latestAtMs != null ? сколькоНазад(ble.latestAtMs) : null;
 
   const activeMeth: 'direct' | 'cloud' | null = bleLive ? 'direct' : nsFeed ? 'cloud' : null;
-  const needsBridge = cat === 'pump' ? pumpNeedsBridge(pump) : !!sensor?.needsBridge;
+  const needsBridge = это.мостОбязателен;
 
   // Порядок условий = порядок препятствий: без модели не знаем даже, что искать;
   // в браузере BLE нет как класса; дальше — мост и наличие драйвера.
@@ -592,42 +580,7 @@ export default function DeviceSection({ onClose, cat, title }: {
               </>
             )}
 
-            {/* Каналы (SugarLifeCore#23). Одна карточка, каналы списком — потому что
-                это одно устройство, до которого мы дотягиваемся двумя дорогами.
-                Верхние поля описывают активный канал, и без этого списка непонятно,
-                откуда взялось «на связи»: помпа рядом или облако помнит её последний
-                документ. Разные факты, и человеку важно, какой из них.
-
-                Рисуем только когда каналов больше одного: у одноканального устройства
-                строка «напрямую» ничего не добавляет к тому, что уже сказано выше. */}
-            {(ble?.channels?.length ?? 0) > 1 && (
-              <>
-                <div className="section-label sec">Каналы</div>
-                <div className="list">
-                  {ble!.channels!.map((c) => {
-                    const с = связь(c as unknown as DeviceView);
-                    return (
-                      <div key={c.id} className="list-row" style={{ cursor: 'default' }}>
-                        <IonIcon icon={c.kind === 'cloud' ? cloudOutline : bluetoothOutline} className="list-ico" />
-                        <span className="pick-main">
-                          <span className="list-title">{сЗаглавной(СЛОВО_КАНАЛА[c.kind])}</span>
-                          <span className="pick-sub">
-                            {c.label ? c.label + ' · ' : ''}
-                            {меткаСвязи[с] ?? 'состояние неизвестно'}
-                            {c.latestAtMs != null ? ' · ' + сколькоНазад(c.latestAtMs) : ''}
-                          </span>
-                        </span>
-                        {c.id === ble!.activeChannel && <span className="meth-now">сейчас</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="sheet-note">
-                  Приложение само берёт тот канал, где данные свежее. Прямая связь
-                  предпочтительнее облака, но молчащая прямая уступает живому облаку.
-                </div>
-              </>
-            )}
+            <Каналы прибор={ble} />
 
             {ble && (bleStatus || bleAge || ble.note || ble.autoConnect != null) && (
               <>
@@ -709,35 +662,8 @@ export default function DeviceSection({ onClose, cat, title }: {
 
             {/* Состояние — только то, что реально знаем; пустых строк не рисуем.
                 Идёт последним: это следствие настройки, а не то, что настраивают. */}
-            {stateRows.length > 0 && (
-              <>
-              <div className="section-label sec">Сейчас на устройстве</div>
-              <div className="basal-rows">
-                {stateRows.map((r) => (
-                  <div key={r.k} className="basal-row"><span>{r.k}</span><b>{r.v}</b></div>
-                ))}
-              </div>
-              </>
-            )}
-            {supplies.length > 0 && (
-              <>
-                <div className="section-label sec">Расходники</div>
-                <div className="sensor-ages sensor-ages-solo">
-                  {supplies.map(([name, a, key]) => (
-                    <div key={name} className="age-pill">
-                      <span>{name}</span>
-                      <b>{ageText(a)}</b>
-                      <ChangedButton what={key} />
-                    </div>
-                  ))}
-                </div>
-                <div className="sheet-note">
-                  Возраст считается по событиям из Nightscout, а их может не быть: замена,
-                  не залогированная в AAPS, не оставляет следа вовсе. Поменял — отметь здесь,
-                  это никуда не отправляется и живёт только на этом устройстве.
-                </div>
-              </>
-            )}
+            <СейчасНаУстройстве строки={stateRows} />
+            <Расходники список={supplies} />
 
             {cat === 'meter' && smbg.length > 0 && (
               <>
