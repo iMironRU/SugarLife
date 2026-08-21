@@ -12,6 +12,7 @@ import { useHealth, записатьЗдоровье } from '@/settings/health';
 import { поВажности, месяцевНазад } from '@/domain/screenings';
 import { ЦЕЛИ, строкиНМГ, полнота, вопросыДляВрача, МИН_ДНЕЙ, МИН_ДОЛЯ, type НаборЦелей } from '@/domain/visitNote';
 import { имяЧасти } from '@/domain/безЗаписи';
+import { видПричины } from '@/domain/причиныПодъёма';
 import Dynamics from '@/ui/Dynamics';
 import { useVisitQuestions, переключитьВопрос, добавитьВопрос, убратьСвой, нужныЛиВопросы } from '@/settings/visitQuestions';
 import Row from '@/ui/Row';
@@ -130,6 +131,13 @@ export default function VisitNoteSection({ onClose, встроенный }: {
         ...(analysis.безЗаписи.преобладает ? [{
           что: 'Чаще всего', значение: имяЧасти(analysis.безЗаписи.преобладает),
           пометка: analysis.безЗаписи.преобладает === 'ночь' ? ('вне цели' as const) : null,
+        }] : []),
+        /* Что человек уже объяснил — отдельной строкой (#167). «Семь подъёмов, три из них
+           канюля» и «семь подъёмов неизвестно от чего» — разные разговоры в кабинете. */
+        ...(analysis.безЗаписи.объяснено.length ? [{
+          что: 'Из них объяснены',
+          значение: analysis.безЗаписи.объяснено
+            .map((о) => `${видПричины(о.причина).метка} — ${о.сколько}`).join(', '),
         }] : []),
       ] : [],
     },
@@ -315,6 +323,12 @@ export default function VisitNoteSection({ onClose, встроенный }: {
                 <b className={analysis.безЗаписи.преобладает === 'ночь' ? 'val-warn' : undefined}>
                   {имяЧасти(analysis.безЗаписи.преобладает)}
                 </b>
+              </div>
+            )}
+            {analysis.безЗаписи.объяснено.length > 0 && (
+              <div className="basal-row">
+                <span>Из них объяснены</span>
+                <b>{analysis.безЗаписи.объяснено.map((о) => `${видПричины(о.причина).метка} — ${о.сколько}`).join(', ')}</b>
               </div>
             )}
           </div>

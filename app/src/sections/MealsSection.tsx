@@ -6,6 +6,9 @@ import Section from '@/ui/Section';
 import { useTreatments, useEntries } from '@/sources/db';
 import { useMeals } from '@/sources/mealStore';
 import { необъяснённыеПодъёмы } from '@/domain/mealMoment';
+import { отметкаДля, видПричины } from '@/domain/причиныПодъёма';
+import { useОтметкиПодъёмов } from '@/settings/подъёмы';
+import ПричинаПодъёмаSheet from '@/sheets/ПричинаПодъёмаSheet';
 import { подписьПриёма } from '@/domain/имяПриёма';
 import MealEditSheet from '@/sheets/MealEditSheet';
 import FoodSheet from '@/sheets/FoodSheet';
@@ -47,6 +50,10 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
   /* Куда записать еду по подъёму: время начала подъёма. Человек его как раз и не помнит
      точно — а данные помнят. */
   const [добавляем, setДобавляем] = useState<number | null>(null);
+  /* Сначала спрашиваем ЧТО это было, и только потом — сколько съели. Обратный порядок
+     заставлял человека, у которого отвалилась канюля, отвечать про еду (#167). */
+  const [причина, setПричина] = useState<{ at: number; rise: number } | null>(null);
+  const отметки = useОтметкиПодъёмов();
 
   const лечение = useTreatments(окно * ЧАС);
   const от = Date.now() - окно * ЧАС;
@@ -97,13 +104,18 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
           <>
             <div className="meal-log">
               {подъёмы.map((п) => (
-                <button key={п.at} className="meal-row" onClick={() => setДобавляем(п.at)}>
+                <button key={п.at} className="meal-row" onClick={() => setПричина(п)}>
                   <div className="meal-when"><b>{время(п.at)}</b><span>{день(п.at)}</span></div>
                   <div className="meal-what">
                     {/* Насколько поднялся — это и есть повод: «+3,4 ммоль» человек
                         сопоставит со своей памятью лучше, чем слово «подъём». */}
                     <b>+{п.rise.toFixed(1).replace('.', ',')} ммоль</b>
-                    <span>сахар пошёл вверх · записи нет</span>
+                    {/* Отмеченный подъём говорит, чем он объяснён, а не «записи нет»:
+                        человек уже ответил, и повторять вопрос — значит его не слышать. */}
+                    <span>{(() => {
+                      const о = отметкаДля(отметки, п.at);
+                      return о ? видПричины(о.причина).метка : 'сахар пошёл вверх · записи нет';
+                    })()}</span>
                   </div>
                 </button>
               ))}
@@ -112,7 +124,8 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
                 двух (#167), и выбирать за него мы не вправе. */}
             <div className="metric-note">
               Подъём мог быть от еды, недоданного болюса, отвалившейся канюли, болезни или
-              нагрева сенсора. Тапните — если это была еда, запишем её этим временем.
+              нагрева сенсора. Тапните и отметьте, что это было, — разбор перестанет
+              спрашивать про него, а в записке врачу будет видно, что вы это знаете.
             </div>
           </>
         )
@@ -154,6 +167,12 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
         </div>
       )}
       {правим && <MealEditSheet приём={правим} onClose={() => setПравим(null)} />}
+      {причина && (
+        <ПричинаПодъёмаSheet at={причина.at} rise={причина.rise}
+          onClose={() => setПричина(null)}
+          onЕда={() => { const at = причина.at; setПричина(null); setДобавляем(at); }} />
+      )}
+
       {добавляем != null && (
         <FoodSheet isOpen onClose={() => setДобавляем(null)} времяПодъёма={добавляем} />
       )}

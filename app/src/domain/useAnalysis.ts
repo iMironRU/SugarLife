@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useStore } from '@/sources/store';
 import { useHistory, useTreatments } from '@/sources/db';
 import { useChanges } from '@/settings/changes';
+import { useОтметкиПодъёмов } from '@/settings/подъёмы';
 import { analyzeCached } from './analysisCache';
 import { insulinDaily } from './treatmentStats';
 import type { Analysis } from './analysis';
@@ -30,6 +31,7 @@ export function useAnalysis(days: number): { analysis: Analysis; loading: boolea
   const лечение = useTreatments(days * 86400e3, { minRefreshMs: 3600e3 });
   const батарея = data?.device?.uploaderBattery ?? null;
   const changes = useChanges();
+  const отметки = useОтметкиПодъёмов();
 
   /* Пересчёт привязан к минуте последнего показания, а не к массиву: массив новый на
      каждый опрос, а выводы за две недели от одной точки не меняются. */
@@ -43,9 +45,10 @@ export function useAnalysis(days: number): { analysis: Analysis; loading: boolea
       basalCoverage: { covered: ins.coveredDays, total: ins.totalDays },
       uploaderBattery: батарея,
       changes,
+      отметкиПодъёмов: отметки,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [тик, days, батарея, changes]);
+  }, [тик, days, батарея, changes, отметки]);
 
   return { analysis, loading };
 }
