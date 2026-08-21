@@ -93,8 +93,11 @@ class SugarLifeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Нажали «Отдать приборы» прямо в уведомлении (#395) — не открывая приложение.
-        if (intent?.action == ОТДАТЬ) отдатьПриборы("нажали в уведомлении")
+        // Нажали кнопку прямо в уведомлении (#395) — не открывая приложение.
+        when (intent?.action) {
+            ОТДАТЬ -> отдатьПриборы("нажали в уведомлении")
+            ВЗЯТЬ -> взятьПриборы()
+        }
         return START_STICKY
     }
 
@@ -121,6 +124,30 @@ class SugarLifeService : Service() {
         runCatching {
             EngineHolder.engine(applicationContext).sendIntent("""{"type":"releaseBle"}""")
         }.onFailure { Log.w(TAG, "не удалось отдать приборы: $it") }
+        показать(держим = false)
+    }
+
+    /**
+     * Взять приборы обратно — тем же нажатием, что и отпустили (#395).
+     *
+     * Обратный ход обязан быть там же, где прямой. Иначе человек, отпустивший приборы, чтобы подключиться со
+     * второго телефона, возвращается к первому — и не находит способа вернуть сбор, кроме как открыть
+     * приложение. Ровно от этого лишнего шага мы и избавлялись, когда добавляли первую кнопку.
+     */
+    private fun взятьПриборы() {
+        Log.i(TAG, "берём приборы обратно: нажали в уведомлении")
+        runCatching {
+            EngineHolder.engine(applicationContext).sendIntent("""{"type":"connectAll"}""")
+        }.onFailure { Log.w(TAG, "не удалось взять приборы: $it") }
+        показать(держим = true)
+    }
+
+    /** Переписать постоянное уведомление под текущее состояние. */
+    private fun показать(держим: Boolean) {
+        runCatching {
+            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
+                .notify(NOTIF_ID, уведомление(держим))
+        }.onFailure { Log.w(TAG, "не удалось обновить уведомление: $it") }
     }
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -129,31 +156,46 @@ class SugarLifeService : Service() {
      * говорить правду о состоянии и давать выход (#395): раньше здесь стояло «Мониторинг активен», и отдать
      * приборы можно было только открыв приложение.
      */
-    private fun уведомление(): Notification {
-        val отдать = PendingIntent.getService(
-            this, 1, Intent(this, SugarLifeService::class.java).setAction(ОТДАТЬ),
+    private fun уведомление(держим: Boolean = true): Notification {
+        /*
+         * ДВА СОСТОЯНИЯ — ДВА ТЕКСТА И ДВЕ КНОПКИ (#395).
+         *
+         * Раньше текст был один: «Приборы заняты этим телефоном». После отпускания он оставался прежним —
+         * то есть единственное, что человек видит при закрытом приложении, утверждало обратное тому, что
+         * произошло. И ровно в том сценарии, ради которого всё делалось: он отпустил приборы, пошёл
+         * подключаться со второго телефона, а первый по-прежнему пишет «заняты». Кончилось бы это тем, что
+         * он выключит Bluetooth руками — тем самым, от чего мы его избавляли.
+         */
+        val действие = if (держим) ОТДАТЬ else ВЗЯТЬ
+        val кнопка = PendingIntent.getService(
+            this, if (держим) 1 else 2, Intent(this, SugarLifeService::class.java).setAction(действие),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         return NotificationCompat.Builder(this, CHANNEL)
-            .setContentTitle("SugarLife: мониторинг идёт")
-            .setContentText("Приборы заняты этим телефоном")
+            .setContentTitle(if (держим) "SugarLife: мониторинг идёт" else "SugarLife: приборы отпущены")
+            .setContentText(if (держим) "Приборы заняты этим телефоном" else "По радио сейчас ничего не приходит")
             .setStyle(
                 NotificationCompat.BigTextStyle().bigText(
-                    "Приборы заняты этим телефоном: пока они здесь, другой телефон к ним не подключится.",
+                    if (держим) {
+                        "Приборы заняты этим телефоном: пока они здесь, другой телефон к ним не подключится."
+                    } else {
+                        "Приборы отпущены — их может взять другой телефон. Мы пока ничего не получаем."
+                    },
                 ),
             )
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .addAction(0, "Отдать приборы", отдать)
+            .addAction(0, if (держим) "Отдать приборы" else "Взять обратно", кнопка)
             .build()
     }
 
     companion object {
         private const val TAG = "SugarLifeService"
         private const val CHANNEL = "sugarlife-monitor"
-        /** Действие уведомления «Отдать приборы» (#395). */
+        /** Действия уведомления: отпустить приборы и взять их обратно (#395). */
         private const val ОТДАТЬ = "ru.imiron.sugarlife.RELEASE_DEVICES"
+        private const val ВЗЯТЬ = "ru.imiron.sugarlife.TAKE_DEVICES"
         private const val NOTIF_ID = 4711
         private const val PREFS = "sugarlife-service"
         private const val KEY_ВКЛЮЧЁН = "monitoring-on"
