@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- КОГО МЫ ИМЕЕМ ПРАВО СПРОСИТЬ (#422).
+
+         С Android 11 приложение не видит чужие пакеты без объявления. Нам нужно ровно
+         одно: узнать, установлено ли на телефоне приложение, которое умеет тот же прибор.
+         Это не слежка за установленным — список закрытый и назван поимённо, и нужен он,
+         чтобы вместо «прибор занят кем-то» сказать «вероятно, им». -->
+    <queries>
+        <package android:name="tk.glucodata" />
+        <package android:name="tk.glucodata.ng" />
+        <package android:name="com.eveningoutpost.dexdrip" />
+        <package android:name="info.nightscout.androidaps" />
+        <package android:name="com.sibionics.cgm" />
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"

@@ -327,6 +327,19 @@ class SugarLifeBridgePlugin : Plugin() {
      * Иначе проверить нечем: человек включает тревоги вечером и узнаёт, работают ли они, только когда ночью
      * случится гипогликемия. Это худший из возможных способов узнать.
      */
+    /**
+     * Кто занял прибор (#422). Отдаём НАБЛЮДЕНИЕ, а не приговор: занят ли прибор на этом
+     * телефоне и кто из знакомых приложений установлен. Складывать это в фразу — дело
+     * интерфейса, и фраза не должна утверждать больше, чем мы знаем.
+     */
+    @PluginMethod
+    fun whoHolds(call: PluginCall) {
+        val (занят, кандидаты) = КтоДержит.посмотреть(context.applicationContext, call.getString("address"))
+        val список = com.getcapacitor.JSArray()
+        кандидаты.forEach { список.put(it) }
+        call.resolve(JSObject().put("busyHere", занят).put("candidates", список))
+    }
+
     @PluginMethod
     fun testAlarm(call: PluginCall) {
         Тревоги.проверочная(context.applicationContext)
