@@ -289,6 +289,38 @@ class SugarLifeBridgePlugin : Plugin() {
         else call.resolve(JSObject().put("opened", открыт))
     }
 
+    /**
+     * Настройки тревоги о низком сахаре (#418).
+     *
+     * Пороги и «включено ли» задаёт человек в приложении — здесь их только сохраняют. Считает и будит
+     * [Тревоги] в сервисе: ночью интерфейса нет, и решение «пора будить» принять некому.
+     */
+    @PluginMethod
+    fun setHypoAlarm(call: PluginCall) {
+        val включено = call.getBoolean("on") ?: false
+        val порог = call.getDouble("mmol") ?: Тревоги.ПОРОГ_ПО_УМОЛЧАНИЮ
+        Тревоги.настроить(context.applicationContext, включено, порог)
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun hypoAlarm(call: PluginCall) {
+        val ctx = context.applicationContext
+        call.resolve(JSObject().put("on", Тревоги.включено(ctx)).put("mmol", Тревоги.порог(ctx)))
+    }
+
+    /**
+     * Проверочная тревога — тем же путём, что настоящая (#418).
+     *
+     * Иначе проверить нечем: человек включает тревоги вечером и узнаёт, работают ли они, только когда ночью
+     * случится гипогликемия. Это худший из возможных способов узнать.
+     */
+    @PluginMethod
+    fun testAlarm(call: PluginCall) {
+        Тревоги.проверочная(context.applicationContext)
+        call.resolve()
+    }
+
     @PluginMethod
     fun requestSnapshot(call: PluginCall) = onEngineThread(call) {
         JSObject().put("json", engine.requestSnapshot())

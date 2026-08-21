@@ -99,6 +99,9 @@ export const AnalyticsSection = ленивый<{ onClose?: () => void; встр�
 export const MealsSection = ленивый<{ onClose: () => void }>(
   () => import('./MealsSection'), 'Приёмы пищи');
 
+export const AlarmsSection = ленивый<{ onClose: () => void }>(
+  () => import('./AlarmsSection'), 'Тревоги',
+);
 export const DiagnosticsSection = ленивый<{ onClose: () => void }>(
   () => import('./DiagnosticsSection'), 'Диагностика');
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import {
-  AboutSection, AnalyticsSection, AppearanceSection, BasalProfileSection, CloudAccountsSection,
+  AboutSection, AlarmsSection, AnalyticsSection, AppearanceSection, BasalProfileSection, CloudAccountsSection,
   CloudSection, DataDevicesSection, DeviceSection, DevicesSection, DiagnosticsSection,
   HealthSection, HistorySection, LoopSection, LoopSetupSection, MealsSection, ServicesSection,
   SourcesSection, VisitNoteSection,
@@ -30,6 +30,7 @@ export type Метка =
   | { id: 'петля' }
   | { id: 'настройкаПетли' }
   | { id: 'здоровье' }
+  | { id: 'тревоги' }
   | { id: 'диагностика' }
   | { id: 'оформление' }
   | { id: 'оПриложении' }
@@ -51,6 +52,7 @@ export function собрать(м: Метка, pop: () => void): ReactNode | nul
     case 'петля': return <LoopSection onClose={pop} />;
     case 'настройкаПетли': return <LoopSetupSection onClose={pop} />;
     case 'здоровье': return <HealthSection onClose={pop} />;
+    case 'тревоги': return <AlarmsSection onClose={pop} />;
     case 'диагностика': return <DiagnosticsSection onClose={pop} />;
     case 'оформление': return <AppearanceSection onClose={pop} />;
     case 'оПриложении': return <AboutSection onClose={pop} />;
