@@ -163,8 +163,11 @@ jobs:
         if: env.HAS_CORE_TOKEN == 'да'
         run: cp app/android/app/build/outputs/apk/lite/debug/app-lite-debug.apk sugarlife-debug.apk
 
+      # Артефакт тоже не выкладываем: репозиторий публичный, а значит и артефакты сборки
+      # публичные. Нативная часть ставится с компьютера владельца по кабелю — APK из CI
+      # для этого не нужен. Сборка выше остаётся: она проверяет, что нативка жива.
       - name: Upload artifact
-        if: env.HAS_CORE_TOKEN == 'да'
+        if: env.HAS_CORE_TOKEN == 'да' && inputs.публиковать
         uses: actions/upload-artifact@v4
         with:
           name: sugarlife-debug-apk
