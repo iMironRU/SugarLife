@@ -116,10 +116,27 @@ jobs:
           fi
           # Сам сторож не в счёт: в нём эти строки написаны нарочно — он их и ищет.
           # Первая версия поймала собственный тест и уронила сборку; смешно ровно один раз.
-          LICENSED=$(grep -rlE 'GNU GPL|GPL-3\.0|General Public License' app/android/app/src app/ios/App/App app/src 2>/dev/null \
+          #
+          # Две ступени, как в app/src/чужойКод.test.ts — держать их в согласии обязательно.
+          # 1. Лицензионная ШАПКА: формула выдачи прав, а не название лицензии. Её приносит
+          #    с собой скопированный файл, и это нарушение без исключений.
+          SRC="app/android/app/src app/ios/App/App app/src"
+          HEADER=$(grep -rlEi 'SPDX-License-Identifier:[^\n]*GPL|this program is free software|redistribute it and/or modify|under the terms of the GNU|either version [23]' $SRC 2>/dev/null \
             | grep -v 'чужойКод.test.ts' | head -5 || true)
-          if [ -n "$LICENSED" ]; then
-            echo "::error::Файлы под GPL в наших исходниках: $LICENSED (#439)."
+          if [ -n "$HEADER" ]; then
+            echo "::error::Лицензионная шапка GPL в наших исходниках: $HEADER (#439)."
+            exit 1
+          fi
+          # 2. Просто УПОМИНАНИЕ — нарушение, пока в файле нет расписки. Расписку пишут
+          #    руками и по-русски: чужой файл её не принесёт, а свой заставит посмотреть.
+          MENTION=$(grep -rlE 'GNU GPL|GPL-[23]\.0|General Public License' $SRC 2>/dev/null \
+            | grep -v 'чужойКод.test.ts' || true)
+          UNSIGNED=""
+          for f in $MENTION; do
+            grep -q 'ЧУЖОГО КОДА ЗДЕСЬ НЕТ' "$f" || UNSIGNED="$UNSIGNED $f"
+          done
+          if [ -n "$UNSIGNED" ]; then
+            echo "::error::GPL упомянут без расписки «ЧУЖОГО КОДА ЗДЕСЬ НЕТ»:$UNSIGNED (#439)."
             exit 1
           fi
           echo "чужого кода не найдено"
