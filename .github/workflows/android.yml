@@ -28,7 +28,10 @@ on:
     branches: [main]
   workflow_dispatch:        # запуск вручную (Actions → Android APK → Run workflow)
     inputs:
-      публиковать:
+      # Имя входа — ASCII, как и имена переменных окружения ниже: GitHub принимает здесь
+      # только [a-zA-Z_][a-zA-Z0-9_-]*, а на кириллице роняет весь файл ещё до запуска
+      # (run 32521286726, «workflow file issue», ноль секунд). Описание — по-русски.
+      publish:
         description: 'Выложить APK в Releases (по умолчанию нет — ставим по проводу)'
         type: boolean
         default: false
@@ -167,7 +170,7 @@ jobs:
       # публичные. Нативная часть ставится с компьютера владельца по кабелю — APK из CI
       # для этого не нужен. Сборка выше остаётся: она проверяет, что нативка жива.
       - name: Upload artifact
-        if: env.HAS_CORE_TOKEN == 'да' && inputs.публиковать
+        if: env.HAS_CORE_TOKEN == 'да' && inputs.publish
         uses: actions/upload-artifact@v4
         with:
           name: sugarlife-debug-apk
@@ -178,12 +181,12 @@ jobs:
       # проводу. Автоматический релиз на каждый push в main это правило нарушал: тег
       # android-latest публичный, и приложение по нему само предлагает «Скачать APK».
       # Собирать APK в CI продолжаем — это проверка, что сборка жива; лежит в artifacts.
-      # Выложить осознанно: Actions → Android APK → Run workflow → «публиковать» ✓.
+      # Выложить осознанно: Actions → Android APK → Run workflow → publish ✓.
       #
       # Строка «build:» — не украшение: по ней приложение решает, предлагать ли
       # «Скачать APK» (src/platform/appUpdate.ts, #238). Формат менять нельзя.
       - name: Publish to Releases
-        if: env.HAS_CORE_TOKEN == 'да' && inputs.публиковать
+        if: env.HAS_CORE_TOKEN == 'да' && inputs.publish
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'android-latest' }}
