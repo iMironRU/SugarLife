@@ -109,7 +109,10 @@ jobs:
             echo "::error::Чужой код в дереве: $FOUND. Он не должен попадать в репозиторий и в релиз (#439)."
             exit 1
           fi
-          LICENSED=$(grep -rlE 'GNU GPL|GPL-3\.0|General Public License' app/android/app/src app/ios/App/App app/src 2>/dev/null | head -5 || true)
+          # Сам сторож не в счёт: в нём эти строки написаны нарочно — он их и ищет.
+          # Первая версия поймала собственный тест и уронила сборку; смешно ровно один раз.
+          LICENSED=$(grep -rlE 'GNU GPL|GPL-3\.0|General Public License' app/android/app/src app/ios/App/App app/src 2>/dev/null \
+            | grep -v 'чужойКод.test.ts' | head -5 || true)
           if [ -n "$LICENSED" ]; then
             echo "::error::Файлы под GPL в наших исходниках: $LICENSED (#439)."
             exit 1
