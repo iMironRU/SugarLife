@@ -57,6 +57,10 @@ class SugarLifeService : Service() {
             startForeground(NOTIF_ID, notif)
         }
         слушатьРадиТревог()
+        /* Приборы у нас — значит молчание больше ничем не объяснено, и сторож имеет право говорить.
+           Счёт начинается заново: что было, пока сервиса не существовало, мы не знаем (#243). */
+        Тревоги.приборыОтданы(applicationContext, false)
+        SilenceWatchdog.поНастройке(applicationContext)
     }
 
     /**
@@ -144,6 +148,9 @@ class SugarLifeService : Service() {
         runCatching {
             EngineHolder.engine(applicationContext).sendIntent("""{"type":"releaseBle"}""")
         }.onFailure { Log.w(TAG, "не удалось отдать приборы: $it") }
+        /* Молчание теперь объяснено: приборы у другого телефона. Сторож обязан замолчать вместе с
+           ними — тревога, ругающая за собственное решение человека, будет выключена первой (#243). */
+        Тревоги.приборыОтданы(applicationContext, true)
         показать(держим = false)
     }
 
@@ -159,6 +166,7 @@ class SugarLifeService : Service() {
         runCatching {
             EngineHolder.engine(applicationContext).sendIntent("""{"type":"connectAll"}""")
         }.onFailure { Log.w(TAG, "не удалось взять приборы: $it") }
+        Тревоги.приборыОтданы(applicationContext, false)
         показать(держим = true)
     }
 

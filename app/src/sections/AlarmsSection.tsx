@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { IonIcon, IonToggle } from '@ionic/react';
-import { alarmOutline, notificationsOutline, playOutline, trendingUpOutline, phonePortraitOutline } from 'ionicons/icons';
+import { alarmOutline, notificationsOutline, playOutline, trendingUpOutline, phonePortraitOutline, cloudOfflineOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import {
   настройкиТревоги, задатьТревогу, проверитьТревогу, тревогиДоступны,
   ПОРОГ_ПО_УМОЛЧАНИЮ, МИН_ПОРОГ, МАКС_ПОРОГ,
   ВЫСОКИЙ_ПО_УМОЛЧАНИЮ, МИН_ВЫСОКИЙ, МАКС_ВЫСОКИЙ, ТИХО_ВЫКЛ,
+  МОЛЧАНИЕ_ПО_УМОЛЧАНИЮ, МИН_МОЛЧАНИЕ, МАКС_МОЛЧАНИЕ, ШАГ_МОЛЧАНИЯ,
   type НастройкиТревоги,
 } from '@/platform/тревоги';
 import { isNative, platform } from '@/platform/appUpdate';
@@ -26,6 +27,7 @@ const ПУСТО: НастройкиТревоги = {
   on: false, mmol: ПОРОГ_ПО_УМОЛЧАНИЮ,
   highOn: false, highMmol: ВЫСОКИЙ_ПО_УМОЛЧАНИЮ,
   quietFrom: ТИХО_ВЫКЛ, quietTo: ТИХО_ВЫКЛ,
+  silenceOn: false, silenceMin: МОЛЧАНИЕ_ПО_УМОЛЧАНИЮ,
 };
 
 /* Час словами: «23:00». Минут в тихих часах нет намеренно — человек ложится «около
@@ -51,6 +53,7 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
   };
 
   const порог = н?.mmol ?? ПОРОГ_ПО_УМОЛЧАНИЮ;
+  const молчание = н?.silenceMin ?? МОЛЧАНИЕ_ПО_УМОЛЧАНИЮ;
   const можем = тревогиДоступны();
 
   return (
@@ -132,6 +135,47 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
           <div className="sheet-note">
             Повторяем не чаще раза в час: высокий сахар требует решения, но не в ту же
             минуту, а тревога каждые десять минут — наказание за то, что вы уже знаете.
+          </div>
+        </>
+      )}
+
+      {/* МОЛЧАНИЕ ПРИБОРА — СРАЗУ ПОСЛЕ НИЗКОГО САХАРА, и это не вопрос порядка строк.
+
+          Гипо считается от показаний. Нет показаний — нечего сравнивать, и тревога молчит; на
+          экране и в кармане это выглядит точно так же, как «всё хорошо». Человек, включивший
+          только верхнюю строку, уходит спать под охраной, которой нет. Поэтому вторая стоит
+          вплотную и объясняет себя словами, а не названием. */}
+      <div className="section-label sec">Прибор молчит</div>
+      <div className="list">
+        <Row icon={cloudOfflineOutline} title="Будить, если данные перестали идти"
+          sub={можем ? 'ночью тоже — тихие часы её не глушат' : 'недоступно на этом устройстве'}
+          right={<IonToggle checked={!!н?.silenceOn} disabled={!можем || !готово}
+            onIonChange={(e) => менять({ silenceOn: e.detail.checked })} />} />
+      </div>
+      {н?.on && !н?.silenceOn && (
+        <div className="sheet-note warn">
+          Тревога о низком сахаре считается по показаниям. Если сенсор замолчит, будить будет
+          нечем — и тишина будет выглядеть так же, как хороший сахар.
+        </div>
+      )}
+      {н?.silenceOn && (
+        <>
+          <div className="basal-rows">
+            <div className="basal-row">
+              <span>Ждать</span>
+              <b>{молчание} мин</b>
+            </div>
+          </div>
+          <div className="alert-ask alert-ask-row">
+            <button className="changed-btn" disabled={молчание <= МИН_МОЛЧАНИЕ}
+              onClick={() => менять({ silenceMin: молчание - ШАГ_МОЛЧАНИЯ })}>−5 мин</button>
+            <button className="changed-btn" disabled={молчание >= МАКС_МОЛЧАНИЕ}
+              onClick={() => менять({ silenceMin: молчание + ШАГ_МОЛЧАНИЯ })}>+5 мин</button>
+          </div>
+          <div className="sheet-note">
+            Скажем один раз и замолчим: сенсор не начнёт отвечать оттого, что мы позвоним ещё
+            раз. Когда данные вернутся, уведомление уйдёт само — сообщать о хорошем ночью незачем.
+            Пока приборы отданы другому телефону, эта тревога молчит: тогда пауза объяснена.
           </div>
         </>
       )}
