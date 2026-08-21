@@ -98,14 +98,20 @@ jobs:
       - name: Чужого кода в дереве нет
         if: env.HAS_CORE_TOKEN == 'да'
         run: |
-          НАЙДЕНО=$(find app -type d -name vendor -not -path '*/node_modules/*' | head -5)
-          if [ -n "$НАЙДЕНО" ]; then
-            echo "::error::Чужой код в дереве: $НАЙДЕНО. Он не должен попадать в репозиторий и в релиз (#439)."
+          # Имена переменных ЛАТИНИЦЕЙ. Bash допускает в именах только ASCII: строка
+          # «НАЙДЕНО=...» для него не присваивание, а команда, и шаг падает с кодом 127.
+          # Это уже описано в шапке этого же файла — и я всё равно наступил, потому что
+          # писал проверку, а не читал соседний комментарий.
+          # Ищем в ИСХОДНИКАХ, а не по всему app: в каталогах сборки лежат скомпилированные
+          # пакеты с тем же именем, и проверка падала бы на машине, где недавно собирали.
+          FOUND=$(find app/android/app/src app/ios/App app/src -type d -name vendor 2>/dev/null | head -5)
+          if [ -n "$FOUND" ]; then
+            echo "::error::Чужой код в дереве: $FOUND. Он не должен попадать в репозиторий и в релиз (#439)."
             exit 1
           fi
-          ЛИЦЕНЗИИ=$(grep -rlE 'GNU GPL|GPL-3\.0|General Public License' app/android/app/src app/ios/App/App app/src 2>/dev/null | head -5 || true)
-          if [ -n "$ЛИЦЕНЗИИ" ]; then
-            echo "::error::Файлы под GPL в наших исходниках: $ЛИЦЕНЗИИ (#439)."
+          LICENSED=$(grep -rlE 'GNU GPL|GPL-3\.0|General Public License' app/android/app/src app/ios/App/App app/src 2>/dev/null | head -5 || true)
+          if [ -n "$LICENSED" ]; then
+            echo "::error::Файлы под GPL в наших исходниках: $LICENSED (#439)."
             exit 1
           fi
           echo "чужого кода не найдено"
