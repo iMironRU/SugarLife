@@ -27,6 +27,14 @@ on:
   push:
     branches: [main]
   workflow_dispatch:        # запуск вручную (Actions → Android APK → Run workflow)
+    inputs:
+      # Имя входа — ASCII, как и имена переменных окружения ниже: GitHub принимает здесь
+      # только [a-zA-Z_][a-zA-Z0-9_-]*, а на кириллице роняет весь файл ещё до запуска
+      # (run 32521286726, «workflow file issue», ноль секунд). Описание — по-русски.
+      publish:
+        description: 'Выложить APK в Releases (по умолчанию нет — ставим по проводу)'
+        type: boolean
+        default: false
 
 concurrency:                # не копить параллельные сборки — оставляем последнюю
   group: android-apk
@@ -111,10 +119,27 @@ jobs:
           fi
           # Сам сторож не в счёт: в нём эти строки написаны нарочно — он их и ищет.
           # Первая версия поймала собственный тест и уронила сборку; смешно ровно один раз.
-          LICENSED=$(grep -rlE 'GNU GPL|GPL-3\.0|General Public License' app/android/app/src app/ios/App/App app/src 2>/dev/null \
+          #
+          # Две ступени, как в app/src/чужойКод.test.ts — держать их в согласии обязательно.
+          # 1. Лицензионная ШАПКА: формула выдачи прав, а не название лицензии. Её приносит
+          #    с собой скопированный файл, и это нарушение без исключений.
+          SRC="app/android/app/src app/ios/App/App app/src"
+          HEADER=$(grep -rlEi 'SPDX-License-Identifier:[^\n]*GPL|this program is free software|redistribute it and/or modify|under the terms of the GNU|either version [23]' $SRC 2>/dev/null \
             | grep -v 'чужойКод.test.ts' | head -5 || true)
-          if [ -n "$LICENSED" ]; then
-            echo "::error::Файлы под GPL в наших исходниках: $LICENSED (#439)."
+          if [ -n "$HEADER" ]; then
+            echo "::error::Лицензионная шапка GPL в наших исходниках: $HEADER (#439)."
+            exit 1
+          fi
+          # 2. Просто УПОМИНАНИЕ — нарушение, пока в файле нет расписки. Расписку пишут
+          #    руками и по-русски: чужой файл её не принесёт, а свой заставит посмотреть.
+          MENTION=$(grep -rlE 'GNU GPL|GPL-[23]\.0|General Public License' $SRC 2>/dev/null \
+            | grep -v 'чужойКод.test.ts' || true)
+          UNSIGNED=""
+          for f in $MENTION; do
+            grep -q 'ЧУЖОГО КОДА ЗДЕСЬ НЕТ' "$f" || UNSIGNED="$UNSIGNED $f"
+          done
+          if [ -n "$UNSIGNED" ]; then
+            echo "::error::GPL упомянут без расписки «ЧУЖОГО КОДА ЗДЕСЬ НЕТ»:$UNSIGNED (#439)."
             exit 1
           fi
           echo "чужого кода не найдено"
@@ -158,17 +183,27 @@ jobs:
         if: env.HAS_CORE_TOKEN == 'да'
         run: cp app/android/app/build/outputs/apk/lite/debug/app-lite-debug.apk sugarlife-debug.apk
 
+      # Артефакт тоже не выкладываем: репозиторий публичный, а значит и артефакты сборки
+      # публичные. Нативная часть ставится с компьютера владельца по кабелю — APK из CI
+      # для этого не нужен. Сборка выше остаётся: она проверяет, что нативка жива.
       - name: Upload artifact
-        if: env.HAS_CORE_TOKEN == 'да'
+        if: env.HAS_CORE_TOKEN == 'да' && inputs.publish
         uses: actions/upload-artifact@v4
         with:
           name: sugarlife-debug-apk
           path: sugarlife-debug.apk
 
+      # ПУБЛИКАЦИЯ ВЫКЛЮЧЕНА ПО УМОЛЧАНИЮ (решение владельца, 22.08.2026).
+      # Тестовые сборки ставятся только на телефоны владельца, с его компьютера, по
+      # проводу. Автоматический релиз на каждый push в main это правило нарушал: тег
+      # android-latest публичный, и приложение по нему само предлагает «Скачать APK».
+      # Собирать APK в CI продолжаем — это проверка, что сборка жива; лежит в artifacts.
+      # Выложить осознанно: Actions → Android APK → Run workflow → publish ✓.
+      #
       # Строка «build:» — не украшение: по ней приложение решает, предлагать ли
       # «Скачать APK» (src/platform/appUpdate.ts, #238). Формат менять нельзя.
       - name: Publish to Releases
-        if: env.HAS_CORE_TOKEN == 'да'
+        if: env.HAS_CORE_TOKEN == 'да' && inputs.publish
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'android-latest' }}

@@ -194,7 +194,7 @@ export default function Onboarding() {
               onClick={() => setStep(готовность?.canScan ? 'scan' : 'доступ')} />
           ) : (
             <Row icon={downloadOutline} title="Найти рядом — в приложении"
-              sub="браузер не умеет Bluetooth · как поставить на телефон" href={ГДЕ_ВЗЯТЬ} />
+              sub="браузер не умеет Bluetooth · почему так и что тогда делать" href={ГДЕ_ВЗЯТЬ} />
           )}
 
           <Row icon={cloudOutline} title="Через облако" sub="данные из Nightscout — работает уже сейчас"
