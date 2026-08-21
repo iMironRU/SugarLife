@@ -7,6 +7,7 @@ import { deviceAges , type ChangeMarks } from './treatmentStats';
 import { stats, agp, LOW, HIGH, VLOW, VHIGH } from './agp';
 import { необъяснённыеПодъёмы } from './mealMoment';
 import { разборБезЗаписи, имяЧасти, type РазборБезЗаписи } from './безЗаписи';
+import type { ОтметкаПодъёма } from './причиныПодъёма';
 import { toUnits, unitLabel } from './units';
 
 export type Severity = 'good' | 'info' | 'warn' | 'bad';
@@ -46,6 +47,9 @@ export interface AnalyzeCtx {
      только по событиям Nightscout, а они бывают пропущены целиком — и «канюля 11 дней»
      оказывается неправдой (settings/changes.ts). */
   changes?: ChangeMarks;
+  /* Чем человек объяснил подъёмы (#167). Без них разбор считает объяснённое
+     необъяснённым и спрашивает второй раз про то, на что уже ответили. */
+  отметкиПодъёмов?: ОтметкаПодъёма[];
 }
 
 const SEV_ORDER: Record<Severity, number> = { bad: 0, warn: 1, info: 2, good: 3 };
@@ -246,7 +250,7 @@ export function analyze(
      Поэтому находка сообщает факт и задаёт вопрос, а не ставит диагноз. Ночное
      преобладание названо отдельно: там причины другие, и разговор с врачом другой. */
   const подъёмы = необъяснённыеПодъёмы(es, carbs.map((c) => c.t), now, { глубинаМс: winMs, предел: 500 });
-  const разбор = разборБезЗаписи(подъёмы, windowDays);
+  const разбор = разборБезЗаписи(подъёмы, windowDays, ctx.отметкиПодъёмов ?? []);
   if (разбор.всего >= 3) {
     const где = разбор.преобладает ? ` — чаще всего ${имяЧасти(разбор.преобладает)}` : '';
     ins.push({
