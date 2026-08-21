@@ -74,6 +74,7 @@ class SugarLifeService : Service() {
         runCatching {
             EngineHolder.engine(applicationContext).subscribe { json ->
                 Тревоги.приСнимке(applicationContext, json)
+                показатьСахар(json)   // человек чаще всего смотрит сюда (#449)
             }
         }.onFailure { Log.w(TAG, "не удалось подписаться на снимки для тревог: $it") }
     }
@@ -139,6 +140,60 @@ class SugarLifeService : Service() {
         super.onTaskRemoved(rootIntent)
     }
 
+    /**
+     * САХАР В ПОСТОЯННОМ УВЕДОМЛЕНИИ (#449).
+     *
+     * Уведомление висит круглосуточно и до сих пор говорило только «приборы заняты этим телефоном». А
+     * человек берёт телефон в руки не за этим: он хочет число. На iOS его показывает живой баннер, на
+     * Android такого механизма нет — зато есть эта строка, и она уже на экране блокировки.
+     *
+     * ВОЗРАСТ ПОКАЗАНИЯ ВСЕГДА РЯДОМ. «7,3 · 2 мин» и «7,3 · 40 мин» — разные сообщения, и второе значит
+     * «не верь». Число без возраста хуже пустоты: вчерашнее выглядит как сегодняшнее.
+     *
+     * СЫРОЕ НАЗЫВАЕМ СЫРЫМ. Пока калибратор не прогрет, значение не калиброванное — и мы это пишем, а не
+     * подсовываем как готовое (core#109).
+     */
+    private fun показатьСахар(json: String) {
+        val строка = runCatching { сахарИзСнимка(json) }.getOrNull() ?: return
+        if (строка == последняяСтрока) return          // не дёргаем систему одинаковыми обновлениями
+        последняяСтрока = строка
+        показать(держимПриборы)
+    }
+
+    /** Что писать в заголовке: число, стрелка, возраст. `null` — числа нет, выдумывать нечего. */
+    private fun сахарИзСнимка(json: String): String? {
+        val monitor = org.json.JSONObject(json).optJSONObject("monitor") ?: return null
+        if (monitor.isNull("glucoseMmol")) return null
+        val сахар = monitor.optDouble("glucoseMmol").takeIf { !it.isNaN() && it > 0.0 } ?: return null
+        val калиброван = monitor.optBoolean("glucoseCalibrated", false)
+        val когда = monitor.optLong("latestAtMs", 0L)
+        val минут = if (когда > 0) ((System.currentTimeMillis() - когда) / 60_000L).toInt() else -1
+        val возраст = when {
+            минут < 0 -> ""
+            минут <= 1 -> " · только что"
+            минут < 60 -> " · $минут мин"
+            else -> " · ${минут / 60} ч"
+        }
+        /* Имена трендов — из ядра (Trend), а не выдуманные: RisingRapidly … FallingRapidly, Unknown.
+           Незнакомое имя даёт пустую стрелку — врать направлением хуже, чем молчать о нём. */
+        val стрелка = when (monitor.optString("trend")) {
+            "RisingRapidly" -> " ⇑"
+            "Rising" -> " ↑"
+            "RisingSlowly" -> " ↗"
+            "Stable" -> " →"
+            "FallingSlowly" -> " ↘"
+            "Falling" -> " ↓"
+            "FallingRapidly" -> " ⇓"
+            else -> ""
+        }
+        val число = "%.1f".format(сахар).replace('.', ',')
+        return число + стрелка + (if (калиброван) "" else " (сырое)") + возраст
+    }
+
+    /** Последняя показанная строка и то, держим ли мы приборы: по ним решаем, обновлять ли уведомление. */
+    private var последняяСтрока: String? = null
+    private var держимПриборы = true
+
     private fun отдатьПриборы(причина: String) {
         Log.i(TAG, "отдаём приборы: $причина")
         runCatching {
@@ -164,6 +219,7 @@ class SugarLifeService : Service() {
 
     /** Переписать постоянное уведомление под текущее состояние. */
     private fun показать(держим: Boolean) {
+        держимПриборы = держим
         runCatching {
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                 .notify(NOTIF_ID, уведомление(держим))
@@ -192,7 +248,10 @@ class SugarLifeService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         return NotificationCompat.Builder(this, CHANNEL)
-            .setContentTitle(if (держим) "SugarLife: мониторинг идёт" else "SugarLife: приборы отпущены")
+            /* Число — в заголовок, а не в текст: заголовок виден и на экране блокировки, и в свёрнутой
+               шторке, а текст система прячет первым. Нет числа — прежний заголовок про мониторинг. */
+            .setContentTitle(последняяСтрока?.let { "$it ммоль/л" }
+                ?: if (держим) "SugarLife: мониторинг идёт" else "SugarLife: приборы отпущены")
             .setContentText(if (держим) "Приборы заняты этим телефоном" else "По радио сейчас ничего не приходит")
             .setStyle(
                 NotificationCompat.BigTextStyle().bigText(
