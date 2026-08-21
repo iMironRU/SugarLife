@@ -42,6 +42,10 @@ object EngineHolder {
         // Долгие паузы отмеряет будильник, а не корутина (core#93): в Doze процессор ради `delay` не будят,
         // и пятиминутный цикл помпы превращается в «когда система разрешит».
         provider.setWakeups(AlarmWakeups(appContext))
+        // Калибровка сенсора вендорским алгоритмом (core#88). Сам алгоритм скачивается скриптом и в
+        // репозиторий не попадает; нет его — нет и калиброванного значения, приложение покажет сырое и
+        // скажет, что оно сырое.
+        provider.setCalibratorFactory { SibionicsVendorCalibrator() }
         engine(appContext).attachDriverProvider(provider)
     }
 }
