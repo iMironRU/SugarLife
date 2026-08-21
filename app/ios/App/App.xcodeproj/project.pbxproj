@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0BC9060DB1B6BD10DFAD738B /* SugarLifeBridgePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87C68B8AE0D695D6036A724F /* SugarLifeBridgePlugin.swift */; };
+		1A2B3C4D5E6F708192A3B4C5 /* BackgroundKeepAlive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B4C6 /* BackgroundKeepAlive.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		3B525332656E3548733735E2 /* SugarLifeKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28830E06463F890289CA9B00 /* SugarLifeKit.framework */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
@@ -32,6 +33,7 @@
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		87C68B8AE0D695D6036A724F /* SugarLifeBridgePlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SugarLifeBridgePlugin.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F708192A3B4C6 /* BackgroundKeepAlive.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackgroundKeepAlive.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		C70503BD4ED04304CB66D13E /* ViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -80,6 +82,7 @@
 				50B271D01FEDC1A000F3C39B /* public */,
 				C70503BD4ED04304CB66D13E /* ViewController.swift */,
 				87C68B8AE0D695D6036A724F /* SugarLifeBridgePlugin.swift */,
+				1A2B3C4D5E6F708192A3B4C6 /* BackgroundKeepAlive.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -211,6 +214,7 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				A210E6E13DB4959AC3907C3E /* ViewController.swift in Sources */,
 				0BC9060DB1B6BD10DFAD738B /* SugarLifeBridgePlugin.swift in Sources */,
+				1A2B3C4D5E6F708192A3B4C5 /* BackgroundKeepAlive.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

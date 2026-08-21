@@ -16,9 +16,12 @@ import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
+import ru.imiron.sugarlife.contract.LinkFailures
+import ru.imiron.sugarlife.contract.LinkPlatform
 import ru.imiron.sugarlife.drivers.medtronic.PumpTransportBridge
 import ru.imiron.sugarlife.drivers.sibionics.SensorTransportBridge
 import java.util.UUID
@@ -84,6 +87,44 @@ private val RL_RESP = UUID.fromString("6E6C7910-B89E-43A5-A0FE-50C5E2B81F4A")
  *  GATT-операции сериализуются очередью — Android держит одну операцию за раз (иначе тихие сбои). */
 @SuppressLint("MissingPermission")
 @Suppress("DEPRECATION")
+/**
+ * Не дать процессору уснуть посреди обмена с прибором (#380).
+ *
+ * Foreground-сервис держит ПРОЦЕСС, но не мешает процессору спать между событиями. А обмен у нас длинный:
+ * побудка помпы — 12 секунд эфира, за ней шестнадцать кадров страницы истории, каждый со своим ответом.
+ * Уснуть посередине означает оборванную страницу, а человек прочитает это как «связь плохая».
+ *
+ * Так делают обе рабочие реализации: AndroidAPS держит `PARTIAL_WAKE_LOCK` вокруг всей очереди команд к
+ * помпе (до 10 минут), xDrip — вокруг каждого сеанса, через общий помощник `JoH.getWakeLock(имя, срок)`.
+ *
+ * Потолок обязателен. Замок, который забыли отпустить, — это севшая за ночь батарея, и виноваты будем мы,
+ * а не система: `acquire(срок)` отпускает сам, даже если наш код до `отпустить()` не дошёл.
+ */
+internal class Пробуждение(context: Context, private val имя: String) {
+    private val pm = context.applicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+    private var wl: PowerManager.WakeLock? = null
+
+    @Synchronized fun взять() {
+        if (wl?.isHeld == true) return
+        wl = runCatching {
+            pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, имя).apply {
+                setReferenceCounted(false)
+                acquire(ПОТОЛОК_МС)
+            }
+        }.onFailure { Log.w(TAG, "$имя: не удалось взять wake-lock: $it") }.getOrNull()
+    }
+
+    @Synchronized fun отпустить() {
+        runCatching { wl?.takeIf { it.isHeld }?.release() }
+        wl = null
+    }
+
+    private companion object {
+        /** 10 минут — как у AndroidAPS вокруг очереди команд. Дольше не длится ни один наш обмен. */
+        const val ПОТОЛОК_МС = 10L * 60 * 1000
+    }
+}
+
 class BleLink(
     private val context: Context,
     private val address: String,
@@ -118,10 +159,14 @@ class BleLink(
         opСторож?.let(mainHandler::removeCallbacks); opСторож = null
         opBusy = false; pump()
     }
+    /** Замок бодрствования на время обмена: берём под первую операцию, отпускаем, когда очередь пуста (#380). */
+    private val замок = Пробуждение(context, "SugarLife:ble:$address")
+
     @Synchronized private fun pump() {
         if (opBusy) return
-        val op = opQueue.poll() ?: return
+        val op = opQueue.poll() ?: run { замок.отпустить(); return }
         opBusy = true
+        замок.взять()
         val поколение = ++opПоколение
         val сторож = Runnable {
             synchronized(this) {
@@ -221,6 +266,7 @@ class BleLink(
         
            Разрыв — это факт, а не чужое мнение: кто его совершил, тот и объявляет. */
         opBusy = false; opQueue.clear()
+        замок.отпустить()   // связи нет — держать процессор незачем (#380)
         onState?.invoke("Disconnected")
     }
 
@@ -284,17 +330,18 @@ class BleLink(
             // и по этим выдуманным событиям я строил выводы о железе. Лог, который врёт, хуже отсутствующего.
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 Log.w(TAG, "connState НЕ-успех status=$status (133=GATT_ERROR/недоступен) addr=$address")
-                bleLog("Warn", "связь с прибором не установилась", address, "код" to status.toString(),
-                    // Коды BLE-стека — словами: именно код решает, куда идти дальше.
-                    "смысл" to when (status) {
-                        8 -> "связь потеряна: прибор ушёл из зоны или эфир перегружен"
-                        19 -> "прибор разорвал связь сам"
-                        22 -> "связь разорвана локально"
-                        34, 62 -> "стек не смог установить соединение"
-                        133 -> "прибор недоступен или занят"
-                        147 -> "исчерпан лимит одновременных подключений"
-                        else -> "код стека Android"
-                    })
+                // Причина и совет — ИЗ ЯДРА (core#94). Раньше словарь жил здесь, кодами Android, и на iOS
+                // его не было вовсе: там свои коды CBError, и человек с айфоном не видел ничего.
+                val беда = LinkFailures.of(LinkPlatform.Android, status)
+                bleLog(
+                    "Warn", "связь с прибором не установилась", address,
+                    "код" to status.toString(),
+                    "смысл" to беда.reason,
+                    // Диагноз без продолжения вреднее молчания: человек знает, что сломалось, и не знает,
+                    // его ли это дело.
+                    "что делать" to беда.whatToDo,
+                    "поможет повтор" to беда.retryHelps.toString(),
+                )
             }
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {

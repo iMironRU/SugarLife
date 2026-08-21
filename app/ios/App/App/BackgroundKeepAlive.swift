@@ -1,0 +1,126 @@
+import Foundation
+import AVFoundation
+import UIKit
+
+/**
+ Не дать системе усыпить приложение, когда будить его нечем (#388).
+
+ Фоновый режим `bluetooth-central` (#379) решает половину задачи: приложение просыпается, когда прибор
+ что-то прислал. Но **у человека на одном облаке прибора нет вовсе** — ни сенсора, ни моста. Будить нас
+ нечем: iOS приостанавливает процесс, и данные из Nightscout перестают приходить до следующего открытия.
+ Именно так живёт наблюдатель — родитель, который смотрит на чужой сенсор, — и ему свежесть цифры важнее
+ всех.
+
+ Приём взят у xDrip4iOS: проигрывать **миллисекунду тишины** раз в несколько секунд. Фоновый режим `audio`
+ не даёт системе приостановить процесс.
+
+ Две вещи здесь важнее самого приёма, и обе от них же:
+
+  — включается **только при уходе в фон**: на экране оно не нужно и батарею не ест;
+  — это **выбор человека**, а не наша самодеятельность. По умолчанию выключено. Честная сделка: живость
+    против батареи, и решает тот, чей телефон.
+
+ Звук строим в коде, а не носим файлом: сорок четыре нулевых сэмпла с заголовком WAV — это сотня байт,
+ которую видно целиком. Ресурс пришлось бы объяснять всякому, кто откроет проект.
+ */
+final class ФоновоеБодрствование {
+
+    enum Режим: String, CaseIterable {
+        case выключено, обычное, настойчивое
+
+        /// Как часто напоминать системе о себе. У xDrip4iOS ровно эти числа: 5 и 2 секунды.
+        var интервал: TimeInterval? {
+            switch self {
+            case .выключено: return nil
+            case .обычное: return 5
+            case .настойчивое: return 2
+            }
+        }
+    }
+
+    static let shared = ФоновоеБодрствование()
+
+    private let ключ = "sugarlife.background-keep-alive"
+    private var проигрыватель: AVAudioPlayer?
+    private var таймер: DispatchSourceTimer?
+    private let очередь = DispatchQueue(label: "ru.imiron.sugarlife.keepalive")
+
+    private(set) var режим: Режим {
+        get { Режим(rawValue: UserDefaults.standard.string(forKey: ключ) ?? "") ?? .выключено }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: ключ) }
+    }
+
+    private init() {}
+
+    /// Подписаться на уход в фон и возвращение. Зовётся один раз, при старте плагина.
+    func начать() {
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(ушлиВФон),
+            name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(вернулись),
+            name: UIApplication.willEnterForegroundNotification, object: nil)
+    }
+
+    func установить(_ новый: Режим) {
+        режим = новый
+        NSLog("SugarLife: фоновое бодрствование — \(новый.rawValue)")
+        // Меняют настройку обычно на экране, то есть на переднем плане: тогда просто запомнили. Но если
+        // приложение уже в фоне (настройку изменили из шторки/через мост) — применяем сразу.
+        if UIApplication.shared.applicationState == .background { применить() } else { остановить() }
+    }
+
+    @objc private func ушлиВФон() { применить() }
+    @objc private func вернулись() { остановить() }
+
+    private func применить() {
+        guard let интервал = режим.интервал else { остановить(); return }
+        do {
+            // `.playback` — единственная категория, которая продолжает жить в фоне. `.mixWithOthers`
+            // обязателен: без него мы остановим музыку или подкаст человека ради своей тишины.
+            try AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            NSLog("SugarLife: не удалось занять аудио-сессию (\(error)) — фоновое бодрствование не работает")
+            return
+        }
+        if проигрыватель == nil {
+            проигрыватель = try? AVAudioPlayer(data: тишина())
+            проигрыватель?.volume = 0
+            проигрыватель?.prepareToPlay()
+        }
+        таймер?.cancel()
+        let t = DispatchSource.makeTimerSource(queue: очередь)
+        t.schedule(deadline: .now(), repeating: интервал)
+        t.setEventHandler { [weak self] in
+            guard let p = self?.проигрыватель, !p.isPlaying else { return }
+            p.play()
+        }
+        t.resume()
+        таймер = t
+        NSLog("SugarLife: фоновое бодрствование включено, раз в \(интервал) с")
+    }
+
+    private func остановить() {
+        таймер?.cancel(); таймер = nil
+        проигрыватель?.stop()
+        try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+    }
+
+    /// Миллисекунда тишины: заголовок WAV и сорок четыре нулевых сэмпла при 44.1 кГц, моно, 16 бит.
+    private func тишина() -> Data {
+        let частота: UInt32 = 44_100
+        let сэмплов = 44                        // ≈ 1 мс
+        let данных = UInt32(сэмплов * 2)
+        var d = Data()
+        func u32(_ v: UInt32) { withUnsafeBytes(of: v.littleEndian) { d.append(contentsOf: $0) } }
+        func u16(_ v: UInt16) { withUnsafeBytes(of: v.littleEndian) { d.append(contentsOf: $0) } }
+        d.append(contentsOf: Array("RIFF".utf8)); u32(36 + данных)
+        d.append(contentsOf: Array("WAVE".utf8))
+        d.append(contentsOf: Array("fmt ".utf8)); u32(16); u16(1); u16(1)
+        u32(частота); u32(частота * 2); u16(2); u16(16)
+        d.append(contentsOf: Array("data".utf8)); u32(данных)
+        d.append(Data(repeating: 0, count: сэмплов * 2))
+        return d
+    }
+}

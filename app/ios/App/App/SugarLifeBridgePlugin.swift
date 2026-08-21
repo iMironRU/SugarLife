@@ -32,6 +32,33 @@ private func kmpNow() -> KotlinLong { KotlinLong(longLong: Int64(Date().timeInte
 /// соединение, а CoreBluetooth держит peripheral подключённым, ПОКА ЖИВ ХОТЬ ОДИН central → cancel на одном
 /// не рвал, освобождало только закрытие приложения (сносит все центральные). Один общий central = одна ссылка
 /// на соединение → disconnect всегда реально освобождает. Он же скан (didDiscover) — один владелец эфира.
+/**
+ ОЧЕРЕДЬ BLE — ОДНА НА ВСЁ СОСТОЯНИЕ СВЯЗИ (#379).
+
+ До этого CoreBluetooth создавался с `queue: nil`, то есть колбэки приходили на ГЛАВНУЮ нить, а звали нас
+ при этом из движка — из его собственного потока. Получалось, что `links`, `chars`, обработчики и очередь
+ отложенных операций пишутся из двух потоков сразу. Словари Swift к этому не готовы: гонка здесь — это не
+ «иногда медленнее», а падение приложения в случайном месте.
+
+ Отдельная нить сама по себе гонку не убирает, а лишь переносит. Убирает — единственный владелец: всё
+ состояние живёт на этой очереди, а публичные методы на неё переходят. Так устроены обе рабочие реализации:
+ у Loop `centralQueue` с проверками `dispatchPrecondition`, у xDrip4iOS менеджер создаётся с пометкой
+ «so all delegate callbacks arrive off the main thread».
+ */
+let bleQueue = DispatchQueue(label: "ru.imiron.sugarlife.ble")
+
+/**
+ ОЧЕРЕДЬ ОТВЕТОВ НАРУЖУ — ВТОРАЯ, И ЭТО НЕ ИЗЛИШЕСТВО.
+
+ Из BLE мы зовём движок: показание пришло, связь изменилась, команда ответила. Вызовы движка синхронны — он
+ ждёт своей внутренней очереди. Если бы мы ждали его прямо на [bleQueue], то в момент, когда движок с своего
+ потока спрашивает у нас состояние Bluetooth (а он спрашивает, синхронно), обе стороны встали бы намертво.
+
+ Поэтому наружу отвечаем с отдельной последовательной очереди: порядок событий сохраняется — для потока
+ показаний это обязательно, — а очередь связи не ждёт никого.
+ */
+let bleOutQueue = DispatchQueue(label: "ru.imiron.sugarlife.ble.out")
+
 final class SharedCentral: NSObject, CBCentralManagerDelegate {
     static let shared = SharedCentral()
     private var central: CBCentralManager!
@@ -46,10 +73,14 @@ final class SharedCentral: NSObject, CBCentralManagerDelegate {
     /// Можем ли слушать эфир прямо сейчас. `nil` — CoreBluetooth ещё не определился (состояние .unknown):
     /// врать «нельзя» в этот момент нельзя, это нормальная фаза запуска.
     var bluetoothOn: Bool? {
-        switch central.state {
-        case .poweredOn: return true
-        case .unknown, .resetting: return nil
-        default: return false
+        // Спрашивают из движка, с чужого потока: состояние менеджера читаем на его очереди. Ждать здесь
+        // безопасно — [bleQueue] сама никого не ждёт, ответы наружу уходят с [bleOutQueue].
+        bleQueue.sync {
+            switch central.state {
+            case .poweredOn: return true
+            case .unknown, .resetting: return nil
+            default: return false
+            }
         }
     }
     /// Дал ли человек доступ к Bluetooth. На iOS отказ выглядит как «ничего не находится» — молча.
@@ -58,34 +89,149 @@ final class SharedCentral: NSObject, CBCentralManagerDelegate {
         return true
     }
 
-    override init() { super.init(); central = CBCentralManager(delegate: self, queue: nil) }
+    /// Приборы, соединение с которыми мы хотим ДЕРЖАТЬ. Заявка на подключение в CoreBluetooth бессрочна и
+    /// переживает приостановку приложения: система соединит сама, когда прибор появится в эфире, и разбудит
+    /// нас под это событие. Ровно так живёт Loop (`autoConnectDevices` при каждом разрыве) — и это
+    /// единственный способ вернуться на связь, пока приложение спит и своей петли переподключения крутить не
+    /// может (#379).
+    ///
+    /// В набор попадает то, что просил драйвер, и выбывает то, что он же сам отсоединил. Разница
+    /// принципиальная: свой разрыв — это решение (core#83), чужой — потеря связи, и только её мы чиним молча.
+    private var держим: Set<UUID> = []
+    /// Периферали, вернувшиеся от системы при восстановлении (см. `willRestoreState`).
+    private var восстановленные: [UUID: CBPeripheral] = [:]
 
-    func register(_ link: BleLink, for uuid: UUID) { links[uuid] = link }
+    override init() {
+        super.init()
+        /* ВОССТАНОВЛЕНИЕ СОСТОЯНИЯ (#379).
+
+           Без идентификатора восстановления выгруженное приложение не поднимется больше никогда — ни на
+           одно BLE-событие, пока человек не откроет его руками. А выгружает iOS обычно: по памяти, по сбою,
+           просто так. Идентификатор говорит системе «этот центральный менеджер мой, подними меня, когда по
+           нему что-то произойдёт».
+
+           Идентификатор обязан быть ПОСТОЯННЫМ между запусками — на том и держится вся затея. У нас общий
+           центральный на всё приложение (core#20), поэтому строка одна и записана здесь; у xDrip4iOS
+           менеджеров много, и они складывают адрес прибора в идентификатор, чтобы получить ту же
+           постоянство. Издания разведены: Pro и Lite не должны делить восстановление.
+
+           ShowPowerAlert — системная подсказка «включите Bluetooth». Отказ доступа на iOS выглядит как
+           «ничего не находится», молча (core#61), и одну из причин этой тишины система объяснит сама. */
+        let restoreId = (Bundle.main.bundleIdentifier ?? "ru.imiron.sugarlife") + ".central"
+        central = CBCentralManager(
+            delegate: self, queue: bleQueue,
+            options: [
+                CBCentralManagerOptionRestoreIdentifierKey: restoreId,
+                CBCentralManagerOptionShowPowerAlertKey: true,
+            ]
+        )
+    }
+
+    func register(_ link: BleLink, for uuid: UUID) { bleQueue.async { self.links[uuid] = link } }
     // Снимаем маршрут только если он всё ещё НАШ: иначе disconnect старого линка стёр бы маршрут нового.
-    func unregister(_ uuid: UUID, _ link: BleLink) { if links[uuid] === link { links.removeValue(forKey: uuid) } }
+    func unregister(_ uuid: UUID, _ link: BleLink) {
+        bleQueue.async { if self.links[uuid] === link { self.links.removeValue(forKey: uuid) } }
+    }
 
-    func connect(_ uuid: UUID) {
+    func connect(_ uuid: UUID) { bleQueue.async { self.подключить(uuid) } }
+
+    private func подключить(_ uuid: UUID) {
+        dispatchPrecondition(condition: .onQueue(bleQueue))
+        держим.insert(uuid)
         guard central.state == .poweredOn else { if !pending.contains(uuid) { pending.append(uuid) }; return }
-        if let p = central.retrievePeripherals(withIdentifiers: [uuid]).first {
+        // Восстановленная периферь — та же самая: система вернула нам живой объект, заново искать нечего.
+        if let p = восстановленные[uuid] ?? central.retrievePeripherals(withIdentifiers: [uuid]).first {
             links[uuid]?.bind(p); central.connect(p, options: nil)
         }
     }
-    func cancel(_ p: CBPeripheral) { central.cancelPeripheralConnection(p) }
+    func cancel(_ p: CBPeripheral) {
+        bleQueue.async {
+            self.держим.remove(p.identifier)   // отсоединил драйвер — держать больше не надо (#379)
+            self.central.cancelPeripheralConnection(p)
+        }
+    }
 
-    func startScan() { wantScan = true; if central.state == .poweredOn { central.scanForPeripherals(withServices: nil) } }
-    func stopScan() { wantScan = false; central.stopScan() }
+    func startScan() {
+        bleQueue.async {
+            self.wantScan = true
+            if self.central.state == .poweredOn { self.central.scanForPeripherals(withServices: nil) }
+        }
+    }
+    func stopScan() { bleQueue.async { self.wantScan = false; self.central.stopScan() } }
+
+    /// Система подняла приложение и вернула ему свои периферали (#379). Пустой обработчик уже достаточен —
+    /// важен сам факт объявления, — но раз периферали дают, забираем: по ним `connect` соединится без поиска.
+    func centralManager(_ c: CBCentralManager, willRestoreState dict: [String: Any]) {
+        let список = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] ?? []
+        NSLog("SugarLifeBLE: восстановление состояния — периферали: \(список.count)")
+        for p in список { восстановленные[p.identifier] = p }
+    }
 
     func centralManagerDidUpdateState(_ c: CBCentralManager) {
-        readinessHandler?()   // выключили/включили Bluetooth или ответили на запрос доступа — сказать движку
+        // Наружу — со своей очереди: обработчик идёт в движок, а он синхронный (см. [bleOutQueue]).
+        if let h = readinessHandler { bleOutQueue.async { h() } }
         guard c.state == .poweredOn else { return }
-        let p = pending; pending = []; p.forEach { connect($0) }
+        let p = pending; pending = []; p.forEach { подключить($0) }
+        // Приборы, которые мы держим, переподаём заявкой: Bluetooth могли выключить и включить, а заявка
+        // при этом теряется (#379).
+        держим.forEach { подключить($0) }
         if wantScan { c.scanForPeripherals(withServices: nil) }
     }
     func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) { links[p.identifier]?.didConnect(p) }
-    func centralManager(_ c: CBCentralManager, didDisconnectPeripheral p: CBPeripheral, error: Error?) { links[p.identifier]?.didDisconnect() }
-    func centralManager(_ c: CBCentralManager, didFailToConnect p: CBPeripheral, error: Error?) { links[p.identifier]?.didFail() }
+    func centralManager(_ c: CBCentralManager, didDisconnectPeripheral p: CBPeripheral, error: Error?) {
+        сообщитьОБеде("связь с прибором потеряна", p, error)
+        links[p.identifier]?.didDisconnect()
+        /* ЧУЖОЙ РАЗРЫВ — ПЕРЕПОДАЁМ ЗАЯВКУ (#379).
+
+           Прибор ушёл из радиуса, мигнул питанием, iOS решила освободить эфир — своего решения тут нет
+           (наше сняло бы `cancel`, см. выше). Пока приложение на экране, переподключением займётся драйвер;
+           в фоне он не запустится вовсе — процесс приостановлен. Бессрочная заявка тем и хороша, что её
+           исполняет система: прибор появился — соединение поднято, приложение разбужено под это событие.
+
+           Так же поступает Loop: `autoConnectDevices()` вызывается прямо из обработчика разрыва. */
+        if держим.contains(p.identifier) { c.connect(p, options: nil) }
+    }
+    func centralManager(_ c: CBCentralManager, didFailToConnect p: CBPeripheral, error: Error?) {
+        сообщитьОБеде("подключиться к прибору не удалось", p, error)
+        links[p.identifier]?.didFail()
+    }
+
+    /**
+     Причина и совет — ИЗ ЯДРА (core#94).
+
+     Словарь причин жил в Android-мосте и кодами Android; здесь не было ничего, и человек с айфоном видел
+     либо тишину, либо системную английскую строку. Теперь обе платформы берут ответ в одном месте: одна и
+     та же беда читается одинаково, и у каждой есть продолжение — что делать дальше.
+
+     Молчим только когда система молчит сама: разрыв без ошибки — это штатное завершение (мы сами позвали
+     cancel), и объявлять бедой его нельзя. Лог, который врёт, хуже отсутствующего.
+     */
+    private func сообщитьОБеде(_ событие: String, _ p: CBPeripheral, _ error: Error?) {
+        guard let error = error else { return }
+        let id = p.identifier.uuidString
+        guard let code = cbCode(error) else {
+            NSLog("SugarLifeBLE: \(событие) — \(error.localizedDescription)")
+            bleLog("Warn", событие, id, ["смысл": error.localizedDescription])
+            return
+        }
+        let беда = LinkFailures.shared.of(platform: .apple, code: code)
+        NSLog("SugarLifeBLE: \(событие) [код \(code)] — \(беда.reason); \(беда.whatToDo)")
+        bleLog("Warn", событие, id, [
+            "код": String(code),
+            "смысл": беда.reason,
+            "что делать": беда.whatToDo,
+            "поможет повтор": String(беда.retryHelps),
+        ])
+    }
     func centralManager(_ c: CBCentralManager, didDiscover p: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
-        scanHandler?(p, advertisementData, RSSI)
+        /* НАРУЖУ — С ВЫХОДНОЙ ОЧЕРЕДИ, и это не формальность (#379).
+
+           Обработчик скана зовёт движок НАПРЯМУЮ и синхронно (`submitAdvertisement`). Оставь мы его здесь —
+           получили бы взаимную блокировку в первую же секунду: движок со своего потока спрашивает у нас
+           состояние Bluetooth и ждёт очередь связи, а очередь связи в это время ждёт движок. Обе стороны
+           стоят, приложение живо и не делает ничего — худший вид поломки. */
+        guard let h = scanHandler else { return }
+        bleOutQueue.async { h(p, advertisementData, RSSI) }
     }
 }
 
@@ -126,7 +272,10 @@ final class BleLink: NSObject, CBPeripheralDelegate {
 
     // Перерегистрируемся при каждом connect: reconnect-петля драйвера делает disconnect()→connect() на том же
     // линке, а disconnect() снимает маршрут — без этого повторный коннект не встал бы.
-    func connectNow() {
+    func connectNow() { bleQueue.async { self.подключиться() } }
+
+    private func подключиться() {
+        dispatchPrecondition(condition: .onQueue(bleQueue))
         SharedCentral.shared.register(self, for: peripheralUUID); SharedCentral.shared.connect(peripheralUUID)
         сторожDiscovery?.cancel()
         let r = DispatchWorkItem { [weak self] in
@@ -134,9 +283,13 @@ final class BleLink: NSObject, CBPeripheralDelegate {
             self?.отпуститьОтложенные(всё: true, причина: "сдались ждать discovery")
         }
         сторожDiscovery = r
-        DispatchQueue.main.asyncAfter(deadline: .now() + 15, execute: r)
+        // Сторож трогает состояние линка — значит живёт на очереди связи, а не на главной (#379).
+        bleQueue.asyncAfter(deadline: .now() + 15, execute: r)
     }
-    func disconnect() {
+    func disconnect() { bleQueue.async { self.отсоединиться() } }
+
+    private func отсоединиться() {
+        dispatchPrecondition(condition: .onQueue(bleQueue))
         сторожDiscovery?.cancel(); сторожDiscovery = nil
         // Отложенное отпускаем: иначе чтение, начатое до разрыва, не ответит никогда.
         отпуститьОтложенные(всё: true, причина: "разрыв связи")
@@ -150,9 +303,11 @@ final class BleLink: NSObject, CBPeripheralDelegate {
            закрытую сессию минутами, а прибор числился «на связи».
 
            Разрыв — факт, а не чужое мнение: кто его совершил, тот и объявляет. */
-        onState?("Disconnected")
+        наружу("Disconnected")
     }
-    func subscribe(_ char: CBUUID, handler: @escaping (Data) -> Void) { notifyHandlers[char] = handler }
+    func subscribe(_ char: CBUUID, handler: @escaping (Data) -> Void) {
+        bleQueue.async { self.notifyHandlers[char] = handler }
+    }
 
     /* Операции ждут discovery, а отказ не пропадает молча (SugarLife#347, #348).
 
@@ -180,7 +335,7 @@ final class BleLink: NSObject, CBPeripheralDelegate {
     }
 
     func write(_ data: Data, to char: CBUUID) {
-        приГотовности(char) { [weak self] in
+        bleQueue.async { self.приГотовности(char) { [weak self] in
             guard let self else { return }
             guard let p = self.peripheral else {
                 NSLog("SugarLifeBLE: запись \(char) отброшена: нет соединения"); return
@@ -190,23 +345,30 @@ final class BleLink: NSObject, CBPeripheralDelegate {
                 return
             }
             p.writeValue(data, for: c, type: c.properties.contains(.write) ? .withResponse : .withoutResponse)
-        }
+        } }
     }
     func read(_ char: CBUUID, completion: @escaping (Data?) -> Void) {
-        приГотовности(char) { [weak self] in
+        bleQueue.async { self.приГотовности(char) { [weak self] in
             guard let self, let p = self.peripheral, let c = self.chars[char] else {
                 NSLog("SugarLifeBLE: чтение \(char) отброшено: нет соединения или характеристики")
-                completion(nil); return
+                bleOutQueue.async { completion(nil) }; return
             }
             self.readHandlers[char] = completion; p.readValue(for: c)
-        }
+        } }
     }
 
     // Колбэки соединения приходят из общего central, маршрутизированные по peripheral.
     func bind(_ p: CBPeripheral) { peripheral = p; p.delegate = self }
-    func didConnect(_ p: CBPeripheral) { onState?("Connected"); p.readRSSI(); p.discoverServices(nil) }  // rssi (issue #38) + все сервисы: MAC 0x2A25 в 0x180A, не в FF30
-    func didDisconnect() { onState?("Disconnected") }
-    func didFail() { onState?("Error") }
+    func didConnect(_ p: CBPeripheral) { наружу("Connected"); p.readRSSI(); p.discoverServices(nil) }  // rssi (issue #38) + все сервисы: MAC 0x2A25 в 0x180A, не в FF30
+    func didDisconnect() { наружу("Disconnected") }
+    func didFail() { наружу("Error") }
+
+    /// Состояние связи — в движок, и всегда с выходной очереди: он синхронный, ждать его на очереди связи
+    /// нельзя (см. [bleOutQueue]).
+    private func наружу(_ state: String) {
+        guard let cb = onState else { return }
+        bleOutQueue.async { cb(state) }
+    }
 
     func peripheral(_ p: CBPeripheral, didDiscoverServices error: Error?) {
         // discover наши характеристики в КАЖДОМ сервисе (FF31/FF32 в FF30, MAC 0x2A25 в 0x180A)
@@ -222,15 +384,16 @@ final class BleLink: NSObject, CBPeripheralDelegate {
         NSLog("SugarLifeBLE: сервис \(s.uuid.uuidString): \((s.characteristics ?? []).map { $0.uuid.uuidString }.joined(separator: ", "))")
         отпуститьОтложенные(всё: false, причина: "нашлись характеристики")
         readTelemetry(p)   // заряд/прошивка, если сервис их принёс (issue #38)
-        onState?("Streaming")
+        наружу("Streaming")
     }
     func peripheral(_ p: CBPeripheral, didUpdateValueFor ch: CBCharacteristic, error: Error?) {
         guard let v = ch.value else { return }
         // Телеметрия (issue #38): заряд 0x2A19 (uint8 %), прошивка 0x2A26 (строка).
         if ch.uuid == batteryChar, let b = v.first { emitTelemetry(battery: Int(b)); return }
         if ch.uuid == firmwareChar, let s = String(data: v, encoding: .utf8) { emitTelemetry(firmware: s); return }
-        if let h = notifyHandlers[ch.uuid] { h(v) }
-        if let r = readHandlers.removeValue(forKey: ch.uuid) { r(v) }
+        // Данные прибора — наружу по порядку и не задерживая очередь связи (#379).
+        if let h = notifyHandlers[ch.uuid] { bleOutQueue.async { h(v) } }
+        if let r = readHandlers.removeValue(forKey: ch.uuid) { bleOutQueue.async { r(v) } }
     }
     func peripheral(_ p: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
         if error == nil { emitTelemetry(rssi: RSSI.intValue) }   // близость периферала (issue #38)
@@ -250,13 +413,43 @@ private let firmwareChar = CBUUID(string: "2A26")
 // Сток телеметрии натив→движок: плагин ставит engine.submitTelemetry; BleLink зовёт с json {bleId,batteryPct?,firmware?,rssi?}.
 var telemetrySink: ((String) -> Void)?
 
+/**
+ Канал BLE-слоя в ОБЩИЙ журнал — вторая половина core#72.
+
+ На Android это сделано давно: строки BLE-слоя уходят в журнал движка и попадают в выгрузку диагностики.
+ На iOS их не было вовсе — только NSLog, то есть видимые нам и невидимые ни человеку с телефоном, ни
+ тестировщику. Ровно эти строки решили разбор помпы.
+ */
+var logSink: ((_ level: String, _ event: String, _ deviceId: String?, _ fields: [String: String], _ frame: Bool) -> Void)?
+
+/// Событие BLE в журнал прибора. `frame = true` — кадр обмена: он несёт идентификаторы прибора.
+func bleLog(_ level: String, _ event: String, _ deviceId: String?, _ fields: [String: String] = [:], frame: Bool = false) {
+    logSink?(level, event, deviceId, fields, frame)
+}
+
+/// Строка в JSON — с экранированием: имя прибора и текст причины приходят снаружи и могут содержать что угодно.
+func jsonStr(_ s: String) -> String {
+    let data = try? JSONSerialization.data(withJSONObject: [s], options: [])
+    let arr = data.flatMap { String(data: $0, encoding: .utf8) } ?? "[\"\"]"
+    return String(arr.dropFirst().dropLast())
+}
+
+/// Код CoreBluetooth из ошибки: он и решает, что человеку делать дальше (core#94).
+func cbCode(_ error: Error?) -> Int32? {
+    guard let e = error as NSError? else { return nil }
+    guard e.domain == CBErrorDomain else { return nil }
+    return Int32(e.code)
+}
+
 final class SensorBridge: SensorTransportBridge {
     private let link: BleLink
     private var onDataCb: ((KotlinByteArray) -> Void)?
     init(bleId: String) { link = BleLink(bleId: bleId, service: sibService, characteristics: [sibNotify, sibWrite, macChar, macCharAlt, batteryChar, firmwareChar]) }
     func onLink(callback: @escaping (String) -> Void) { link.onState = callback }
     func onData(callback: @escaping (KotlinByteArray) -> Void) {
-        onDataCb = callback
+        // Обработчик ставит движок со своего потока, а зовём мы его с выходной очереди — значит и запись
+        // должна идти оттуда же (#379).
+        bleOutQueue.async { self.onDataCb = callback }
         link.subscribe(sibNotify) { [weak self] d in self?.onDataCb?(d.toKotlin()) }
     }
     func connect() { link.connectNow() }
@@ -270,7 +463,7 @@ final class SensorBridge: SensorTransportBridge {
             self.link.read(macCharAlt) { d2 in
                 if let d = d2, d.count == 6 { NSLog("SIB-swift: MAC 2ABE ok"); callback(Data(d.reversed()).toKotlin()); return }
                 if tries > 1 {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self.attemptMac(tries: tries - 1, callback: callback) }
+                    bleOutQueue.asyncAfter(deadline: .now() + 0.5) { self.attemptMac(tries: tries - 1, callback: callback) }
                 } else {
                     NSLog("SIB-swift: MAC не прочитался (2A25/2ABE нет)"); callback(nil)
                 }
@@ -318,7 +511,10 @@ final class PumpBridge: PumpTransportBridge {
 
        Пустой массив, а не 0xAA: у колбэка нет канала ошибки, пустой разбирается ядром как
        «ответа нет», а 0xAA значит «мост ответил, что помпа промолчала» — другая поломка. */
+    /// Ровно один ответ на команду. Живёт на [bleOutQueue]: туда приходят ответы прибора, оттуда же зовут
+    /// команду и срок — иначе `pending` пишется из двух потоков сразу (#379).
     private func завершить(_ данные: Data) {
+        dispatchPrecondition(condition: .onQueue(bleOutQueue))
         срок?.cancel(); срок = nil
         guard let cb = pending else { return }
         pending = nil
@@ -332,19 +528,21 @@ final class PumpBridge: PumpTransportBridge {
         link.connectNow()
     }
     func command(bytes: KotlinByteArray, timeoutMs: Int64, callback: @escaping (KotlinByteArray) -> Void) {
-        завершить(Data())          // предыдущая команда не теряется молча
-        pending = callback
-        if timeoutMs > 0 {
-            let r = DispatchWorkItem { [weak self] in
-                NSLog("SugarLifeBLE: мост молчит \(timeoutMs)мс — отвечаем «нет ответа»")
-                self?.завершить(Data())
+        bleOutQueue.async {
+            self.завершить(Data())          // предыдущая команда не теряется молча
+            self.pending = callback
+            if timeoutMs > 0 {
+                let r = DispatchWorkItem { [weak self] in
+                    NSLog("SugarLifeBLE: мост молчит \(timeoutMs)мс — отвечаем «нет ответа»")
+                    self?.завершить(Data())
+                }
+                self.срок = r
+                bleOutQueue.asyncAfter(deadline: .now() + .milliseconds(Int(timeoutMs)), execute: r)
             }
-            срок = r
-            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(Int(timeoutMs)), execute: r)
+            self.link.write(bytes.toData(), to: rlData)
         }
-        link.write(bytes.toData(), to: rlData)
     }
-    func disconnect() { завершить(Data()); link.disconnect() }
+    func disconnect() { bleOutQueue.async { self.завершить(Data()) }; link.disconnect() }
 }
 
 // MARK: - Скан эфира → engine.submitAdvertisement
@@ -382,7 +580,32 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
            отдаёт вебвью ровно то, что перечислено. Забыть её — получить «not implemented»
            у работающего кода. */
         CAPPluginMethod(name: "logQuery", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "backgroundKeepAlive", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setBackgroundKeepAlive", returnType: CAPPluginReturnPromise),
     ]
+
+    /**
+     Фоновое бодрствование для облачного режима (#388).
+
+     Читать и менять — из интерфейса: это выбор человека, а не наша настройка. Возвращаем и список
+     возможных значений, чтобы экран не хранил их у себя копией.
+     */
+    @objc func backgroundKeepAlive(_ call: CAPPluginCall) {
+        call.resolve([
+            "mode": ФоновоеБодрствование.shared.режим.rawValue,
+            "modes": ФоновоеБодрствование.Режим.allCases.map { $0.rawValue },
+        ])
+    }
+
+    @objc func setBackgroundKeepAlive(_ call: CAPPluginCall) {
+        guard let raw = call.getString("mode"),
+              let режим = ФоновоеБодрствование.Режим(rawValue: raw) else {
+            call.reject("неизвестный режим: \(call.getString("mode") ?? "—")")
+            return
+        }
+        ФоновоеБодрствование.shared.установить(режим)
+        call.resolve(["mode": режим.rawValue])
+    }
 
     // Движок создаём ОТЛОЖЕННО — на следующем тике main-цикла (в load() через async), а не в property-init
     // и не синхронно в load(). Инициализация KMP-графа на главном потоке ВО ВРЕМЯ синхронной фазы Capacitor
@@ -413,6 +636,8 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     private let engineQueue = DispatchQueue(label: "ru.imiron.sugarlife.engine")
 
     override public func load() {
+        // Уход в фон и возвращение — на них подписываемся сразу: без этого настройка была бы мёртвой (#388).
+        ФоновоеБодрствование.shared.начать()
         engineQueue.async { [weak self] in
             guard let self else { return }
             // Персист-БД (нативный SQLite) → история переживает перезапуск. Фабрику собирает Swift (экспорт :persistence).
@@ -443,6 +668,17 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             // на свою очередь — иначе поток событий от железа ждёт очереди движка (core#82).
             telemetrySink = { [weak self] json in
                 self?.engineQueue.async { _ = self?.engine?.submitTelemetry(json: json) }
+            }
+            // BLE-слой → ОБЩИЙ журнал (core#72, вторая половина): на Android так давно, здесь не было
+            // ничего. Строку собираем здесь — она про ЭТОТ момент, — а движку отдаём с его очереди:
+            // запись в журнал не должна останавливать того, кто разговаривает с прибором (core#82).
+            logSink = { [weak self] level, event, deviceId, fields, frame in
+                let f = fields.map { "\(jsonStr($0.key)):\(jsonStr($0.value))" }.joined(separator: ",")
+                var json = "{\"type\":\"submitLog\",\"level\":\(jsonStr(level)),\"tag\":\"ble\"," +
+                    "\"event\":\(jsonStr(event)),"
+                if let d = deviceId { json += "\"deviceId\":\(jsonStr(d))," }
+                json += "\"fields\":{\(f)},\"hasIdentifiers\":\(frame)}"
+                self?.engineQueue.async { _ = self?.engine?.sendIntent(json: json) }
             }
             self.unsubscribe = e.subscribe(onSnapshot: { [weak self] json in
                 DispatchQueue.main.async { self?.notifyListeners("snapshot", data: ["json": json]) }

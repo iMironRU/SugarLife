@@ -47,6 +47,18 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- Фоновая работа с Bluetooth (#379). Без этого ключа iOS приостанавливает приложение через
+	     считанные секунды после ухода с экрана: CoreBluetooth перестаёт звать наши колбэки, и
+	     мониторинг замирает до следующего открытия. Сенсор при этом рядом и вещает каждую минуту.
+	     Тот же режим объявляют Loop, xDrip4iOS и все, кто работает с прибором постоянно. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+		<!-- Для облачного режима (#388): у человека на одном облаке прибора нет, и будить приложение
+		     нечем. Миллисекунда тишины раз в несколько секунд не даёт системе его приостановить.
+		     Включается ТОЛЬКО по выбору человека и ТОЛЬКО в фоне; по умолчанию выключено. -->
+		<string>audio</string>
+	</array>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Подключение к сенсору глюкозы и помпе по Bluetooth</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
