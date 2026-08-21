@@ -297,16 +297,28 @@ class SugarLifeBridgePlugin : Plugin() {
      */
     @PluginMethod
     fun setHypoAlarm(call: PluginCall) {
-        val включено = call.getBoolean("on") ?: false
-        val порог = call.getDouble("mmol") ?: Тревоги.ПОРОГ_ПО_УМОЛЧАНИЮ
-        Тревоги.настроить(context.applicationContext, включено, порог)
+        Тревоги.настроить(
+            context.applicationContext,
+            включено = call.getBoolean("on") ?: false,
+            порогMmol = call.getDouble("mmol") ?: Тревоги.ПОРОГ_ПО_УМОЛЧАНИЮ,
+            высокийВкл = call.getBoolean("highOn") ?: false,
+            высокийMmol = call.getDouble("highMmol") ?: Тревоги.ВЫСОКИЙ_ПО_УМОЛЧАНИЮ,
+            тихоС = call.getInt("quietFrom") ?: Тревоги.ТИХО_ВЫКЛ,
+            тихоДо = call.getInt("quietTo") ?: Тревоги.ТИХО_ВЫКЛ,
+        )
         call.resolve()
     }
 
     @PluginMethod
     fun hypoAlarm(call: PluginCall) {
         val ctx = context.applicationContext
-        call.resolve(JSObject().put("on", Тревоги.включено(ctx)).put("mmol", Тревоги.порог(ctx)))
+        call.resolve(
+            JSObject()
+                .put("on", Тревоги.включено(ctx)).put("mmol", Тревоги.порог(ctx))
+                .put("highOn", Тревоги.высокийВключён(ctx)).put("highMmol", Тревоги.высокийПорог(ctx))
+                .put("quietFrom", Тревоги.тихоС(ctx)).put("quietTo", Тревоги.тихоДо(ctx))
+                .put("quietNow", Тревоги.тихоСейчас(ctx)),
+        )
     }
 
     /**
