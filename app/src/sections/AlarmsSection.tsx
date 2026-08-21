@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { IonIcon, IonToggle } from '@ionic/react';
-import { alarmOutline, notificationsOutline, playOutline } from 'ionicons/icons';
+import { alarmOutline, notificationsOutline, playOutline, trendingUpOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import {
   настройкиТревоги, задатьТревогу, проверитьТревогу, тревогиДоступны,
-  ПОРОГ_ПО_УМОЛЧАНИЮ, МИН_ПОРОГ, МАКС_ПОРОГ, type НастройкиТревоги,
+  ПОРОГ_ПО_УМОЛЧАНИЮ, МИН_ПОРОГ, МАКС_ПОРОГ,
+  ВЫСОКИЙ_ПО_УМОЛЧАНИЮ, МИН_ВЫСОКИЙ, МАКС_ВЫСОКИЙ, ТИХО_ВЫКЛ,
+  type НастройкиТревоги,
 } from '@/platform/тревоги';
 import { isNative, platform } from '@/platform/appUpdate';
+import { тихоСейчас } from '@/domain/тихиеЧасы';
 
 /* Тревоги (#418).
 
@@ -18,17 +21,28 @@ import { isNative, platform } from '@/platform/appUpdate';
    ПРОВЕРОЧНАЯ КНОПКА ОБЯЗАТЕЛЬНА. Иначе узнать, работают ли тревоги, можно только когда
    ночью случится гипогликемия, — худший из возможных способов узнать. Кнопка проходит
    весь путь целиком: канал, звук, обход «не беспокоить», полноэкранное уведомление. */
+const ПУСТО: НастройкиТревоги = {
+  on: false, mmol: ПОРОГ_ПО_УМОЛЧАНИЮ,
+  highOn: false, highMmol: ВЫСОКИЙ_ПО_УМОЛЧАНИЮ,
+  quietFrom: ТИХО_ВЫКЛ, quietTo: ТИХО_ВЫКЛ,
+};
+
+/* Час словами: «23:00». Минут в тихих часах нет намеренно — человек ложится «около
+   одиннадцати», а не в 23:15, и точность здесь создаёт работу без пользы. */
+const часПодпись = (ч: number) => (ч === ТИХО_ВЫКЛ ? 'не заданы' : `${String(ч).padStart(2, '0')}:00`);
+const следующийЧас = (ч: number) => (ч === ТИХО_ВЫКЛ ? 22 : (ч + 1) % 24);
+
 export default function AlarmsSection({ onClose }: { onClose: () => void }) {
   const [н, setН] = useState<НастройкиТревоги | null>(null);
   const [готово, setГотово] = useState(false);
   const [проверил, setПроверил] = useState(false);
 
   useEffect(() => {
-    void настройкиТревоги().then((r) => { setН(r ?? { on: false, mmol: ПОРОГ_ПО_УМОЛЧАНИЮ }); setГотово(true); });
+    void настройкиТревоги().then((r) => { setН(r ?? ПУСТО); setГотово(true); });
   }, []);
 
   const менять = (патч: Partial<НастройкиТревоги>) => {
-    const новое = { ...(н ?? { on: false, mmol: ПОРОГ_ПО_УМОЛЧАНИЮ }), ...патч };
+    const новое = { ...(н ?? ПУСТО), ...патч };
     setН(новое);
     void задатьТревогу(новое);
   };
@@ -90,6 +104,57 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
           </div>
         </>
       )}
+
+      <div className="section-label sec">Высокий сахар</div>
+      <div className="list">
+        <Row icon={trendingUpOutline} title="Говорить о высоком"
+          sub={можем ? 'без будильника ночью — см. тихие часы' : 'недоступно на этом устройстве'}
+          right={<IonToggle checked={!!н?.highOn} disabled={!можем || !готово}
+            onIonChange={(e) => менять({ highOn: e.detail.checked })} />} />
+      </div>
+      {н?.highOn && (
+        <>
+          <div className="basal-rows">
+            <div className="basal-row">
+              <span>Говорить выше</span>
+              <b>{(н?.highMmol ?? ВЫСОКИЙ_ПО_УМОЛЧАНИЮ).toFixed(1).replace('.', ',')} ммоль/л</b>
+            </div>
+          </div>
+          <div className="alert-ask alert-ask-row">
+            <button className="changed-btn" disabled={(н?.highMmol ?? 0) <= МИН_ВЫСОКИЙ}
+              onClick={() => менять({ highMmol: Math.round(((н?.highMmol ?? ВЫСОКИЙ_ПО_УМОЛЧАНИЮ) - 0.5) * 10) / 10 })}>−0,5</button>
+            <button className="changed-btn" disabled={(н?.highMmol ?? 0) >= МАКС_ВЫСОКИЙ}
+              onClick={() => менять({ highMmol: Math.round(((н?.highMmol ?? ВЫСОКИЙ_ПО_УМОЛЧАНИЮ) + 0.5) * 10) / 10 })}>+0,5</button>
+          </div>
+          <div className="sheet-note">
+            Повторяем не чаще раза в час: высокий сахар требует решения, но не в ту же
+            минуту, а тревога каждые десять минут — наказание за то, что вы уже знаете.
+          </div>
+        </>
+      )}
+
+      {/* ТИХИЕ ЧАСЫ ГЛУШАТ ТОЛЬКО ВЫСОКИЙ. Это и есть условие, при котором они вообще
+          имеют право существовать: низкий сахар ночью требует действий сейчас, и
+          заглушённая тревога — не тревога. Без этого правила человек однажды выключил бы
+          тревоги целиком, вместе с той, которая спасает. */}
+      <div className="section-label sec">Тихие часы</div>
+      <div className="basal-rows">
+        <div className="basal-row"><span>С</span><b>{часПодпись(н?.quietFrom ?? ТИХО_ВЫКЛ)}</b></div>
+        <div className="basal-row"><span>До</span><b>{часПодпись(н?.quietTo ?? ТИХО_ВЫКЛ)}</b></div>
+      </div>
+      <div className="alert-ask alert-ask-row">
+        <button className="changed-btn" disabled={!можем}
+          onClick={() => менять({ quietFrom: следующийЧас(н?.quietFrom ?? ТИХО_ВЫКЛ) })}>Сдвинуть начало</button>
+        <button className="changed-btn" disabled={!можем}
+          onClick={() => менять({ quietTo: следующийЧас(н?.quietTo ?? ТИХО_ВЫКЛ) })}>Сдвинуть конец</button>
+        <button className="changed-btn" disabled={!можем || (н?.quietFrom ?? ТИХО_ВЫКЛ) === ТИХО_ВЫКЛ}
+          onClick={() => менять({ quietFrom: ТИХО_ВЫКЛ, quietTo: ТИХО_ВЫКЛ })}>Убрать</button>
+      </div>
+      <div className="sheet-note">
+        {тихоСейчас(new Date().getHours(), н?.quietFrom ?? ТИХО_ВЫКЛ, н?.quietTo ?? ТИХО_ВЫКЛ)
+          ? 'Сейчас тихие часы: о высоком промолчим. Низкий сахар разбудит в любом случае.'
+          : 'Низкий сахар тихие часы не глушат никогда — ради этого они и могут существовать. Молчит только «высокий»: ночью он требует решения утром, а не подъёма.'}
+      </div>
 
       {можем && (
         <>
