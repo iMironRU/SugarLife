@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useUpdateState, applyUpdate, перечитатьВсё, ОБНОВИЛИСЬ_ПРИ_СТАРТЕ } from '@/platform/swUpdate';
 import { ключОтказа, КЛЮЧ_ОТКАЗА as КЛЮЧ } from '@/platform/отставание';
 import { вДневник } from '@/sources/дневникStore';
-import { APP_BUILD, isNative, применитьOta, ПРИЕХАЛО_ПРИ_СТАРТЕ } from '@/platform/appUpdate';
+import { APP_BUILD, isNative, применитьOta, ПРИЕХАЛО_ПРИ_СТАРТЕ, useХодOta } from '@/platform/appUpdate';
 import { useОтаОбновление } from '@/platform/otaWatch';
 import { прочитать, записать } from '@/settings/storage';
 
@@ -55,6 +55,7 @@ export default function UpdateReady() {
   const [ставлю, setСтавлю] = useState(false);
   const [отказ, setОтказ] = useState<string | null>(null);
   const [прочитано, setПрочитано] = useState(false);
+  const ход = useХодOta();
   const обновились = !прочитано && (isNative ? !!ПРИЕХАЛО_ПРИ_СТАРТЕ : ОБНОВИЛИСЬ_ПРИ_СТАРТЕ);
 
   /* «Отстали, а воркера нет» — второй повод сказать (#386).
@@ -89,10 +90,25 @@ export default function UpdateReady() {
   const занят = ставлю || upd.applying;
   if (занят) {
     return (
-      <Notice вид="сообщение" значок={refreshOutline} заголовок="Обновляю…">
+      <Notice вид="сообщение" значок={refreshOutline}
+        заголовок={ход != null ? `Скачиваю… ${ход} %` : 'Обновляю…'}>
         {isNative
           ? 'Скачиваю и перезапускаю приложение. Экран моргнёт и вернётся туда, где вы сейчас.'
           : 'Приложение сейчас перезапустится. Экран моргнёт и вернётся туда, где вы сейчас.'}
+        {/* ПОЛОСКА, А НЕ ТОЛЬКО ЧИСЛО (#423).
+
+            Загрузка бандла по мобильной сети идёт не «пару секунд», а сколько получится, и
+            всё это время карточка говорила одно слово. Отличить «медленно» от «зависло»
+            человек не мог — а решения у этих случаев разные: подождать или нажать заново.
+
+            Полоска отвечает на это движением: она либо ползёт, либо нет. Число рядом —
+            чтобы было видно и то, что движения почти нет. */}
+        {ход != null && (
+          <span className="обновление-ход" role="progressbar"
+            aria-valuenow={ход} aria-valuemin={0} aria-valuemax={100}>
+            <span className="обновление-ход-полоса" style={{ width: `${ход}%` }} />
+          </span>
+        )}
       </Notice>
     );
   }
