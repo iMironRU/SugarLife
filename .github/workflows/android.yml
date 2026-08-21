@@ -27,6 +27,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:        # запуск вручную (Actions → Android APK → Run workflow)
+    inputs:
+      публиковать:
+        description: 'Выложить APK в Releases (по умолчанию нет — ставим по проводу)'
+        type: boolean
+        default: false
 
 concurrency:                # не копить параллельные сборки — оставляем последнюю
   group: android-apk
@@ -165,10 +170,17 @@ jobs:
           name: sugarlife-debug-apk
           path: sugarlife-debug.apk
 
+      # ПУБЛИКАЦИЯ ВЫКЛЮЧЕНА ПО УМОЛЧАНИЮ (решение владельца, 22.08.2026).
+      # Тестовые сборки ставятся только на телефоны владельца, с его компьютера, по
+      # проводу. Автоматический релиз на каждый push в main это правило нарушал: тег
+      # android-latest публичный, и приложение по нему само предлагает «Скачать APK».
+      # Собирать APK в CI продолжаем — это проверка, что сборка жива; лежит в artifacts.
+      # Выложить осознанно: Actions → Android APK → Run workflow → «публиковать» ✓.
+      #
       # Строка «build:» — не украшение: по ней приложение решает, предлагать ли
       # «Скачать APK» (src/platform/appUpdate.ts, #238). Формат менять нельзя.
       - name: Publish to Releases
-        if: env.HAS_CORE_TOKEN == 'да'
+        if: env.HAS_CORE_TOKEN == 'да' && inputs.публиковать
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'android-latest' }}
