@@ -1,8 +1,9 @@
-import { DiagnosticsSection, HealthSection, LoopSection, DataDevicesSection, AboutSection, AppearanceSection } from '@/sections/lazy';
+import { AlarmsSection, DiagnosticsSection, HealthSection, LoopSection, DataDevicesSection, AboutSection, AppearanceSection } from '@/sections/lazy';
+import { тревогиДоступны } from '@/platform/тревоги';
 import {
   optionsOutline, nutritionOutline,
   hardwareChipOutline, repeat, documentTextOutline, heartOutline, informationCircleOutline,
-  colorPaletteOutline,
+  colorPaletteOutline, alarmOutline,
 } from 'ionicons/icons';
 import { useState, useEffect, useRef } from 'react';
 import { resetLocalData } from '@/settings/reset';
@@ -169,6 +170,10 @@ export default function Profile() {
                 и записывает врач (#156). */}
             <Row icon={heartOutline} title="Здоровье" sub={здоровьеПодпись}
               onClick={() => push(<HealthSection onClose={pop} />, { id: 'здоровье' })} />
+            {/* Тревоги — рядом со «Здоровьем», а не в диагностике: это не отладка, а то,
+                что решает, разбудят ли человека ночью (#418). */}
+            <Row icon={alarmOutline} title="Тревоги" sub={тревогиДоступны() ? 'что должно разбудить и при каких числах' : 'в браузере не работают'}
+              onClick={() => push(<AlarmsSection onClose={pop} />, { id: 'тревоги' })} />
           </div>
 
           {/* настройки */}
