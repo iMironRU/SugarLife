@@ -111,34 +111,6 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
         </>
       )}
 
-      <div className="section-label sec">Высокий сахар</div>
-      <div className="list">
-        <Row icon={trendingUpOutline} title="Говорить о высоком"
-          sub={можем ? 'без будильника ночью — см. тихие часы' : 'недоступно на этом устройстве'}
-          right={<IonToggle checked={!!н?.highOn} disabled={!можем || !готово}
-            onIonChange={(e) => менять({ highOn: e.detail.checked })} />} />
-      </div>
-      {н?.highOn && (
-        <>
-          <div className="basal-rows">
-            <div className="basal-row">
-              <span>Говорить выше</span>
-              <b>{(н?.highMmol ?? ВЫСОКИЙ_ПО_УМОЛЧАНИЮ).toFixed(1).replace('.', ',')} ммоль/л</b>
-            </div>
-          </div>
-          <div className="alert-ask alert-ask-row">
-            <button className="changed-btn" disabled={(н?.highMmol ?? 0) <= МИН_ВЫСОКИЙ}
-              onClick={() => менять({ highMmol: Math.round(((н?.highMmol ?? ВЫСОКИЙ_ПО_УМОЛЧАНИЮ) - 0.5) * 10) / 10 })}>−0,5</button>
-            <button className="changed-btn" disabled={(н?.highMmol ?? 0) >= МАКС_ВЫСОКИЙ}
-              onClick={() => менять({ highMmol: Math.round(((н?.highMmol ?? ВЫСОКИЙ_ПО_УМОЛЧАНИЮ) + 0.5) * 10) / 10 })}>+0,5</button>
-          </div>
-          <div className="sheet-note">
-            Повторяем не чаще раза в час: высокий сахар требует решения, но не в ту же
-            минуту, а тревога каждые десять минут — наказание за то, что вы уже знаете.
-          </div>
-        </>
-      )}
-
       {/* МОЛЧАНИЕ ПРИБОРА — СРАЗУ ПОСЛЕ НИЗКОГО САХАРА, и это не вопрос порядка строк.
 
           Гипо считается от показаний. Нет показаний — нечего сравнивать, и тревога молчит; на
@@ -176,6 +148,34 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
             Скажем один раз и замолчим: сенсор не начнёт отвечать оттого, что мы позвоним ещё
             раз. Когда данные вернутся, уведомление уйдёт само — сообщать о хорошем ночью незачем.
             Пока приборы отданы другому телефону, эта тревога молчит: тогда пауза объяснена.
+          </div>
+        </>
+      )}
+
+      <div className="section-label sec">Высокий сахар</div>
+      <div className="list">
+        <Row icon={trendingUpOutline} title="Говорить о высоком"
+          sub={можем ? 'без будильника ночью — см. тихие часы' : 'недоступно на этом устройстве'}
+          right={<IonToggle checked={!!н?.highOn} disabled={!можем || !готово}
+            onIonChange={(e) => менять({ highOn: e.detail.checked })} />} />
+      </div>
+      {н?.highOn && (
+        <>
+          <div className="basal-rows">
+            <div className="basal-row">
+              <span>Говорить выше</span>
+              <b>{(н?.highMmol ?? ВЫСОКИЙ_ПО_УМОЛЧАНИЮ).toFixed(1).replace('.', ',')} ммоль/л</b>
+            </div>
+          </div>
+          <div className="alert-ask alert-ask-row">
+            <button className="changed-btn" disabled={(н?.highMmol ?? 0) <= МИН_ВЫСОКИЙ}
+              onClick={() => менять({ highMmol: Math.round(((н?.highMmol ?? ВЫСОКИЙ_ПО_УМОЛЧАНИЮ) - 0.5) * 10) / 10 })}>−0,5</button>
+            <button className="changed-btn" disabled={(н?.highMmol ?? 0) >= МАКС_ВЫСОКИЙ}
+              onClick={() => менять({ highMmol: Math.round(((н?.highMmol ?? ВЫСОКИЙ_ПО_УМОЛЧАНИЮ) + 0.5) * 10) / 10 })}>+0,5</button>
+          </div>
+          <div className="sheet-note">
+            Повторяем не чаще раза в час: высокий сахар требует решения, но не в ту же
+            минуту, а тревога каждые десять минут — наказание за то, что вы уже знаете.
           </div>
         </>
       )}
