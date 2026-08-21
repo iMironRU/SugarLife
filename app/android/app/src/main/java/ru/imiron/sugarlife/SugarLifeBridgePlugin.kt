@@ -305,7 +305,12 @@ class SugarLifeBridgePlugin : Plugin() {
             высокийMmol = call.getDouble("highMmol") ?: Тревоги.ВЫСОКИЙ_ПО_УМОЛЧАНИЮ,
             тихоС = call.getInt("quietFrom") ?: Тревоги.ТИХО_ВЫКЛ,
             тихоДо = call.getInt("quietTo") ?: Тревоги.ТИХО_ВЫКЛ,
+            молчаниеВкл = call.getBoolean("silenceOn") ?: false,
+            молчаниеМин = call.getInt("silenceMin") ?: Тревоги.МОЛЧАНИЕ_ПО_УМОЛЧАНИЮ_МИН,
         )
+        /* Сторожа заводим здесь же, а не при следующем запуске сервиса: человек включает тревогу
+           вечером и ложится спать — она обязана начать работать в ту же минуту (#243). */
+        SilenceWatchdog.поНастройке(context.applicationContext)
         call.resolve()
     }
 
@@ -317,7 +322,8 @@ class SugarLifeBridgePlugin : Plugin() {
                 .put("on", Тревоги.включено(ctx)).put("mmol", Тревоги.порог(ctx))
                 .put("highOn", Тревоги.высокийВключён(ctx)).put("highMmol", Тревоги.высокийПорог(ctx))
                 .put("quietFrom", Тревоги.тихоС(ctx)).put("quietTo", Тревоги.тихоДо(ctx))
-                .put("quietNow", Тревоги.тихоСейчас(ctx)),
+                .put("quietNow", Тревоги.тихоСейчас(ctx))
+                .put("silenceOn", Тревоги.молчаниеВключено(ctx)).put("silenceMin", Тревоги.молчаниеПорог(ctx)),
         )
     }
 
