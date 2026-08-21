@@ -24,6 +24,9 @@ object EngineHolder {
                 dbDriverFactory = DatabaseDriverFactory(appContext.applicationContext),
             )
             engine = e
+            // Отдача показаний в AAPS (core#100). Сам вещатель проверяет выключатель на каждом показании:
+            // человек может передумать в любой момент, и перезапуск ради этого не нужен.
+            e.setGlucoseBroadcaster(AapsBroadcast(appContext.applicationContext))
             e.startAsync()
         }
         return e
