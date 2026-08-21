@@ -9,12 +9,7 @@ import { состояниеОболочки, словоОболочки, ПУС�
 import Row from '@/ui/Row';
 import { useSnapshot } from '@/sources/bridge';
 import { useUpdateState, checkNow, applyUpdate, ОБНОВИЛИСЬ_ПРИ_СТАРТЕ, перечитатьВсё } from '@/platform/swUpdate';
-import {
-  APP_EDITION, APP_VERSION, APP_BUILD, APP_BUILT_AT, isNative, platform,
-  узнатьOta, применитьOta, checkNativeUpdate, openApkDownload, installApk, откудаБандл,
-  нативнаяСборка, ПРИЕХАЛО_ПРИ_СТАРТЕ, ССЫЛКИ, ВЫПУСКАЕТСЯ_APK, ИЗДАНИЕ_РЕЛИЗА,
-  type ОтаБандл,
-} from '@/platform/appUpdate';
+import { APP_BUILD, APP_BUILT_AT, APP_EDITION, APP_VERSION, checkNativeUpdate, installApk, isNative, openApkDownload, platform, type ОтаБандл, useХодOta, ВЫПУСКАЕТСЯ_APK, ИЗДАНИЕ_РЕЛИЗА, ПРИЕХАЛО_ПРИ_СТАРТЕ, ССЫЛКИ, нативнаяСборка, откудаБандл, применитьOta, узнатьOta } from '@/platform/appUpdate';
 
 /* «О приложении» отдельным разделом (замечание с телефона).
 
@@ -66,6 +61,7 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
      (флаг service worker'а) или мы сами перезапустили webview ради OTA. Забирается
      один раз — иначе сообщение висело бы всю сессию. */
   const [толькоОбновились] = useState(ОБНОВИЛИСЬ_ПРИ_СТАРТЕ);
+  const ход = useХодOta();
   const приехало = ПРИЕХАЛО_ПРИ_СТАРТЕ;
 
   const проверить = async () => {
@@ -177,8 +173,12 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
             читается как сбой, и человек второй раз кнопку уже не нажмёт. */}
         {найдено && (
           <Row icon={refreshOutline} chevron={false} disabled={ставлю}
-            title={ставлю ? 'Скачиваю и перезапускаю…' : 'Обновить интерфейс'}
-            sub={`сборка ${найдено.build} · скачается и перезапустит приложение`}
+            /* Ход загрузки и здесь (#423): начать обновление можно с «Сегодня», а прийти
+               посмотреть — сюда, и оба места должны показывать одно и то же число. */
+            title={ставлю ? (ход != null ? `Скачиваю… ${ход} %` : 'Скачиваю и перезапускаю…') : 'Обновить интерфейс'}
+            sub={ставлю && ход != null
+              ? `сборка ${найдено.build} · идёт загрузка, не закрывайте приложение`
+              : `сборка ${найдено.build} · скачается и перезапустит приложение`}
             onClick={() => {
               setСтавлю(true);
               void применитьOta(найдено).then((ок) => { if (!ок) { setСтавлю(false); setИтог('Не удалось скачать — похоже, нет сети.'); } });

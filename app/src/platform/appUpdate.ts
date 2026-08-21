@@ -6,6 +6,7 @@
    • Нативный APK — полная переустановка из GitHub Releases (checkNativeUpdate + openApkDownload),
      нужна лишь при смене нативного кода/зависимостей.
    iOS-нативка через APK обновляться не может (только App Store), но OTA работает и на iOS. */
+import { useSyncExternalStore } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { прочитать, записать, убрать, прочитатьJson, записатьJson } from '@/settings/storage';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
@@ -136,19 +137,60 @@ function забратьПрименение(): string | null {
 export const ПРИЕХАЛО_ПРИ_СТАРТЕ = забратьПрименение();
 
 /** Скачать и переключиться. Перезагружает webview — зовётся только по решению человека. */
+/* СКОЛЬКО УЖЕ СКАЧАНО (#423).
+
+   Обновление в нативе — это загрузка бандла по мобильной сети, и она занимает не «пару
+   секунд», а сколько получится. Всё это время карточка говорила «Обновляю…» и больше
+   ничего: полоски нет, чисел нет, и через полминуты человек не знает, идёт загрузка или
+   встала. Отличить «медленно» от «зависло» он не может — а решение у этих двух случаев
+   разное: подождать или нажать заново.
+
+   Ход держим отдельным маленьким хранилищем, а не состоянием экрана: загрузку начинают с
+   «Сегодня», а посмотреть на неё могут из «О приложении», и оба места должны видеть одно
+   и то же число. */
+let ходЗагрузки: number | null = null;
+const ходПодписки = new Set<() => void>();
+
+function ход(п: number | null): void {
+  ходЗагрузки = п;
+  ходПодписки.forEach((f) => f());
+}
+
+export function ходOta(): number | null { return ходЗагрузки; }
+
+export function useХодOta(): number | null {
+  return useSyncExternalStore(
+    (cb) => { ходПодписки.add(cb); return () => { ходПодписки.delete(cb); }; },
+    ходOta, ходOta,
+  );
+}
+
 export async function применитьOta(б: ОтаБандл): Promise<boolean> {
   /* Перезапуск наш — человек должен вернуться туда, где стоял (#400). Отметка ставится
      до загрузки: она переживает и перезапуск webview, и неудачу — во втором случае
      просто истечёт по времени. */
   этоНашПерезапуск();
   отметитьПрименение(б.build);
+  /* Ноль, а не null: «0 %» означает «началось», а пустота — «неизвестно». Разница важна
+     в первую секунду, когда плагин ещё не прислал ни одного события. */
+  ход(0);
+  let слушатель: { remove: () => void } | null = null;
   try {
+    слушатель = await CapacitorUpdater.addListener('download', ({ percent }) => {
+      if (typeof percent === 'number') ход(Math.max(0, Math.min(100, Math.round(percent))));
+    });
     const bundle = await CapacitorUpdater.download({ url: б.url, version: б.version });
+    ход(100);
     await CapacitorUpdater.set(bundle); // сделать активным
     await CapacitorUpdater.reload();    // перезагрузить webview на новый бандл
     return true;
   } catch {
+    /* Не смогли — ход сбрасываем, иначе полоска замрёт на сорока процентах и будет
+       врать, что загрузка продолжается. */
+    ход(null);
     return false;
+  } finally {
+    слушатель?.remove();
   }
 }
 
