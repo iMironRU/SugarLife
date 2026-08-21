@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { IonIcon, IonToggle } from '@ionic/react';
-import { alarmOutline, notificationsOutline, playOutline, trendingUpOutline } from 'ionicons/icons';
+import { alarmOutline, notificationsOutline, playOutline, trendingUpOutline, phonePortraitOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import {
@@ -11,6 +11,7 @@ import {
 } from '@/platform/тревоги';
 import { isNative, platform } from '@/platform/appUpdate';
 import { тихоСейчас } from '@/domain/тихиеЧасы';
+import { баннерВозможен, состояниеБаннера, включитьБаннер, type СостояниеБаннера } from '@/platform/живойБаннер';
 
 /* Тревоги (#418).
 
@@ -36,9 +37,11 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
   const [н, setН] = useState<НастройкиТревоги | null>(null);
   const [готово, setГотово] = useState(false);
   const [проверил, setПроверил] = useState(false);
+  const [баннер, setБаннер] = useState<СостояниеБаннера | null>(null);
 
   useEffect(() => {
     void настройкиТревоги().then((r) => { setН(r ?? ПУСТО); setГотово(true); });
+    void состояниеБаннера().then(setБаннер);
   }, []);
 
   const менять = (патч: Partial<НастройкиТревоги>) => {
@@ -155,6 +158,32 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
           ? 'Сейчас тихие часы: о высоком промолчим. Низкий сахар разбудит в любом случае.'
           : 'Низкий сахар тихие часы не глушат никогда — ради этого они и могут существовать. Молчит только «высокий»: ночью он требует решения утром, а не подъёма.'}
       </div>
+
+      {/* ЖИВОЙ БАННЕР — здесь же, а не отдельным разделом (#428). Это соседняя вещь: и
+          тревога, и баннер отвечают на вопрос «что я узнаю, не открывая приложение».
+          Развести их по разным экранам значило бы заставить искать дважды. */}
+      {баннерВозможен() && (
+        <>
+          <div className="section-label sec">Живой баннер</div>
+          <div className="list">
+            <Row icon={phonePortraitOutline} title="Показывать сахар на экране блокировки"
+              sub={баннер?.умеет === false
+                ? 'нужен iOS 16.2 или новее'
+                : 'и в «Динамическом острове», и на панели CarPlay'}
+              right={<IonToggle checked={!!баннер?.включён} disabled={баннер?.умеет === false}
+                onIonChange={(e) => {
+                  const on = e.detail.checked;
+                  setБаннер((б) => (б ? { ...б, включён: on } : б));
+                  void включитьБаннер(on);
+                }} />} />
+          </div>
+          <div className="sheet-note">
+            Обновляется, когда приходит показание, — не раз в пятнадцать минут, как обычный
+            виджет. Система гасит такие баннеры через восемь часов; приложение продлевает
+            их само, пока получает данные.
+          </div>
+        </>
+      )}
 
       {можем && (
         <>

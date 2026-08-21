@@ -582,6 +582,8 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "logQuery", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "backgroundKeepAlive", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setBackgroundKeepAlive", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "liveBanner", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setLiveBanner", returnType: CAPPluginReturnPromise),
     ]
 
     /**
@@ -595,6 +597,43 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             "mode": ФоновоеБодрствование.shared.режим.rawValue,
             "modes": ФоновоеБодрствование.Режим.allCases.map { $0.rawValue },
         ])
+    }
+
+    /* ЖИВОЙ БАННЕР (#428).
+
+       Включает и выключает его человек: Live Activity — вещь, которая занимает экран
+       блокировки и «Динамический остров», и заводить её без спроса нельзя.
+
+       Само содержимое сюда не приходит: строку значения, стрелку и разницу собирает
+       приложение из снимка и присылает готовыми. Здесь только «включено ли» и передача
+       дальше — считать в двух местах одно и то же мы не станем. */
+    @objc func liveBanner(_ call: CAPPluginCall) {
+        if #available(iOS 16.2, *) {
+            call.resolve([
+                "supported": true,
+                "on": UserDefaults.standard.bool(forKey: "sl.live-banner"),
+                "running": ЖивойБаннер.живой,
+            ])
+        } else {
+            /* До 16.2 живых уведомлений нет вовсе. Говорим это прямо, чтобы экран не
+               обещал человеку то, чего его телефон не умеет. */
+            call.resolve(["supported": false, "on": false, "running": false])
+        }
+    }
+
+    @objc func setLiveBanner(_ call: CAPPluginCall) {
+        let включено = call.getBool("on") ?? false
+        UserDefaults.standard.set(включено, forKey: "sl.live-banner")
+        if #available(iOS 16.2, *) {
+            if включено {
+                /* Показываем сразу, не дожидаясь следующего показания: человек нажал и
+                   должен увидеть результат, а следующее показание придёт через пять минут. */
+                _ = обновитьЖивойБаннер(последнийСнимок)
+            } else {
+                ЖивойБаннер.погасить()
+            }
+        }
+        call.resolve()
     }
 
     @objc func setBackgroundKeepAlive(_ call: CAPPluginCall) {
@@ -681,7 +720,15 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
                 self?.engineQueue.async { _ = self?.engine?.sendIntent(json: json) }
             }
             self.unsubscribe = e.subscribe(onSnapshot: { [weak self] json in
-                DispatchQueue.main.async { self?.notifyListeners("snapshot", data: ["json": json]) }
+                DispatchQueue.main.async {
+                    self?.notifyListeners("snapshot", data: ["json": json])
+                    /* Баннер обновляем ЗДЕСЬ, а не из веб-слоя (#428). Ночью и в кармане
+                       webview усыплён, а этот код живёт, пока приложение просыпается от
+                       эфира BLE (#379). Обновление из JS работало бы ровно тогда, когда
+                       человек и так смотрит на экран, — то есть когда баннер не нужен. */
+                    self?.последнийСнимок = json
+                    if #available(iOS 16.2, *) { _ = self?.обновитьЖивойБаннер(json) }
+                }
             })
             e.startAsync()
             // Boot-реконнект BLE: если доступ к Bluetooth уже выдан — цепляем провайдер сразу, движок
@@ -690,6 +737,50 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             if CBManager.authorization == .allowedAlways { self.ensureProvider() }
         }
     }
+    /// Последний снимок — чтобы включённый баннер показал число сразу, а не через пять минут.
+    private var последнийСнимок: String?
+
+    /* Из снимка — в состояние баннера.
+
+       Разбираем ровно то, что показываем: значение, тренд, время. Единицы не трогаем —
+       движок отдаёт готовую строку в тех единицах, которые выбрал человек, и второй
+       формат здесь означал бы, что на экране блокировки и в приложении разные числа. */
+    @available(iOS 16.2, *)
+    @discardableResult
+    private func обновитьЖивойБаннер(_ json: String?) -> String {
+        guard UserDefaults.standard.bool(forKey: "sl.live-banner") else { return "выключено" }
+        guard let json, let data = json.data(using: .utf8),
+              let корень = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let monitor = корень["monitor"] as? [String: Any] else { return "нет снимка" }
+
+        let значение = (monitor["glucose"] as? String) ?? "—"
+        guard значение != "—", !значение.isEmpty else { return "нет числа" }
+
+        let стрелка = стрелкаТренда(monitor["trend"] as? String)
+        let когдаМс = (monitor["latestAtMs"] as? Double) ?? Date().timeIntervalSince1970 * 1000
+        /* «Старое» решает движок своим статусом, а не мы порогом: два мнения о свежести
+           разойдутся в первый же день (та же причина, что в domain/freshness.ts). */
+        let старое = ((monitor["status"] as? String) ?? "") != "Live"
+        return ЖивойБаннер.обновить(
+            значение: значение, стрелка: стрелка, разница: "",
+            когдаМс: когдаМс, старое: старое,
+            источник: (monitor["source"] as? String) ?? "сенсор"
+        )
+    }
+
+    /// Тренд движка — стрелкой. Незнакомое значение отдаём пустым: выдуманная стрелка
+    /// хуже отсутствующей, по ней принимают решение о дозе.
+    private func стрелкаТренда(_ t: String?) -> String {
+        switch t {
+        case "DoubleUp", "SingleUp": return "↑"
+        case "FortyFiveUp": return "↗"
+        case "Flat": return "→"
+        case "FortyFiveDown": return "↘"
+        case "SingleDown", "DoubleDown": return "↓"
+        default: return ""
+        }
+    }
+
     deinit { unsubscribe?(); engine?.stop() }
 
     /// Подцепить провайдер реальных драйверов — по первому скану/добавлению (создаём на фоне, цепляем на main).
