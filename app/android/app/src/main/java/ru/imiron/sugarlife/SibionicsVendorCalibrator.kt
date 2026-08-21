@@ -3,8 +3,6 @@ package ru.imiron.sugarlife
 import android.util.Log
 import kotlin.math.abs
 import ru.imiron.sugarlife.contract.SensorCalibrator
-import ru.imiron.sugarlife.vendor.SibionicsExactV115GCore
-import ru.imiron.sugarlife.vendor.SibionicsSensitivity
 
 /**
  * Калибровка Sibionics вендорским алгоритмом (core#88).
@@ -23,7 +21,7 @@ import ru.imiron.sugarlife.vendor.SibionicsSensitivity
  */
 class SibionicsVendorCalibrator : SensorCalibrator {
 
-    private var core: SibionicsExactV115GCore? = null
+    private var core: ВендорскийАлгоритм? = null
     private var чувствительность: Float = 0f
     /** Последняя разница между точным ответом и сырым — ею закрываются промежуточные минуты. */
     private var поправка: Float? = null
@@ -32,8 +30,8 @@ class SibionicsVendorCalibrator : SensorCalibrator {
         /* ЧУВСТВИТЕЛЬНОСТЬ ПАРТИИ — ИЗ КОДА СЕНСОРА. Она закодирована в последних четырёх символах
            («671K» у XDUD671K) и входит в расчёт напрямую. Не узнав её, алгоритм считает по умолчанию
            (1.27) и расходится с прибором на всём диапазоне. */
-        чувствительность = SibionicsSensitivity.tryDecode(sensorCode) ?: ПО_УМОЛЧАНИЮ
-        core = SibionicsExactV115GCore(чувствительность)
+        чувствительность = ВендорскийАлгоритм.чувствительностьИзКода(sensorCode) ?: ПО_УМОЛЧАНИЮ
+        core = ВендорскийАлгоритм.создать(чувствительность)
         поправка = null
         точныхОтветов = 0
         Log.i(TAG, "калибратор настроен: код=${sensorCode ?: "—"} чувствительность=$чувствительность")
@@ -83,7 +81,7 @@ class SibionicsVendorCalibrator : SensorCalibrator {
     }
 
     override fun reset() {
-        core = SibionicsExactV115GCore(чувствительность); поправка = null; точныхОтветов = 0
+        core = ВендорскийАлгоритм.создать(чувствительность); поправка = null; точныхОтветов = 0
     }
 
     /* СОСТОЯНИЕ ПЕРЕЖИВАЕТ ПЕРЕЗАПУСК (core#88). У самого алгоритма для этого есть snapshot/restore — им и
@@ -92,7 +90,7 @@ class SibionicsVendorCalibrator : SensorCalibrator {
     override fun snapshot(): ByteArray? = core?.snapshot()
 
     override fun restore(state: ByteArray?): Boolean {
-        val c = core ?: SibionicsExactV115GCore(чувствительность).also { core = it }
+        val c = core ?: ВендорскийАлгоритм.создать(чувствительность)?.also { core = it } ?: return false
         val получилось = c.restore(state)
         /* ВОССТАНОВЛЕННОЕ СОСТОЯНИЕ — УЖЕ ПРОГРЕТОЕ (core#109).
         
