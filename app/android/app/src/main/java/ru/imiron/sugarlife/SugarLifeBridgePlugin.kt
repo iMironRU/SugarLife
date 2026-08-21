@@ -347,8 +347,20 @@ class SugarLifeBridgePlugin : Plugin() {
     }
 
     @PluginMethod
-    fun requestSnapshot(call: PluginCall) = onEngineThread(call) {
-        JSObject().put("json", engine.requestSnapshot())
+    fun requestSnapshot(call: PluginCall) {
+        /*
+         * СНАЧАЛА ПОСЛЕДНИЙ ИЗВЕСТНЫЙ, И ТОЛЬКО ПОТОМ ОЧЕРЕДЬ (core#110).
+         *
+         * Поймано на живом приборе: пока драйвер добирал историю, возвращение в приложение давало серое
+         * полотно и предложение системы закрыть приложение — этот вызов ждал в очереди движка позади тысяч
+         * событий. Последний разосланный снимок отстаёт на сотую долю секунды и рисуется мгновенно.
+         *
+         * `null` бывает только на самом старте, когда снимка ещё не было ни разу; тогда ждём — очередь в
+         * этот момент пуста.
+         */
+        val последний = engine.lastSnapshot()
+        if (последний != null) { call.resolve(JSObject().put("json", последний)); return }
+        onEngineThread(call) { JSObject().put("json", engine.requestSnapshot()) }
     }
 
     @PluginMethod

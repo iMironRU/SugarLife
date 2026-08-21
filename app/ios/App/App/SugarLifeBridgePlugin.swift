@@ -798,6 +798,16 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func requestSnapshot(_ call: CAPPluginCall) {
+        /*
+         СНАЧАЛА ПОСЛЕДНИЙ ИЗВЕСТНЫЙ, И ТОЛЬКО ПОТОМ ОЧЕРЕДЬ (core#110).
+
+         Снято на Android, но причина общая: пока драйвер добирает историю, очередь движка занята тысячами
+         событий, и запрос снимка ждёт вместе с ней. Последний разосланный снимок отстаёт на сотую долю
+         секунды и отдаётся сразу.
+         */
+        if let последний = engine?.lastSnapshot() {
+            call.resolve(["json": последний]); return
+        }
         engineQueue.async { [weak self] in
             call.resolve(["json": self?.engine?.requestSnapshot() ?? Self.emptySnapshot])
         }
