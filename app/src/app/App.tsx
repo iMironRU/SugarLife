@@ -13,6 +13,8 @@ import Ins from '@/screens/Ins';
    один раз в жизни. */
 const Onboarding = lazy(() => import('@/screens/Onboarding'));
 import Loader from '@/screens/Loader';
+import ПервыйСнимок from '@/ui/ПервыйСнимок';
+import { isNative } from '@/platform/appUpdate';
 import InstallPrompt from '@/ui/InstallPrompt';
 import HeroPanel from '@/app/HeroPanel';
 import { useStore } from '@/sources/store';
@@ -210,6 +212,18 @@ export default function App() {
     return <IonApp><Suspense fallback={<Loader />}><Onboarding /></Suspense></IonApp>;
   }
   if (!data && !bridgeHasData && (status === 'idle' || status === 'loading')) return <IonApp><Loader /></IonApp>;
+
+  /* Первого снимка ещё не было — показываем ожидание, а не пустую оболочку (#420).
+
+     В нативе `status` у нашего стора равен 'off', пока не настроено ни одного облака, —
+     и условие выше не срабатывает. Получалась серая оболочка с пустыми экранами: панель
+     с прочерками, вкладки, и ничего внутри. Ровно это и видели на живом приборе, когда
+     снимок стоял в очереди за добором истории.
+
+     Только для натива и только до ПЕРВОГО снимка. Дальше данные могут пропадать и
+     возвращаться — это уже другая история, и рассказывают её экраны, у которых есть что
+     показать: последнее известное значение важнее пустоты. */
+  if (isNative && !snap) return <IonApp><ПервыйСнимок /></IonApp>;
 
   return (
     <IonApp>
