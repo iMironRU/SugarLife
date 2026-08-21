@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { новееЛи, checkNativeUpdate } from './appUpdate';
+import { новееЛи, checkNativeUpdate, ВЫПУСКАЕТСЯ_APK } from './appUpdate';
 
 /* «Скачать APK» — единственная кнопка, которая просит человека переустановить
    приложение. Ошибка здесь не падает и не мигает: она просто предлагает поставить
@@ -47,15 +47,34 @@ describe('проверка APK знает про издания', () => {
     } finally { globalThis.fetch = было; }
   });
 
-  /* Издание не назвали — старый мост или веб. Ведём себя как раньше: молчаливо считать
-     сборку чужой опаснее, чем предложить обновление тому, кому оно и адресовано. */
+  /* Издание не назвали — старый мост или веб. Ведём себя как Lite: молчаливо считать
+     сборку чужой опаснее, чем предложить обновление тому, кому оно и адресовано.
+
+     Пока ВЫПУСКАЕТСЯ_APK выключен, до этого решения дело не доходит вовсе — сборок
+     наружу нет, и спрашивать не о чем. Тест держит обе ветки, чтобы флаг можно было
+     вернуть одной строкой и не чинить тесты следом. */
   it('издание неизвестно — ведём себя как Lite', async () => {
     const было = globalThis.fetch;
     let звали = false;
     globalThis.fetch = (async () => { звали = true; return { ok: false } as Response; }) as typeof fetch;
     try {
       await checkNativeUpdate(null);
-      expect(звали).toBe(true);
+      expect(звали).toBe(ВЫПУСКАЕТСЯ_APK);
+    } finally { globalThis.fetch = было; }
+  });
+
+  /* Сборки не раздаём (решение владельца, 22.08.2026): ни сети, ни предложения обновиться,
+     ни ссылки на релиз, которого больше нет. */
+  it('когда APK не выпускается — не спрашиваем сеть и не предлагаем ничего', async () => {
+    if (ВЫПУСКАЕТСЯ_APK) return;
+    const было = globalThis.fetch;
+    let звали = false;
+    globalThis.fetch = (() => { звали = true; throw new Error('сети быть не должно'); }) as typeof fetch;
+    try {
+      const r = await checkNativeUpdate('lite');
+      expect(звали).toBe(false);
+      expect((r as { hasUpdate: boolean }).hasUpdate).toBe(false);
+      expect((r as { apkUrl: string | null }).apkUrl).toBe(null);
     } finally { globalThis.fetch = было; }
   });
 });

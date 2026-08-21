@@ -222,7 +222,7 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
       <div className="section-label sec">Поделиться</div>
       <div className="list">
         <Row icon={phonePortraitOutline} title="Где взять приложение"
-          sub="страница для того, кому вы его посоветуете: браузер, Android, iPhone"
+          sub="страница для того, кому вы его посоветуете"
           href={ССЫЛКИ.гдеВзять} chevron={false} />
       </div>
 
