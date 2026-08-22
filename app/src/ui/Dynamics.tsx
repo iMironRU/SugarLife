@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { stats } from '@/domain/agp';
 import { toUnits, unitLabel } from '@/domain/units';
-import { динамика, сравнимо, полнота, чтоСталоЛучше } from '@/domain/visitNote';
+import { динамика, сравнимо, полнота } from '@/domain/visitNote';
+import { чтоСталоЛучше } from '@/показ/записка';
 import type { Entry } from '@/sources/nightscout';
 
 /* «Что изменилось» — один блок на два экрана (SugarLife#195).
