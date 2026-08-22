@@ -1,18 +1,22 @@
 import { IonIcon, IonToggle } from '@ionic/react';
-import { датаИВремя, сколькоНазад } from '@/слова/время';
+import { сколькоНазад } from '@/слова/время';
 import { BasalProfileSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
 import Section from '@/ui/Section';
-import { chevronForward, batteryHalfOutline, hardwareChipOutline, flash, gitNetworkOutline, cloudOutline, bluetoothOutline, createOutline, pulseOutline, trashOutline, water } from 'ionicons/icons';
+import { chevronForward, flash, cloudOutline, bluetoothOutline, createOutline, trashOutline, hardwareChipOutline, gitNetworkOutline } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, setParam, forgetDevice } from '@/settings/deviceConfig';
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
 import { связь, предложениеСлияния, своиЖелезки, каналРоли } from '@/domain/deviceState';
-import { чтоЗаПрибор, ageText } from './прибор/поКатегории';
+import { чтоЗаПрибор, ageText, ключиВыбора, имяМоделиПоId, драйверМодели } from './прибор/поКатегории';
 import { СейчасНаУстройстве, Расходники } from './прибор/Состояние';
 import Каналы from './прибор/Каналы';
+import ПоказанияГлюкометра from './прибор/ПоказанияГлюкометра';
+import ОсновнойИсточник from './прибор/ОсновнойИсточник';
+import ПокаНеУмеем from './прибор/ПокаНеУмеем';
+import РядыПомпы from './прибор/РядыПомпы';
 import { названиеКанала, подсказкаПроМост } from '@/слова/приборы';
 import { мостСлота } from '@/domain/slotStatus';
 import { железоДиспетчера } from '@/domain/nearby';
@@ -29,7 +33,7 @@ import { useDeviceExtras } from '@/sources/deviceExtras';
 import { deviceAges, type Age } from '@/domain/treatmentStats';
 import { fmt } from '@/domain/units';
 import { Capacitor } from '@capacitor/core';
-import { pumpById, sensorById, insulinById } from '@/domain/catalog';
+import { pumpById, insulinById } from '@/domain/catalog';
 
 // В браузере прямого BLE нет и не будет — это свойство платформы, а не «пока не сделали»
 const isNative = Capacitor.isNativePlatform();
@@ -214,20 +218,21 @@ export default function DeviceSection({ onClose, cat, title }: {
      Модели без драйвера (только облако) записываются с driverType = null: прибор всё
      равно существует, просто читать его напрямую нечем. */
   const setModel = (id: string) => {
-    setDeviceConfig(cat === 'pump' ? { pumpId: id } : { sensorId: id });
+    const ключи = ключиВыбора(cat);
+    if (!ключи.модель) return;
+    setDeviceConfig({ [ключи.модель]: id });
     if (cat !== 'pump' && cat !== 'sensor') return;
-    const модель = cat === 'pump' ? pumpById(id) : sensorById(id);
     void sendIntent({
       type: 'recordDevice',
       kind: cat,
-      driverType: модель?.driverKey ?? null,
+      driverType: драйверМодели(cat, id),
       params: {
         /* Штатное место для модели по нашему справочнику (rev ≥ 1.14): ключ
            `deviceModel`. Свой ключ мы придумывали, пока места не было, — и едва не
            налетели на их служебный `model`, в котором лежал driverType. Они его
            переименовали, мы перешли на штатный: чужих ключей больше не трогаем. */
         deviceModel: id,
-        name: (cat === 'pump' ? pumpById(id)?.model : sensorById(id)?.name) ?? '',
+        name: имяМоделиПоId(cat, id),
       },
     });
   };
@@ -240,7 +245,8 @@ export default function DeviceSection({ onClose, cat, title }: {
      Без движка (браузер) пишем к себе: иначе человеку негде хранить выбранное вовсе. */
   const setBridge = (id: string) => {
     if (!писатьЛокально('bridgePumpId', snap)) return;
-    setDeviceConfig(cat === 'pump' ? { bridgePumpId: id } : { bridgeSensorId: id });
+    const ключ = ключиВыбора(cat).мост;
+    if (ключ) setDeviceConfig({ [ключ]: id });
   };
   const pickerItems = hasModel ? modelItems(cat as 'pump' | 'sensor') : [];
 
@@ -489,35 +495,14 @@ export default function DeviceSection({ onClose, cat, title }: {
                 <Row icon={modelIcon} title="Модель" value={modelName || 'выбрать'}
                   valueMuted={!modelName} onClick={() => setPick('model')} />
                 {cat === 'pump' && (
-                  <Row icon={water} title="Инсулин" value={insulin ? insulin.name : 'выбрать'}
-                    valueMuted={!insulin} onClick={() => setPick('insulin')} />
-                )}
-                {cat === 'pump' && (
-                  /* Тип батарейки — не украшение: процент заряда без него не отвечает
-                     на вопрос «успею ли до утра» (domain/battery.ts). */
-                  <Row icon={batteryHalfOutline} title="Батарейка"
-                    value={batteryKindName(cfg.pumpBatteryKind) ?? 'выбрать'}
-                    valueMuted={!cfg.pumpBatteryKind}
-                    onClick={() => setPick('battery')} />
-                )}
-                {cat === 'pump' && (
-                  <Row icon={pulseOutline} title="Базальный профиль"
-                    value={basalTotal != null ? basalTotal.toFixed(2) + ' ЕД/сут' : 'нет данных'}
-                    valueMuted={basalTotal == null}
-                    onClick={() => push(<BasalProfileSection onClose={pop} />, { id: 'базал' })} />
+                  <РядыПомпы insulin={insulin} батарейка={batteryKindName(cfg.pumpBatteryKind)}
+                    базалВСутки={basalTotal}
+                    onИнсулин={() => setPick('insulin')} onБатарейка={() => setPick('battery')}
+                    onБазал={() => push(<BasalProfileSection onClose={pop} />, { id: 'базал' })} />
                 )}
               </div>
             ) : (
-              <div className="loop-empty">
-                <IonIcon icon={cat === 'loop' ? gitNetworkOutline : hardwareChipOutline} />
-                <div className="loop-empty-t">{cat === 'loop' ? 'Петля' : 'Глюкометр'}</div>
-                <div className="loop-empty-s">{cat === 'loop'
-                  ? 'Алгоритм замкнутого цикла (AAPS/Loop/встроенный) и статус — в разработке.'
-                  : 'Модель глюкометра и расходники (тест-полоски, ланцеты) — в разработке. Показания можно вносить уже сейчас.'}</div>
-                {cat === 'meter' && (
-                  <button className="loop-empty-btn" onClick={() => setSmbgOpen(true)}>Внести показание</button>
-                )}
-              </div>
+              <ПокаНеУмеем cat={cat} onВнести={() => setSmbgOpen(true)} />
             )}
             {recordedNoModel && (
               <div className="sheet-note">
@@ -543,42 +528,7 @@ export default function DeviceSection({ onClose, cat, title }: {
               </>
             )}
 
-            {/* Основной источник глюкозы. Показываем ТОЛЬКО когда источников больше
-                одного: при единственном сенсоре выбор бессмысленен, а список из одной
-                строки с отметкой «сейчас» — это интерфейс ради интерфейса.
-
-                Отмечаем тот, у кого primary в снимке, а не тот, что мы отправили:
-                интент подтверждает приём, а не результат, и рисовать выбор по своему
-                намерению значит однажды показать не то, что происходит на деле
-                (SugarLifeCore#14). */}
-            {cat === 'sensor' && источникиГлюкозы.length > 1 && (
-              <>
-                <div className="section-label sec">Основной источник</div>
-                <div className="list">
-                  {источникиГлюкозы.map((d) => (
-                    <button key={d.id} className="list-row"
-                      onClick={() => sendIntent({ type: 'setPrimarySource', sourceId: d.id })}>
-                      <span className="pick-main">
-                        <span className="list-title">{d.name}</span>
-                        <span className="pick-sub">{sourceStatusLabel(d.status) ?? 'источник глюкозы'}</span>
-                      </span>
-                      {d.primary && <span className="meth-now">сейчас</span>}
-                    </button>
-                  ))}
-                  <button className="list-row" onClick={() => sendIntent({ type: 'setPrimarySource', sourceId: null })}>
-                    <span className="pick-main">
-                      <span className="list-title">Автоматически</span>
-                      <span className="pick-sub">приложение выберет само и переключится, когда датчик кончится</span>
-                    </span>
-                    {!источникиГлюкозы.some((d) => d.primary) && <span className="meth-now">сейчас</span>}
-                  </button>
-                </div>
-                <div className="sheet-note">
-                  Отсюда берётся сахар в круге наверху. Выбор переживает перезапуск; если
-                  выбранный датчик пропадёт, приложение вернётся к автоматическому.
-                </div>
-              </>
-            )}
+            {cat === 'sensor' && <ОсновнойИсточник источники={источникиГлюкозы} />}
 
             <Каналы прибор={ble} />
 
@@ -665,23 +615,7 @@ export default function DeviceSection({ onClose, cat, title }: {
             <СейчасНаУстройстве строки={stateRows} />
             <Расходники список={supplies} />
 
-            {cat === 'meter' && smbg.length > 0 && (
-              <>
-                <div className="section-label sec">Последние показания</div>
-                <div className="basal-rows">
-                  {[...smbg].reverse().slice(0, 8).map((x) => (
-                    <div key={x.t} className="basal-row">
-                      <span>{датаИВремя(x.t)}</span>
-                      <b>{toUnits(x.mmol)} {unitLabel()}</b>
-                    </div>
-                  ))}
-                </div>
-                <div className="sheet-note">
-                  Эти показания не подмешиваются в ленту сенсора: с пальца точнее по крови,
-                  но реже по времени, и в расчётах диапазона вес у них был бы неправильный.
-                </div>
-              </>
-            )}
+            {cat === 'meter' && <ПоказанияГлюкометра список={smbg} />}
 
             {hasModel && modelName && (
               <button className="sheet-danger" onClick={onForget}>
