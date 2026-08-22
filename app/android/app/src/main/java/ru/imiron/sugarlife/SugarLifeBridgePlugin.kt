@@ -299,13 +299,19 @@ class SugarLifeBridgePlugin : Plugin() {
     @PluginMethod
     fun alarmReadiness(call: PluginCall) {
         val ctx = context.applicationContext
-        val нет = Тревоги.чегоНеХватаетДляНочи(ctx)
+        val нет = Тревоги.поломки(ctx)
         val список = com.getcapacitor.JSArray()
-        нет.forEach { список.put(it) }
+        нет.forEach { (_, фраза) -> список.put(фраза) }
+        // Коды — чтобы экран мог разложить поломки по своим пунктам, а не показывать их одной кучей
+        // (просьба интерфейса, SugarLife#473). Старое поле `missing` оставлено: выкинем, когда экран
+        // перейдёт на `problems`, а не одновременно с ним — иначе сломаем то, что уже работает.
+        val подробно = com.getcapacitor.JSArray()
+        нет.forEach { (код, фраза) -> подробно.put(JSObject().put("code", код).put("text", фраза)) }
         call.resolve(
             JSObject()
                 .put("problem", нет.isNotEmpty())
                 .put("missing", список)
+                .put("problems", подробно)
                 .put("silenceWatchdogOn", Тревоги.молчаниеВключено(ctx))
                 .put("silenceThresholdMin", Тревоги.молчаниеПорог(ctx)),
         )
