@@ -83,6 +83,28 @@
       { role: 'cgm', activeSourceId: сенсор.id, via: 'direct', sourceIds: [сенсор.id] },
       { role: 'insulin', activeSourceId: облакоПомпы.id, via: 'cloud', serial: '923109', sourceIds: [помпа.id, облакоПомпы.id] },
     ],
+    /* ПРАВИЛА ТРЕВОГ (мост 1.30, SugarLife#482). В демо они нужны не для красоты: экран правил
+       рисуется ровно из этого списка и без него не существует, а посмотреть на него надо до того,
+       как сборка с настоящим движком окажется на телефоне.
+
+       Оговорка у молчания настоящая: неточный будильник системы сдвигает пробуждение до девяти
+       минут, и «15» на деле означает «до 24». */
+    alarmRules: [
+      { id: 'гипо', level: 'Разбудить', kind: 'low', needsAck: true, throughSpeaker: true,
+        voice: 'always', settings: { 'targets.lowMmol': '3.9' },
+        helpUrl: 'https://github.com/iMironRU/SugarLife/wiki/Тревоги' },
+      { id: 'прогноз-падения', level: 'Сегодня', kind: 'forecast', voice: 'always',
+        settings: { 'alarms.forecast.windowMin': '15', 'alarms.forecast.horizonMin': '20',
+          'alarms.forecast.ceilingMmol': '7.0', 'alarms.forecast.speedMmolPerMin': '0.15' },
+        helpUrl: 'https://github.com/iMironRU/SugarLife/wiki/Прогноз-падения' },
+      { id: 'молчание-во-сне', level: 'Разбудить', kind: 'silence', needsAck: true,
+        voice: 'asleep', settings: { 'alarms.silence.sleepMin': '15', 'alarms.exactWakeups': 'off' },
+        effectiveWords: 'порог 15 мин, фактически до 24 — будильник системы неточен',
+        helpUrl: 'https://github.com/iMironRU/SugarLife/wiki/Точные-будильники' },
+      { id: 'высокий', level: 'Сегодня', kind: 'high', voice: 'always',
+        settings: { 'targets.highMmol': '13.9', 'alarms.high.holdMin': '45' } },
+    ],
+    alarmEvents: [], activeAlarms: [],
     insights: null, pendingWrites: [], alerts: [],
     scanning: false,
     discovered: [
@@ -454,6 +476,32 @@
       }
       if (i.type === 'startScan') { снимок.scanning = true; разослать(); }
       if (i.type === 'stopScan') { снимок.scanning = false; разослать(); }
+      /* Правка правил (rev 1.30): тем же ключом, каким значение приехало. Демо ведёт себя как движок —
+         принимает и сразу отдаёт новое значение, иначе экран правил нечем проверить: кнопка нажимается,
+         а число стоит на месте, и непонятно, кто виноват. */
+      if (i.type === 'setConfig') {
+        var патч = i.patch || {};
+        снимок.alarmRules = (снимок.alarmRules || []).map(function (п) {
+          var новые = null;
+          Object.keys(патч).forEach(function (к) {
+            if (п.settings && Object.prototype.hasOwnProperty.call(п.settings, к)) {
+              новые = новые || Object.assign({}, п.settings);
+              новые[к] = патч[к];
+            }
+          });
+          if (!новые) return п;
+          var правило = Object.assign({}, п, { settings: новые });
+          /* Оговорка про точность пересчитывается сама — иначе она осталась бы от старого числа и
+             врала бы ровно в том месте, ради которого её и завели. */
+          if (п.kind === 'silence') {
+            var порог = parseInt(новые['alarms.silence.sleepMin'] || новые['alarms.silence.dayMin'] || '0', 10);
+            var точно = новые['alarms.exactWakeups'] === 'on';
+            правило.effectiveWords = точно || !порог ? null
+              : 'порог ' + порог + ' мин, фактически до ' + (порог + 9) + ' — будильник системы неточен';
+          }
+          return правило;
+        });
+      }
       if (i.type === 'setPrimarySource') {
         снимок.roles = снимок.roles.map(function (r) {
           var свои = r.sourceIds || [];

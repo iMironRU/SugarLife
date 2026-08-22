@@ -1,0 +1,99 @@
+import Иконка from '@/ui/Иконка';
+import { IonToggle } from '@ionic/react';
+import { openOutline } from 'ionicons/icons';
+import { useState } from 'react';
+import { sendIntent } from '@/sources/bridge';
+import type { AlarmRuleView } from '@/sources/bridge';
+import { правилаНаЭкран, значениеСловом, следующее, type Поле } from '@/показ/правилаТревог';
+import { открытьСнаружи } from '@/platform/appUpdate';
+
+/* ПРАВИЛА ТРЕВОГ ИЗ ДВИЖКА (SugarLife#482, шаг 3).
+
+   Экран не хранит своей копии правил: движок отдаёт список вместе с ключами настроек, тем же ключом
+   настройка и правится (`setConfig`). Поэтому новая тревога появляется здесь сама, без нашей правки, —
+   и поэтому же тут нет ни одного зашитого порога.
+
+   ЧИСЛО БЕЗ ОБЪЯСНЕНИЯ НЕ ПОКАЗЫВАЕМ. У правил движка есть статья (`helpUrl`), и правило проекта общее с
+   ядром: нет объяснения — нет настройки. «Скорость падения 0,15 ммоль/мин» человеку не говорит ничего,
+   пока он не прочтёт, откуда она взялась.
+
+   ОГОВОРКУ ПОКАЗЫВАЕМ РЯДОМ С ЧИСЛОМ, а не в подсказке: «порог 15 мин, фактически до 24» — это и есть
+   правда о заданном числе, и прятать её значит обещать то, чего платформа не даёт. */
+
+export default function ПравилаДвижка({ правила }: { правила: AlarmRuleView[] | undefined }) {
+  /* Что не приняли — говорим сразу. Молчаливый отказ читается как «кнопка сломана», и человек жмёт
+     её снова. */
+  const [ошибка, setОшибка] = useState<string | null>(null);
+  const [ждём, setЖдём] = useState<string | null>(null);
+  const список = правилаНаЭкран(правила);
+  if (!список.length) return null;
+
+  const править = async (ключ: string, значение: string) => {
+    setЖдём(ключ);
+    setОшибка(null);
+    const r = await sendIntent({ type: 'setConfig', patch: { [ключ]: значение } });
+    setЖдём(null);
+    /* Структурные ключи движок валидирует сам. Не принял — значит значение вне допустимого. */
+    if (!r.accepted) setОшибка(r.error || 'движок не принял это значение');
+  };
+
+  const строкаЧисла = (поле: Поле) => {
+    const ниже = следующее(поле, -1);
+    const выше = следующее(поле, 1);
+    return (
+      <div key={поле.ключ}>
+        <div className="basal-row">
+          <span>{поле.имя}</span>
+          <b>{значениеСловом(поле)}{поле.единица ? ` ${поле.единица}` : ''}</b>
+        </div>
+        {(ниже || выше) && (
+          <div className="alert-ask alert-ask-row">
+            <button className="changed-btn" disabled={!ниже || ждём === поле.ключ}
+              onClick={() => ниже && void править(поле.ключ, ниже)}>
+              −{поле.шаг.toString().replace('.', ',')}
+            </button>
+            <button className="changed-btn" disabled={!выше || ждём === поле.ключ}
+              onClick={() => выше && void править(поле.ключ, выше)}>
+              +{поле.шаг.toString().replace('.', ',')}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <div className="section-label sec">Правила тревог</div>
+      <div className="sheet-note">
+        Считает движок — один расчёт на телефон и на айфон. Здесь то, по каким числам он это делает;
+        правки уходят ему сразу.
+      </div>
+      {список.map((п) => (
+        <div key={п.id} style={{ marginTop: 12 }}>
+          <div className="section-label sec">{п.имя} · {п.уровень}</div>
+          <div className="basal-rows">
+            {п.поля.map((поле) => (
+              поле.выключатель ? (
+                <div key={поле.ключ} className="basal-row">
+                  <span>{поле.имя}</span>
+                  <IonToggle checked={поле.включено} disabled={ждём === поле.ключ}
+                    onIonChange={(e) => void править(поле.ключ, e.detail.checked ? 'on' : 'off')} />
+                </div>
+              ) : строкаЧисла(поле)
+            ))}
+          </div>
+          {п.оговорка && <div className="sheet-note warn">{п.оговорка}</div>}
+          {п.ссылка && (
+            <button className="changed-btn во-всю" style={{ marginTop: 8 }}
+              onClick={() => открытьСнаружи(п.ссылка as string)}>
+              <Иконка icon={openOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
+              Почему именно так
+            </button>
+          )}
+        </div>
+      ))}
+      {ошибка && <div className="sheet-note warn">Не приняли правку: {ошибка}</div>}
+    </>
+  );
+}
