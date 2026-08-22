@@ -62,3 +62,37 @@ export function чтоЗаПрибор(cat: DeviceCatKey, cfg: DeviceConfig): Ч
 /* Возраст расходника словами: до суток — часы, дальше дни. Точность выше человеку не
    нужна, а «26 ч» вместо «1 дн» заставляет считать в уме. */
 export const ageText = (a: Age): string => (a.days >= 1 ? `${a.days} дн` : `${a.hours} ч`);
+
+/* Куда писать выбранное и как назвать модель — тоже по категории (#406).
+
+   Эти три ветки жили в теле экрана и повторялись при каждом обращении: ключ настройки для
+   модели, ключ для моста, откуда взять имя. Одна и та же мысль «сенсор или помпа»,
+   размноженная по файлу; забыть её в одном месте — значит записать выбор помпы в поле
+   сенсора и не заметить.
+
+   Категорий без модели это не касается: у глюкометра и петли выбирать нечего, и функции
+   честно отвечают `null`, а не подставляют сенсор по умолчанию. */
+export interface КлючиВыбора {
+  модель: 'pumpId' | 'sensorId' | null;
+  мост: 'bridgePumpId' | 'bridgeSensorId' | null;
+}
+
+export function ключиВыбора(cat: DeviceCatKey): КлючиВыбора {
+  if (cat === 'pump') return { модель: 'pumpId', мост: 'bridgePumpId' };
+  if (cat === 'sensor') return { модель: 'sensorId', мост: 'bridgeSensorId' };
+  return { модель: null, мост: null };
+}
+
+/** Имя модели по её id — из того справочника, который относится к этой категории. */
+export function имяМоделиПоId(cat: DeviceCatKey, id: string): string {
+  if (cat === 'pump') return pumpById(id)?.model ?? '';
+  if (cat === 'sensor') return sensorById(id)?.name ?? '';
+  return '';
+}
+
+/** Ключ драйвера выбранной модели: по нему движок понимает, чем её читать. */
+export function драйверМодели(cat: DeviceCatKey, id: string): string | null {
+  if (cat === 'pump') return pumpById(id)?.driverKey ?? null;
+  if (cat === 'sensor') return sensorById(id)?.driverKey ?? null;
+  return null;
+}
