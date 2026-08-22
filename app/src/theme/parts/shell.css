@@ -28,9 +28,7 @@ ion-content { --background: var(--color-bg); }
      панелями карусели при композиции (см. .stack-page в sheets.css). */
   isolation: isolate;
 }
-/* каждая .pager-pane содержит экран (IonPage absolute inset:0) */
-.pager-pane > .ion-page { position: absolute; inset: 0; }
-.pager-pane .ion-page-invisible { opacity: 1; }
+/* каждая .pager-pane содержит экран (.страница — absolute inset:0, см. свои.css) */
 
 /* ===== Свой таб-бар (заменяет IonTabBar) ===== */
 .tabbar {
@@ -344,7 +342,7 @@ ion-content { --background: var(--color-bg); }
   display: flex; align-items: center; justify-content: center; gap: 10px;
   margin-top: 22px; font-size: 0.8125rem; color: var(--color-neutral-400);
 }
-.pl-spin ion-spinner { width: 18px; height: 18px; color: var(--color-accent); }
+.pl-spin .крутилка { width: 18px; height: 18px; color: var(--color-accent); }
 
 /* Отступ сверху у всего, что прокручивается: панель висит над контентом, и без
    отступа первый экран начинался бы под ней. Величина — высота в ПОКОЕ, а не

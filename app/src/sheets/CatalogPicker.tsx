@@ -1,5 +1,6 @@
-import { IonInput } from '@ionic/react';
+
 import Иконка from '@/ui/Иконка';
+import Поле from '@/ui/Поле';
 import {searchOutline, checkmarkCircle} from 'ionicons/icons';
 import { useState } from 'react';
 import Sheet from '@/ui/Sheet';
@@ -53,7 +54,7 @@ export default function CatalogPicker({
 
         <div className="field">
           <Иконка icon={searchOutline} className="field-ico" />
-          <IonInput placeholder="Поиск" value={q} onIonInput={(e) => setQ(e.detail.value || '')} />
+          <Поле placeholder="Поиск" value={q} onInput={(v: string) => setQ(v || '')} />
         </div>
         <button className={'pick-toggle' + (currentOnly ? ' on' : '')} onClick={() => setCurrentOnly((v) => !v)}>
           {currentLabel}

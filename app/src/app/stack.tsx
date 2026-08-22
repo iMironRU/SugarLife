@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { createGesture } from '@ionic/react';
+import { создатьЖест } from '@/ui/Жест';
 import { StackCtx, type StackApi } from './stackCtx';
 import { syncToActiveScreen, плавно } from './panel';
 import { useGoHome } from './nav';
@@ -175,10 +175,8 @@ export function StackHost({ tab, children }: { tab: number; children: ReactNode 
     const el = верх.current;
     if (!el || !pages.length) return;
     let W = 1;
-    const жест = createGesture({
+    const жест = создатьЖест({
       el,
-      gestureName: 'stack-back',
-      direction: 'x',
       threshold: 10,
       canStart: (d) => canStartBack(d.startX),
       onStart: () => {

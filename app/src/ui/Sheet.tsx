@@ -1,4 +1,4 @@
-import { IonModal } from '@ionic/react';
+import Модалка, { type УправлениеМодалкой } from './Модалка';
 import Иконка from './Иконка';
 import { closeOutline, chevronBack } from 'ionicons/icons';
 import { useEffect, useRef, type ReactNode } from 'react';
@@ -47,7 +47,7 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
   footer?: ReactNode;
   children: ReactNode;
 }) {
-  const модалка = useRef<HTMLIonModalElement>(null);
+  const модалка = useRef<УправлениеМодалкой>(null);
   const оболочка = useRef<HTMLDivElement>(null);
   const тело = useRef<HTMLDivElement>(null);
   const снять = useRef<(() => void) | null>(null);
@@ -61,7 +61,7 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
 
      Теперь путь один: dismiss() у модалки, а наружу мы сообщаем в onDidDismiss —
      когда уход уже случился. */
-  const закрыть = () => { void модалка.current?.dismiss(); };
+  const закрыть = () => { модалка.current?.dismiss(); };
 
   /* Смахивание вниз — и прокрутка, одновременно, а не вместо друг друга.
 
@@ -175,13 +175,7 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
   }, [isOpen]);
 
   return (
-    <IonModal
-      ref={модалка}
-      isOpen={isOpen}
-      keepContentsMounted
-      onDidDismiss={onClose}
-      className="sheet-modal"
-    >
+    <Модалка ref={модалка} isOpen={isOpen} onClose={onClose} className="sheet-modal">
       <div className="sheet-shell" ref={оболочка}>
         <div className="sheet-head">
           {/* Полоска-ручка: она же подсказка, что шторку можно смахнуть. Без неё жест
@@ -205,6 +199,6 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
         <div className="sheet-body" ref={тело}>{children}<КрайПрокрутки /></div>
         {footer}
       </div>
-    </IonModal>
+    </Модалка>
   );
 }
