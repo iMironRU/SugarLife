@@ -311,6 +311,31 @@ class SugarLifeBridgePlugin : Plugin() {
         )
     }
 
+    /**
+     * Открыть экран разрешения на полноэкранные уведомления (#468).
+     *
+     * Отдельный от «Не беспокоить» и появился в Android 14: право есть в манифесте, но система выдаёт
+     * его сама только приложениям-звонилкам и будильникам. Всем остальным — руками человека, и найти
+     * этот пункт, не зная, что он существует, практически нельзя.
+     *
+     * До Android 14 разрешение не требуется — отвечаем честно «экрана нет», а не молча ничего не делаем.
+     */
+    @PluginMethod
+    fun openFullScreenAccess(call: PluginCall) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            call.reject("на этой версии Android разрешение не требуется"); return
+        }
+        val ctx = context.applicationContext
+        runCatching {
+            ctx.startActivity(
+                Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
+                    .setData(android.net.Uri.parse("package:" + ctx.packageName))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }.onSuccess { call.resolve() }
+            .onFailure { call.reject("не удалось открыть настройки: ${it.message}") }
+    }
+
     /** Открыть системный экран доступа к «Не беспокоить» (#468). Без него обход тихого режима мёртв. */
     @PluginMethod
     fun openDndAccess(call: PluginCall) {
