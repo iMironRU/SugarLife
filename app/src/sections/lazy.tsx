@@ -52,6 +52,10 @@ function ленивый<P extends object>(
 
 export const DevicesSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
   () => import('./DevicesSection'), 'Устройства');
+export const ОхранаSection = ленивый<{ onClose: () => void }>(
+  () => import('./ОхранаSection'), 'Охрана',
+);
+
 export const AppearanceSection = ленивый<{ onClose: () => void }>(
   () => import('./AppearanceSection'), 'Оформление');
 
