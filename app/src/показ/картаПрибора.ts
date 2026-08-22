@@ -1,9 +1,9 @@
 import type { HardwareView, UiSnapshot, DeviceView } from '@/sources/bridge';
-import { связь, активныйКанал } from './deviceState';
+import { связь, активныйКанал } from '@/domain/deviceState';
 import { меткаСвязи, подписьСвежести, подписьЗанятия } from '@/слова/приборы';
-import { чтоСПрибором, свежесть } from './freshness';
-import { sourceStatusLabel } from './sourceStatus';
-import { СЛОТ, заМостомЛи, мостЖелезки, имяЖелезки } from './nearby';
+import { чтоСПрибором, свежесть } from '@/domain/freshness';
+import { sourceStatusLabel } from '@/domain/sourceStatus';
+import { СЛОТ, заМостомЛи, мостЖелезки, имяЖелезки } from '@/domain/nearby';
 
 /* Что показывать в карточке прибора — по факту, а не по шаблону (SugarLife#378).
 

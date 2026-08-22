@@ -10,7 +10,7 @@ import { ходПопытки, почемуМолчит, type Попытка, ty
 import { чтоСПрибором } from '@/domain/freshness';
 import { ктоДержит } from '@/platform/ктоДержит';
 import { словоЗанятости } from '@/слова/ктоДержит';
-import { картаПрибора } from '@/domain/картаПрибора';
+import { картаПрибора } from '@/показ/картаПрибора';
 import ParamsForm from '@/ui/ParamsForm';
 import ScanSheet from './ScanSheet';
 import DeviceLogSheet from './DeviceLogSheet';
@@ -55,7 +55,7 @@ export default function HardwareSheet({ прибор, снимок, попытк
   const звено = звеноЦепочки(прибор, снимок);
   const мост = мостЖелезки(прибор, снимок);
 
-  /* Что показывать — решает domain/картаПрибора: приборы разные, и общий шаблон даёт
+  /* Что показывать — решает показ/картаПрибора: приборы разные, и общий шаблон даёт
      либо пустые строки, либо потерянные (#378). Здесь только раскладка. */
   const карта = картаПрибора(прибор, снимок, сейчас);
 
