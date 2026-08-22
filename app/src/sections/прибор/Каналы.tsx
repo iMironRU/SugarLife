@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { cloudOutline, bluetoothOutline } from 'ionicons/icons';
 import type { DeviceView } from '@/sources/bridge';
 import { связь } from '@/domain/deviceState';
@@ -27,7 +27,7 @@ export default function Каналы({ прибор }: { прибор: DeviceVie
           const с = связь(c as unknown as DeviceView);
           return (
             <div key={c.id} className="list-row" style={{ cursor: 'default' }}>
-              <IonIcon icon={c.kind === 'cloud' ? cloudOutline : bluetoothOutline} className="list-ico" />
+              <Иконка icon={c.kind === 'cloud' ? cloudOutline : bluetoothOutline} className="list-ico" />
               <span className="pick-main">
                 <span className="list-title">{сЗаглавной(СЛОВО_КАНАЛА[c.kind])}</span>
                 <span className="pick-sub">

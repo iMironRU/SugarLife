@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { IonIcon, IonToggle } from '@ionic/react';
+import { IonToggle } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { alarmOutline, notificationsOutline, playOutline, trendingUpOutline, phonePortraitOutline, cloudOfflineOutline, appsOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
@@ -64,7 +65,7 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
       {/* Предел доставки — до всего остального. */}
       {!можем && (
         <div className="today-alert warn">
-          <IonIcon icon={notificationsOutline} className="alert-ico" />
+          <Иконка icon={notificationsOutline} className="alert-ico" />
           <div>
             <span className="alert-title">
               {!isNative ? 'В браузере тревог нет' : 'На этом телефоне разбудить не сможем'}
@@ -264,7 +265,7 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
         <>
           <div className="section-label sec">Проверка</div>
           <button className="changed-btn is-undo во-всю" onClick={() => { void проверитьТревогу(); setПроверил(true); }}>
-            <IonIcon icon={playOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
+            <Иконка icon={playOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
             Проверить тревогу сейчас
           </button>
           <div className="sheet-note">

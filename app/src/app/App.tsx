@@ -1,4 +1,5 @@
-import { IonApp, IonIcon, createGesture } from '@ionic/react';
+import { IonApp, createGesture } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { Suspense, lazy, useEffect, useRef } from 'react';
 import { barChart, pulse, home, water, personCircle, medkit } from 'ionicons/icons';
 
@@ -134,7 +135,7 @@ function TabBar({ insIcon, новых }: { insIcon: string; новых: number }
     <div className="tabbar">
       {tabs.map((t) => (
         <button key={t.i} className={'tab' + (idx === t.i ? ' on' : '')} onClick={() => pressTab(t.i)}>
-          <IonIcon icon={t.icon} />
+          <Иконка icon={t.icon} />
           {!!t.badge && <span className="tab-badge">{t.badge}</span>}
           <span>{t.label}</span>
         </button>

@@ -61,3 +61,20 @@ ion-content::part(scroll)::-webkit-scrollbar,
 .stack-body::-webkit-scrollbar,
 .connect.ob-page::-webkit-scrollbar,
 .chips-scroll::-webkit-scrollbar { width: 0; height: 0; }
+
+/* Своя иконка (#405). Размер в em, цвет — от текста: так она ведёт себя как буква, а не
+   как картинка, и не требует править размер в каждом месте. Ionic делал ровно это же,
+   только ценой своей среды выполнения. */
+.иконка {
+  display: inline-flex;
+  font-style: normal;
+  width: 1em; height: 1em;
+  flex: none;
+  vertical-align: -0.125em;
+}
+.иконка svg { width: 100%; height: 100%; fill: currentColor; stroke: currentColor; }
+/* Контурные иконки рисуются линией, а не заливкой, и несут это классами на путях. Раньше
+   правила приходили из стилей Ionic; теперь они наши — без них контурная иконка
+   превращается в чёрное пятно, что мы и увидели на «Истории». */
+.иконка .ionicon-fill-none { fill: none; }
+.иконка .ionicon-stroke-width { stroke-width: 32px; }

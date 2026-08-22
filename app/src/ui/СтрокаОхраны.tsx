@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { chevronForward } from 'ionicons/icons';
 import { useStack } from '@/app/stackCtx';
 import { ОхранаSection } from '@/sections/lazy';
@@ -35,7 +35,7 @@ export default function СтрокаОхраны() {
             : 'Ночью может не разбудить'}</b>
         <span>{беда ? (первая?.под ?? о.почему) : 'тревоги и сторож молчания на месте'}</span>
       </span>
-      <IonIcon icon={chevronForward} className="охрана-шеврон" />
+      <Иконка icon={chevronForward} className="охрана-шеврон" />
     </button>
   );
 }

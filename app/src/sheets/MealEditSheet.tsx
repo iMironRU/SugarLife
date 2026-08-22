@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { IonIcon, IonInput } from '@ionic/react';
+import { IonInput } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { checkmarkCircle, trashOutline } from 'ionicons/icons';
 import Sheet from '@/ui/Sheet';
 import { updateMeal, deleteMeal } from '@/sources/mealStore';
@@ -134,12 +135,12 @@ export default function MealEditSheet({ приём, onClose }: { приём: Mea
 
       <button className="food-save" disabled={!годно || занят} onClick={() => void сохранить()}
         style={{ marginTop: 14 }}>
-        <IonIcon icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
+        <Иконка icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
         {занят ? 'Сохраняю…' : 'Сохранить'}
       </button>
 
       <button className="ob-skip" style={{ marginTop: 12 }} onClick={() => void удалить()}>
-        <IonIcon icon={trashOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
+        <Иконка icon={trashOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
         Удалить приём
       </button>
     </Sheet>

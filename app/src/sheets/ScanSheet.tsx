@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { cameraOutline, imageOutline, copyOutline, checkmarkCircle, refreshOutline } from 'ionicons/icons';
 import Sheet from '@/ui/Sheet';
 import Row from '@/ui/Row';
@@ -136,7 +136,7 @@ export default function ScanSheet({ isOpen, onClose, подпись, onВыбо�
               открылось» получается именно там. Метка даёт этот жест сама, без единой
               строки скрипта, и поле для неё не должно быть hidden — прячем размером. */}
           <label className="list-row" htmlFor="скан-файл">
-            <IonIcon icon={imageOutline} className="list-ico" />
+            <Иконка icon={imageOutline} className="list-ico" />
             <span className="pick-main">
               <span className="list-title">Выбрать фото</span>
               <span className="pick-sub">{занят ? 'разбираю снимок…' : 'снимок коробки — можно из галереи'}</span>
@@ -162,7 +162,7 @@ export default function ScanSheet({ isOpen, onClose, подпись, onВыбо�
               <div className="скан-текст">{к.текст || '(пусто)'}</div>
               <div className="скан-кнопки">
                 <button className="changed-btn is-undo" onClick={() => void скопировать(к.текст)}>
-                  <IonIcon icon={скопировано === к.текст ? checkmarkCircle : copyOutline}
+                  <Иконка icon={скопировано === к.текст ? checkmarkCircle : copyOutline}
                     style={{ marginRight: 5, verticalAlign: -2 }} />
                   {скопировано === к.текст ? 'Скопировано' : 'Скопировать'}
                 </button>

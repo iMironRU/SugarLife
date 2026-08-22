@@ -1,4 +1,5 @@
-import { IonIcon, IonInput } from '@ionic/react';
+import { IonInput } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import {searchOutline, checkmarkCircle} from 'ionicons/icons';
 import { useState } from 'react';
 import Sheet from '@/ui/Sheet';
@@ -51,7 +52,7 @@ export default function CatalogPicker({
     <Sheet isOpen={isOpen} onClose={onClose} title={title} subtitle={subtitle}>
 
         <div className="field">
-          <IonIcon icon={searchOutline} className="field-ico" />
+          <Иконка icon={searchOutline} className="field-ico" />
           <IonInput placeholder="Поиск" value={q} onIonInput={(e) => setQ(e.detail.value || '')} />
         </div>
         <button className={'pick-toggle' + (currentOnly ? ' on' : '')} onClick={() => setCurrentOnly((v) => !v)}>
@@ -74,7 +75,7 @@ export default function CatalogPicker({
                       {it.subtitle && <span className="pick-sub">{it.subtitle}</span>}
                     </span>
                     {it.meta && <span className="list-value pick-meta">{it.meta}</span>}
-                    <IonIcon icon={checkmarkCircle} className="pick-check" style={{ opacity: it.id === selectedId ? 1 : 0 }} />
+                    <Иконка icon={checkmarkCircle} className="pick-check" style={{ opacity: it.id === selectedId ? 1 : 0 }} />
                   </button>
                 ))}
               </div>

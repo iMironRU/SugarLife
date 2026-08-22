@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { warningOutline, checkmarkCircle } from 'ionicons/icons';
 import { sendIntent } from '@/sources/bridge';
 import { спроситьМожно, кудаВНастройки, type Помеха } from '@/domain/scanReadiness';
@@ -23,7 +23,7 @@ export default function Готовность({ помеха, спокойно }:
     if (!спокойно) return null;
     return (
       <div className="sheet-note">
-        <IonIcon icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
+        <Иконка icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
         Поиск возможен: приложение видит эфир и жалоб на разрешения нет.
       </div>
     );
@@ -31,7 +31,7 @@ export default function Готовность({ помеха, спокойно }:
 
   return (
     <div className="today-alert">
-      <IonIcon icon={warningOutline} className="alert-ico" />
+      <Иконка icon={warningOutline} className="alert-ico" />
       <div>
         <span className="alert-title">{помеха.reason ?? 'Поиск сейчас невозможен'}</span>
         {помеха.remediation && <span>{помеха.remediation}</span>}

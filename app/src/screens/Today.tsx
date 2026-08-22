@@ -1,5 +1,5 @@
 import СтрокаОхраны from '@/ui/СтрокаОхраны';
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 /* Импорт под другим именем: местное «часы» — это длительность в часах, а не время
    на циферблате. Одно слово на два смысла в одном файле — заготовка для ошибки. */
 import { сколькоНазад, часы as наЧасах } from '@/слова/время';
@@ -378,7 +378,7 @@ export default function Today() {
               {/* Действие названо глаголом. «Еда» была существительным: что случится по
                   нажатию — открытие журнала или ввод — приходилось угадывать. */}
               <span className="carb-add">
-                <IonIcon icon={restaurantOutline} />
+                <Иконка icon={restaurantOutline} />
                 <span>внести</span>
               </span>
             </button>
@@ -400,7 +400,7 @@ export default function Today() {
               <span className="carb-hist-r">
                 {mealCount > 0 && <>{mealCount} · {toCarbs(dayCarbs, cu)} {carbUnitLabel(cu)}</>}
                 {mealCount === 0 && 'журнал'}
-                <IonIcon icon={chevronForward} />
+                <Иконка icon={chevronForward} />
               </span>
             </button>
           </div>
@@ -597,9 +597,9 @@ export default function Today() {
               Неброско намеренно: это не действие, а дверь назад во времени. Заметная
               кнопка тянула бы внимание там, где человек решает, колоть ли. */}
           <button className="сегодня-история" onClick={() => push(<HistorySection onClose={pop} />, { id: 'история' })}>
-            <IonIcon icon={timeOutline} />
+            <Иконка icon={timeOutline} />
             <span>История</span>
-            <IonIcon icon={chevronForward} className="сегодня-история-шеврон" />
+            <Иконка icon={chevronForward} className="сегодня-история-шеврон" />
           </button>
 
           </DataGate>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { IonIcon, IonToggle } from '@ionic/react';
+import { IonToggle } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { shareOutline, checkmarkCircle } from 'ionicons/icons';
 import Sheet from '@/ui/Sheet';
 import { запросЖурнала, sendIntent, type HardwareView, type LogRecord } from '@/sources/bridge';
@@ -108,7 +109,7 @@ export default function DeviceLogSheet({ прибор, onClose }: {
 
       <div className="list" style={{ marginTop: 12 }}>
         <button className="list-row" onClick={() => void поделиться()} disabled={!все.length}>
-          <IonIcon icon={поделился ? checkmarkCircle : shareOutline} className="list-ico" />
+          <Иконка icon={поделился ? checkmarkCircle : shareOutline} className="list-ico" />
           <span className="pick-main">
             <span className="list-title">{поделился ? 'Отправлено' : 'Поделиться журналом'}</span>
             <span className="pick-sub">выгрузка целиком — переслать нам, когда что-то не так</span>

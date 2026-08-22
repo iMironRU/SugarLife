@@ -1,5 +1,5 @@
 import ГотовностьТревогБлок from '@/ui/ГотовностьТревог';
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { useState } from 'react';
 import { documentTextOutline, shareOutline, warningOutline, qrCodeOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
@@ -91,7 +91,7 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
         {готовность}
         {коды}
         <div className="loop-empty">
-          <IonIcon icon={documentTextOutline} />
+          <Иконка icon={documentTextOutline} />
           <div className="loop-empty-t">Логов нет</div>
           <div className="loop-empty-s">
             Лог ведёт движок приложения, а в браузере он не работает. В приложении будет и
@@ -151,12 +151,12 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
           Вернём, когда ядро начнёт их читать. */}
 
       <button className="sheet-danger diag-share" onClick={поделиться} disabled={делюсь}>
-        <IonIcon icon={делюсь ? shareOutline : shareOutline} />
+        <Иконка icon={делюсь ? shareOutline : shareOutline} />
         {делюсь ? 'Открываю…' : 'Поделиться логом'}
       </button>
       {/* Предупреждение ДО нажатия, а не после: отправленное обратно не вернуть. */}
       <div className="sheet-note warn">
-        <IonIcon icon={warningOutline} style={{ verticalAlign: '-2px', marginRight: 4 }} />
+        <Иконка icon={warningOutline} style={{ verticalAlign: '-2px', marginRight: 4 }} />
         В логе твои данные: значения сахара, идентификаторы устройств, при включённом
         сыром обмене — переписка с сенсором. Отправляй только тому, кто разбирает проблему.
       </div>

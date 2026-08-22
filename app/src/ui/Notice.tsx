@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { closeOutline } from 'ionicons/icons';
 import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import { поВажности } from '@/domain/notices';
@@ -58,7 +58,7 @@ export default function Notice({ вид, значок, заголовок, child
 }) {
   return (
     <div className={КЛАСС[вид]}>
-      <IonIcon icon={значок} />
+      <Иконка icon={значок} />
       <div>
         <b>{заголовок}</b>
         {children && <span>{children}</span>}
@@ -66,7 +66,7 @@ export default function Notice({ вид, значок, заголовок, child
       </div>
       {отложить && (
         <button className="notice-close" onClick={отложить} aria-label="Пока не до этого">
-          <IonIcon icon={closeOutline} />
+          <Иконка icon={closeOutline} />
         </button>
       )}
     </div>

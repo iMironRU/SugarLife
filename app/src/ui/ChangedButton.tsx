@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { checkmarkCircle, refreshOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
 import { markChanged, unmarkChanged, type Consumable } from '@/settings/changes';
@@ -28,14 +28,14 @@ export default function ChangedButton({ what, label = 'Поменял' }: {
   if (отмечено) {
     return (
       <button className="changed-btn is-undo" onClick={() => { unmarkChanged(what); setОтмечено(false); }}>
-        <IonIcon icon={checkmarkCircle} />
+        <Иконка icon={checkmarkCircle} />
         отменить
       </button>
     );
   }
   return (
     <button className="changed-btn" onClick={() => { markChanged(what); setОтмечено(true); }}>
-      <IonIcon icon={refreshOutline} />
+      <Иконка icon={refreshOutline} />
       {label}
     </button>
   );

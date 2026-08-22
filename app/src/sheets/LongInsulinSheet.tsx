@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { IonIcon, IonInput } from '@ionic/react';
+import { IonInput } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { checkmarkCircle } from 'ionicons/icons';
 import Sheet from '@/ui/Sheet';
 import { sendIntent } from '@/sources/bridge';
@@ -76,7 +77,7 @@ export default function LongInsulinSheet({ onClose }: { onClose: () => void }) {
 
       <button className="food-save" disabled={!годно || пишу} onClick={() => void записать()}
         style={{ marginTop: 14 }}>
-        <IonIcon icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
+        <Иконка icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
         {пишу ? 'Записываю…' : 'Записать'}
       </button>
     </Sheet>

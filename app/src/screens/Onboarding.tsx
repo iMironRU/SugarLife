@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { часы } from '@/слова/время';
 import Row from '@/ui/Row';
-import { IonIcon, IonInput, IonButton } from '@ionic/react';
+import { IonInput, IonButton } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import {
   linkOutline, keyOutline, chevronForward, chevronBack, cloudOutline,
   listOutline, bluetoothOutline, downloadOutline, checkmarkCircle, hardwareChipOutline, flash,
@@ -155,7 +156,7 @@ export default function Onboarding() {
         </p>
         <div className="connect-form">
           <IonButton expand="block" className="connect-btn" onClick={() => setStep('ways')}>
-            <IonIcon icon={chevronForward} slot="start" />
+            <Иконка icon={chevronForward} slot="start" />
             Подключить устройство
           </IonButton>
           <button className="ob-skip" onClick={skip}>Уже настроено — просто открыть</button>
@@ -170,7 +171,7 @@ export default function Onboarding() {
       <div className="connect ob-page">
         <div className="ob-head">
           <button className="sheet-close" onClick={() => setStep('welcome')} aria-label="Назад">
-            <IonIcon icon={chevronBack} />
+            <Иконка icon={chevronBack} />
           </button>
           <div>
             <div className="sheet-title">Как подключим</div>
@@ -241,7 +242,7 @@ export default function Onboarding() {
       <div className="connect ob-page">
         <div className="ob-head">
           <button className="sheet-close" onClick={() => setStep('ways')} aria-label="Назад">
-            <IonIcon icon={chevronBack} />
+            <Иконка icon={chevronBack} />
           </button>
           <div>
             <div className="sheet-title">Поиск приборов</div>
@@ -268,7 +269,7 @@ export default function Onboarding() {
         <div className="connect-form">
           <IonButton expand="block" className="connect-btn"
             onClick={() => { void sendIntent({ type: 'requestScanPermissions' }); setStep('scan'); }}>
-            <IonIcon icon={bluetoothOutline} slot="start" />
+            <Иконка icon={bluetoothOutline} slot="start" />
             Разрешить и начать поиск
           </IonButton>
         </div>
@@ -293,7 +294,7 @@ export default function Onboarding() {
       <div className="connect ob-page">
         <div className="ob-head">
           <button className="sheet-close" onClick={() => setStep('ways')} aria-label="Назад">
-            <IonIcon icon={chevronBack} />
+            <Иконка icon={chevronBack} />
           </button>
           <div>
             <div className="sheet-title">Что рядом</div>
@@ -314,7 +315,7 @@ export default function Onboarding() {
                   : `Заведено ${заведено === 1 ? 'устройство' : `устройств: ${заведено}`}. Данные пойдут, как только прибор выйдет на связь: новый сенсор греется — это часы, и это нормально.`}
               </div>
               <IonButton expand="block" className="connect-btn" onClick={() => setOnboarded(true)}>
-                <IonIcon icon={checkmarkCircle} slot="start" />
+                <Иконка icon={checkmarkCircle} slot="start" />
                 Готово
               </IonButton>
             </>
@@ -332,7 +333,7 @@ export default function Onboarding() {
       <div className="connect ob-page">
         <div className="ob-head">
           <button className="sheet-close" onClick={() => setStep('ways')} aria-label="Назад">
-            <IonIcon icon={chevronBack} />
+            <Иконка icon={chevronBack} />
           </button>
           <div>
             <div className="sheet-title">Через облако</div>
@@ -347,20 +348,20 @@ export default function Onboarding() {
 
         <div className="connect-form">
           <div className="field">
-            <IonIcon icon={linkOutline} className="field-ico" />
+            <Иконка icon={linkOutline} className="field-ico" />
             <IonInput value={url} onIonInput={(e) => setUrl(e.detail.value ?? '')} placeholder="https://ваш-сайт.nightscout…" inputmode="url" autocapitalize="off" />
           </div>
           {needToken && (
             <>
               <div className="field-label">Токен доступа · с правом чтения</div>
               <div className="field">
-                <IonIcon icon={keyOutline} className="field-ico" />
+                <Иконка icon={keyOutline} className="field-ico" />
                 <IonInput value={token} onIonInput={(e) => setToken(e.detail.value ?? '')} placeholder="токен с ролью readable" autocapitalize="off" />
               </div>
             </>
           )}
           <IonButton expand="block" className="connect-btn" onClick={doProbe} disabled={busy}>
-            <IonIcon icon={cloudOutline} slot="start" />
+            <Иконка icon={cloudOutline} slot="start" />
             {busy ? 'Проверяю…' : needToken ? 'Проверить с токеном' : 'Посмотреть, что есть'}
           </IonButton>
           <div className="connect-msg">{msg}</div>
@@ -382,7 +383,7 @@ export default function Onboarding() {
     <div className="connect ob-page">
       <div className="ob-head">
         <button className="sheet-close" onClick={() => setStep('cloud')} aria-label="Назад">
-          <IonIcon icon={chevronBack} />
+          <Иконка icon={chevronBack} />
         </button>
         <div>
           <div className="sheet-title">Что нашли</div>
@@ -395,13 +396,13 @@ export default function Onboarding() {
           <Row icon={hardwareChipOutline} onClick={() => setPick('sensor')}
             title={`Глюкоза · ${toUnits(probe.glucose.mmol)} ${unitLabel()}`}
             sub={(glucoseAt ? `последнее в ${glucoseAt} · ` : '') + (modelTitle('sensor', sensorId) ?? 'какой у вас сенсор?')}
-            right={sensorId ? <IonIcon icon={checkmarkCircle} className="list-chev" /> : undefined} />
+            right={sensorId ? <Иконка icon={checkmarkCircle} className="list-chev" /> : undefined} />
         )}
         {probe?.pump && (
           <Row icon={flash} onClick={() => setPick('pump')}
             title={`Статус помпы${pumpBits ? ' · ' + pumpBits : ''}`}
             sub={modelTitle('pump', pumpId) ?? 'какая у вас помпа?'}
-            right={pumpId ? <IonIcon icon={checkmarkCircle} className="list-chev" /> : undefined} />
+            right={pumpId ? <Иконка icon={checkmarkCircle} className="list-chev" /> : undefined} />
         )}
       </div>
 
@@ -414,7 +415,7 @@ export default function Onboarding() {
       <div className="connect-form">
         {/* Не блокируется: модели необязательны, а облако уже проверено и работает. */}
         <IonButton expand="block" className="connect-btn" onClick={finish}>
-          <IonIcon icon={checkmarkCircle} slot="start" />
+          <Иконка icon={checkmarkCircle} slot="start" />
           Подключить
         </IonButton>
       </div>

@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { сколькоНазад } from '@/слова/время';
 import { bluetoothOutline, chevronForward } from 'ionicons/icons';
 import { useSnapshot } from '@/sources/bridge';
@@ -92,7 +92,7 @@ export default function NearbyTile() {
             </span>
           ))}
         </span>
-        <IonIcon icon={chevronForward} className="nearby-chev" />
+        <Иконка icon={chevronForward} className="nearby-chev" />
       </button>
     );
   }

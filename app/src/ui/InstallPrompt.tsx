@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { прочитать, записать } from '@/settings/storage';
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { Capacitor } from '@capacitor/core';
 import { downloadOutline, shareOutline, addOutline, close } from 'ionicons/icons';
 
@@ -72,7 +72,7 @@ export default function InstallPrompt() {
 
   return (
     <div className="install-banner">
-      <div className="install-ico"><IonIcon icon={downloadOutline} /></div>
+      <div className="install-ico"><Иконка icon={downloadOutline} /></div>
       {mode === 'android' ? (
         <>
           <div className="install-text">
@@ -85,11 +85,11 @@ export default function InstallPrompt() {
         <div className="install-text">
           <b>Добавить на экран «Домой»</b>
           <span>
-            Нажмите <IonIcon icon={shareOutline} /> внизу Safari, затем «На экран „Домой“» <IonIcon icon={addOutline} />.
+            Нажмите <Иконка icon={shareOutline} /> внизу Safari, затем «На экран „Домой“» <Иконка icon={addOutline} />.
           </span>
         </div>
       )}
-      <button className="install-close" onClick={dismiss} aria-label="Закрыть"><IonIcon icon={close} /></button>
+      <button className="install-close" onClick={dismiss} aria-label="Закрыть"><Иконка icon={close} /></button>
     </div>
   );
 }

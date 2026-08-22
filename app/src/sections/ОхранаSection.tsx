@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { playOutline, chevronForward } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
@@ -97,7 +97,7 @@ export default function ОхранаSection({ onClose }: { onClose: () => void }
                 </span>
                 {с.знак === 'нет' && с.действие && (
                   <button className="охрана-чинить" onClick={() => void починить(с.действие!)}>
-                    исправить <IonIcon icon={chevronForward} />
+                    исправить <Иконка icon={chevronForward} />
                   </button>
                 )}
               </div>
@@ -109,7 +109,7 @@ export default function ОхранаSection({ onClose }: { onClose: () => void }
               из возможных способов узнать. */}
           <button className="changed-btn is-undo во-всю" style={{ marginTop: 12 }}
             onClick={() => { void проверитьТревогу(); setПроверил(true); }}>
-            <IonIcon icon={playOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
+            <Иконка icon={playOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
             Проверить тревогу сейчас
           </button>
           {проверил && (

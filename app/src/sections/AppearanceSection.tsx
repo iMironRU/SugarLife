@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { ellipse, sunny, moon, languageOutline, checkmarkCircle } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
@@ -39,7 +39,7 @@ export default function AppearanceSection({ onClose }: { onClose: () => void }) 
       <div className="list">
         {темы.map((т) => (
           <Row key={т.key} icon={т.icon} title={т.label} sub={т.sub} chevron={false}
-            right={theme === т.key ? <IonIcon icon={checkmarkCircle} className="pick-check" /> : undefined}
+            right={theme === т.key ? <Иконка icon={checkmarkCircle} className="pick-check" /> : undefined}
             onClick={() => setTheme(т.key)} />
         ))}
       </div>

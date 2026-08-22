@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { chevronForward } from 'ionicons/icons';
 import type { ReactNode } from 'react';
 
@@ -45,7 +45,7 @@ export default function Row({ icon, title, sub, value, valueMuted, chevron = tru
 
   const inner = (
     <>
-      {icon && <IonIcon icon={icon} className="list-ico" />}
+      {icon && <Иконка icon={icon} className="list-ico" />}
       {sub ? (
         <span className="pick-main">
           <span className={tcls}>{title}</span>
@@ -56,7 +56,7 @@ export default function Row({ icon, title, sub, value, valueMuted, chevron = tru
       )}
       {value != null && <span className={'list-value' + (valueMuted ? ' muted' : '')}>{value}</span>}
       {right}
-      {!right && (onClick || href) && chevron && <IonIcon icon={chevronForward} className="list-chev" />}
+      {!right && (onClick || href) && chevron && <Иконка icon={chevronForward} className="list-chev" />}
     </>
   );
 

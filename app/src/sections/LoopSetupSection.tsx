@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { checkmarkCircle, closeCircle, alertCircle, lockClosedOutline, createOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '@/sources/store';
@@ -146,7 +146,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
               <>
                 {checks.map((c) => (
                   <div key={c.name} className="wz-card wz-hw">
-                    <IonIcon className={'wz-ic ' + c.ok} icon={c.ok === 'yes' ? checkmarkCircle : c.ok === 'no' ? closeCircle : alertCircle} />
+                    <Иконка className={'wz-ic ' + c.ok} icon={c.ok === 'yes' ? checkmarkCircle : c.ok === 'no' ? closeCircle : alertCircle} />
                     <span className="pick-main">
                       <span className="wz-hw-n">{c.name}</span>
                       <span className="wz-hw-d">{c.note}</span>
@@ -201,7 +201,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
                         <span className="wz-limname">{l.name}</span>
                         {!open && (
                           <button className="wz-edit-btn" onClick={() => setEditing(l.id)}>
-                            <IonIcon icon={createOutline} /> Изменить
+                            <Иконка icon={createOutline} /> Изменить
                           </button>
                         )}
                       </div>
@@ -290,7 +290,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
                 </div>
                 {needDoctor && (
                   <button className={'wz-gate' + (profile.doctorOk ? ' on' : '')} onClick={() => saveLoopProfile({ doctorOk: !profile.doctorOk })}>
-                    <IonIcon icon={profile.doctorOk ? checkmarkCircle : alertCircle} />
+                    <Иконка icon={profile.doctorOk ? checkmarkCircle : alertCircle} />
                     <span>Часть значений вне рекомендованного диапазона. Подтверждаю согласование с лечащим врачом.</span>
                   </button>
                 )}
@@ -302,7 +302,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
                     где человек может решить, что сейчас включит подачу, — кнопка
                     удержания, и предупреждение должно стоять ровно над ней. */}
                 <div className="wz-l0">
-                  <IonIcon icon={lockClosedOutline} />
+                  <Иконка icon={lockClosedOutline} />
                   <span>Приложение на L0: команды в помпу не отправляются. Это запись профиля, не включение подачи.</span>
                 </div>
                 <div className="wz-apply">

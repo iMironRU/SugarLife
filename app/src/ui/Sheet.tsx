@@ -1,4 +1,5 @@
-import { IonModal, IonIcon } from '@ionic/react';
+import { IonModal } from '@ionic/react';
+import Иконка from './Иконка';
 import { closeOutline, chevronBack } from 'ionicons/icons';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { закрыватьЛи, сдвиг, тянемШторку, начинатьЛи, ПОРОГ_СТАРТА, ОКНО_СКОРОСТИ } from './sheetGesture';
@@ -188,7 +189,7 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
           <span className="sheet-grab" aria-hidden />
           {onBack && (
             <button className="sheet-close" onClick={onBack} aria-label="Назад">
-              <IonIcon icon={chevronBack} />
+              <Иконка icon={chevronBack} />
             </button>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -196,7 +197,7 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
             {subtitle && <div className="sheet-subtitle">{subtitle}</div>}
           </div>
           <button className="sheet-close" onClick={закрыть} aria-label="Закрыть">
-            <IonIcon icon={closeOutline} />
+            <Иконка icon={closeOutline} />
           </button>
         </div>
         {/* У шторки этого не было вовсе (#285): длинный список в шторке обрывался у

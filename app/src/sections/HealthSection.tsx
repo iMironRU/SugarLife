@@ -1,4 +1,5 @@
-import { IonIcon, IonInput } from '@ionic/react';
+import { IonInput } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { датаПолная } from '@/слова/время';
 import {
   bodyOutline, heartOutline, flaskOutline, calendarOutline, checkmarkOutline, trashOutline,
@@ -125,13 +126,13 @@ export default function HealthSection({ onClose }: { onClose: () => void }) {
                   превращается в подтверждение и гаснет. */}
               <button className="page-btn bas-go" disabled={сегодняЛи(выбранная.когда)}
                 onClick={() => { отметитьПроверку(выбранная.проверка.id, Date.now()); setПроверка(null); }}>
-                <IonIcon icon={checkmarkOutline} />
+                <Иконка icon={checkmarkOutline} />
                 {сегодняЛи(выбранная.когда) ? ' Отмечено сегодня' : ' Сделал сегодня'}
               </button>
               {выбранная.когда && (
                 <button className="page-btn"
                   onClick={() => { забытьПроверку(выбранная.проверка.id); setПроверка(null); }}>
-                  <IonIcon icon={trashOutline} /> Убрать дату
+                  <Иконка icon={trashOutline} /> Убрать дату
                 </button>
               )}
             </div>

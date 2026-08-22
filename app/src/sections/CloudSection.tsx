@@ -1,4 +1,5 @@
-import { IonInput, IonToggle, IonButton, IonIcon } from '@ionic/react';
+import { IonInput, IonToggle, IonButton } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { DeviceSection } from '@/sections/lazy';
 import Section from '@/ui/Section';
 import { linkOutline, keyOutline, chevronForward, gitNetworkOutline, copyOutline, checkmarkOutline, trashOutline, flash, hardwareChipOutline } from 'ionicons/icons';
@@ -137,14 +138,14 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
 
         <div className="field-label">Адрес сайта</div>
         <div className="field">
-          <IonIcon icon={linkOutline} className="field-ico" />
+          <Иконка icon={linkOutline} className="field-ico" />
           <IonInput value={url} onIonInput={(e) => setUrl(e.detail.value ?? '')} placeholder="https://ваш-сайт.nightscout…" inputmode="url" autocapitalize="off" />
           {/* Адрес длинный и набирать его руками мучительно — а перенести на другое
               устройство или отправить в поддержку хочется целиком. Выделять пальцем
               внутри поля неудобно: попадаешь в правку. */}
           {url.trim() && (
             <button className={'field-copy' + (copied === 'ok' ? ' ok' : '')} onClick={copyUrl} aria-label="Скопировать адрес">
-              <IonIcon icon={copied === 'ok' ? checkmarkOutline : copyOutline} />
+              <Иконка icon={copied === 'ok' ? checkmarkOutline : copyOutline} />
             </button>
           )}
         </div>
@@ -156,7 +157,7 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
               {access === 'needsToken' ? 'Токен доступа · этот Nightscout закрыт' : 'Токен доступа'}
             </div>
             <div className="field">
-              <IonIcon icon={keyOutline} className="field-ico" />
+              <Иконка icon={keyOutline} className="field-ico" />
               <IonInput value={token} onIonInput={(e) => setToken(e.detail.value ?? '')} placeholder="токен из Nightscout" autocapitalize="off" />
             </div>
           </>
@@ -168,7 +169,7 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
         )}
 
         <IonButton expand="block" className="connect-btn" onClick={save} disabled={checking}>
-          <IonIcon icon={gitNetworkOutline} slot="start" />
+          <Иконка icon={gitNetworkOutline} slot="start" />
           Проверить и сохранить
         </IonButton>
 
@@ -189,23 +190,23 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
               вынесен из кнопки: он про источник данных, а не про переход. */}
           <div className="list-row src-row">
             <button className="src-main" onClick={() => push(<DeviceSection cat="sensor" title="Сенсор (НМГ)" onClose={pop} />, { id: 'категория', cat: 'sensor', title: 'Сенсор (НМГ)' })}>
-              <IonIcon icon={hardwareChipOutline} className="list-ico" />
+              <Иконка icon={hardwareChipOutline} className="list-ico" />
               <span className="pick-main">
                 <span className={'list-title' + (sensorRecorded ? '' : ' muted')}>{sensorLabel}</span>
                 <span className="pick-sub">{sensorSub}</span>
               </span>
-              <IonIcon icon={chevronForward} className="list-chev" />
+              <Иконка icon={chevronForward} className="list-chev" />
             </button>
             <IonToggle checked={cloud.sourceGlucose} disabled={!sensorRecorded} onIonChange={(e) => onToggleSensor(e.detail.checked)} />
           </div>
           <div className="list-row src-row">
             <button className="src-main" onClick={() => push(<DeviceSection cat="pump" title="Помпа" onClose={pop} />, { id: 'категория', cat: 'pump', title: 'Помпа' })}>
-              <IonIcon icon={flash} className="list-ico" />
+              <Иконка icon={flash} className="list-ico" />
               <span className="pick-main">
                 <span className={'list-title' + (pumpRecorded ? '' : ' muted')}>{pumpLabel}</span>
                 <span className="pick-sub">{pumpSub}</span>
               </span>
-              <IonIcon icon={chevronForward} className="list-chev" />
+              <Иконка icon={chevronForward} className="list-chev" />
             </button>
             <IonToggle checked={cloud.sourcePumpStatus} disabled={!pumpRecorded} onIonChange={(e) => onTogglePump(e.detail.checked)} />
           </div>
@@ -215,7 +216,7 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
         )}
 
         <button className="sheet-danger" onClick={onDelete}>
-          <IonIcon icon={trashOutline} />
+          <Иконка icon={trashOutline} />
           Удалить облако
         </button>
     </Section>

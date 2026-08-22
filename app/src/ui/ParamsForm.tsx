@@ -1,4 +1,5 @@
-import { IonIcon, IonInput, IonToggle } from '@ionic/react';
+import { IonInput, IonToggle } from '@ionic/react';
+import Иконка from './Иконка';
 import { qrCodeOutline, openOutline } from 'ionicons/icons';
 import type { SettingsSpec } from '@/sources/bridge';
 
@@ -46,7 +47,7 @@ function Подробнее({ адрес, зеркало }: { адрес: string
   return (
     <>
       <a className="param-help" href={адрес} target="_blank" rel="noreferrer">
-        <IonIcon icon={openOutline} /> Подробнее
+        <Иконка icon={openOutline} /> Подробнее
       </a>
       {зеркало && зеркало !== адрес && (
         <a className="param-help-alt" href={зеркало} target="_blank" rel="noreferrer">
@@ -124,7 +125,7 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
               />
               {p.scan === 'qr' && onScan && (
                 <button className="field-copy" onClick={() => onScan(p.key)} aria-label="Сканировать QR">
-                  <IonIcon icon={qrCodeOutline} />
+                  <Иконка icon={qrCodeOutline} />
                 </button>
               )}
             </div>
