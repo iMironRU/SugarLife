@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Виджет сахара (SugarLife#449).
+
+    Раскладка ровно та, что человек уже видит в приложении: кольцо слева, число крупно, под ним
+    возраст показания и мелкая строка про инсулин и сырое значение.
+
+    Возраст — Chronometer, а не текст: он считает сам, внутри процесса лаунчера, и продолжает идти,
+    когда наша служба остановлена. Виджет с застывшим «2 мин» врал бы убедительнее, чем пустой.
+
+    Ширины фиксированные, потому что RemoteViews не умеет constraint-раскладок: горизонтальный ряд
+    с весами — самое надёжное, что переживает и 4×2, и 2×2 (resizeMode в описании виджета).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/sugar_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="12dp"
+    android:background="@drawable/sugar_widget_bg">
+
+    <ImageView
+        android:id="@+id/sugar_ring"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:contentDescription="@string/widget_ring_desc" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="12dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/sugar_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#E9E9ED"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:includeFontPadding="false"
+            android:text="—" />
+
+        <Chronometer
+            android:id="@+id/sugar_age"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#9397AB"
+            android:textSize="13sp"
+            android:includeFontPadding="false" />
+
+        <TextView
+            android:id="@+id/sugar_sub"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#9397AB"
+            android:textSize="12sp"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:ellipsize="end" />
+    </LinearLayout>
+</LinearLayout>
