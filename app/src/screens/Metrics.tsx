@@ -1,5 +1,6 @@
-import { IonSpinner } from '@ionic/react';
+
 import Иконка from '@/ui/Иконка';
+import Крутилка from '@/ui/Крутилка';
 import { useTab } from '@/app/nav';
 import { water, nutrition, medkit } from 'ionicons/icons';
 import ЧипыПотоков, { type Поток } from '@/ui/Потоки';
@@ -161,7 +162,7 @@ export default function Metrics() {
 
           {gathering && (
             <div className="gather-note">
-              <IonSpinner name="crescent" />
+              <Крутилка />
               <span>Собираем историю за {days} дн — данные ещё пополняются, показано не за весь период.</span>
             </div>
           )}

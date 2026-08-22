@@ -171,10 +171,8 @@ export function syncToActiveScreen(таб?: number): void {
      сахара размер и ничего не давать взамен (ui/Screen.tsx решает, когда так). */
   if (pane.querySelector('.screen.is-mid')) { setProgress(СЕРЕДИНА); return; }
   if (pane.querySelector('.screen.is-compact')) { setProgress(1); return; }
-  const content = pane.querySelector('ion-content') as (HTMLElement & { getScrollElement?: () => Promise<HTMLElement> }) | null;
-  if (content?.getScrollElement) {
-    content.getScrollElement().then((el) => setCollapse(el.scrollTop)).catch(() => setCollapse(0));
-  } else {
-    setCollapse(0);
-  }
+  /* Скроллер свой и обычный (#405): раньше здесь спрашивали `ion-content`, у которого элемент
+     прокрутки лежал в теневом дереве и отдавался обещанием. Теперь это просто узел. */
+  const скроллер = pane.querySelector('.страница-тело') as HTMLElement | null;
+  setCollapse(скроллер?.scrollTop ?? 0);
 }

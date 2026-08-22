@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { IonInput } from '@ionic/react';
+import Поле from '@/ui/Поле';
+
 import Иконка from '@/ui/Иконка';
 import { checkmarkCircle, trashOutline } from 'ionicons/icons';
 import Sheet from '@/ui/Sheet';
@@ -86,16 +87,16 @@ export default function MealEditSheet({ приём, onClose }: { приём: Mea
       <div className="param">
         <div className="field-label">Углеводы, {carbUnitLabel(cu)}</div>
         <div className="field">
-          <IonInput value={углеводы} inputmode="decimal"
-            onIonInput={(e) => setУглеводы(e.detail.value ?? '')} />
+          <Поле value={углеводы} inputmode="decimal"
+            onInput={(v: string) => setУглеводы(v)} />
         </div>
       </div>
 
       <div className="param">
         <div className="field-label">Когда ели</div>
         <div className="field">
-          <IonInput value={время} inputmode="numeric"
-            onIonInput={(e) => setВремя(e.detail.value ?? '')} placeholder="13:20" />
+          <Поле value={время} inputmode="numeric"
+            onInput={(v: string) => setВремя(v)} placeholder="13:20" />
         </div>
         <div className="field-hint param-hint">
           От времени еды считаются активные углеводы — если вносили задним числом,
@@ -106,8 +107,8 @@ export default function MealEditSheet({ приём, onClose }: { приём: Mea
       <div className="param">
         <div className="field-label">Название, если хотите</div>
         <div className="field">
-          <IonInput value={имя} placeholder="овсянка с бананом"
-            onIonInput={(e) => setИмя(e.detail.value ?? '')} />
+          <Поле value={имя} placeholder="овсянка с бананом"
+            onInput={(v: string) => setИмя(v)} />
         </div>
         <div className="field-hint param-hint">
           Так будут подписаны все такие приёмы — этот тип и примерно столько же углеводов.

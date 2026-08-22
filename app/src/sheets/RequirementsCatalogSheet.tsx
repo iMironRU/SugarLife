@@ -1,5 +1,6 @@
-import { IonInput } from '@ionic/react';
+
 import Иконка from '@/ui/Иконка';
+import Поле from '@/ui/Поле';
 import Row from '@/ui/Row';
 import { searchOutline, lockClosedOutline } from 'ionicons/icons';
 import { useState } from 'react';
@@ -35,7 +36,7 @@ export default function RequirementsCatalogSheet({ isOpen, onClose }: {
           <>
             <div className="field">
               <Иконка icon={searchOutline} className="field-ico" />
-              <IonInput placeholder="Модель или бренд" value={q} onIonInput={(e) => setQ(e.detail.value || '')} />
+              <Поле placeholder="Модель или бренд" value={q} onInput={(v: string) => setQ(v || '')} />
             </div>
             <div className="list" style={{ marginTop: 10 }}>
               {filtered.map((r) => (

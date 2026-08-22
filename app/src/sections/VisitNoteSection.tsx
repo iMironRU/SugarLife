@@ -1,4 +1,6 @@
-import { IonInput, IonToggle } from '@ionic/react';
+
+import Переключатель from '@/ui/Переключатель';
+import Поле from '@/ui/Поле';
 import Иконка from '@/ui/Иконка';
 import { деньМесяц } from '@/слова/время';
 import { checkmarkCircle, ellipseOutline, addOutline, helpCircleOutline, personOutline, printOutline } from 'ionicons/icons';
@@ -376,7 +378,7 @@ export default function VisitNoteSection({ onClose, встроенный }: {
       <div className="list">
         <Row icon={helpCircleOutline} title="Готовить вопросы к приёму"
           sub={вопросы.нужны ? 'список копится между приёмами' : 'предложим по вашим данным и дадим дописать своё'}
-          right={<IonToggle checked={!!вопросы.нужны} onIonChange={(e) => нужныЛиВопросы(e.detail.checked)} />} />
+          right={<Переключатель checked={!!вопросы.нужны} onChange={(v) => нужныЛиВопросы(v)} />} />
       </div>
       {вопросы.нужны && (<>
       <div className="list" style={{ marginTop: 10 }}>
@@ -409,11 +411,9 @@ export default function VisitNoteSection({ onClose, встроенный }: {
 
       <div className="field" style={{ marginTop: 10 }}>
         <Иконка icon={addOutline} className="field-ico" />
-        <IonInput value={своё} placeholder="Свой вопрос врачу"
-          onIonInput={(e) => setСвоё(e.detail.value ?? '')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && своё.trim()) { добавитьВопрос(своё.trim()); setСвоё(''); }
-          }} />
+        <Поле value={своё} placeholder="Свой вопрос врачу"
+          onInput={(v: string) => setСвоё(v)}
+          onEnter={() => { if (своё.trim()) { добавитьВопрос(своё.trim()); setСвоё(''); } }} />
       </div>
       {своё.trim() && (
         <button className="changed-btn во-всю" style={{ marginTop: 8 }}
@@ -435,8 +435,8 @@ export default function VisitNoteSection({ onClose, встроенный }: {
       </div>
       <div className="field" style={{ marginTop: 10 }}>
         <Иконка icon={personOutline} className="field-ico" />
-        <IonInput value={имя} placeholder="Имя в файле (можно не указывать)"
-          onIonInput={(e) => setИмя(e.detail.value ?? '')} />
+        <Поле value={имя} placeholder="Имя в файле (можно не указывать)"
+          onInput={(v: string) => setИмя(v)} />
       </div>
       <button className="changed-btn is-undo во-всю" style={{ marginTop: 10 }}
         onClick={() => window.print()}>

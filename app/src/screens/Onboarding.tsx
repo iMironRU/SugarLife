@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
+import Поле from '@/ui/Поле';
 import { часы } from '@/слова/время';
 import Row from '@/ui/Row';
-import { IonInput, IonButton } from '@ionic/react';
+
 import Иконка from '@/ui/Иконка';
 import {
   linkOutline, keyOutline, chevronForward, chevronBack, cloudOutline,
@@ -23,7 +24,6 @@ import { refresh } from '@/sources/store';
 import { setDeviceConfig, UNKNOWN_MODEL } from '@/settings/deviceConfig';
 import { setOnboarded } from '@/settings/onboarding';
 import { toUnits, unitLabel } from '@/domain/units';
-
 
 /* Ведём на СВОЮ страницу «где взять», а не на GitHub Releases (#316).
 
@@ -155,10 +155,10 @@ export default function Onboarding() {
           или через облако, если данные уже уходят в Nightscout.
         </p>
         <div className="connect-form">
-          <IonButton expand="block" className="connect-btn" onClick={() => setStep('ways')}>
+          <button className="кнопка-во-всю connect-btn" onClick={() => setStep('ways')}>
             <Иконка icon={chevronForward} slot="start" />
             Подключить устройство
-          </IonButton>
+          </button>
           <button className="ob-skip" onClick={skip}>Уже настроено — просто открыть</button>
         </div>
       </div>
@@ -267,11 +267,11 @@ export default function Onboarding() {
         <Готовность помеха={мешаетТут} />
 
         <div className="connect-form">
-          <IonButton expand="block" className="connect-btn"
+          <button className="кнопка-во-всю connect-btn"
             onClick={() => { void sendIntent({ type: 'requestScanPermissions' }); setStep('scan'); }}>
             <Иконка icon={bluetoothOutline} slot="start" />
             Разрешить и начать поиск
-          </IonButton>
+          </button>
         </div>
         <button className="ob-skip" onClick={skip}>Пропустить — настрою потом</button>
       </div>
@@ -314,10 +314,10 @@ export default function Onboarding() {
                   ? `${имяЖелезки(живой)} на связи — данные пошли.`
                   : `Заведено ${заведено === 1 ? 'устройство' : `устройств: ${заведено}`}. Данные пойдут, как только прибор выйдет на связь: новый сенсор греется — это часы, и это нормально.`}
               </div>
-              <IonButton expand="block" className="connect-btn" onClick={() => setOnboarded(true)}>
+              <button className="кнопка-во-всю connect-btn" onClick={() => setOnboarded(true)}>
                 <Иконка icon={checkmarkCircle} slot="start" />
                 Готово
-              </IonButton>
+              </button>
             </>
           ) : (
             <button className="ob-skip" onClick={skip}>Пропустить — настрою потом</button>
@@ -349,21 +349,21 @@ export default function Onboarding() {
         <div className="connect-form">
           <div className="field">
             <Иконка icon={linkOutline} className="field-ico" />
-            <IonInput value={url} onIonInput={(e) => setUrl(e.detail.value ?? '')} placeholder="https://ваш-сайт.nightscout…" inputmode="url" autocapitalize="off" />
+            <Поле value={url} onInput={(v: string) => setUrl(v)} placeholder="https://ваш-сайт.nightscout…" inputmode="url" />
           </div>
           {needToken && (
             <>
               <div className="field-label">Токен доступа · с правом чтения</div>
               <div className="field">
                 <Иконка icon={keyOutline} className="field-ico" />
-                <IonInput value={token} onIonInput={(e) => setToken(e.detail.value ?? '')} placeholder="токен с ролью readable" autocapitalize="off" />
+                <Поле value={token} onInput={(v: string) => setToken(v)} placeholder="токен с ролью readable" />
               </div>
             </>
           )}
-          <IonButton expand="block" className="connect-btn" onClick={doProbe} disabled={busy}>
+          <button className="кнопка-во-всю connect-btn" onClick={doProbe} disabled={busy}>
             <Иконка icon={cloudOutline} slot="start" />
             {busy ? 'Проверяю…' : needToken ? 'Проверить с токеном' : 'Посмотреть, что есть'}
-          </IonButton>
+          </button>
           <div className="connect-msg">{msg}</div>
         </div>
 
@@ -414,10 +414,10 @@ export default function Onboarding() {
 
       <div className="connect-form">
         {/* Не блокируется: модели необязательны, а облако уже проверено и работает. */}
-        <IonButton expand="block" className="connect-btn" onClick={finish}>
+        <button className="кнопка-во-всю connect-btn" onClick={finish}>
           <Иконка icon={checkmarkCircle} slot="start" />
           Подключить
-        </IonButton>
+        </button>
       </div>
       {/* «Пропустить» здесь нет намеренно: на этом шаге пропуск молча выбрасывал
           рабочее подключение. Отказаться можно шагом назад, до проверки. */}

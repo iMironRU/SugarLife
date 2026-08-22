@@ -1,4 +1,6 @@
-import { IonInput, IonToggle } from '@ionic/react';
+
+import Переключатель from './Переключатель';
+import Поле from './Поле';
 import Иконка from './Иконка';
 import { qrCodeOutline, openOutline } from 'ionicons/icons';
 import type { SettingsSpec } from '@/sources/bridge';
@@ -77,7 +79,7 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
                   {p.hint && <span className="pick-sub">{p.hint}</span>}
                   {p.helpUrl && <Подробнее адрес={p.helpUrl} зеркало={p.helpUrlMirror} />}
                 </span>
-                <IonToggle checked={on} onIonChange={(e) => onChange(p.key, String(e.detail.checked))} />
+                <Переключатель checked={on} onChange={(v) => onChange(p.key, String(v))} ariaLabel={p.title} />
               </div>
             </div>
           );
@@ -112,16 +114,14 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
           <div key={p.key} className="param">
             <div className="field-label">{p.title}{p.required && <span className="param-req"> · обязательно</span>}</div>
             <div className="field">
-              <IonInput
-                value={value}
-                type={secret ? 'password' : p.type === 'Number' ? 'number' : 'text'}
+              <Поле
+                value={value} type={secret ? 'password' : 'text'}
                 /* Клавиатуру выбираем отдельно от типа: серийник помпы — текст (ведущие
                    нули существуют), но набирают его цифрами, и буквенная раскладка тут
                    лишний шаг у человека, который смотрит на наклейку сзади помпы. */
                 inputmode={p.keyboard ?? (p.type === 'Number' ? 'numeric' : undefined)}
-                autocapitalize="off"
                 placeholder={p.default ?? (secret ? '' : 'не задано')}
-                onIonInput={(e) => onChange(p.key, e.detail.value ?? '')}
+                onInput={(v: string) => onChange(p.key, v)}
               />
               {p.scan === 'qr' && onScan && (
                 <button className="field-copy" onClick={() => onScan(p.key)} aria-label="Сканировать QR">

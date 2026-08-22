@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { IonToggle } from '@ionic/react';
+import Переключатель from '@/ui/Переключатель';
+
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import { repeat, lockClosedOutline, listOutline, shareOutline } from 'ionicons/icons';
@@ -78,9 +79,9 @@ export default function LoopSection({ onClose }: { onClose: () => void }) {
               sub={наружу === null && спросили
                 ? 'эта сборка старше отдачи — обновите приложение целиком'
                 : наружу?.кому ?? 'спрашиваю…'}
-              right={<IonToggle checked={!!наружу?.включено} disabled={!наружу}
-                onIonChange={(e) => {
-                  const on = e.detail.checked;
+              right={<Переключатель checked={!!наружу?.включено} disabled={!наружу}
+                onChange={(v) => {
+                  const on = v;
                   setНаружу((н) => (н ? { ...н, включено: on } : н));
                   void задатьОтдачу(on).then(({ мешает }) =>
                     setНаружу((н) => (н ? { ...н, мешает } : н)));

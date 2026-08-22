@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { IonInput } from '@ionic/react';
+import Поле from '@/ui/Поле';
+
 import Иконка from '@/ui/Иконка';
 import { checkmarkCircle } from 'ionicons/icons';
 import Sheet from '@/ui/Sheet';
@@ -53,7 +54,7 @@ export default function LongInsulinSheet({ onClose }: { onClose: () => void }) {
       <div className="param">
         <div className="field-label">Сколько единиц<span className="param-req"> · обязательно</span></div>
         <div className="field">
-          <IonInput value={ед} onIonInput={(e) => setЕд(e.detail.value ?? '')}
+          <Поле value={ед} onInput={(v: string) => setЕд(v)}
             inputmode="decimal" placeholder="например, 24" />
         </div>
       </div>
@@ -61,7 +62,7 @@ export default function LongInsulinSheet({ onClose }: { onClose: () => void }) {
       <div className="param">
         <div className="field-label">Когда</div>
         <div className="field">
-          <IonInput value={время} onIonInput={(e) => setВремя(e.detail.value ?? '')}
+          <Поле value={время} onInput={(v: string) => setВремя(v)}
             inputmode="numeric" placeholder="22:10" />
         </div>
         <div className="field-hint param-hint">
