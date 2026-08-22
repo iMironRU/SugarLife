@@ -83,7 +83,11 @@ class SugarLifeService : Service() {
     private fun слушатьРадиТревог() {
         runCatching {
             EngineHolder.engine(applicationContext).subscribe { json ->
-                Тревоги.приСнимке(applicationContext, json)
+                /* Сначала спрашиваем движок (#482): если тревоги ведёт он, наша половина молчит —
+                   двоевластия в тревогах быть не должно. Вернул false — дежурим по-прежнему мы. */
+                if (!ТревогиДвижка.приСнимке(applicationContext, json)) {
+                    Тревоги.приСнимке(applicationContext, json)
+                }
                 показатьСахар(json)   // человек чаще всего смотрит сюда (#449)
                 SugarWidget.приСнимке(applicationContext, json)   // и на рабочий стол (#449)
             }
