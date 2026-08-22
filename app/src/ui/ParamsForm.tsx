@@ -35,12 +35,25 @@ export interface ParamsFormProps {
    в поиске и находил чужую инструкцию к другой версии.
 
    Адрес приходит от ядра вместе с параметром. Своих ссылок мы не подставляем по той же
-   причине, по которой не пишем подсказок: знание о железке живёт у того, кто её знает. */
-function Подробнее({ адрес }: { адрес: string }) {
+   причине, по которой не пишем подсказок: знание о железке живёт у того, кто её знает.
+
+   ЗЕРКАЛО — ЗАПАСНОЙ ВЫХОД, А НЕ ВТОРАЯ КНОПКА (core#114). Тот же текст лежит в
+   репозитории и отвечает даже там, где основной домен ещё не разрешается. Но поставить
+   их рядом нельзя: два одинаковых «подробнее» у одного поля человек читает как выбор,
+   которого нет, — и первым делом попробует угадать, чем они отличаются. Поэтому зеркало
+   появляется отдельной, тихой строкой и названо тем, чем является: «не открывается?». */
+function Подробнее({ адрес, зеркало }: { адрес: string; зеркало?: string | null }) {
   return (
-    <a className="param-help" href={адрес} target="_blank" rel="noreferrer">
-      <IonIcon icon={openOutline} /> Подробнее
-    </a>
+    <>
+      <a className="param-help" href={адрес} target="_blank" rel="noreferrer">
+        <IonIcon icon={openOutline} /> Подробнее
+      </a>
+      {зеркало && зеркало !== адрес && (
+        <a className="param-help-alt" href={зеркало} target="_blank" rel="noreferrer">
+          не открывается?
+        </a>
+      )}
+    </>
   );
 }
 
@@ -61,7 +74,7 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
                 <span className="pick-main">
                   <span className="list-title">{p.title}</span>
                   {p.hint && <span className="pick-sub">{p.hint}</span>}
-                  {p.helpUrl && <Подробнее адрес={p.helpUrl} />}
+                  {p.helpUrl && <Подробнее адрес={p.helpUrl} зеркало={p.helpUrlMirror} />}
                 </span>
                 <IonToggle checked={on} onIonChange={(e) => onChange(p.key, String(e.detail.checked))} />
               </div>
@@ -74,7 +87,7 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
             <div key={p.key} className="param">
               <div className="field-label">{p.title}{p.required && <span className="param-req"> · обязательно</span>}</div>
               {p.hint && <div className="field-hint param-hint">{p.hint}</div>}
-              {p.helpUrl && <Подробнее адрес={p.helpUrl} />}
+              {p.helpUrl && <Подробнее адрес={p.helpUrl} зеркало={p.helpUrlMirror} />}
               {/* Подпись варианта — от ядра (мост 1.23). Своей не выдумываем: `auto`,
                   `868`, `916` человеку не говорят ничего, но что именно они значат,
                   знает тот, кто знает железку. Нет подписи — показываем сам вариант:
@@ -119,7 +132,7 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
                 хардкод под конкретный коннектор здесь означал бы, что каждое новое
                 устройство требует правки интерфейса. */}
             {p.hint && <div className="field-hint param-hint">{p.hint}</div>}
-            {p.helpUrl && <Подробнее адрес={p.helpUrl} />}
+            {p.helpUrl && <Подробнее адрес={p.helpUrl} зеркало={p.helpUrlMirror} />}
           </div>
         );
       })}

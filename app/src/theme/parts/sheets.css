@@ -473,3 +473,10 @@ label.list-row { cursor: pointer; }
   color: var(--color-accent); font-size: 0.8125rem; text-decoration: none;
 }
 .param-help ion-icon { font-size: 0.9375rem; }
+
+/* Зеркало гайда — запасной выход (core#114). Тише основной ссылки и без иконки: он нужен
+   только тому, у кого первая не открылась, и спорить с ней за внимание не должен. */
+.param-help-alt {
+  display: inline-block; margin-top: 4px; margin-left: 14px;
+  color: var(--color-neutral-600); font-size: 0.75rem; text-decoration: underline;
+}
