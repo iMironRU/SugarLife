@@ -74,6 +74,7 @@ for ED in $EDITIONS; do
         if ( cd ios/App && JAVA_HOME="$JDK17" xcodebuild -project App.xcodeproj -scheme App \
               -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath "$DD" \
               -allowProvisioningUpdates DEVELOPMENT_TEAM="$TEAM" APP_BUNDLE_ID="$BID" \
+              ${SL_ENTITLEMENTS:+SL_ENTITLEMENTS="$SL_ENTITLEMENTS"} \
               APP_DISPLAY_NAME="$DNAME" \
               build -quiet ); then
           note "iOS $ED: ✅  ($BID)"
