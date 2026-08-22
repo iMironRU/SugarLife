@@ -598,6 +598,11 @@ export interface AlarmRuleView {
   throughSpeaker?: boolean;
   voice?: string;
   effectiveWords?: string | null;
+  /* Адрес объяснения и зеркало (rev ≥ 1.30, SugarLifeCore#16). Правило у нас общее с ядром: нет
+     объяснения — нет настройки. Экран тревог полон чисел, объяснить которые строкой под полем
+     нельзя, и статья тут не украшение. */
+  helpUrl?: string | null;
+  helpUrlMirror?: string | null;
 }
 
 /* СОБЫТИЕ ТРЕВОГИ (rev ≥ 1.29, SugarLife#482).

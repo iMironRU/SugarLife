@@ -49,7 +49,17 @@ object ТревогиДвижка {
      */
     fun приСнимке(ctx: Context, json: String): Boolean {
         val снимок = runCatching { JSONObject(json) }.getOrNull() ?: return дежуритДвижок
-        val правил = снимок.optJSONArray("alarmRules")?.length() ?: 0
+        val правила = снимок.optJSONArray("alarmRules")
+        val правил = правила?.length() ?: 0
+        /* Выключатель точных будильников приезжает в правилах молчания — там же, где пороги, которые он
+           делает достижимыми или нет. Зеркалим в настройки: будильник заводится в фоне, где снимка нет. */
+        for (i in 0 until правил) {
+            val н = правила?.optJSONObject(i)?.optJSONObject("settings") ?: continue
+            if (н.has("alarms.exactWakeups")) {
+                Точность.запомнить(ctx, н.optString("alarms.exactWakeups", "off"))
+                break
+            }
+        }
         val ведёт = ПравилаПоказа.ведётДвижок(снимок.optString("bridgeRevision", null), правил)
         if (ведёт && !дежуритДвижок) {
             Log.i(TAG, "тревоги ведёт движок — наша половина уходит в отставку")
