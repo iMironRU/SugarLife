@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { CloudSection, CloudAccountsSection } from '@/sections/lazy';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
@@ -36,8 +36,8 @@ export default function ServicesSection({ onClose, встроенный }: {
     if (!c.sourceGlucose && !c.sourcePumpStatus) return <span className="list-value">ничего не берём</span>;
     return (
       <span className="list-roles">
-        {c.sourceGlucose && <IonIcon icon={pulse} aria-label="глюкоза" title="глюкоза" />}
-        {c.sourcePumpStatus && <IonIcon icon={flash} aria-label="статус помпы" title="статус помпы" />}
+        {c.sourceGlucose && <Иконка icon={pulse} aria-label="глюкоза" title="глюкоза" />}
+        {c.sourcePumpStatus && <Иконка icon={flash} aria-label="статус помпы" title="статус помпы" />}
       </span>
     );
   };

@@ -1,4 +1,5 @@
-import { IonIcon, IonSpinner } from '@ionic/react';
+import { IonSpinner } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import Row from '@/ui/Row';
 import {bluetoothOutline, radioOutline, checkmarkCircle} from 'ionicons/icons';
 import { useEffect, useState } from 'react';
@@ -126,7 +127,7 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
         {step.kind === 'list' && (
           <>
             <div className={'scan-state' + (scanning ? ' on' : '')}>
-              {scanning ? <IonSpinner name="crescent" /> : <IonIcon icon={bluetoothOutline} />}
+              {scanning ? <IonSpinner name="crescent" /> : <Иконка icon={bluetoothOutline} />}
               <span>{scanning ? 'Ищу устройства рядом…' : 'Поиск остановлен'}</span>
             </div>
             <div className="list">
@@ -214,7 +215,7 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
             )}
             <button className="food-save" disabled={busy || !!мало.length}
               onClick={() => confirm(step.item, step.target, values)} style={{ marginTop: 16 }}>
-              <IonIcon icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
+              <Иконка icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
               {busy ? 'Подключаю…' : 'Подключить'}
             </button>
           </>

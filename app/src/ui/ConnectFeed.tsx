@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { сколькоНазад } from '@/слова/время';
 import { bluetoothOutline, checkmarkCircleOutline, alertCircleOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
@@ -53,7 +53,7 @@ export default function ConnectFeed() {
     <div className="connect-feed">
       {свежие.map((e) => (
         <div key={e.id + e.at} className={'connect-line is-' + e.phase}>
-          <IonIcon icon={e.phase === 'captured' ? checkmarkCircleOutline
+          <Иконка icon={e.phase === 'captured' ? checkmarkCircleOutline
             : e.phase === 'released' ? alertCircleOutline : bluetoothOutline} />
           <span>{фразаСобытия(e)}</span>
           <i>{сколькоНазад(e.at).replace(' назад', '')}</i>

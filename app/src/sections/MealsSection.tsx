@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { имяДня, часы } from '@/слова/время';
 import { useState } from 'react';
 import { restaurantOutline, cloudOutline, chevronForward } from 'ionicons/icons';
@@ -99,7 +99,7 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
       {вкладка === 'безЗаписи' ? (
         подъёмы.length === 0 ? (
           <div className="loop-empty">
-            <IonIcon icon={restaurantOutline} />
+            <Иконка icon={restaurantOutline} />
             <div className="loop-empty-t">Всё объяснено</div>
             <div className="loop-empty-s">
               За сутки не было подъёмов, под которыми нет записи. Это не оценка — просто
@@ -137,7 +137,7 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
         )
       ) : все.length === 0 ? (
         <div className="loop-empty">
-          <IonIcon icon={restaurantOutline} />
+          <Иконка icon={restaurantOutline} />
           <div className="loop-empty-t">Записей нет</div>
           <div className="loop-empty-s">
             Ни в приложении, ни в Nightscout за этот период. Внести приём можно с экрана
@@ -171,10 +171,10 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
                        их в одну строку, мы заставили бы читать обе, чтобы найти первую. */
                     return <>{п.главное}{п.уточнение && <> · <span className="meal-kind">{п.уточнение}</span></>}</>;
                   })()}
-                  {!x.своё && <> · <IonIcon icon={cloudOutline} /> Nightscout</>}
+                  {!x.своё && <> · <Иконка icon={cloudOutline} /> Nightscout</>}
                 </span>
               </div>
-              {x.своё && <IonIcon icon={chevronForward} className="list-chev" />}
+              {x.своё && <Иконка icon={chevronForward} className="list-chev" />}
             </button>
           ))}
         </div>

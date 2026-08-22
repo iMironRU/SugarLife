@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { checkmarkCircle, ellipseOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import Section from '@/ui/Section';
@@ -92,7 +92,7 @@ export default function SourcesSection({ onClose, встроенный }: {
                      состояния не заводим, и разъезжаться нечему. Замолчит выбранный —
                      данные придут прежним путём, человек не останется ни с чем. */
                   onClick={() => { if (!и.активен && и.id !== 'руками') void sendIntent({ type: 'setPrimarySource', sourceId: и.id }); }}>
-                  <IonIcon icon={и.активен ? checkmarkCircle : ellipseOutline} className="list-ico" />
+                  <Иконка icon={и.активен ? checkmarkCircle : ellipseOutline} className="list-ico" />
                   <span className="pick-main">
                     <span className="list-title">{и.имя}</span>
                     <span className="pick-sub">{и.подпись}</span>

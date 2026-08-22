@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { chevronBack } from 'ionicons/icons';
 import type { ReactNode } from 'react';
 
@@ -41,7 +41,7 @@ export default function PageHead({ title, subtitle, onBack, действие }: 
 }) {
   return (
     <div className="sheet-head">
-      <button className="sheet-close" onClick={onBack} aria-label="Назад"><IonIcon icon={chevronBack} /></button>
+      <button className="sheet-close" onClick={onBack} aria-label="Назад"><Иконка icon={chevronBack} /></button>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="sheet-title">{title}</div>
         {subtitle && <div className="sheet-subtitle">{subtitle}</div>}

@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { bluetoothOutline, checkmarkCircleOutline, warningOutline } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { sendIntent, useSnapshot, type UiSnapshot } from '@/sources/bridge';
@@ -90,7 +90,7 @@ export default function ReleaseBle() {
 
   return (
     <button className={'release-ble' + вид.cls} onClick={отдать} disabled={фаза === 'ждём' || фаза === 'готово'}>
-      <IonIcon icon={вид.icon} />
+      <Иконка icon={вид.icon} />
       <span>
         <b>
           {фаза === 'готово' ? 'Устройства отпущены'

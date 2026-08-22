@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { playOutline, pauseOutline, refreshOutline, trashOutline, checkmarkCircle } from 'ionicons/icons';
 import Sheet from '@/ui/Sheet';
 import Row from '@/ui/Row';
@@ -155,7 +155,7 @@ export default function HardwareSheet({ прибор, снимок, попытк
             onScan={setЧитаемДля} />
           <button className="food-save" disabled={сохраняю || !естьЧтоСохранить}
             onClick={() => void сохранить()} style={{ marginTop: 12 }}>
-            <IonIcon icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
+            <Иконка icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
             {сохраняю ? 'Сохраняю…' : 'Сохранить'}
           </button>
           {!!мало.length && (

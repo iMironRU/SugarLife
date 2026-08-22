@@ -1,4 +1,5 @@
-import { IonIcon, IonInput, IonToggle } from '@ionic/react';
+import { IonInput, IonToggle } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { деньМесяц } from '@/слова/время';
 import { checkmarkCircle, ellipseOutline, addOutline, helpCircleOutline, personOutline, printOutline } from 'ionicons/icons';
 import { useMemo, useState } from 'react';
@@ -355,7 +356,7 @@ export default function VisitNoteSection({ onClose, встроенный }: {
           return (
             <button key={в.id} className={'list-row pick-row' + (выбран ? ' on' : '')}
               onClick={() => переключитьВопрос(в.id)}>
-              <IonIcon icon={выбран ? checkmarkCircle : ellipseOutline} className="list-ico" />
+              <Иконка icon={выбран ? checkmarkCircle : ellipseOutline} className="list-ico" />
               <span className="pick-main">
                 <span className="list-title">{в.текст}</span>
                 <span className="pick-sub">повод: {в.повод}</span>
@@ -365,7 +366,7 @@ export default function VisitNoteSection({ onClose, встроенный }: {
         })}
         {вопросы.свои.map((т, i) => (
           <button key={'своё' + i} className="list-row pick-row on" onClick={() => убратьСвой(i)}>
-            <IonIcon icon={checkmarkCircle} className="list-ico" />
+            <Иконка icon={checkmarkCircle} className="list-ico" />
             <span className="pick-main">
               <span className="list-title">{т}</span>
               <span className="pick-sub">свой вопрос · нажмите, чтобы убрать</span>
@@ -378,7 +379,7 @@ export default function VisitNoteSection({ onClose, встроенный }: {
       </div>
 
       <div className="field" style={{ marginTop: 10 }}>
-        <IonIcon icon={addOutline} className="field-ico" />
+        <Иконка icon={addOutline} className="field-ico" />
         <IonInput value={своё} placeholder="Свой вопрос врачу"
           onIonInput={(e) => setСвоё(e.detail.value ?? '')}
           onKeyDown={(e) => {
@@ -404,13 +405,13 @@ export default function VisitNoteSection({ onClose, встроенный }: {
         компьютер, — поэтому мы его не запоминаем и не подставляем сами.
       </div>
       <div className="field" style={{ marginTop: 10 }}>
-        <IonIcon icon={personOutline} className="field-ico" />
+        <Иконка icon={personOutline} className="field-ico" />
         <IonInput value={имя} placeholder="Имя в файле (можно не указывать)"
           onIonInput={(e) => setИмя(e.detail.value ?? '')} />
       </div>
       <button className="changed-btn is-undo во-всю" style={{ marginTop: 10 }}
         onClick={() => window.print()}>
-        <IonIcon icon={printOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
+        <Иконка icon={printOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
         Сохранить PDF или напечатать
       </button>
       <div className="sheet-note">

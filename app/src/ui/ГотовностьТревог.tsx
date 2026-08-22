@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { notificationsOutline, checkmarkCircle } from 'ionicons/icons';
 import {
   готовностьТревог, открытьДоступКТихомуРежиму, тревогиДоступны, type ГотовностьТревог,
@@ -46,7 +46,7 @@ export default function ГотовностьТревогБлок({ спокой�
     if (!спокойно) return null;
     return (
       <div className="sheet-note">
-        <IonIcon icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
+        <Иконка icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
         Тревоги: разрешения на месте — звук, обход «не беспокоить», полный экран.
         {г.сторожМолчания
           ? ` Сторож молчания включён, порог ${г.порогМолчанияМин} мин.`
@@ -57,7 +57,7 @@ export default function ГотовностьТревогБлок({ спокой�
 
   return (
     <div className="today-alert warn">
-      <IonIcon icon={notificationsOutline} className="alert-ico" />
+      <Иконка icon={notificationsOutline} className="alert-ico" />
       <div>
         <span className="alert-title">Ночью может не разбудить</span>
         <span>

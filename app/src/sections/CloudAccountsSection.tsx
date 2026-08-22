@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { cloudOutline, checkmarkCircle, alertCircle, personOutline, hardwareChipOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import Section from '@/ui/Section';
@@ -136,7 +136,7 @@ function Учётка({ a }: { a: AccountView }) {
             <button key={s.id}
               className={'list-row pick-row' + (s.id === a.activeSubjectId ? ' on' : '')}
               onClick={() => void sendIntent({ type: 'selectAccountSubject', accountId: a.id, subjectId: s.id })}>
-              <IonIcon icon={s.kind === 'device' ? hardwareChipOutline : personOutline} className="list-ico" />
+              <Иконка icon={s.kind === 'device' ? hardwareChipOutline : personOutline} className="list-ico" />
               <span className="pick-main">
                 <span className="list-title">{имяСубъекта(s)}</span>
               </span>

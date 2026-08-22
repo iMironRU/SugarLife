@@ -1,7 +1,7 @@
 import ГотовностьТревогБлок from '@/ui/ГотовностьТревог';
 import { словоОжидания } from '@/слова/попытка';
 import { СЛОТ_ЖЕЛЕЗКИ as СЛОТ, ПОДПИСЬ_СЛОТА } from '@/слова/слоты';
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { сколькоНазад } from '@/слова/время';
 import Section from '@/ui/Section';
 import { DeviceSection } from '@/sections/lazy';
@@ -266,7 +266,7 @@ export default function DevicesSection({ onClose, встроенный, толь
                   <button key={с.id} className={'list-row' + (с.вид === 'неслышно' ? ' is-soon' : '')}
                     onClick={() => (h ? setКарточка(h.id) : добавить(с.вЭфире!))}>
                     <span className={'поток-точка ' + ТОЧКА[с.вид]} style={{ marginRight: 4 }} />
-                    <IonIcon icon={h && заМостомЛи(h, снимок) ? radioOutline : bluetoothOutline}
+                    <Иконка icon={h && заМостомЛи(h, снимок) ? radioOutline : bluetoothOutline}
                       className={'list-ico' + (живой ? '' : ' muted')} />
                     <span className="pick-main">
                       <span className="list-title">{имя}</span>
@@ -284,7 +284,7 @@ export default function DevicesSection({ onClose, встроенный, толь
                     ) : с.действие === 'добавить' ? (
                       <span className="changed-btn is-undo">Добавить</span>
                     ) : (
-                      <IonIcon icon={chevronForward} className="list-chev" />
+                      <Иконка icon={chevronForward} className="list-chev" />
                     )}
                   </button>
                 );

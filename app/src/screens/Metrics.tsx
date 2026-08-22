@@ -1,4 +1,5 @@
-import { IonIcon, IonSpinner } from '@ionic/react';
+import { IonSpinner } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { useTab } from '@/app/nav';
 import { water, nutrition, medkit } from 'ionicons/icons';
 import ЧипыПотоков, { type Поток } from '@/ui/Потоки';
@@ -168,7 +169,7 @@ export default function Metrics() {
           {metric === 'glucose' ? (
             s ? (
               <>
-                <div className="metric-title"><IonIcon icon={water} style={{ color: 'var(--c-glu)', fontSize: 26 }} /><span>Время в диапазоне</span></div>
+                <div className="metric-title"><Иконка icon={water} style={{ color: 'var(--c-glu)', fontSize: 26 }} /><span>Время в диапазоне</span></div>
                 <div className="agp-card"><TirBar s={s} /></div>
                 <div className="stat-grid4">
                   <div className="stat"><div className="stat-label">Среднее</div><div className="stat-val">{toUnits(s.mean)}<span>{unitLabel()}</span></div></div>
@@ -188,7 +189,7 @@ export default function Metrics() {
               const M = metric === 'carbs' ? carbsDef : insDef;
               return (
                 <>
-                  <div className="metric-title"><IonIcon icon={M.icon} style={{ color: M.color, fontSize: 26 }} /><span>{M.title}</span></div>
+                  <div className="metric-title"><Иконка icon={M.icon} style={{ color: M.color, fontSize: 26 }} /><span>{M.title}</span></div>
                   <div className="hero-tile">
                     <div className="hero-tile-top"><span className="hero-tile-label">{M.hero[0]}</span></div>
                     <div className="hero-tile-val"><b>{M.hero[1]}</b><span>{M.hero[2]}</span></div>

@@ -1,4 +1,5 @@
-import { IonIcon, IonInput } from '@ionic/react';
+import { IonInput } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import {timeOutline, searchOutline, sparklesOutline, warningOutline} from 'ionicons/icons';
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/sources/store';
@@ -263,7 +264,7 @@ export default function FoodSheet({ isOpen, onClose, времяПодъёма }:
         {сейчас && (
           <>
             <div className={'food-label' + (сейчас.гипо ? ' is-hypo' : '')}>
-              <IonIcon icon={сейчас.гипо ? warningOutline : timeOutline} /> {сейчас.причина}
+              <Иконка icon={сейчас.гипо ? warningOutline : timeOutline} /> {сейчас.причина}
             </div>
             <div className="food-picks">
               {сейчас.свои.map((p) => (
@@ -296,7 +297,7 @@ export default function FoodSheet({ isOpen, onClose, времяПодъёма }:
             есть, и он лучше: подобран под время и сахар. */}
         {своё.length > 0 && (
           <>
-            <div className="food-label"><IonIcon icon={sparklesOutline} /> Ваше обычное</div>
+            <div className="food-label"><Иконка icon={sparklesOutline} /> Ваше обычное</div>
             <div className="food-picks">
               {своё.slice(0, 6).map((p) => (
                 <button key={p.id} className={'food-pick' + (выбрано === p.id ? ' on' : '')}
@@ -325,7 +326,7 @@ export default function FoodSheet({ isOpen, onClose, времяПодъёма }:
             задним числом — значит есть повод, и повод виден в данных: сахар пошёл вверх,
             а еды в этот момент не внесено (domain/mealMoment.ts). Смещения остаются
             запасным вариантом: поел ровно столько, сколько уколол, — и сахар не дрогнул. */}
-        <div className="food-label"><IonIcon icon={timeOutline} /> Когда ели</div>
+        <div className="food-label"><Иконка icon={timeOutline} /> Когда ели</div>
         <div className="food-meals">
           <button className={'food-meal' + (когда === 0 ? ' on' : '')} onClick={() => setКогда(0)}>сейчас</button>
           {/* Коротко: время — это то, что выбирают, а «+5,2» говорит, насколько
@@ -359,14 +360,14 @@ export default function FoodSheet({ isOpen, onClose, времяПодъёма }:
             коротким видом (приёмы и купирование гипо), потому что новому человеку он
             единственный ориентир. Полный список — по явному запросу. */}
         <button className="food-toggle" onClick={() => setСправочник(справочник === 'нет' ? 'коротко' : 'нет')}>
-          <IonIcon icon={searchOutline} />
+          <Иконка icon={searchOutline} />
           <span>{справочник === 'нет' ? 'Найти в справочнике' : 'Свернуть справочник'}</span>
         </button>
 
         {справочник !== 'нет' && (
           <>
             <div className="field" style={{ marginTop: 10 }}>
-              <IonIcon icon={searchOutline} className="field-ico" />
+              <Иконка icon={searchOutline} className="field-ico" />
               <IonInput value={запрос} placeholder="Приём, блюдо, напиток"
                 onIonInput={(e) => setЗапрос(e.detail.value ?? '')} />
             </div>

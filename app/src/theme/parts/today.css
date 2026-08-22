@@ -31,7 +31,7 @@
 /* Действие глаголом: «Еда» была существительным, и что произойдёт по нажатию —
    ввод или журнал — приходилось угадывать. */
 .carb-add { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.carb-add ion-icon { font-size: min(1.375rem, 27.5px); color: var(--c-carb); }
+.carb-add .иконка { font-size: min(1.375rem, 27.5px); color: var(--c-carb); }
 .carb-add span { font-size: 0.625rem; color: var(--color-neutral-400); }
 
 /* Низ — что уже записано. Черта показывает границу «сейчас / было» и делит нажатия:
@@ -49,7 +49,7 @@
 }
 .carb-hist-l b { font-weight: 600; color: var(--color-text); }
 .carb-hist-r { flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px; font-size: 0.7188rem; color: var(--color-neutral-400); }
-.carb-hist-r ion-icon { font-size: 0.8125rem; color: var(--color-neutral-500); }
+.carb-hist-r .иконка { font-size: 0.8125rem; color: var(--color-neutral-500); }
 
 /* подсветки резервуара */
 .today-alert {
@@ -60,7 +60,7 @@
 }
 .today-alert.warn { border-left-color: var(--c-carb); background: color-mix(in srgb, var(--c-carb) 8%, var(--color-neutral-900)); }
 .today-alert.info { border-left-color: var(--color-accent); }
-.today-alert > ion-icon { font-size: 1.25rem; flex-shrink: 0; margin-top: 1px; }
+.today-alert > .иконка { font-size: 1.25rem; flex-shrink: 0; margin-top: 1px; }
 /* Крестик «пока не до этого» (ui/Notice.tsx). Сорок четыре пикселя касания при
    маленьком значке: попадать в него человек будет одной рукой и не глядя, а вот
    выглядеть он должен тише содержимого — это не действие карточки, а отказ от неё. */
@@ -69,10 +69,10 @@
   width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
   background: transparent; border: 0; cursor: pointer; color: var(--color-neutral-500);
 }
-.notice-close ion-icon { font-size: 1.125rem; }
+.notice-close .иконка { font-size: 1.125rem; }
 .notice-close:active { color: var(--color-text); }
-.today-alert.warn > ion-icon { color: var(--c-carb); }
-.today-alert.info > ion-icon { color: var(--color-accent-300); }
+.today-alert.warn > .иконка { color: var(--c-carb); }
+.today-alert.info > .иконка { color: var(--color-accent-300); }
 .today-alert b { display: block; font-size: 0.875rem; font-weight: 600; }
 .today-alert span { display: block; font-size: 0.75rem; color: var(--color-neutral-400); line-height: 1.4; margin-top: 3px; text-wrap: pretty; }
 .macros { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 14px 0 14px 18px; }
@@ -96,7 +96,7 @@
   transition: background .16s;
 }
 .an-tile:active { background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 20%, transparent), color-mix(in srgb, var(--color-accent) 7%, transparent)); }
-.an-tile ion-icon { font-size: min(1.5rem, 30px); color: var(--color-accent); }
+.an-tile .иконка { font-size: min(1.5rem, 30px); color: var(--color-accent); }
 .an-tile-t { font-size: 0.75rem; font-weight: 600; }
 
 /* Значок непрочитанного. Жёлтый по умолчанию, красный — только когда среди нового
@@ -180,16 +180,16 @@
   background: var(--color-neutral-900);
   border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
-.release-ble ion-icon { font-size: min(1.375rem, 27.5px); color: var(--color-accent); flex-shrink: 0; }
+.release-ble .иконка { font-size: min(1.375rem, 27.5px); color: var(--color-accent); flex-shrink: 0; }
 .release-ble b { display: block; font-size: 0.875rem; font-weight: 600; }
 .release-ble i { display: block; margin-top: 3px; font-size: 0.75rem; font-style: normal; color: var(--color-neutral-400); line-height: 1.4; }
 .release-ble:active { background: var(--color-neutral-800); }
 .release-ble.is-done { border-color: color-mix(in srgb, var(--c-glu) 45%, transparent); }
-.release-ble.is-done ion-icon { color: var(--c-glu); }
+.release-ble.is-done .иконка { color: var(--c-glu); }
 /* Не вышло — предупреждение, а не ошибка: связь осталась, данные идут, потерять
    ничего нельзя. Красный тут пугал бы сильнее, чем стоит событие. */
 .release-ble.is-fail { border-color: color-mix(in srgb, var(--c-carb) 50%, transparent); }
-.release-ble.is-fail ion-icon { color: var(--c-carb); }
+.release-ble.is-fail .иконка { color: var(--c-carb); }
 
 /* Вход в поиск по эфиру. Два вида намеренно: карточка кричит, только когда есть о чём
    кричать, — иначе человек привыкает к постоянному блоку и перестаёт его замечать
@@ -201,7 +201,7 @@
   background: color-mix(in srgb, var(--color-accent) 10%, var(--color-neutral-900));
   border: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
-.nearby-tile > ion-icon:first-child { font-size: min(1.375rem, 27.5px); color: var(--color-accent); flex-shrink: 0; }
+.nearby-tile > .иконка:first-child { font-size: min(1.375rem, 27.5px); color: var(--color-accent); flex-shrink: 0; }
 .nearby-tile div { flex: 1; min-width: 0; }
 .nearby-tile b { display: block; font-size: 0.875rem; font-weight: 600; }
 .nearby-tile span { display: block; margin-top: 3px; font-size: 0.75rem; color: var(--color-neutral-400); line-height: 1.4; }
@@ -212,7 +212,7 @@
   margin-top: 10px; padding: 9px 4px; cursor: pointer; background: none; border: 0;
   font-family: var(--font-body); font-size: 0.75rem; color: var(--color-neutral-500);
 }
-.nearby-quiet ion-icon { font-size: 0.9375rem; flex-shrink: 0; }
+.nearby-quiet .иконка { font-size: 0.9375rem; flex-shrink: 0; }
 .nearby-quiet span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nearby-chev { font-size: 0.875rem; opacity: .6; }
 
@@ -235,12 +235,12 @@
 .meal-what { flex: 1; min-width: 0; }
 .meal-what b { display: block; font-size: 0.9375rem; font-weight: 600; color: var(--c-carb); }
 .meal-what span { display: block; font-size: 0.6875rem; color: var(--color-neutral-400); margin-top: 2px; }
-.meal-what span ion-icon { font-size: 0.6875rem; vertical-align: -1px; }
+.meal-what span .иконка { font-size: 0.6875rem; vertical-align: -1px; }
 .meal-del {
   flex: 0 0 auto; width: 38px; height: 38px; border-radius: 12px; cursor: pointer;
   border: 0; background: transparent; color: var(--color-neutral-500);
 }
-.meal-del ion-icon { font-size: 1.0625rem; }
+.meal-del .иконка { font-size: 1.0625rem; }
 .meal-del:active { background: var(--color-neutral-800); color: var(--c-danger-2); }
 
 /* Лента подключения. Тонкие строки, а не карточки: это временные сообщения, и место
@@ -250,13 +250,13 @@
   display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px;
   background: var(--color-neutral-900); font-size: 0.75rem; color: var(--color-neutral-300);
 }
-.connect-line ion-icon { font-size: 0.9375rem; flex-shrink: 0; }
+.connect-line .иконка { font-size: 0.9375rem; flex-shrink: 0; }
 .connect-line span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .connect-line i { font-style: normal; font-size: 0.6875rem; color: var(--color-neutral-500); flex-shrink: 0; }
-.connect-line.is-captured ion-icon { color: var(--c-glu); }
+.connect-line.is-captured .иконка { color: var(--c-glu); }
 /* Потеря связи заметна цветом: её нужно увидеть, а успех можно и пропустить. */
 .connect-line.is-released { color: var(--c-danger-2); }
-.connect-line.is-released ion-icon { color: var(--c-danger-2); }
+.connect-line.is-released .иконка { color: var(--c-danger-2); }
 
 /* Обновление скачано и ждёт перезапуска (ui/UpdateReady.tsx, #150).
 
@@ -268,7 +268,7 @@
   margin-top: 12px; padding: 12px 14px; border-radius: 16px;
   background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
 }
-.upd-row > ion-icon { font-size: 1.25rem; color: var(--color-accent-300); flex-shrink: 0; }
+.upd-row > .иконка { font-size: 1.25rem; color: var(--color-accent-300); flex-shrink: 0; }
 /* Заголовок не должен ломаться пополам ради кнопок. При min-width 140px на 393-м
    экране кнопки вставали рядом и ужимали текст до двух строк — проверено на телефоне.
    200px гарантируют перенос: либо строка целиком, либо кнопки ниже. */
@@ -445,7 +445,7 @@
   background: none; border: 0; border-top: 1px solid var(--color-neutral-800);
   color: var(--color-text); font-size: 0.9375rem;
 }
-.сегодня-история ion-icon { color: var(--color-neutral-500); font-size: 1.125rem; }
+.сегодня-история .иконка { color: var(--color-neutral-500); font-size: 1.125rem; }
 .сегодня-история-шеврон { margin-left: auto; }
 
 /* СТРОКА ОХРАНЫ НА «СЕГОДНЯ» (#473).

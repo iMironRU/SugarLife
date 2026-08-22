@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { phonePortraitOutline } from 'ionicons/icons';
 import { открытьВПриложении, type Раздел } from '@/platform/deepLink';
 import { isNative } from '@/platform/appUpdate';
@@ -22,7 +22,7 @@ export default function ВПриложении({ раздел, подпись }:
   return (
     <button className="changed-btn is-undo" style={{ marginTop: 10 }}
       onClick={() => открытьВПриложении(раздел)}>
-      <IonIcon icon={phonePortraitOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
+      <Иконка icon={phonePortraitOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
       {подпись ?? 'Открыть в приложении'}
     </button>
   );

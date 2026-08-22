@@ -30,7 +30,7 @@
   background: transparent; border: 1px solid var(--color-neutral-800);
   color: var(--color-neutral-400); transition: background .16s, border-color .16s;
 }
-.theme-chip ion-icon { font-size: 1.1875rem; }
+.theme-chip .иконка { font-size: 1.1875rem; }
 .theme-chip span { font-size: 0.75rem; font-weight: 500; }
 .theme-chip.on {
   background: color-mix(in srgb, var(--color-accent) 26%, var(--color-neutral-900));
@@ -62,7 +62,7 @@ a.list-row { text-decoration: none; color: inherit; }
    в CSV» многоточие съедало бы смысл). */
 .list-title.one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .list-roles { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; color: var(--color-accent); }
-.list-roles ion-icon { font-size: 1.0625rem; }
+.list-roles .иконка { font-size: 1.0625rem; }
 .list-value { font-size: 0.8125rem; color: var(--color-neutral-400); }
 .list-value.muted { color: var(--color-accent); }
 /* Строка, которой вышел срок (раздел «Здоровье»). Красим только значение: строку
@@ -118,7 +118,7 @@ a.list-row { text-decoration: none; color: inherit; }
 }
 .scan-state.on { color: var(--color-accent); border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
 .scan-state ion-spinner { width: 16px; height: 16px; --color: var(--color-accent); }
-.scan-state ion-icon { font-size: 1.0625rem; }
+.scan-state .иконка { font-size: 1.0625rem; }
 
 .logout {
   width: 100%; margin-top: 24px; padding: 14px; border-radius: 16px; cursor: pointer;

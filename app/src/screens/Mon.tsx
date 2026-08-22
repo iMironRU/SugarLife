@@ -1,6 +1,6 @@
 import { useSnapshot } from '@/sources/bridge';
 import { предупредитьОСыром, СЛОВО_СЫРОГО, ПОЯСНЕНИЕ_СЫРОГО } from '@/domain/сырое';
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { useTab } from '@/app/nav';
 import { DeviceSection } from '@/sections/lazy';
 import { useChanges } from '@/settings/changes';
@@ -54,12 +54,12 @@ export default function Mon() {
           {/* сахар/тренд/свежесть — в верхней панели; здесь кнопка датчика + график */}
           {ages.sensor && (
             <button className="pump-btn" style={{ marginTop: 0 }} onClick={() => push(<DeviceSection cat="sensor" title="Сенсор (НМГ)" onClose={pop} />, { id: 'категория', cat: 'sensor', title: 'Сенсор (НМГ)' })}>
-              <IonIcon icon={hardwareChipOutline} className="pump-btn-ico" style={{ color: 'var(--color-accent)' }} />
+              <Иконка icon={hardwareChipOutline} className="pump-btn-ico" style={{ color: 'var(--color-accent)' }} />
               <div className="pump-btn-txt">
                 <div className="pump-btn-title">Датчик</div>
                 <div className="pump-btn-sub">День {ages.sensor.days + 1} · установлен {fmtWhen(ages.sensor.at)}</div>
               </div>
-              <IonIcon icon={chevronForward} className="pump-btn-chev" />
+              <Иконка icon={chevronForward} className="pump-btn-chev" />
             </button>
           )}
 

@@ -1,4 +1,5 @@
-import { IonIcon, IonToggle } from '@ionic/react';
+import { IonToggle } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { сколькоНазад } from '@/слова/время';
 import { BasalProfileSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
@@ -389,7 +390,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                 спрашивать вообще, — в domain/deviceState.ts. */}
             {слияние && (
               <div className="today-alert">
-                <IonIcon icon={cloudOutline} />
+                <Иконка icon={cloudOutline} />
                 <div>
                   <b>Это ваша помпа?</b>
                   <span>
@@ -418,17 +419,17 @@ export default function DeviceSection({ onClose, cat, title }: {
                       вместо блютуса, он и есть способ добраться до такой железки. */}
                   {directTap ? (
                     <button className={'list-row meth' + (activeMeth === 'direct' ? ' meth-on' : '')} onClick={directTap}>
-                      <IonIcon icon={bluetoothOutline} className="list-ico" />
+                      <Иконка icon={bluetoothOutline} className="list-ico" />
                       <span className="pick-main">
                         <span className="list-title">Прямое чтение</span>
                         <span className="pick-sub">{directSub}</span>
                       </span>
                       {activeMeth === 'direct' && <span className="meth-now">сейчас</span>}
-                      <IonIcon icon={chevronForward} className="list-chev" />
+                      <Иконка icon={chevronForward} className="list-chev" />
                     </button>
                   ) : (
                     <div className="list-row meth" style={{ cursor: 'default' }}>
-                      <IonIcon icon={bluetoothOutline} className="list-ico muted" />
+                      <Иконка icon={bluetoothOutline} className="list-ico muted" />
                       <span className="pick-main">
                         <span className="list-title muted">Прямое чтение</span>
                         <span className="pick-sub">{directSub}</span>
@@ -437,7 +438,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                   )}
                   {needsBridge && modelKnown && (
                     <button className="list-row meth meth-in" onClick={() => setPick('bridge')}>
-                      <IonIcon icon={gitNetworkOutline} className="list-ico" />
+                      <Иконка icon={gitNetworkOutline} className="list-ico" />
                       <span className="pick-main">
                         <span className="list-title">Мост / трансмиттер</span>
                         {/* Имя из снимка вернее выбранного: движок видит, какой мост
@@ -445,14 +446,14 @@ export default function DeviceSection({ onClose, cat, title }: {
                             назвали (#281). */}
                         <span className="pick-sub">{имяМоста ?? 'не выбран'}</span>
                       </span>
-                      <IonIcon icon={chevronForward} className="list-chev" />
+                      <Иконка icon={chevronForward} className="list-chev" />
                     </button>
                   )}
 
                   {/* Облако. Отсюда в карточку облака не ведём: путь туда уже есть в обратную
                       сторону («Забираем отсюда» → устройство), а взаимные ссылки запутали бы. */}
                   <div className={'list-row meth' + (activeMeth === 'cloud' ? ' meth-on' : '')} style={{ cursor: 'default' }}>
-                    <IonIcon icon={cloudOutline} className="list-ico" />
+                    <Иконка icon={cloudOutline} className="list-ico" />
                     <span className="pick-main">
                       <span className="list-title">Через Nightscout</span>
                       <span className="pick-sub">{nsFeed ? 'приходит: ' + nsFeed : 'данных пока нет'}</span>
@@ -470,7 +471,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                       дальше человек перестаёт трогать соседние кнопки тоже. */}
                   {cat === 'sensor' && (
                   <button className="list-row meth" onClick={() => setSmbgOpen(true)}>
-                    <IonIcon icon={createOutline} className="list-ico" />
+                    <Иконка icon={createOutline} className="list-ico" />
                     <span className="pick-main">
                       <span className="list-title">Ручной ввод</span>
                       <span className="pick-sub">
@@ -479,7 +480,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                           : 'внести показание глюкометра'}
                       </span>
                     </span>
-                    <IonIcon icon={chevronForward} className="list-chev" />
+                    <Иконка icon={chevronForward} className="list-chev" />
                   </button>
                   )}
                 </div>
@@ -554,7 +555,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                 {ble.autoConnect != null && (
                   <div className="list">
                     <div className="list-row">
-                      <IonIcon icon={bluetoothOutline} className="list-ico" />
+                      <Иконка icon={bluetoothOutline} className="list-ico" />
                       <span className="pick-main">
                         <span className="list-title">Подключаться автоматически</span>
                         <span className="pick-sub">при запуске приложения</span>
@@ -619,7 +620,7 @@ export default function DeviceSection({ onClose, cat, title }: {
 
             {hasModel && modelName && (
               <button className="sheet-danger" onClick={onForget}>
-                <IonIcon icon={trashOutline} />
+                <Иконка icon={trashOutline} />
                 Забыть устройство
               </button>
             )}

@@ -1,4 +1,5 @@
-import { IonIcon, IonInput } from '@ionic/react';
+import { IonInput } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import {waterOutline} from 'ionicons/icons';
 import { useState } from 'react';
 import { addSmbg, SMBG_REASONS, type Smbg } from '@/settings/smbg';
@@ -39,7 +40,7 @@ export default function SmbgSheet({ isOpen, onClose }: { isOpen: boolean; onClos
 
         <div className="field-label">Значение, {unitLabel(u)}</div>
         <div className="field">
-          <IonIcon icon={waterOutline} className="field-ico" />
+          <Иконка icon={waterOutline} className="field-ico" />
           {/* Тип text, а не number, намеренно. Числовое поле молча съедает запятую —
               а мы весь сахар показываем именно с запятой («6,5»), и человек её и
               наберёт. Поле оказывалось пустым без единого объяснения. Клавиатуру

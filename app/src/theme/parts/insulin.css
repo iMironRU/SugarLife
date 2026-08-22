@@ -23,11 +23,11 @@
   border: 1px solid var(--color-neutral-800); background: var(--color-neutral-900); color: var(--color-accent);
 }
 .loop-btn:active { background: color-mix(in srgb, var(--color-accent) 14%, var(--color-neutral-900)); }
-.loop-btn ion-icon { font-size: min(1.625rem, 32.5px); }
+.loop-btn .иконка { font-size: min(1.625rem, 32.5px); }
 
 /* заглушка шторки «Петля» */
 .loop-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 40px 20px; }
-.loop-empty ion-icon { font-size: min(2.5rem, 50px); color: var(--color-neutral-700); }
+.loop-empty .иконка { font-size: min(2.5rem, 50px); color: var(--color-neutral-700); }
 .loop-empty-t { font-size: 0.9375rem; font-weight: 500; color: var(--color-neutral-300); }
 .loop-empty-s { font-size: 0.8125rem; color: var(--color-neutral-500); }
 
@@ -55,7 +55,7 @@
 /* ===== Инсулин ===== */
 .basal-card { margin-top: 16px; border-radius: 20px; padding: 16px; background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900)); }
 .basal-head { display: flex; align-items: center; gap: 8px; font-size: 0.9375rem; font-weight: 600; }
-.basal-head ion-icon { font-size: 1.25rem; }
+.basal-head .иконка { font-size: 1.25rem; }
 .basal-rows { margin-top: 12px; }
 .basal-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--color-neutral-800); }
 .basal-row:last-child { border-bottom: 0; }
@@ -74,7 +74,7 @@
   width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--color-neutral-700);
   background: transparent; color: var(--color-accent); cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
-.stepper button ion-icon { font-size: 1.125rem; }
+.stepper button .иконка { font-size: 1.125rem; }
 .stepper b { font-size: min(1.375rem, 27.5px); font-weight: 600; min-width: 54px; text-align: center; }
 .stepper b i { font-size: 0.75rem; font-weight: 400; color: var(--color-neutral-400); font-style: normal; margin-left: 2px; }
 

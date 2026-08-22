@@ -44,7 +44,7 @@ ion-content { --background: var(--color-bg); }
   padding: 8px 0 7px; background: transparent; border: 0; cursor: pointer; font-family: var(--font-body);
   color: var(--color-neutral-500);
 }
-.tab ion-icon { font-size: min(1.375rem, 27.5px); }
+.tab .иконка { font-size: min(1.375rem, 27.5px); }
 .tab span { font-size: 0.625rem; }
 .tab.on { color: var(--color-accent); }
 
@@ -175,7 +175,7 @@ ion-content { --background: var(--color-bg); }
    даже на 320px. */
 .hp-batteries { display: flex; justify-content: center; gap: 14px; }
 .hp-batt-item { display: inline-flex; align-items: center; gap: 3px; font-size: 0.625rem; font-weight: 600; }
-.hp-batt-item ion-icon { font-size: 0.8125rem; color: currentColor; }
+.hp-batt-item .иконка { font-size: 0.8125rem; color: currentColor; }
 
 .hp-row { position: relative; height: calc(150px - 88px * var(--p)); }
 
@@ -212,9 +212,9 @@ ion-content { --background: var(--color-bg); }
 .hp-head, .hp-name, .hp-sub, .hp-val { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hp-head { display: flex; align-items: center; gap: 5px; }
 .hp-ico { display: flex; line-height: 1; color: var(--color-accent); }
-.hp-ico, .hp-ico ion-icon { font-size: min(calc(1.5rem - 0.625rem * var(--p)), calc(30px - 12.5px * var(--p))); }
+.hp-ico, .hp-ico .иконка { font-size: min(calc(1.5rem - 0.625rem * var(--p)), calc(30px - 12.5px * var(--p))); }
 .hp-ico { margin-bottom: calc(5px * (1 - var(--p))); }
-.hp-ico ion-icon { color: var(--color-accent); }
+.hp-ico .иконка { color: var(--color-accent); }
 /* Имя крыла УМЕЮЩЕЕ сжиматься (#325). При системном крупном шрифте «Помпа» занимала
    всю строку и выталкивала точку связи за край панели — а точка тут и есть сообщение,
    имя же и так известно. Что сжимать первым, решает важность, а не порядок в вёрстке. */

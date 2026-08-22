@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { сколькоНазад, часы } from '@/слова/время';
 import { useTab } from '@/app/nav';
 import { DeviceSection, LoopSetupSection } from '@/sections/lazy';
@@ -59,7 +59,7 @@ export default function Ins() {
   const длиннаяСтрока = (
     <div className="basal-card" style={{ marginTop: 12 }}>
       <div className="basal-head">
-        <IonIcon icon={moonOutline} style={{ color: 'var(--c-ins)' }} /><span>Длинный инсулин</span>
+        <Иконка icon={moonOutline} style={{ color: 'var(--c-ins)' }} /><span>Длинный инсулин</span>
       </div>
       <div className="basal-rows">
         {фон ? (
@@ -91,7 +91,7 @@ export default function Ins() {
           <DataGate>
           {isPen ? (
             <div className="basal-card">
-              <div className="basal-head"><IonIcon icon={flash} style={{ color: 'var(--c-ins)' }} /><span>Шприц-ручка</span></div>
+              <div className="basal-head"><Иконка icon={flash} style={{ color: 'var(--c-ins)' }} /><span>Шприц-ручка</span></div>
               <div className="basal-rows">
                 <div className="basal-row"><span>Последняя инъекция</span><b>{dev?.lastBolus != null ? fmt(dev.lastBolus) + ' ед' : '—'}</b></div>
                 {/* «Нет инсулина» и «неизвестно, сколько» — разные вещи (domain/loopValue.ts):
@@ -108,15 +108,15 @@ export default function Ins() {
               {/* помпа (шторка) + петля (шторка) */}
               <div className="pump-row">
                 <button className="pump-btn" onClick={() => push(<DeviceSection cat="pump" title="Ввод инсулина" onClose={pop} />, { id: 'категория', cat: 'pump', title: 'Ввод инсулина' })}>
-                  <IonIcon icon={flash} className="pump-btn-ico" />
+                  <Иконка icon={flash} className="pump-btn-ico" />
                   <div className="pump-btn-txt">
                     <div className="pump-btn-title">Помпа</div>
                     <div className="pump-btn-sub">{pumpStatus} · базал {baseBasalTxt} ед/ч</div>
                   </div>
-                  <IonIcon icon={chevronForward} className="pump-btn-chev" />
+                  <Иконка icon={chevronForward} className="pump-btn-chev" />
                 </button>
                 <button className="loop-btn" onClick={() => push(<LoopSetupSection onClose={pop} />, { id: 'настройкаПетли' })} aria-label="Петля">
-                  <IonIcon icon={repeat} />
+                  <Иконка icon={repeat} />
                 </button>
               </div>
 

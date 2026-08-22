@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import {checkmarkCircle, ellipseOutline} from 'ionicons/icons';
 import { useUnit, setUnit, type Unit } from '@/domain/units';
 import Sheet from '@/ui/Sheet';
@@ -33,7 +33,7 @@ export default function UnitsModal({ isOpen, onClose }: { isOpen: boolean; onClo
                     <div className="unit-opt-title">{o.title}</div>
                     <div className="unit-opt-sub">{o.sub}</div>
                   </div>
-                  <IonIcon
+                  <Иконка
                     icon={on ? checkmarkCircle : ellipseOutline}
                     className="unit-opt-check"
                     style={{ color: on ? 'var(--color-accent)' : 'var(--color-neutral-700)' }}

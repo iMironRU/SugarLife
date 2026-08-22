@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { checkmarkCircle, ellipseOutline, trashOutline } from 'ionicons/icons';
 import Sheet from '@/ui/Sheet';
 import { ПРИЧИНЫ, отметкаДля, type Причина } from '@/domain/причиныПодъёма';
@@ -46,7 +46,7 @@ export default function ПричинаПодъёмаSheet({ at, rise, onClose, o
         {ПРИЧИНЫ.map((п) => (
           <button key={п.ключ} className={'list-row pick-row' + (текущая === п.ключ ? ' on' : '')}
             onClick={() => выбрать(п.ключ)}>
-            <IonIcon icon={текущая === п.ключ ? checkmarkCircle : ellipseOutline} className="list-ico" />
+            <Иконка icon={текущая === п.ключ ? checkmarkCircle : ellipseOutline} className="list-ico" />
             <span className="pick-main">
               <span className="list-title">{п.выбор}</span>
               {п.подпись && <span className="pick-sub">{п.подпись}</span>}
@@ -60,7 +60,7 @@ export default function ПричинаПодъёмаSheet({ at, rise, onClose, o
       {текущая && (
         <button className="changed-btn во-всю" style={{ marginTop: 12 }}
           onClick={() => { убратьОтметку(at); onClose(); }}>
-          <IonIcon icon={trashOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
+          <Иконка icon={trashOutline} style={{ marginRight: 6, verticalAlign: -2 }} />
           Убрать отметку
         </button>
       )}

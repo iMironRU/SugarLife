@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { warningOutline, checkmarkCircle } from 'ionicons/icons';
 import {
   фонГотовность, попроситьИсключение, type ФонОтвет,
@@ -93,7 +93,7 @@ export default function ФонГотовность({ спокойно }: {
     if (!спокойно) return null;
     return (
       <div className="sheet-note">
-        <IonIcon icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
+        <Иконка icon={checkmarkCircle} style={{ marginRight: 6, verticalAlign: -2 }} />
         Фон: телефон приложение не усыпляет.
       </div>
     );
@@ -101,7 +101,7 @@ export default function ФонГотовность({ спокойно }: {
 
   return (
     <div className="today-alert">
-      <IonIcon icon={warningOutline} className="alert-ico" />
+      <Иконка icon={warningOutline} className="alert-ico" />
       <div>
         <span className="alert-title">{ответ.reason}</span>
         <span>{ответ.whatToDo}</span>

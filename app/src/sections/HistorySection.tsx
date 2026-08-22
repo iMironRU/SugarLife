@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { часы, имяДня } from '@/слова/время';
 import { restaurantOutline, bluetoothOutline, warningOutline, timeOutline, trendingUpOutline, refreshOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
@@ -61,7 +61,7 @@ export default function HistorySection({ onClose }: { onClose: () => void }) {
 
       {дни.length === 0 ? (
         <div className="loop-empty">
-          <IonIcon icon={timeOutline} />
+          <Иконка icon={timeOutline} />
           <div className="loop-empty-t">Пока нечего вспоминать</div>
           <div className="loop-empty-s">
             За двое суток ничего не записано. Дневник ведётся с момента установки этой
@@ -82,7 +82,7 @@ export default function HistorySection({ onClose }: { onClose: () => void }) {
                         случилось только что. */}
                     {с.доМс && <span>по {часы(с.доМс)}</span>}
                   </div>
-                  <IonIcon icon={ЗНАЧОК[с.вид]} className="list-ico" />
+                  <Иконка icon={ЗНАЧОК[с.вид]} className="list-ico" />
                   <div className="meal-what">
                     <b>{с.главное}{с.повторов ? ` · ${с.повторов} раз` : ''}</b>
                     {с.подпись && <span>{с.подпись}</span>}

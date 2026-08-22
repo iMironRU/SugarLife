@@ -1,6 +1,6 @@
 import { причинаНеготовности } from '@/показ/находки';
 import { useEffect, useState } from 'react';
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { warning, alertCircle } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import PageLoading from '@/ui/PageLoading';
@@ -74,7 +74,7 @@ export default function AnalyticsSection({ onClose, встроенный }: {
             <>
               {' · '}
               <span style={{ color: вид.color }}>
-                <IonIcon icon={вид.icon} style={{ fontSize: 11, verticalAlign: '-1px', marginRight: 3 }} />
+                <Иконка icon={вид.icon} style={{ fontSize: 11, verticalAlign: '-1px', marginRight: 3 }} />
                 {вид.слово}
               </span>
             </>

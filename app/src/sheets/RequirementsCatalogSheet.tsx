@@ -1,4 +1,5 @@
-import { IonIcon, IonInput } from '@ionic/react';
+import { IonInput } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import Row from '@/ui/Row';
 import { searchOutline, lockClosedOutline } from 'ionicons/icons';
 import { useState } from 'react';
@@ -33,7 +34,7 @@ export default function RequirementsCatalogSheet({ isOpen, onClose }: {
         {!picked ? (
           <>
             <div className="field">
-              <IonIcon icon={searchOutline} className="field-ico" />
+              <Иконка icon={searchOutline} className="field-ico" />
               <IonInput placeholder="Модель или бренд" value={q} onIonInput={(e) => setQ(e.detail.value || '')} />
             </div>
             <div className="list" style={{ marginTop: 10 }}>
@@ -58,7 +59,7 @@ export default function RequirementsCatalogSheet({ isOpen, onClose }: {
             </div>
             {picked.support === 'blocked' ? (
               <div className="sheet-note">
-                <IonIcon icon={lockClosedOutline} style={{ verticalAlign: '-2px', marginRight: 4 }} />
+                <Иконка icon={lockClosedOutline} style={{ verticalAlign: '-2px', marginRight: 4 }} />
                 Только мониторинг недоступен: активация этого устройства сама по себе — команда на
                 подачу инсулина, а мы читаем только то, что не требует такой команды.
               </div>

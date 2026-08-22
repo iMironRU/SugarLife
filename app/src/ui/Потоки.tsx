@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { water, nutrition, medkit } from 'ionicons/icons';
 
 /* Три потока — глюкоза, углеводы, инсулин — в одном месте (замечание с телефона).
@@ -50,7 +50,7 @@ export default function ЧипыПотоков({ выбран, выбрать, �
               borderColor: `color-mix(in srgb, ${п.цвет} 60%, transparent)`,
               background: `color-mix(in srgb, ${п.цвет} 20%, var(--color-neutral-900))`,
             } : undefined}>
-            <IonIcon icon={п.значок} style={{ color: on ? п.цвет : 'var(--color-neutral-500)' }} />
+            <Иконка icon={п.значок} style={{ color: on ? п.цвет : 'var(--color-neutral-500)' }} />
             <span>{п.имя}</span>
             {с && <span className={'поток-точка ' + с} />}
           </button>

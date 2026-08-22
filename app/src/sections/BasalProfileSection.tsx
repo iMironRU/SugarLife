@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { arrowUndoOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '@/sources/store';
@@ -137,7 +137,7 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
           <div className="page-foot">
             <div className="bas-act">
               <button className="page-btn bas-undo" onClick={undo} disabled={!undoStack.length} aria-label="Отменить">
-                <IonIcon icon={arrowUndoOutline} />
+                <Иконка icon={arrowUndoOutline} />
               </button>
               <button className="page-btn bas-go" onClick={() => { setDone([]); setSaved(false); setInner({ kind: 'transfer' }); }}>
                 Перенести в помпу

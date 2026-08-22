@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import {
   checkmarkCircle, informationCircle, warning, alertCircle,
   helpCircleOutline, chevronForward,
@@ -24,15 +24,15 @@ function Card({ it, open, onToggle }: { it: Insight; open: boolean; onToggle: ()
   return (
     <div className="insight" style={{ borderLeftColor: SEV_COLOR[it.severity] }}>
       <button className="insight-top" onClick={onToggle}>
-        <IonIcon icon={SEV_ICON[it.severity]} style={{ color: SEV_COLOR[it.severity] }} className="insight-sev" />
+        <Иконка icon={SEV_ICON[it.severity]} style={{ color: SEV_COLOR[it.severity] }} className="insight-sev" />
         <span className="insight-title">{слова.title}</span>
-        <IonIcon icon={chevronForward} className={'insight-chev' + (open ? ' open' : '')} />
+        <Иконка icon={chevronForward} className={'insight-chev' + (open ? ' open' : '')} />
       </button>
       {open && (
         <div className="insight-body">
           <div className="insight-msg">{слова.message}</div>
           {слова.question && (
-            <div className="insight-q"><IonIcon icon={helpCircleOutline} /><span>{слова.question}</span></div>
+            <div className="insight-q"><Иконка icon={helpCircleOutline} /><span>{слова.question}</span></div>
           )}
         </div>
       )}
@@ -107,7 +107,7 @@ export default function Insights({ analysis }: { analysis: Analysis | null }) {
           рисуем — «заметок нет» ничего никому не сообщает. */}
       {!attention.length && (
         <div className="ins-calm">
-          <IonIcon icon={checkmarkCircle} style={{ color: 'var(--c-glu)' }} />
+          <Иконка icon={checkmarkCircle} style={{ color: 'var(--c-glu)' }} />
           <span>Ничего срочного не нашлось.</span>
         </div>
       )}

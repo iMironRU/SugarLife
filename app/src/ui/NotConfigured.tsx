@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from './Иконка';
 import { cloudOfflineOutline, chevronForward } from 'ionicons/icons';
 import { useStore } from '@/sources/store';
 import { useSnapshot } from '@/sources/bridge';
@@ -67,12 +67,12 @@ export default function NotConfigured() {
 
   return (
     <button className="nocfg" onClick={() => setOnboarded(false)}>
-      <IonIcon icon={cloudOfflineOutline} className="nocfg-ico" />
+      <Иконка icon={cloudOfflineOutline} className="nocfg-ico" />
       <span className="nocfg-txt">
         <span className="nocfg-t">Приложение не настроено</span>
         <span className="nocfg-d">Не подключён ни один источник данных. Мастер займёт минуту.</span>
       </span>
-      <IonIcon icon={chevronForward} className="nocfg-chev" />
+      <Иконка icon={chevronForward} className="nocfg-chev" />
     </button>
   );
 }

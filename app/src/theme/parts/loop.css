@@ -20,7 +20,7 @@
   border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
   font-size: 0.6875rem; color: var(--color-neutral-300); line-height: 1.4;
 }
-.wz-l0 ion-icon { font-size: 0.9375rem; color: var(--color-accent); flex-shrink: 0; margin-top: 1px; }
+.wz-l0 .иконка { font-size: 0.9375rem; color: var(--color-accent); flex-shrink: 0; margin-top: 1px; }
 
 .wz-card {
   display: block; width: 100%; text-align: left; padding: 14px 16px; margin-bottom: 10px;
@@ -111,7 +111,7 @@
   border: 1.5px solid color-mix(in srgb, var(--c-carb) 55%, transparent); color: var(--color-neutral-300);
 }
 .wz-gate.on { border-color: var(--c-glu); color: var(--color-text); }
-.wz-gate ion-icon { font-size: 1.1875rem; flex-shrink: 0; }
+.wz-gate .иконка { font-size: 1.1875rem; flex-shrink: 0; }
 
 /* Применение в теле последнего шага: под сводкой, а не в закреплённом низу. */
 .wz-apply { margin-top: 12px; }

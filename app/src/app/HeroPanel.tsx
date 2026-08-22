@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { сколькоНазад, дниЧасы } from '@/слова/время';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline, warningOutline } from 'ionicons/icons';
@@ -47,7 +47,7 @@ const battColor = (p: number) => (p <= 20 ? 'var(--c-danger)' : p <= 50 ? 'var(-
 function ТочкаСвязи({ что }: { что: Связь }) {
   if (что === 'unknown') return null;
   const title = меткаСвязи[что] ?? undefined;
-  if (что === 'wait') return <IonIcon className="hp-link-wait" icon={timeOutline} title={title} />;
+  if (что === 'wait') return <Иконка className="hp-link-wait" icon={timeOutline} title={title} />;
   return <span className={'live-dot' + (что === 'off' ? ' is-off' : '')} title={title} />;
 }
 
@@ -283,7 +283,7 @@ export default function HeroPanel() {
         <span className={'hp-synctext' + (syncWarn ? ' warn' : '')}>
           {syncState === 'live'
             ? <span className="heart">♥</span>
-            : <IonIcon className="sync-ico" icon={syncState === 'poll' ? syncOutline : cloudOfflineOutline} />}
+            : <Иконка className="sync-ico" icon={syncState === 'poll' ? syncOutline : cloudOfflineOutline} />}
           <span>{syncMain}</span>
           {readingAge && <span className="sync-reading">· {readingAge}</span>}
         </span>
@@ -291,7 +291,7 @@ export default function HeroPanel() {
           <span className="hp-batteries">
             {batteries.map((b) => (
               <span key={b.id} className="hp-batt-item" style={{ color: battColor(b.value as number) }}>
-                <IonIcon icon={b.icon} />{b.value}%
+                <Иконка icon={b.icon} />{b.value}%
               </span>
             ))}
           </span>
@@ -301,20 +301,20 @@ export default function HeroPanel() {
       <div className="hp-row">
         <div className="hp-rect">
           <button className="hp-wing hp-wing-l" onClick={() => setTab(1)}>
-            <span className="hp-ico"><IonIcon icon={pulse} /></span>
+            <span className="hp-ico"><Иконка icon={pulse} /></span>
             <span className="hp-head">
               <span className="hp-name">НМГ</span>
               <ТочкаСвязи что={связьНмг} />
               {каналНмг && <span className="hp-chan">{каналНмг}</span>}
             </span>
-            <span className="hp-sub">{nmgSub}{staleSensor && <IonIcon className="hp-stale" icon={timeOutline} />}</span>
+            <span className="hp-sub">{nmgSub}{staleSensor && <Иконка className="hp-stale" icon={timeOutline} />}</span>
             <span className="hp-val">{nmgVal}</span>
           </button>
 
           <div className="hp-gap" />
 
           <button className="hp-wing hp-wing-r" onClick={() => setTab(3)}>
-            <span className="hp-ico"><IonIcon icon={flash} /></span>
+            <span className="hp-ico"><Иконка icon={flash} /></span>
             <span className="hp-head">
               <span className="hp-name">Помпа</span>
               <ТочкаСвязи что={связьПомпы} />
@@ -325,7 +325,7 @@ export default function HeroPanel() {
                 разных факта, поэтому две разные метки, а не одна на двоих. */}
             <span className="hp-sub">{pumpStatus}</span>
             <span className="hp-val">{reservoir}</span>
-            <span className="hp-sub">{resSub2}{staleDays && <IonIcon className="hp-stale" icon={timeOutline} />}</span>
+            <span className="hp-sub">{resSub2}{staleDays && <Иконка className="hp-stale" icon={timeOutline} />}</span>
           </button>
         </div>
 
@@ -341,7 +341,7 @@ export default function HeroPanel() {
                   то же враньё, что и ноль вместо «неизвестно»: стрелка «вверх» на
                   получасовой давности цифре читается как «растёт прямо сейчас». */}
               {acquiring
-                ? <IonIcon className={'hp-arrow hp-wait' + (кругЖдёт ? ' hp-wait-big' : '')} icon={timeOutline} />
+                ? <Иконка className={'hp-arrow hp-wait' + (кругЖдёт ? ' hp-wait-big' : '')} icon={timeOutline} />
                 : arrow && <span className="hp-arrow">{arrow}</span>}
             </span>
             {/* Единица без числа — подпись к пустому месту, поэтому её тоже нет. */}
@@ -357,7 +357,7 @@ export default function HeroPanel() {
             <span className="hp-ago" title={сырое ? ПОЯСНЕНИЕ_СЫРОГО : undefined}>
               {кругЖдёт ? 'догоняю…' : сырое ? (
                 <>
-                  <IonIcon icon={warningOutline} className="hp-raw-ico" />
+                  <Иконка icon={warningOutline} className="hp-raw-ico" />
                   {МЕТКА_СЫРОГО} · {ago}
                 </>
               ) : ago}

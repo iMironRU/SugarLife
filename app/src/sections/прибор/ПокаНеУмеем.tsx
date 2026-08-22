@@ -1,4 +1,4 @@
-import { IonIcon } from '@ionic/react';
+import Иконка from '@/ui/Иконка';
 import { gitNetworkOutline, hardwareChipOutline } from 'ionicons/icons';
 import type { DeviceCatKey } from '../DeviceSection';
 
@@ -15,7 +15,7 @@ export default function ПокаНеУмеем({ cat, onВнести }: {
   const петля = cat === 'loop';
   return (
     <div className="loop-empty">
-      <IonIcon icon={петля ? gitNetworkOutline : hardwareChipOutline} />
+      <Иконка icon={петля ? gitNetworkOutline : hardwareChipOutline} />
       <div className="loop-empty-t">{петля ? 'Петля' : 'Глюкометр'}</div>
       <div className="loop-empty-s">{петля
         ? 'Алгоритм замкнутого цикла (AAPS/Loop/встроенный) и статус — в разработке.'
