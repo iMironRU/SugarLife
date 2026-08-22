@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { слотПоСнимку, каналСлота, мостСлота, путьСлота } from './slotStatus';
+import { слотПоСнимку, каналСлота, мостСлота, путьСлота, модельСлота } from './slotStatus';
 import { ПОДПИСЬ_СЛОТА } from '@/слова/слоты';
 import type { DeviceView, UiSnapshot, HardwareView, RoleView } from '@/sources/bridge';
 
@@ -125,6 +125,18 @@ describe('чей мост показывать', () => {
   it('мостов нет вовсе — null', () => {
     expect(мостСлота(snap([помпа], роли), 'pump')).toBe(null);
   });
+
+  /* Мост — железка, и в проекции железа он есть всегда; в devices[] его кладёт не всякая
+     сборка. Пока смотрели только в devices, карточка писала «мост не выбран» рядом со
+     списком, где этот мост стоял строкой выше. */
+  it('моста нет в devices — берём из проекции железа', () => {
+    const железо = [{ id: 'orange', name: 'OrangeLink', kind: 'bridge', connection: 'Disconnected',
+      batteryPct: 60, firmware: '2.4' }] as unknown as HardwareView[];
+    const s = snap([dev({ id: 'p', kind: 'pump', behindBridgeId: 'orange' })],
+      [{ role: 'insulin', activeSourceId: 'p' }], железо);
+    expect(мостСлота(s, 'pump')?.name).toBe('OrangeLink');
+    expect(мостСлота(s, 'pump')?.batteryPct).toBe(60);
+  });
 });
 
 /* Откуда идут цифры — вопрос не тот же, что «работает ли связь». Помпа может молчать по
@@ -151,5 +163,65 @@ describe('откуда идут данные слота', () => {
       availableDrivers: [{ id: 'x', displayName: 'x', kind: 'pump', roles: [], settings: { parameters: [] }, available: true }],
     };
     expect(путьСлота(s, 'pump')).toBe(null);
+  });
+});
+
+/* Модель по нашему справочнику — из снимка (#224, шаг 4). Здесь проверяем только «у
+   какого прибора спрашивать»; годится ли ответ, решает domain/реестр.ts. */
+describe('модель прибора из снимка', () => {
+  const роли: RoleView[] = [{ role: 'insulin', activeSourceId: 'p2' }];
+
+  /* Приборов одного вида бывает несколько: запасная помпа, снятая с учёта старая. Взять
+     первую попавшуюся значит показать спецификации не той железки. */
+  it('спрашиваем прибор слота, а не первый в списке', () => {
+    const s = snap([
+      dev({ id: 'p1', kind: 'pump', deviceModel: 'старая' }),
+      dev({ id: 'p2', kind: 'pump', deviceModel: 'нужная' }),
+    ], роли);
+    expect(модельСлота(s, 'pump')).toBe('нужная');
+  });
+
+  /* Прибор записан, но данные ещё не пошли и слот пуст. Один прибор своего вида —
+     двусмысленности нет, про него и речь. */
+  it('слот пуст, прибор один — отвечаем за него', () => {
+    expect(модельСлота(snap([dev({ id: 'p', kind: 'pump', deviceModel: 'она' })]), 'pump'))
+      .toBe('она');
+  });
+
+  /* А вот двух молчим: выбрать за человека нечем, и ошибиться тут дороже, чем промолчать
+     — по модели считается резервуар. */
+  it('слот пуст, приборов два — молчим', () => {
+    const s = snap([
+      dev({ id: 'a', kind: 'pump', deviceModel: 'одна' }),
+      dev({ id: 'b', kind: 'pump', deviceModel: 'другая' }),
+    ]);
+    expect(модельСлота(s, 'pump')).toBe(null);
+  });
+
+  it('движок модели не знает — null, дальше отвечает локальный выбор', () => {
+    expect(модельСлота(snap([dev({ id: 'p', kind: 'pump' })]), 'pump')).toBe(null);
+    expect(модельСлота(null, 'pump')).toBe(null);
+  });
+});
+
+/* Помпа на теле, радио молчит, цифры идут из Nightscout: слот наполняет облачный
+   источник, а модель записана железке. Устройство при этом одно — роль перечисляет оба
+   пути в sourceIds. */
+describe('модель, когда слот наполняет облако', () => {
+  it('берём её у второго пути того же устройства', () => {
+    const s = snap([
+      dev({ id: 'ble', kind: 'pump', deviceModel: 'наша' }),
+      dev({ id: 'cloud', kind: 'pump' }),
+    ], [{ role: 'insulin', activeSourceId: 'cloud', sourceIds: ['ble', 'cloud'] }]);
+    expect(модельСлота(s, 'pump')).toBe('наша');
+  });
+
+  /* Чужого прибора это не касается: за пределы своей роли не выходим. */
+  it('прибор не из этой роли не считается', () => {
+    const s = snap([
+      dev({ id: 'чужая', kind: 'pump', deviceModel: 'не наша' }),
+      dev({ id: 'cloud', kind: 'pump' }),
+    ], [{ role: 'insulin', activeSourceId: 'cloud', sourceIds: ['cloud'] }]);
+    expect(модельСлота(s, 'pump')).toBe(null);
   });
 });

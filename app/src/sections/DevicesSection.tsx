@@ -22,6 +22,7 @@ import Готовность from '@/ui/Готовность';
 import ФонГотовность from '@/ui/ФонГотовность';
 import ВПриложении from '@/ui/ВПриложении';
 import { спроситьЛи } from '@/domain/deviceParams';
+import { useМодели } from '@/показ/модели';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
 import {
   железоДиспетчера, мостЖелезки, имяЖелезки, адресВЭфире,
@@ -79,8 +80,11 @@ export default function DevicesSection({ onClose, встроенный, толь
     void sendIntent(intent);
   };
 
-  const pump = pumpById(devCfg.pumpId);
-  const sensor = sensorById(devCfg.sensorId);
+  /* Модель — из движка, если он её помнит (#224): локальный конфиг живёт в
+     localStorage и исчезает вместе с ним, а запись прибора переживает перезапуск. */
+  const модели = useМодели();
+  const pump = pumpById(модели.pumpId);
+  const sensor = sensorById(модели.sensorId);
   const dev = data?.device ?? null;
   /* Через что живёт роль — из снимка движка (SugarLifeCore#34). Строка роли раньше
      говорила только «настроено», и это отвечало на вопрос про настройку, а не про

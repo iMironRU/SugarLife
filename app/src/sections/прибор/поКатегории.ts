@@ -35,14 +35,19 @@ export interface ЧтоЗаПрибор {
   мостОбязателен: boolean;
 }
 
-export function чтоЗаПрибор(cat: DeviceCatKey, cfg: DeviceConfig): ЧтоЗаПрибор {
+/* `модель` — уже разрешённый ответ «какая модель выбрана» (domain/реестр.ts, #224):
+   сначала движок, потом локальный конфиг. Не передали — читаем локальный сами, чтобы
+   вызов без снимка (браузер, тесты) остался осмысленным. */
+export function чтоЗаПрибор(
+  cat: DeviceCatKey, cfg: DeviceConfig, модель: string | null = null,
+): ЧтоЗаПрибор {
   const естьМодель = cat === 'sensor' || cat === 'pump';
-  const modelId = cat === 'pump' ? cfg.pumpId : cat === 'sensor' ? cfg.sensorId : null;
+  const modelId = модель ?? (cat === 'pump' ? cfg.pumpId : cat === 'sensor' ? cfg.sensorId : null);
   const модельИзвестна = isModelKnown(modelId);
   const записанБезМодели = естьМодель && isRecorded(modelId) && !модельИзвестна;
 
-  const pump = cat === 'pump' ? pumpById(cfg.pumpId) : null;
-  const sensor = cat === 'sensor' ? sensorById(cfg.sensorId) : null;
+  const pump = cat === 'pump' ? pumpById(modelId) : null;
+  const sensor = cat === 'sensor' ? sensorById(modelId) : null;
   const bridgeId = cat === 'pump' ? cfg.bridgePumpId : cat === 'sensor' ? cfg.bridgeSensorId : null;
 
   return {

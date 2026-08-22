@@ -8,8 +8,9 @@ import { useClouds, updateCloud, removeCloud } from '@/sources/clouds';
 import { ping, checkReadAccess, type ReadAccess } from '@/sources/nightscout';
 import { refresh } from '@/sources/store';
 import { toUnits } from '@/domain/units';
-import { useDeviceConfig, isRecorded, isModelKnown } from '@/settings/deviceConfig';
+import { isRecorded, isModelKnown } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
+import { useМодели } from '@/показ/модели';
 import { useStack } from '@/app/stackCtx';
 
 /* Карточка одного облака (docs/CONNECT-UX.md §2b, §7). «Забираем отсюда» — по конкретным
@@ -35,23 +36,23 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
   const [access, setAccess] = useState<ReadAccess | 'checking' | null>(null);
   const [tokenShown, setTokenShown] = useState(false);
   const [copied, setCopied] = useState<null | 'ok' | 'fail'>(null);
-  const devCfg = useDeviceConfig();
   // Запись в реестре может быть без модели (§2b) — тогда облако для неё единственный
   // способ, и переключатель обязан быть доступен. Заперт он только если записи нет вовсе.
-  const sensorRecorded = isRecorded(devCfg.sensorId);
-  const pumpRecorded = isRecorded(devCfg.pumpId);
+  const модели = useМодели();
+  const sensorRecorded = isRecorded(модели.sensorId);
+  const pumpRecorded = isRecorded(модели.pumpId);
   /* Название в заголовке, состояние — во второй строке. «Сенсор · модель не указана»
      одной строкой не влезало рядом с шевроном и переключателем и переносилось надвое. */
-  const sensorLabel = isModelKnown(devCfg.sensorId)
-    ? (sensorById(devCfg.sensorId)?.name ?? 'Сенсор')
+  const sensorLabel = isModelKnown(модели.sensorId)
+    ? (sensorById(модели.sensorId)?.name ?? 'Сенсор')
     : 'Сенсор';
-  const pumpLabel = isModelKnown(devCfg.pumpId)
-    ? (pumpById(devCfg.pumpId)?.model ?? 'Помпа')
+  const pumpLabel = isModelKnown(модели.pumpId)
+    ? (pumpById(модели.pumpId)?.model ?? 'Помпа')
     : 'Помпа';
   const sensorSub = !sensorRecorded ? 'не записан в «Устройствах»'
-    : isModelKnown(devCfg.sensorId) ? 'настроить' : 'модель не указана';
+    : isModelKnown(модели.sensorId) ? 'настроить' : 'модель не указана';
   const pumpSub = !pumpRecorded ? 'не записана в «Устройствах»'
-    : isModelKnown(devCfg.pumpId) ? 'настроить' : 'модель не указана';
+    : isModelKnown(модели.pumpId) ? 'настроить' : 'модель не указана';
 
   useEffect(() => {
     if (!cloud) return;

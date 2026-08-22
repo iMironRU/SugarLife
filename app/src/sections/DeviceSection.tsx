@@ -12,6 +12,7 @@ import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
 import { связь, предложениеСлияния, своиЖелезки, каналРоли } from '@/domain/deviceState';
 import { чтоЗаПрибор, ageText, ключиВыбора, имяМоделиПоId, драйверМодели } from './прибор/поКатегории';
+import { useМодели } from '@/показ/модели';
 import { СейчасНаУстройстве, Расходники } from './прибор/Состояние';
 import Каналы from './прибор/Каналы';
 import ПоказанияГлюкометра from './прибор/ПоказанияГлюкометра';
@@ -75,7 +76,12 @@ export default function DeviceSection({ onClose, cat, title }: {
   /* Что значит эта категория — одним ответом (sections/прибор/поКатегории.ts, #406).
      Сорок веток «а если помпа» жили по всему файлу; теперь они собраны, и поправить
      поведение можно, не держа в голове все четыре прибора сразу. */
-  const это = чтоЗаПрибор(cat, cfg);
+  /* Снимок нужен раньше самого экрана: с него берётся модель (#224). Локальный
+     конфиг остаётся ответом только там, где движка нет вовсе. */
+  const snap = useSnapshot();
+  const модели = useМодели();
+  const модельПрибора = cat === 'pump' ? модели.pumpId : cat === 'sensor' ? модели.sensorId : null;
+  const это = чтоЗаПрибор(cat, cfg, модельПрибора);
   const hasModel = это.естьМодель;
   const modelKnown = это.модельИзвестна;
   const recordedNoModel = это.записанБезМодели;
@@ -85,12 +91,11 @@ export default function DeviceSection({ onClose, cat, title }: {
 
   // реальное BLE-подключение показываем ТОЛЬКО когда мост действительно предлагает
   // драйвер для этой категории (прямой или через мост) — иначе секции нет вообще
-  const snap = useSnapshot();
   const drivers = snap?.availableDrivers ?? [];
   const driverKind = (id: string) => drivers.find((d) => d.id === id)?.kind;
   const hasBleDriver = modelKnown && drivers.some((d) => d.kind === cat || (d.providesTransportFor ?? []).some((t) => driverKind(t) === cat));
 
-  const pump = cat === 'pump' ? pumpById(cfg.pumpId) : null;
+  const pump = cat === 'pump' ? pumpById(модели.pumpId) : null;
 
   /* Мост спрашиваем у снимка, локальный выбор оставляем запасным (#281, шаг 2).
 
@@ -639,7 +644,7 @@ export default function DeviceSection({ onClose, cat, title }: {
           <CatalogPicker
             isOpen={pick === 'model'} onClose={() => setPick(null)}
             title={cat === 'pump' ? 'Выбор помпы' : 'Выбор сенсора'} subtitle="Справочник моделей"
-            items={pickerItems} selectedId={cat === 'pump' ? cfg.pumpId : cfg.sensorId}
+            items={pickerItems} selectedId={модельПрибора}
             onSelect={setModel} currentLabel="только актуальные"
           />
         )}

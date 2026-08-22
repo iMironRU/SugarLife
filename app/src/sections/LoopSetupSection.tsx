@@ -2,8 +2,9 @@ import Иконка from '@/ui/Иконка';
 import { checkmarkCircle, closeCircle, alertCircle, lockClosedOutline, createOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { useStore } from '@/sources/store';
-import { useDeviceConfig, isModelKnown } from '@/settings/deviceConfig';
+import { isModelKnown } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
+import { useМодели } from '@/показ/модели';
 import HoldButton from '@/ui/HoldButton';
 import Section from '@/ui/Section';
 import {
@@ -45,13 +46,15 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
   const [picked, setPicked] = useState<LoopModeId | null>(profile.savedAt ? profile.mode : null);
   const [done, setDone] = useState(false);
   const { data } = useStore();
-  const devCfg = useDeviceConfig();
 
   const close = () => { onClose(); setStep(0); setEditing(null); setDone(false); };
 
   const dev = data?.device ?? null;
-  const pump = isModelKnown(devCfg.pumpId) ? pumpById(devCfg.pumpId) : null;
-  const sensor = isModelKnown(devCfg.sensorId) ? sensorById(devCfg.sensorId) : null;
+  /* Модель спрашиваем у движка, локальный выбор — запасной (#224). Иначе после
+     переустановки проверка писала бы «модель не указана» при работающей помпе. */
+  const модели = useМодели();
+  const pump = isModelKnown(модели.pumpId) ? pumpById(модели.pumpId) : null;
+  const sensor = isModelKnown(модели.sensorId) ? sensorById(модели.sensorId) : null;
   const checks: Check[] = [
     pump ? { ok: 'yes', name: `Помпа ${pump.model}`, note: 'модель записана в «Устройствах»' }
          : { ok: 'maybe', name: 'Помпа — модель не указана', note: 'без модели неизвестно, какие полномочия она поддерживает' },

@@ -26,6 +26,10 @@
      нужен. Помпа стоит за мостом, и её вторая связь молчит: так видно цепочку. */
   var сенсор = {
     id: 'ble-E2:38:B4:63:51:59', name: 'Sibionics GS1', kind: 'sensor', driverId: 'sibionics',
+    /* Модель по справочнику ПРИЛОЖЕНИЯ (rev ≥ 1.14): движок её хранит и отдаёт обратно.
+       В демо она есть, а локального конфига нет — так и видно, что после переустановки
+       экран берёт модель у движка, а не пишет «не указана» при работающем приборе. */
+    deviceModel: 'sibionics-gs1',
     requiresAccountId: 'acc-1',
     /* Сеанс сенсора: конец и состояние — по ним карточка отвечает «сколько осталось»
        (#378). Начала движок не присылает, и день мы не выдумываем. */
@@ -39,6 +43,7 @@
   };
   var помпа = {
     id: 'medtronic-722:923109', name: 'Medtronic 722', kind: 'pump', driverId: 'medtronic',
+    deviceModel: 'minimed-group-бывшая-medtronic-diabetes-paradigm-522-722',
     roles: ['PumpStateSource', 'DeliveryHistorySource'], connection: 'Disconnected', status: 'Disconnected',
     capabilities: {}, settings: { parameters: [{ key: 'serial', title: 'Серийный номер', type: 'Text', required: true, default: null, options: [], keyboard: 'numeric' }] },
     params: { serial: '923109' },
