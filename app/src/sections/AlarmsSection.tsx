@@ -3,6 +3,7 @@ import { IonIcon, IonToggle } from '@ionic/react';
 import { alarmOutline, notificationsOutline, playOutline, trendingUpOutline, phonePortraitOutline, cloudOfflineOutline, appsOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
+import ГотовностьТревогБлок from '@/ui/ГотовностьТревог';
 import {
   настройкиТревоги, задатьТревогу, проверитьТревогу, тревогиДоступны,
   ПОРОГ_ПО_УМОЛЧАНИЮ, МИН_ПОРОГ, МАКС_ПОРОГ,
@@ -80,6 +81,10 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
         </div>
       )}
 
+      {/* Чем разбудим — первым, до порогов (#468): пороги при беззвучной тревоге не
+          значат ничего. Тот же блок стоит на экране готовности приборов. */}
+      <ГотовностьТревогБлок />
+
       <div className="section-label sec">Низкий сахар</div>
       <div className="list">
         <Row icon={alarmOutline} title="Будить при низком сахаре"
@@ -147,9 +152,11 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
               onClick={() => менять({ silenceMin: молчание + ШАГ_МОЛЧАНИЯ })}>+5 мин</button>
           </div>
           <div className="sheet-note">
-            Скажем один раз и замолчим: сенсор не начнёт отвечать оттого, что мы позвоним ещё
-            раз. Когда данные вернутся, уведомление уйдёт само — сообщать о хорошем ночью незачем.
-            Пока приборы отданы другому телефону, эта тревога молчит: тогда пауза объяснена.
+            Повторяем, пока данные не вернулись: первый раз через пятнадцать минут, дальше
+            реже, до получаса. Молчание ночью означает, что тревога о низком сахаре сработать
+            не может — считать нечего, и одного сигнала тут мало. Когда данные вернутся,
+            уведомление уйдёт само. Пока приборы отданы другому телефону, эта тревога молчит:
+            тогда пауза объяснена.
           </div>
         </>
       )}
