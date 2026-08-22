@@ -336,19 +336,32 @@ object Тревоги {
      * Поэтому спрашиваем сами и говорим вслух. Возвращаем то, чего не хватает, человеческим языком;
      * пустой список — всё на месте.
      */
-    fun чегоНеХватаетДляНочи(ctx: Context): List<String> {
+    fun чегоНеХватаетДляНочи(ctx: Context): List<String> = поломки(ctx).map { it.second }
+
+    /**
+     * То же, но КОДОМ И ФРАЗОЙ (просьба интерфейса, SugarLife#473).
+     *
+     * Дословную строку нельзя разложить по разделам экрана: «услышим ли тревогу» и «заметим ли
+     * пропажу данных» — разные пункты, а поломки разрешений валились в один. Код машине, фраза
+     * человеку; фраза по-прежнему живёт здесь, чтобы на двух платформах не разошлась.
+     *
+     * Коды: `notifications-off`, `dnd-access`, `fullscreen`, `channel-lowered`.
+     */
+    fun поломки(ctx: Context): List<Pair<String, String>> {
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val нет = mutableListOf<String>()
-        if (!nm.areNotificationsEnabled()) нет += "уведомления выключены целиком"
+        val нет = mutableListOf<Pair<String, String>>()
+        if (!nm.areNotificationsEnabled()) {
+            нет += "notifications-off" to "уведомления выключены целиком"
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !nm.isNotificationPolicyAccessGranted) {
-            нет += "нет доступа к «Не беспокоить» — ночью тревога будет беззвучной"
+            нет += "dnd-access" to "нет доступа к «Не беспокоить» — ночью тревога будет беззвучной"
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !nm.canUseFullScreenIntent()) {
-            нет += "запрещены полноэкранные уведомления — тревога останется строкой в шторке"
+            нет += "fullscreen" to "запрещены полноэкранные уведомления — тревога останется строкой в шторке"
         }
         val канал = nm.getNotificationChannel(КАНАЛ)
         if (канал != null && канал.importance < NotificationManager.IMPORTANCE_HIGH) {
-            нет += "канал тревог понижен в системных настройках — звука не будет"
+            нет += "channel-lowered" to "канал тревог понижен в системных настройках — звука не будет"
         }
         return нет
     }
