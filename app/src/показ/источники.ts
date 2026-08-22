@@ -1,7 +1,8 @@
 import type { DeviceView, UiSnapshot } from '@/sources/bridge';
-import { связь, устройствоРоли, толькоОблако, рольСнимка } from './deviceState';
-import { каналСлота, СЛОВО_ПУТИ } from './slotStatus';
-import { мостЖелезки, имяЖелезки, железоДиспетчера } from './nearby';
+import { связь, устройствоРоли, толькоОблако, рольСнимка } from '@/domain/deviceState';
+import { каналСлота } from '@/domain/slotStatus';
+import { СЛОВО_ПУТИ } from '@/слова/слоты';
+import { мостЖелезки, имяЖелезки, железоДиспетчера } from '@/domain/nearby';
 
 /* Откуда берутся данные — по слотам, а не по приборам (SugarLife#277).
 
@@ -18,10 +19,6 @@ import { мостЖелезки, имяЖелезки, железоДиспет�
    стоит половина наших подсказок. */
 
 export type Слот = 'сахар' | 'инсулин' | 'углеводы';
-
-export const ИМЯ_СЛОТА: Record<Слот, string> = {
-  сахар: 'Сахар', инсулин: 'Инсулин', углеводы: 'Углеводы',
-};
 
 export interface Источник {
   id: string;

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { слотПоСнимку, каналСлота, мостСлота, путьСлота, ПОДПИСЬ_СЛОТА } from './slotStatus';
+import { слотПоСнимку, каналСлота, мостСлота, путьСлота } from './slotStatus';
+import { ПОДПИСЬ_СЛОТА } from '@/слова/слоты';
 import type { DeviceView, UiSnapshot, HardwareView, RoleView } from '@/sources/bridge';
 
 /* Состояние слота человек читает как ответ на «работает ли у меня это». Ошибка здесь

@@ -5,7 +5,7 @@ import Section from '@/ui/Section';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 import {
   источникиСлота, причинаСлота, откудаСейчас, наполненЛи, учёткаСлота, type Слот,
-} from '@/domain/sources';
+} from '@/показ/источники';
 import { useStack } from '@/app/stackCtx';
 import ЧипыПотоков, { ПОТОКИ, type Поток } from '@/ui/Потоки';
 import { CloudAccountsSection } from '@/sections/lazy';

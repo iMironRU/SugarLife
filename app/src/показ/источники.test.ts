@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { источникиСлота, причинаСлота, наполненЛи } from './sources';
+import { источникиСлота, причинаСлота, наполненЛи } from './источники';
 import type { DeviceView, RoleView, UiSnapshot } from '@/sources/bridge';
 
 /* Слоты «откуда берутся данные» (SugarLife#277). Ошибка здесь не падает: она молча
