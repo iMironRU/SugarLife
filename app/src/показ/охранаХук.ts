@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useSnapshot } from '@/sources/bridge';
 import { готовностьТревог, настройкиТревоги, type ГотовностьТревог } from '@/platform/тревоги';
-import { фонГотовность, type ФонОтвет } from '@/platform/фон';
-import { охрана, type Охрана } from './охрана';
+import { фонГотовность, бодрствование, type ФонОтвет } from '@/platform/фон';
+import { Capacitor } from '@capacitor/core';
+import { состояниеБаннера } from '@/platform/живойБаннер';
+import { охрана, type Охрана, type Платформа } from './охрана';
 
 /* Один сбор для двух мест: раздела «Охрана» и строки на «Сегодня» (#473).
 
@@ -13,6 +15,8 @@ export function useОхрана(): { охрана: Охрана | null; обно
   const [готовность, setГотовность] = useState<ГотовностьТревог | null>(null);
   const [фон, setФон] = useState<ФонОтвет | null>(null);
   const [включены, setВключены] = useState(false);
+  const [баннер, setБаннер] = useState(false);
+  const [звук, setЗвук] = useState(false);
   const [спросили, setСпросили] = useState(false);
   /* Счётчик перечитываний. Без него экран, на котором человек только что выдал доступ или
      включил тревогу, продолжал бы показывать прежний ответ: состояние живёт в системе, а
@@ -22,10 +26,12 @@ export function useОхрана(): { охрана: Охрана | null; обно
 
   useEffect(() => {
     let жив = true;
-    void Promise.all([готовностьТревог(), фонГотовность(), настройкиТревоги()])
-      .then(([г, ф, н]) => {
+    void Promise.all([готовностьТревог(), фонГотовность(), настройкиТревоги(), состояниеБаннера(), бодрствование()])
+      .then(([г, ф, н, б, бд]) => {
         if (!жив) return;
-        setГотовность(г); setФон(ф); setВключены(!!н?.on); setСпросили(true);
+        setГотовность(г); setФон(ф); setВключены(!!н?.on); setБаннер(!!б?.включён);
+        setЗвук(!!бд && бд.режим !== 'выключено');
+        setСпросили(true);
       });
     return () => { жив = false; };
   }, [заход]);
@@ -33,7 +39,12 @@ export function useОхрана(): { охрана: Охрана | null; обно
   const обновить = () => setЗаход((з) => з + 1);
   if (!спросили) return { охрана: null, обновить };
   const м = снимок?.monitor;
+  const платформа: Платформа = !Capacitor.isNativePlatform() ? 'веб'
+    : Capacitor.getPlatform() === 'ios' ? 'ios' : 'android';
   const итог = охрана({
+    платформа,
+    баннерВключён: баннер,
+    ночнойЗвук: звук,
     тревогиВключены: включены,
     готовность,
     фон,
