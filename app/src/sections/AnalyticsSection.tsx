@@ -1,3 +1,4 @@
+import { причинаНеготовности } from '@/показ/находки';
 import { useEffect, useState } from 'react';
 import { IonIcon } from '@ionic/react';
 import { warning, alertCircle } from 'ionicons/icons';
@@ -95,8 +96,11 @@ export default function AnalyticsSection({ onClose, встроенный }: {
       {/* Причины остаются, но строкой, а не карточкой: «нет учёта углеводов» — это
           то, что человек может починить, и выбрасывать его вместе с плашкой нельзя.
           Показываем только когда есть оговорка: при полных данных объяснять нечего. */}
+      {/* Разбор возвращает коды причин, называет их слой показа (#324). */}
       {вид && r.reasons.length > 0 && (
-        <div className="sheet-note warn" style={{ marginTop: 10 }}>{r.reasons.join(' · ')}</div>
+        <div className="sheet-note warn" style={{ marginTop: 10 }}>
+          {r.reasons.map(причинаНеготовности).join(' · ')}
+        </div>
       )}
 
       {/* Что изменилось — до находок, а не после (#195).

@@ -6,25 +6,55 @@ import type { Entry, Treatment } from '@/domain/types';
 import { deviceAges , type ChangeMarks } from './treatmentStats';
 import { stats, agp, LOW, HIGH, VLOW, VHIGH } from './agp';
 import { необъяснённыеПодъёмы } from './mealMoment';
-import { разборБезЗаписи, имяЧасти, type РазборБезЗаписи } from './безЗаписи';
+import { разборБезЗаписи, type РазборБезЗаписи } from './безЗаписи';
 import type { ОтметкаПодъёма } from './причиныПодъёма';
-import { toUnits, unitLabel } from './units';
 
 export type Severity = 'good' | 'info' | 'warn' | 'bad';
 export type InsightKind = 'device' | 'data' | 'habit' | 'glucose';
 
-export interface Insight {
+/* Что нашёл разбор — БЕЗ СЛОВ (#324, #407).
+
+   Раньше здесь же лежали заголовок, объяснение и вопрос человеку. Файл разбора — самый
+   плотный по правилам в приложении: пороги, окна, эпизоды, медианы. Формулировка,
+   живущая рядом с числом, по которому человек решает про инсулин, означала две беды
+   сразу: правку слова нельзя было сделать, не тронув расчёт, а расчёт нельзя было
+   проверить тестом, не сверяя буквы.
+
+   Теперь разбор возвращает `вид` — что именно найдено — и `п`: числа, которые попадут во
+   фразу. Слова живут в `показ/находки.ts` и полны по типу: новый вид не соберётся, пока
+   ему не написана фраза.
+
+   `id` остался прежним и отдельно от `вида`: по нему группируются вопросы врачу и
+   строятся ключи списка, и он не должен дробиться вместе с формулировками. */
+export type ВидНаходки =
+  | 'канюля-пора' | 'канюля-скоро' | 'резервуар-давно'
+  | 'датчик-перерос' | 'датчик-скоро' | 'батарея-давно'
+  | 'ритм-канюли' | 'ритм-датчика' | 'телефон-разряжен'
+  | 'ночные-гипо' | 'гипо-тяжёлая' | 'гипо-много' | 'гипо-в-норме' | 'откат'
+  | 'заря' | 'окно-высоко' | 'окно-низко' | 'непредсказуемый-час'
+  | 'тренд-вверх' | 'тренд-вниз' | 'gmi-выше' | 'долгая-гипер'
+  | 'нмг-дыры' | 'нмг-пропуски' | 'нмг-полные' | 'базал-неполный'
+  | 'без-записи' | 'еда-не-пишется' | 'еда-мало' | 'болюсов-нет';
+
+export interface Находка {
   id: string;
+  вид: ВидНаходки;
   kind: InsightKind;
   severity: Severity;
-  title: string;
-  message: string;
-  question?: string;
+  /** Числа для фразы. Их подставляет слой показа — здесь только значения. */
+  п?: Record<string, number | string>;
 }
+
+/** Прежнее имя типа: им пользуются экраны и записка. */
+export type Insight = Находка;
+
+/* Причины неготовности — кодами, а не фразами: сами фразы в `показ/находки.ts`. */
+export type ПричинаНеготовности =
+  | 'мало-дней' | 'дыры-в-нмг' | 'пропуски-в-нмг' | 'нет-углеводов' | 'мало-углеводов';
 
 export interface Readiness {
   level: 'ready' | 'partial' | 'not';
-  reasons: string[];
+  reasons: ПричинаНеготовности[];
 }
 
 export interface Analysis {
@@ -55,10 +85,6 @@ export interface AnalyzeCtx {
 const SEV_ORDER: Record<Severity, number> = { bad: 0, warn: 1, info: 2, good: 3 };
 const DAY = 86400e3;
 
-// глюкоза в текущих единицах со знаком единиц
-const gv = (mmol: number) => `${toUnits(mmol)} ${unitLabel()}`;
-// дельта глюкозы (без подписи «ниже нуля»): для мг/дл ×18
-const gd = (mmol: number) => toUnits(mmol);
 
 // Число «входов» ниже порога (эпизоды гипо/выхода за диапазон)
 function episodesBelow(sorted: Entry[], thr: number): number {
@@ -116,19 +142,19 @@ export function analyze(
   // ================= расходники / замены =================
   if (ages.site) {
     const d = ages.site.days;
-    if (d >= 5) ins.push({ id: 'site', kind: 'device', severity: 'warn', title: `Канюля стоит ${d} дн.`, message: 'Инфузионный набор обычно меняют каждые 2–3 дня — дольше растёт риск воспаления и плохого всасывания инсулина.', question: 'Пора менять набор?' });
-    else if (d >= 3) ins.push({ id: 'site', kind: 'device', severity: 'info', title: `Канюля: ${d} дн.`, message: 'Приближается срок замены инфузионного набора (обычно 2–3 дня).' });
+    if (d >= 5) ins.push({ id: 'site', вид: 'канюля-пора', kind: 'device', severity: 'warn', п: { дней: d } });
+    else if (d >= 3) ins.push({ id: 'site', вид: 'канюля-скоро', kind: 'device', severity: 'info', п: { дней: d } });
   }
   if (ages.reservoir && ages.reservoir.days >= 6) {
-    ins.push({ id: 'reservoir', kind: 'device', severity: 'warn', title: `Резервуар залит ${ages.reservoir.days} дн.`, message: 'Инсулин в помпе теряет активность от тепла тела за несколько дней. Обычно перезаливают каждые 3–6 дней.' });
+    ins.push({ id: 'reservoir', вид: 'резервуар-давно', kind: 'device', severity: 'warn', п: { дней: ages.reservoir.days } });
   }
   if (ages.sensor) {
     const d = ages.sensor.days;
-    if (d >= 14) ins.push({ id: 'sensor', kind: 'device', severity: 'warn', title: `Датчик: день ${d + 1}`, message: 'Дольше обычного срока сенсора. Если это не сенсор расширенного ношения — проверь точность по глюкометру и запланируй замену.' });
-    else if (d >= 10) ins.push({ id: 'sensor', kind: 'device', severity: 'info', title: `Датчик: день ${d + 1}`, message: 'Приближается типичный конец срока сенсора — держи новый под рукой.' });
+    if (d >= 14) ins.push({ id: 'sensor', вид: 'датчик-перерос', kind: 'device', severity: 'warn', п: { день: d + 1 } });
+    else if (d >= 10) ins.push({ id: 'sensor', вид: 'датчик-скоро', kind: 'device', severity: 'info', п: { день: d + 1 } });
   }
   if (ages.battery && ages.battery.days >= 21) {
-    ins.push({ id: 'battery', kind: 'device', severity: 'info', title: `Батарея помпы: ${ages.battery.days} дн.`, message: 'Работает давно — держи запасную под рукой.' });
+    ins.push({ id: 'battery', вид: 'батарея-давно', kind: 'device', severity: 'info', п: { дней: ages.battery.days } });
   }
   // каденс замен — «обычно ты меняешь каждые N дней»
   const cadence = (types: string[]): number | null => {
@@ -140,25 +166,25 @@ export function analyze(
     return gaps[Math.floor(gaps.length / 2)]; // медиана
   };
   const siteCad = cadence(['Site Change']);
-  if (siteCad) ins.push({ id: 'site-cad', kind: 'device', severity: 'info', title: `Канюлю меняешь ~каждые ${siteCad.toFixed(0)} дн.`, message: 'Твой обычный ритм замены набора — по истории Nightscout.' });
+  if (siteCad) ins.push({ id: 'site-cad', вид: 'ритм-канюли', kind: 'device', severity: 'info', п: { дней: siteCad } });
   const sensorCad = cadence(['Sensor Change', 'Sensor Start']);
-  if (sensorCad) ins.push({ id: 'sensor-cad', kind: 'device', severity: 'info', title: `Датчик меняешь ~каждые ${sensorCad.toFixed(0)} дн.`, message: 'Твой обычный ритм замены сенсора — по истории Nightscout.' });
+  if (sensorCad) ins.push({ id: 'sensor-cad', вид: 'ритм-датчика', kind: 'device', severity: 'info', п: { дней: sensorCad } });
 
   // телефон-аплоадер
   if (ctx.uploaderBattery != null && ctx.uploaderBattery <= 20) {
-    ins.push({ id: 'phone', kind: 'device', severity: 'warn', title: `Телефон разряжен (${ctx.uploaderBattery}%)`, message: 'Аплоадер вот-вот сядет — данные CGM прервутся, пока не зарядишь.' });
+    ins.push({ id: 'phone', вид: 'телефон-разряжен', kind: 'device', severity: 'warn', п: { процент: ctx.uploaderBattery } });
   }
 
   // ================= ночная безопасность =================
   const night = es.filter((e) => new Date(e.t).getHours() < 6);
   const nightHypo = episodesBelow(night, LOW);
   if (nightHypo >= 1) {
-    ins.push({ id: 'night-hypo', kind: 'glucose', severity: nightHypo >= 4 ? 'bad' : 'warn', title: `Ночные гипо: ${nightHypo} за ${windowDays} дн.`, message: `Сахар опускался ниже ${gv(LOW)} в 00:00–06:00 — во сне это легко проспать. Частые ночные гипо — повод обсудить с врачом снижение ночного базала.` });
+    ins.push({ id: 'night-hypo', вид: 'ночные-гипо', kind: 'glucose', severity: nightHypo >= 4 ? 'bad' : 'warn', п: { сколько: nightHypo, дней: windowDays, низ: LOW } });
   }
   if (s) {
-    if (s.veryLow > 1) ins.push({ id: 'tbr', kind: 'glucose', severity: 'bad', title: `Тяжёлая гипо ${s.veryLow.toFixed(1)}% времени`, message: `Ниже ${gv(VLOW)} — ${s.veryLow.toFixed(1)}% времени при цели <1%. Это опасно много.` });
-    else if (s.tbr > 4) ins.push({ id: 'tbr', kind: 'glucose', severity: 'warn', title: `Ниже нормы ${s.tbr.toFixed(1)}% времени`, message: `Сахар ниже ${gv(LOW)} — ${s.tbr.toFixed(1)}% времени при клинической цели <4%.` });
-    else ins.push({ id: 'tbr', kind: 'glucose', severity: 'good', title: `Гипо под контролем (${s.tbr.toFixed(1)}%)`, message: `Ниже нормы всего ${s.tbr.toFixed(1)}% времени — в пределах цели <4%.` });
+    if (s.veryLow > 1) ins.push({ id: 'tbr', вид: 'гипо-тяжёлая', kind: 'glucose', severity: 'bad', п: { доля: s.veryLow, порог: VLOW } });
+    else if (s.tbr > 4) ins.push({ id: 'tbr', вид: 'гипо-много', kind: 'glucose', severity: 'warn', п: { доля: s.tbr, порог: LOW } });
+    else ins.push({ id: 'tbr', вид: 'гипо-в-норме', kind: 'glucose', severity: 'good', п: { доля: s.tbr } });
   }
   // рикошет: гипо → гипер в течение 2 ч
   let rebounds = 0;
@@ -172,13 +198,13 @@ export function analyze(
     }
   }
   if (rebounds >= 3) {
-    ins.push({ id: 'rebound', kind: 'glucose', severity: 'info', title: `Откат в гипер: ${rebounds} раз`, message: `После гипо сахар в течение 2 ч улетал выше ${gv(HIGH)}. Часто это перебор быстрых углеводов при купировании низкого.`, question: 'Сколько съедаешь, когда «ловишь» гипо?' });
+    ins.push({ id: 'rebound', вид: 'откат', kind: 'glucose', severity: 'info', п: { сколько: rebounds, верх: HIGH } });
   }
 
   // ================= паттерны по времени суток =================
   const p3 = p50.get(3), p7 = p50.get(7);
   if (p3 != null && p7 != null && p7 - p3 >= 1.7) {
-    ins.push({ id: 'dawn', kind: 'glucose', severity: 'info', title: 'Феномен зари', message: `Под утро сахар сам поднимается на ${gd(p7 - p3)} ${unitLabel()} (с ${gv(p3)} в 3:00 до ${gv(p7)} в 7:00) без еды. Обычно решается добавкой предутреннего базала.` });
+    ins.push({ id: 'dawn', вид: 'заря', kind: 'glucose', severity: 'info', п: { рост: p7 - p3, в3: p3, в7: p7 } });
   }
   // самые «высокие» и «низкие» часы по медиане
   const runHours = (test: (v: number) => boolean) => {
@@ -194,19 +220,19 @@ export function analyze(
   const hi = runHours((v) => v > HIGH);
   if (hi.length >= 3) {
     const med = hi.reduce((a, h) => a + (p50.get(h) || 0), 0) / hi.length;
-    ins.push({ id: 'high-window', kind: 'glucose', severity: 'warn', title: `Стабильно высоко ${hi[0]}:00–${hi[hi.length - 1] + 1}:00`, message: `В эти часы медиана держится около ${gv(med)}. Присмотрись к базалу и болюсам этого времени.` });
+    ins.push({ id: 'high-window', вид: 'окно-высоко', kind: 'glucose', severity: 'warn', п: { с: hi[0], до: hi[hi.length - 1] + 1, медиана: med } });
   }
   const lo = runHours((v) => v < LOW);
   if (lo.length >= 2) {
     const med = lo.reduce((a, h) => a + (p50.get(h) || 0), 0) / lo.length;
-    ins.push({ id: 'low-window', kind: 'glucose', severity: 'warn', title: `Стабильно низко ${lo[0]}:00–${lo[lo.length - 1] + 1}:00`, message: `Медиана около ${gv(med)} — вероятно, в это время инсулина многовато.` });
+    ins.push({ id: 'low-window', вид: 'окно-низко', kind: 'glucose', severity: 'warn', п: { с: lo[0], до: lo[lo.length - 1] + 1, медиана: med } });
   }
   // самый непредсказуемый час
   let volH = -1, volW = 0;
   for (const [h, sp] of spread) { const w = sp.hi - sp.lo; if (w > volW) { volW = w; volH = h; } }
   if (volH >= 0 && volW > 5) {
     const sp = spread.get(volH)!;
-    ins.push({ id: 'volatile', kind: 'glucose', severity: 'info', title: `Самый непредсказуемый час: ${volH}:00`, message: `Разброс сахара от ${gv(sp.lo)} до ${gv(sp.hi)}. Что обычно происходит в это время — еда, спорт, стресс?` });
+    ins.push({ id: 'volatile', вид: 'непредсказуемый-час', kind: 'glucose', severity: 'info', п: { час: volH, низ: sp.lo, верх: sp.hi } });
   }
 
   // ================= тренды и цели =================
@@ -216,25 +242,25 @@ export function analyze(
     if (last7 && prev7 && last7.n > 500 && prev7.n > 500) {
       const d = last7.target - prev7.target;
       if (Math.abs(d) >= 3) {
-        ins.push({ id: 'tir-trend', kind: 'glucose', severity: d >= 0 ? 'good' : 'warn', title: `Время в норме: ${last7.target.toFixed(0)}% (${d >= 0 ? '+' : ''}${d.toFixed(0)}% за неделю)`, message: d >= 0 ? 'Контроль за последнюю неделю улучшился — так держать.' : 'За последнюю неделю время в норме просело. Стоит разобраться, что изменилось.' });
+        ins.push({ id: 'tir-trend', вид: d >= 0 ? 'тренд-вверх' : 'тренд-вниз', kind: 'glucose', severity: d >= 0 ? 'good' : 'warn', п: { сейчас: last7.target, сдвиг: d } });
       }
     }
     if (s.gmi > 7) {
-      ins.push({ id: 'gmi', kind: 'glucose', severity: s.gmi > 7.5 ? 'warn' : 'info', title: `GMI ${s.gmi.toFixed(1)}% — выше цели`, message: `Расчётный HbA1c ${s.gmi.toFixed(1)}% при цели <7% (средний сахар ${gv(s.mean)}). Снижение среднего сахара уменьшит риск осложнений.` });
+      ins.push({ id: 'gmi', вид: 'gmi-выше', kind: 'glucose', severity: s.gmi > 7.5 ? 'warn' : 'info', п: { gmi: s.gmi, среднее: s.mean } });
     }
     const longHigh = sustainedAbove(es, VHIGH, 2 * 3600e3);
     if (longHigh >= 1) {
-      ins.push({ id: 'long-high', kind: 'glucose', severity: 'info', title: `Долгая гипергликемия: ${longHigh} эпизод(ов)`, message: `Сахар держался выше ${gv(VHIGH)} дольше 2 ч. Длительные высокие бьют по сосудам — проверь, хватает ли коррекций.` });
+      ins.push({ id: 'long-high', вид: 'долгая-гипер', kind: 'glucose', severity: 'info', п: { сколько: longHigh, порог: VHIGH } });
     }
   }
 
   // ================= качество данных =================
-  if (coverage < 0.5) ins.push({ id: 'cgm', kind: 'data', severity: 'bad', title: `Много пропусков в CGM (${pct}%)`, message: 'Половину времени нет показаний — телефон терял связь с сенсором или не выгружал в Nightscout. Из-за дыр метрики и Autotune сильно занижаются.' });
-  else if (coverage < 0.8) ins.push({ id: 'cgm', kind: 'data', severity: 'warn', title: `Пропуски в CGM (${pct}%)`, message: 'Часть времени нет показаний. Полнее данные — точнее анализ. Проверь связь телефона с сенсором и выгрузку в Nightscout.' });
-  else ins.push({ id: 'cgm', kind: 'data', severity: 'good', title: `Данные CGM почти полные (${pct}%)`, message: 'Показания идут без больших пропусков — хорошая основа для анализа.' });
+  if (coverage < 0.5) ins.push({ id: 'cgm', вид: 'нмг-дыры', kind: 'data', severity: 'bad', п: { процент: pct } });
+  else if (coverage < 0.8) ins.push({ id: 'cgm', вид: 'нмг-пропуски', kind: 'data', severity: 'warn', п: { процент: pct } });
+  else ins.push({ id: 'cgm', вид: 'нмг-полные', kind: 'data', severity: 'good', п: { процент: pct } });
 
   if (ctx.basalCoverage && ctx.basalCoverage.total > 0 && ctx.basalCoverage.covered / ctx.basalCoverage.total < 0.6) {
-    ins.push({ id: 'basal', kind: 'data', severity: 'warn', title: 'Неполная выгрузка базала', message: `Только ${ctx.basalCoverage.covered} из ${ctx.basalCoverage.total} дней с полными данными по temp basal — остальные залиты частично. Суточная доза и Autotune на таких днях недостоверны.` });
+    ins.push({ id: 'basal', вид: 'базал-неполный', kind: 'data', severity: 'warn', п: { дней: ctx.basalCoverage.covered, всего: ctx.basalCoverage.total } });
   }
 
   // ================= привычки логирования =================
@@ -252,36 +278,35 @@ export function analyze(
   const подъёмы = необъяснённыеПодъёмы(es, carbs.map((c) => c.t), now, { глубинаМс: winMs, предел: 500 });
   const разбор = разборБезЗаписи(подъёмы, windowDays, ctx.отметкиПодъёмов ?? []);
   if (разбор.всего >= 3) {
-    const где = разбор.преобладает ? ` — чаще всего ${имяЧасти(разбор.преобладает)}` : '';
     ins.push({
-      id: 'без-записи', kind: 'habit',
+      id: 'без-записи', вид: 'без-записи', kind: 'habit',
       severity: разбор.вДень >= 1 ? 'warn' : 'info',
-      title: `Подъёмы без записи: ${разбор.всего} за ${windowDays} дн.${где}`,
-      message: `Сахар поднимался в среднем на ${разбор.типичныйПодъём.toFixed(1).replace('.', ',')} ммоль, а записи рядом не было. Причин у такого подъёма несколько: недоданный болюс, отвалившаяся канюля, рассветный феномен, болезнь или съеденное без записи.`,
-      question: разбор.преобладает === 'ночь'
-        ? 'Ночные подъёмы повторяются — это стоит показать врачу.'
-        : 'Что это было — еда, которую не записали, или что-то другое?',
+      п: {
+        всего: разбор.всего, дней: windowDays,
+        типичный: разбор.типичныйПодъём,
+        преобладает: разбор.преобладает ?? '',
+      },
     });
   }
 
-  if (carbsPerDay < 0.5) ins.push({ id: 'carbs', kind: 'habit', severity: 'warn', title: 'Углеводы почти не записаны', message: 'За период — почти ноль приёмов пищи. Без углеводов калькулятор болюса и Autotune работают вслепую: им не с чем сопоставлять подъёмы сахара.', question: 'Ты не ешь — или забываешь записывать еду?' });
-  else if (carbsPerDay < 2) ins.push({ id: 'carbs', kind: 'habit', severity: 'info', title: `Мало записей еды (${carbsPerDay.toFixed(1)}/день)`, message: 'Похоже, часть приёмов пищи не попадает в дневник. Чем полнее еда — тем точнее рекомендации.', question: 'Записываешь все приёмы пищи или только крупные?' });
-  if (bolusPerDay < 0.5 && carbsPerDay >= 0.5) ins.push({ id: 'bolus', kind: 'habit', severity: 'info', title: 'Дискретных болюсов почти нет', message: 'Похоже, коррекции идут через temp basal (замкнутая петля). Для AAPS это норма, но Autotune труднее делить базал и болюс.' });
+  if (carbsPerDay < 0.5) ins.push({ id: 'carbs', вид: 'еда-не-пишется', kind: 'habit', severity: 'warn' });
+  else if (carbsPerDay < 2) ins.push({ id: 'carbs', вид: 'еда-мало', kind: 'habit', severity: 'info', п: { вДень: carbsPerDay } });
+  if (bolusPerDay < 0.5 && carbsPerDay >= 0.5) ins.push({ id: 'bolus', вид: 'болюсов-нет', kind: 'habit', severity: 'info' });
 
   ins.sort((a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity]);
 
   // ================= вердикт готовности к Autotune =================
-  const reasons: string[] = [];
+  const reasons: ПричинаНеготовности[] = [];
   let level: Readiness['level'] = 'ready';
   const worsen = (l: Readiness['level']) => {
     if (l === 'not') level = 'not';
     else if (l === 'partial' && level === 'ready') level = 'partial';
   };
-  if (windowDays < 7) { reasons.push('нужно хотя бы 7 дней истории'); worsen('partial'); }
-  if (coverage < 0.5) { reasons.push('слишком много пропусков в CGM'); worsen('not'); }
-  else if (coverage < 0.8) { reasons.push('есть пропуски в CGM'); worsen('partial'); }
-  if (carbsPerDay < 0.5) { reasons.push('нет учёта углеводов — Autotune будет слепым'); worsen('not'); }
-  else if (carbsPerDay < 2) { reasons.push('неполный учёт еды снизит точность'); worsen('partial'); }
+  if (windowDays < 7) { reasons.push('мало-дней'); worsen('partial'); }
+  if (coverage < 0.5) { reasons.push('дыры-в-нмг'); worsen('not'); }
+  else if (coverage < 0.8) { reasons.push('пропуски-в-нмг'); worsen('partial'); }
+  if (carbsPerDay < 0.5) { reasons.push('нет-углеводов'); worsen('not'); }
+  else if (carbsPerDay < 2) { reasons.push('мало-углеводов'); worsen('partial'); }
 
   return {
     readiness: { level, reasons }, insights: ins, coverage, carbsPerDay, bolusPerDay, windowDays,

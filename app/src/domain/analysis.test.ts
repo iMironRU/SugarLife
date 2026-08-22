@@ -84,11 +84,11 @@ describe('порядок и целостность', () => {
     expect([...ранги].sort((x, y) => x - y)).toEqual(ранги);
   });
 
-  it('у каждой находки есть заголовок и текст — пустых карточек не бывает', () => {
+  /* Слова каждой находки проверяются в слое показа (показ/находки.test.ts): здесь их
+     больше нет, и это главное следствие разделения — правило проверяется, не сверяя букв. */
+  it('у находки есть вид, по которому её называют', () => {
     const a = analyze(мк(288 * 14, (i) => (i % 300 === 0 ? 3 : 12)), [событие('Site Change', 5 * д)], 14);
-    for (const i of a.insights) {
-      expect(i.title.trim().length).toBeGreaterThan(0);
-      expect(i.message.trim().length).toBeGreaterThan(0);
-    }
+    expect(a.insights.length).toBeGreaterThan(0);
+    for (const i of a.insights) expect(i.вид).toBeTruthy();
   });
 });
