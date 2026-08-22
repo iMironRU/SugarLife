@@ -94,3 +94,55 @@ export async function проверитьТревогу(): Promise<boolean> {
   if (!тревогиДоступны()) return false;
   try { await Native.testAlarm(); return true; } catch { return false; }
 }
+
+/* ГОТОВНОСТЬ РАЗБУДИТЬ (#468).
+
+   Канал тревоги заведён правильно: громкость будильника, обход «Не беспокоить»,
+   полноэкранное намерение, вибрация. Но система исполняет всё это только при выданных
+   разрешениях, а без них МОЛЧА ДЕЛАЕТ ВИД, ЧТО ИСПОЛНИЛА. Утром уведомление в шторке на
+   месте — и человек уверен, что защита была.
+
+   Разрешение в манифесте — только право спросить. Доступ к «Не беспокоить» и право на
+   полноэкранные уведомления выдаёт человек руками, и пока он их не выдал, ночная тревога
+   приходит беззвучной строкой. Поэтому список того, чего не хватает, показываем ДО ночи,
+   а не выясняем после. */
+export interface ГотовностьТревог {
+  /** Есть ли о чём говорить. false — молчим, зелёных галочек не рисуем. */
+  проблема: boolean;
+  /** Чего не хватает — словами от натива: ответ один на обе платформы. */
+  чегоНет: string[];
+  сторожМолчания: boolean;
+  порогМолчанияМин: number;
+}
+
+interface ПлагинГотовности {
+  alarmReadiness(): Promise<{
+    problem: boolean; missing: string[];
+    silenceWatchdogOn: boolean; silenceThresholdMin: number;
+  }>;
+  openDndAccess(): Promise<void>;
+}
+const NativeГотовность = registerPlugin<ПлагинГотовности>('SugarLifeBridge');
+
+export async function готовностьТревог(): Promise<ГотовностьТревог | null> {
+  if (!тревогиДоступны()) return null;
+  try {
+    const r = await NativeГотовность.alarmReadiness();
+    return {
+      проблема: !!r.problem,
+      чегоНет: Array.isArray(r.missing) ? r.missing : [],
+      сторожМолчания: !!r.silenceWatchdogOn,
+      порогМолчанияМин: Number(r.silenceThresholdMin) || МОЛЧАНИЕ_ПО_УМОЛЧАНИЮ,
+    };
+  } catch {
+    /* Метода нет — сборка старше проверки. Это НЕ «всё в порядке»: молчание здесь
+       читается как обещание, что разбудим, а мы этого не знаем. */
+    return null;
+  }
+}
+
+/** Открыть системный экран доступа к «Не беспокоить». */
+export async function открытьДоступКТихомуРежиму(): Promise<boolean> {
+  if (!тревогиДоступны()) return false;
+  try { await NativeГотовность.openDndAccess(); return true; } catch { return false; }
+}

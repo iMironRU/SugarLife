@@ -1,3 +1,4 @@
+import ГотовностьТревогБлок from '@/ui/ГотовностьТревог';
 import { IonIcon } from '@ionic/react';
 import { useState } from 'react';
 import { documentTextOutline, shareOutline, warningOutline, qrCodeOutline } from 'ionicons/icons';
@@ -58,6 +59,7 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
       <div className="section-label sec">Поиск приборов</div>
       <Готовность помеха={мешает(snap)} спокойно />
       <ФонГотовность спокойно />
+      <ГотовностьТревогБлок спокойно />
     </>
   );
 
