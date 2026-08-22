@@ -25,14 +25,16 @@ enum ЖивойБаннер {
     private static var текущий: Activity<СахарАтрибуты>?
 
     static func обновить(
-        значение: String, стрелка: String, разница: String, когдаМс: Double, старое: Bool, источник: String
+        значение: String, стрелка: String, разница: String, когдаМс: Double, старое: Bool, источник: String,
+        ряд: [СахарАтрибуты.ContentState.Точка] = []
     ) -> String {
         let состояние = СахарАтрибуты.ContentState(
             значение: значение,
             стрелка: стрелка,
             разница: разница,
             когда: Date(timeIntervalSince1970: когдаМс / 1000),
-            старое: старое
+            старое: старое,
+            ряд: ряд
         )
 
         /* Человек мог выключить живые уведомления в настройках телефона — это его право, и
@@ -68,7 +70,8 @@ enum ЖивойБаннер {
 
     static var живой: Bool { !Activity<СахарАтрибуты>.activities.isEmpty }
     #else
-    static func обновить(значение: String, стрелка: String, разница: String, когдаМс: Double, старое: Bool, источник: String) -> String { "нет ActivityKit" }
+    static func обновить(значение: String, стрелка: String, разница: String, когдаМс: Double, старое: Bool, источник: String,
+                         ряд: [СахарАтрибуты.ContentState.Точка] = []) -> String { "нет ActivityKit" }
     static func погасить() {}
     static var живой: Bool { false }
     #endif
