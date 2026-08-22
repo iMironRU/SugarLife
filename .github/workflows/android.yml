@@ -179,6 +179,16 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleLiteDebug --no-daemon --stacktrace
 
+      # Модульные тесты нативной части (#482). До очереди «понял» проверять тут было нечего, и задача
+      # не звалась вовсе; теперь есть логика, которая живёт в Kotlin и решает, пропадёт ли ответ
+      # человека при перезапуске. Проверять её на телефоне — значит не проверять никогда.
+      - name: Unit tests (Lite)
+        if: env.HAS_CORE_TOKEN == 'да'
+        working-directory: app/android
+        env:
+          SUGARLIFE_CORE_DIR: ${{ github.workspace }}/core
+        run: ./gradlew testLiteDebugUnitTest --no-daemon --stacktrace
+
       - name: Rename APK
         if: env.HAS_CORE_TOKEN == 'да'
         run: cp app/android/app/build/outputs/apk/lite/debug/app-lite-debug.apk sugarlife-debug.apk
