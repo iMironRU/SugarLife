@@ -29,11 +29,19 @@ if [ -z "${УСТР:-}" ]; then
   exit 1
 fi
 cd ios/App
+# Права (общая группа с петлёй) подключаются переменной SL_ENTITLEMENTS — по умолчанию их нет:
+# личная команда разработчика такую группу не поддерживает, и подпись падала бы у всех подряд.
 xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
   -destination "id=$УСТР" -allowProvisioningUpdates \
   ${DEVELOPMENT_TEAM:+DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM"} \
+  ${SL_ENTITLEMENTS:+SL_ENTITLEMENTS="$SL_ENTITLEMENTS"} \
   build
 
+echo
+echo
+echo "Отдача показаний в петлю (iAPS) требует платного аккаунта: общая группа приложений"
+echo "личной команде недоступна. Нужна — собери так:"
+echo "  SL_ENTITLEMENTS=App/App.entitlements bash scripts/ios-на-телефон.sh"
 echo
 echo "Готово. Живой баннер включается в приложении: Профиль → Тревоги → «Показывать сахар"
 echo "на экране блокировки». Подпись живёт семь дней — через неделю запусти этот скрипт снова."
