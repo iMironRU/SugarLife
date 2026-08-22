@@ -18,6 +18,7 @@ import { поВажности } from '@/domain/screenings';
 import { useLoopProfile, LOOP_MODES } from '@/settings/loopProfile';
 import { useDeviceConfig, deviceStatus } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
+import { useМодели } from '@/показ/модели';
 import Row from '@/ui/Row';
 import UnitsModal from '@/sheets/UnitsModal';
 import CarbUnitsModal from '@/sheets/CarbUnitsModal';
@@ -76,7 +77,8 @@ export default function Profile() {
      «настроено»: человек проверяет глазами свою помпу и свой сенсор, а слово
      «настроено» одинаково выглядит и когда всё верно, и когда записана не та модель. */
   const devCfg = useDeviceConfig();
-  const устройства = [pumpById(devCfg.pumpId)?.model, sensorById(devCfg.sensorId)?.name]
+  const модели = useМодели();
+  const устройства = [pumpById(модели.pumpId)?.model, sensorById(модели.sensorId)?.name]
     .filter(Boolean).join(' · ') || 'ничего не записано';
   /* Справа — только то, что требует действия. Строка молчит, пока всё в порядке:
      постоянная надпись «настроено» перестаёт читаться, и «нужен мост» рядом с ней
