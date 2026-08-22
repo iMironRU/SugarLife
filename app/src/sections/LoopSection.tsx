@@ -1,6 +1,11 @@
+import { useEffect, useState } from 'react';
+import { IonToggle } from '@ionic/react';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
-import { repeat, lockClosedOutline, listOutline } from 'ionicons/icons';
+import { repeat, lockClosedOutline, listOutline, shareOutline } from 'ionicons/icons';
+import {
+  отдача, задатьОтдачу, отдачаВозможна, ЧТО_УХОДИТ, type ОтдачаВПетлю,
+} from '@/platform/вПетлю';
 import { useStack } from '@/app/stackCtx';
 import { LoopSetupSection } from '@/sections/lazy';
 import { useLoopProfile, LOOP_MODES, limitsFor, fmtLimit } from '@/settings/loopProfile';
@@ -34,6 +39,9 @@ export default function LoopSection({ onClose }: { onClose: () => void }) {
      Человек, записавший профиль, возвращается сюда с вопросом «а дальше что»; раньше
      ответ был только внутри мастера, при выборе режима. */
   const следующий = LOOP_MODES[LOOP_MODES.findIndex((m) => m.id === профиль.mode) + 1] ?? null;
+  const [наружу, setНаружу] = useState<ОтдачаВПетлю | null>(null);
+  const [спросили, setСпросили] = useState(false);
+  useEffect(() => { void отдача().then((о) => { setНаружу(о); setСпросили(true); }); }, []);
 
   return (
     <Section title="Петля" описание="Правила, по которым считается подача: уровень полномочий, пределы и профиль. Само включение подачи живёт не здесь." onBack={onClose}>
@@ -52,6 +60,47 @@ export default function LoopSection({ onClose }: { onClose: () => void }) {
           Следующая ступень — <b>{следующий.code} · {следующий.name}</b>. {следующий.need}.
           Пока подача недоступна, это остаётся описанием, а не предложением.
         </div>
+      )}
+
+      {/* ОТДАЧА ПОКАЗАНИЙ — ЗДЕСЬ, А НЕ В НАСТРОЙКАХ ИСТОЧНИКОВ (#419).
+
+          Вопрос «отдавать ли мои числа петле» — про петлю, и человек придёт с ним сюда.
+          В разделе источников он звучал бы как настройка сбора, хотя это ровно наоборот:
+          не мы берём, а от нас берут.
+
+          Состав отдачи показан ДО выключателя, а не после. По нашим числам чужая программа
+          посчитает инсулин — знать, что именно уходит, человек вправе до нажатия. */}
+      {отдачаВозможна() && (
+        <>
+          <div className="section-label sec">Отдавать показания в петлю</div>
+          <div className="list">
+            <Row icon={shareOutline} title="Отдавать показания"
+              sub={наружу === null && спросили
+                ? 'эта сборка старше отдачи — обновите приложение целиком'
+                : наружу?.кому ?? 'спрашиваю…'}
+              right={<IonToggle checked={!!наружу?.включено} disabled={!наружу}
+                onIonChange={(e) => {
+                  const on = e.detail.checked;
+                  setНаружу((н) => (н ? { ...н, включено: on } : н));
+                  void задатьОтдачу(on).then(({ мешает }) =>
+                    setНаружу((н) => (н ? { ...н, мешает } : н)));
+                }} />} />
+          </div>
+          {/* Помеха важнее состава: человек включил, ждёт, что петля увидит его сахар, —
+              а она не увидит. Молчание здесь читается как «работает». */}
+          {наружу?.включено && наружу.мешает && (
+            <div className="sheet-note warn">
+              Отдавать некуда: {наружу.мешает}. Показания никуда не уходят, пока это не исправлено.
+            </div>
+          )}
+          {наружу && (
+            <div className="sheet-note">
+              Уходит только это: {ЧТО_УХОДИТ.join(', ')}. Ни еды, ни доз, ни истории.
+              {' '}Адресно — одному приложению, а не всем подряд. Выключено по умолчанию:
+              пока вы не сказали «да», не уходит ничего.
+            </div>
+          )}
+        </>
       )}
 
       <div className="section-label sec">Настройка</div>
