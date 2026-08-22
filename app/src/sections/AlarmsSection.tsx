@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { IonIcon, IonToggle } from '@ionic/react';
-import { alarmOutline, notificationsOutline, playOutline, trendingUpOutline, phonePortraitOutline, cloudOfflineOutline } from 'ionicons/icons';
+import { alarmOutline, notificationsOutline, playOutline, trendingUpOutline, phonePortraitOutline, cloudOfflineOutline, appsOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import {
@@ -13,6 +13,7 @@ import {
 import { isNative, platform } from '@/platform/appUpdate';
 import { тихоСейчас } from '@/domain/тихиеЧасы';
 import { баннерВозможен, состояниеБаннера, включитьБаннер, type СостояниеБаннера } from '@/platform/живойБаннер';
+import { виджетВозможен, добавитьВиджет, type ИтогДобавления } from '@/platform/виджет';
 
 /* Тревоги (#418).
 
@@ -40,6 +41,7 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
   const [готово, setГотово] = useState(false);
   const [проверил, setПроверил] = useState(false);
   const [баннер, setБаннер] = useState<СостояниеБаннера | null>(null);
+  const [виджет, setВиджет] = useState<ИтогДобавления | null>(null);
 
   useEffect(() => {
     void настройкиТревоги().then((r) => { setН(r ?? ПУСТО); setГотово(true); });
@@ -225,6 +227,29 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
             Обновляется, когда приходит показание, — не раз в пятнадцать минут, как обычный
             виджет. Система гасит такие баннеры через восемь часов; приложение продлевает
             их само, пока получает данные.
+          </div>
+        </>
+      )}
+
+      {/* ВИДЖЕТ — ТО ЖЕ САМОЕ ДЛЯ ANDROID, и потому стоит там же, где баннер для айфона
+          (#449). Вопрос у человека один: «что я узнаю, не открывая приложение». Ответ на
+          двух платформах разный по механике, но искать его он будет в одном месте. */}
+      {виджетВозможен() && (
+        <>
+          <div className="section-label sec">Виджет на рабочем столе</div>
+          <div className="list">
+            <Row icon={appsOutline} title="Поставить виджет на рабочий стол"
+              sub="сахар, кольцо и возраст показания — без открытия приложения"
+              onClick={() => { void добавитьВиджет().then(setВиджет); }} />
+          </div>
+          <div className="sheet-note">
+            {виджет === 'спросили'
+              ? 'Система спросила, куда его поставить. Если окно не появилось — добавьте вручную: долгое нажатие на пустое место экрана → «Виджеты» → SugarLife.'
+              : виджет === 'не умеет'
+                ? 'Этот лаунчер не умеет ставить виджеты по просьбе приложения. Добавьте вручную: долгое нажатие на пустое место экрана → «Виджеты» → SugarLife.'
+                : виджет === 'нет метода'
+                  ? 'Эта сборка приложения старше виджета — обновите приложение целиком, не только интерфейс.'
+                  : 'Возраст показания на виджете считает сам рабочий стол, поэтому «2 мин» не застынет, даже если приложение остановят.'}
           </div>
         </>
       )}

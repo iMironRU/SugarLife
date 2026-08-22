@@ -17,13 +17,13 @@
     android:layout_height="match_parent"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:padding="12dp"
+    android:padding="14dp"
     android:background="@drawable/sugar_widget_bg">
 
     <ImageView
         android:id="@+id/sugar_ring"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
         android:contentDescription="@string/widget_ring_desc" />
 
     <LinearLayout
@@ -38,7 +38,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="#E9E9ED"
-            android:textSize="28sp"
+            android:textSize="34sp"
             android:textStyle="bold"
             android:includeFontPadding="false"
             android:text="—" />
@@ -48,7 +48,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="#9397AB"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:includeFontPadding="false" />
 
         <TextView
