@@ -42,6 +42,9 @@ class SugarLifeService : Service() {
         /* Ответы «понял», не доехавшие раньше (#482). Ровно тот случай, ради которого очередь и заведена:
            ночью человек нажал, движка в памяти не было, утром процесс поднялся — отдаём. */
         Понял.разгрести(applicationContext)
+        /* Чем мы располагаем прямо сейчас (#482, контракт 1.30). Пока движок этого не знает, он
+           обещает разбудить за нас — а доступ к «Не беспокоить» человек мог отобрать вчера днём. */
+        Доставка.доложить(applicationContext)
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             nm.createNotificationChannel(
