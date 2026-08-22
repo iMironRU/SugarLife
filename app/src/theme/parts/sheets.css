@@ -461,3 +461,15 @@ label.list-row { cursor: pointer; }
   color: var(--color-neutral-500); font-size: 0.8125rem; text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* «Подробнее» — ссылка на внешний гайд рядом с подсказкой параметра (core#16).
+
+   Мишень отдельной строкой и с иконкой: ссылка внутри абзаца подсказки читается как часть
+   текста, и по ней не попадают пальцем. Цвет акцентный, но подчёркивания нет — оно спорит
+   с окружающими подписями, которых в форме много. */
+.param-help {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 6px; min-height: 32px;
+  color: var(--color-accent); font-size: 0.8125rem; text-decoration: none;
+}
+.param-help ion-icon { font-size: 0.9375rem; }
