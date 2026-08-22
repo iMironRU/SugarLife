@@ -170,6 +170,7 @@ class SugarLifeService : Service() {
         val monitor = org.json.JSONObject(json).optJSONObject("monitor") ?: return null
         if (monitor.isNull("glucoseMmol")) return null
         val сахар = monitor.optDouble("glucoseMmol").takeIf { !it.isNaN() && it > 0.0 } ?: return null
+        последнийСахар = сахар
         val калиброван = monitor.optBoolean("glucoseCalibrated", false)
         val когда = monitor.optLong("latestAtMs", 0L)
         val минут = if (когда > 0) ((System.currentTimeMillis() - когда) / 60_000L).toInt() else -1
@@ -197,6 +198,8 @@ class SugarLifeService : Service() {
 
     /** Последняя показанная строка и то, держим ли мы приборы: по ним решаем, обновлять ли уведомление. */
     private var последняяСтрока: String? = null
+    /** Само число — для значка в строке состояния: из готовой строки его пришлось бы разбирать обратно. */
+    private var последнийСахар: Double? = null
     private var держимПриборы = true
 
     private fun отдатьПриборы(причина: String) {
@@ -224,6 +227,39 @@ class SugarLifeService : Service() {
         }.onFailure { Log.w(TAG, "не удалось взять приборы: $it") }
         Тревоги.приборыОтданы(applicationContext, false)
         показать(держим = true)
+    }
+
+    /**
+     * Число, нарисованное как значок строки состояния (#449).
+     *
+     * ОКРУГЛЯЕМ ОСОЗНАННО. В строке состояния значок величиной с ноготь: «13,5» тремя глифами с запятой
+     * превращается в кашу и не читается вовсе. Поэтому ниже десяти — одна десятая («5,4»), выше — целое
+     * («14»). Это подсказка на бегу, а не значение: точное число в заголовке того же уведомления, на
+     * расстоянии одного взгляда вниз.
+     *
+     * Цвет не задаём: систему это не касается, она берёт из значка только форму и красит его сама по
+     * теме строки состояния. Рисуем белым по прозрачному — получится силуэт цифр.
+     */
+    private fun значокСахара(сахар: Double): androidx.core.graphics.drawable.IconCompat {
+        val сторона = 96
+        val bmp = android.graphics.Bitmap.createBitmap(сторона, сторона, android.graphics.Bitmap.Config.ARGB_8888)
+        val холст = android.graphics.Canvas(bmp)
+        val текст = if (сахар >= 10) Math.round(сахар).toString()
+        else "%.1f".format(сахар).replace('.', ',')
+        val кисть = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.WHITE
+            textAlign = android.graphics.Paint.Align.CENTER
+            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+            textSize = сторона * 0.92f
+        }
+        /* Ужимаем по ширине, а не подбираем размер заранее: «5,4» и «14» занимают разное место, и
+           значок, подогнанный под одно, обрежет другое. */
+        val ширина = кисть.measureText(текст)
+        val предел = сторона * 0.96f
+        if (ширина > предел) кисть.textSize = кисть.textSize * предел / ширина
+        val м = кисть.fontMetrics
+        холст.drawText(текст, сторона / 2f, сторона / 2f - (м.ascent + м.descent) / 2f, кисть)
+        return androidx.core.graphics.drawable.IconCompat.createWithBitmap(bmp)
     }
 
     /** Переписать постоянное уведомление под текущее состояние. */
@@ -271,7 +307,15 @@ class SugarLifeService : Service() {
                     },
                 ),
             )
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .apply {
+                /* ЗНАЧОК В СТРОКЕ СОСТОЯНИЯ — С ЧИСЛОМ (#449).
+                   Строка состояния видна всегда: и поверх чужого приложения, и на экране блокировки, и
+                   не разворачивая шторку. Значок приложения там не говорит ничего — его и так видно на
+                   рабочем столе. Число говорит всё. Так делает xDrip, и это единственный андроидный
+                   ответ на «цифру на иконке»: числовых значков система не умеет, только точку. */
+                val значок = последнийСахар?.let { значокСахара(it) }
+                if (значок != null) setSmallIcon(значок) else setSmallIcon(R.mipmap.ic_launcher)
+            }
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .addAction(0, if (держим) "Отдать приборы" else "Взять обратно", кнопка)
