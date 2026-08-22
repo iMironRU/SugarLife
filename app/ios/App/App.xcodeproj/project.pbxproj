@@ -24,6 +24,7 @@
 		D1A0000000000000000012 /* ЖивойБаннерУправление.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000011 /* ЖивойБаннерУправление.swift */; };
 		D1A000000000000000000E /* SugarLifeWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000001 /* SugarLifeWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D1A0000000000000000014 /* СахарАтрибуты.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000013 /* СахарАтрибуты.swift */; };
+		D1A0000000000000000022 /* ИсторияСахара.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000021 /* ИсторияСахара.swift */; };
 		D1A0000000000000000015 /* СахарАтрибуты.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000013 /* СахарАтрибуты.swift */; };
 /* End PBXBuildFile section */
 
@@ -48,6 +49,7 @@
 		D1A0000000000000000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D1A0000000000000000011 /* ЖивойБаннерУправление.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ЖивойБаннерУправление.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000013 /* СахарАтрибуты.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "СахарАтрибуты.swift"; sourceTree = "<group>"; };
+		D1A0000000000000000021 /* ИсторияСахара.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ИсторияСахара.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -107,6 +109,7 @@
 				D1A0000000000000000011 /* ЖивойБаннерУправление.swift */,
 				D1A0000000000000000013 /* СахарАтрибуты.swift */,
 				1A2B3C4D5E6F708192A3B4D6 /* LoopFeed.swift */,
+				D1A0000000000000000021 /* ИсторияСахара.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -310,6 +313,7 @@
 				D1A0000000000000000012 /* ЖивойБаннерУправление.swift in Sources */,
 				D1A0000000000000000014 /* СахарАтрибуты.swift in Sources */,
 				1A2B3C4D5E6F708192A3B4D5 /* LoopFeed.swift in Sources */,
+				D1A0000000000000000022 /* ИсторияСахара.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -526,6 +530,12 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID).widgets";
+				/* Значение по умолчанию нужно И ЗДЕСЬ. Оно живёт в настройках цели App, а у
+				   расширения своих настроек нет — при обычной сборке (Xcode, Run) переменная
+				   разворачивалась в пустоту, и идентификатор получался ".widgets": сборка
+				   падала с «bundle identifier is not prefixed». Работало только через
+				   build-all.sh, который передаёт APP_BUNDLE_ID флагом сразу всем целям. */
+				APP_BUNDLE_ID = ru.imiron.sugarlife;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -549,6 +559,12 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID).widgets";
+				/* Значение по умолчанию нужно И ЗДЕСЬ. Оно живёт в настройках цели App, а у
+				   расширения своих настроек нет — при обычной сборке (Xcode, Run) переменная
+				   разворачивалась в пустоту, и идентификатор получался ".widgets": сборка
+				   падала с «bundle identifier is not prefixed». Работало только через
+				   build-all.sh, который передаёт APP_BUNDLE_ID флагом сразу всем целям. */
+				APP_BUNDLE_ID = ru.imiron.sugarlife;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;

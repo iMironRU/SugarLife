@@ -323,7 +323,12 @@ class SugarLifeBridgePlugin : Plugin() {
             высокийMmol = call.getDouble("highMmol") ?: Тревоги.ВЫСОКИЙ_ПО_УМОЛЧАНИЮ,
             тихоС = call.getInt("quietFrom") ?: Тревоги.ТИХО_ВЫКЛ,
             тихоДо = call.getInt("quietTo") ?: Тревоги.ТИХО_ВЫКЛ,
+            молчаниеВкл = call.getBoolean("silenceOn") ?: false,
+            молчаниеМин = call.getInt("silenceMin") ?: Тревоги.МОЛЧАНИЕ_ПО_УМОЛЧАНИЮ_МИН,
         )
+        /* Сторожа заводим здесь же, а не при следующем запуске сервиса: человек включает тревогу
+           вечером и ложится спать — она обязана начать работать в ту же минуту (#243). */
+        SilenceWatchdog.поНастройке(context.applicationContext)
         call.resolve()
     }
 
@@ -335,7 +340,8 @@ class SugarLifeBridgePlugin : Plugin() {
                 .put("on", Тревоги.включено(ctx)).put("mmol", Тревоги.порог(ctx))
                 .put("highOn", Тревоги.высокийВключён(ctx)).put("highMmol", Тревоги.высокийПорог(ctx))
                 .put("quietFrom", Тревоги.тихоС(ctx)).put("quietTo", Тревоги.тихоДо(ctx))
-                .put("quietNow", Тревоги.тихоСейчас(ctx)),
+                .put("quietNow", Тревоги.тихоСейчас(ctx))
+                .put("silenceOn", Тревоги.молчаниеВключено(ctx)).put("silenceMin", Тревоги.молчаниеПорог(ctx)),
         )
     }
 
@@ -356,6 +362,34 @@ class SugarLifeBridgePlugin : Plugin() {
         val список = com.getcapacitor.JSArray()
         кандидаты.forEach { список.put(it) }
         call.resolve(JSObject().put("busyHere", занят).put("candidates", список))
+    }
+
+    /**
+     * Поставить виджет на рабочий стол — из приложения, а не поиском в лаунчере (#449).
+     *
+     * Иначе путь такой: долго нажать на пустое место, найти «Виджеты», пролистать чужой список до
+     * буквы S, потянуть плитку. Половина людей до конца не доходит и решает, что виджета нет.
+     * Система умеет предложить это сама одним диалогом — спрашиваем её.
+     *
+     * Умеет не всякий лаунчер: до Android 8 такого механизма нет вовсе, а часть прошивок его не
+     * поддерживает. Тогда честно отвечаем «нет» — и экран скажет, как добавить руками.
+     */
+    @PluginMethod
+    fun pinWidget(call: PluginCall) {
+        val ctx = context.applicationContext
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            call.resolve(JSObject().put("supported", false).put("asked", false))
+            return
+        }
+        val менеджер = android.appwidget.AppWidgetManager.getInstance(ctx)
+        if (менеджер == null || !менеджер.isRequestPinAppWidgetSupported) {
+            call.resolve(JSObject().put("supported", false).put("asked", false))
+            return
+        }
+        val ок = runCatching {
+            менеджер.requestPinAppWidget(android.content.ComponentName(ctx, SugarWidget::class.java), null, null)
+        }.getOrDefault(false)
+        call.resolve(JSObject().put("supported", true).put("asked", ок))
     }
 
     @PluginMethod

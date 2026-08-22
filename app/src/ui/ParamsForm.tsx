@@ -1,5 +1,5 @@
 import { IonIcon, IonInput, IonToggle } from '@ionic/react';
-import { qrCodeOutline } from 'ionicons/icons';
+import { qrCodeOutline, openOutline } from 'ionicons/icons';
 import type { SettingsSpec } from '@/sources/bridge';
 
 /* Форма параметров по спецификации — одна на все устройства и сервисы.
@@ -27,6 +27,23 @@ export interface ParamsFormProps {
   title?: string;
 }
 
+/* «Подробнее» — ссылка наружу, на гайд (SugarLifeCore#16).
+
+   Подсказка под полем отвечает на «что сюда вписать». На «как это получить» она ответить
+   не может: поднять Nightscout или выдать токен с правом записи — это страница текста, а
+   не строка под полем. Раньше такие вещи заканчивались тем, что человек шёл искать ответ
+   в поиске и находил чужую инструкцию к другой версии.
+
+   Адрес приходит от ядра вместе с параметром. Своих ссылок мы не подставляем по той же
+   причине, по которой не пишем подсказок: знание о железке живёт у того, кто её знает. */
+function Подробнее({ адрес }: { адрес: string }) {
+  return (
+    <a className="param-help" href={адрес} target="_blank" rel="noreferrer">
+      <IonIcon icon={openOutline} /> Подробнее
+    </a>
+  );
+}
+
 export default function ParamsForm({ spec, values, onChange, onScan, title }: ParamsFormProps) {
   const params = spec?.parameters ?? [];
   if (!params.length) return null;
@@ -44,6 +61,7 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
                 <span className="pick-main">
                   <span className="list-title">{p.title}</span>
                   {p.hint && <span className="pick-sub">{p.hint}</span>}
+                  {p.helpUrl && <Подробнее адрес={p.helpUrl} />}
                 </span>
                 <IonToggle checked={on} onIonChange={(e) => onChange(p.key, String(e.detail.checked))} />
               </div>
@@ -56,6 +74,7 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
             <div key={p.key} className="param">
               <div className="field-label">{p.title}{p.required && <span className="param-req"> · обязательно</span>}</div>
               {p.hint && <div className="field-hint param-hint">{p.hint}</div>}
+              {p.helpUrl && <Подробнее адрес={p.helpUrl} />}
               {/* Подпись варианта — от ядра (мост 1.23). Своей не выдумываем: `auto`,
                   `868`, `916` человеку не говорят ничего, но что именно они значат,
                   знает тот, кто знает железку. Нет подписи — показываем сам вариант:
@@ -100,6 +119,7 @@ export default function ParamsForm({ spec, values, onChange, onScan, title }: Pa
                 хардкод под конкретный коннектор здесь означал бы, что каждое новое
                 устройство требует правки интерфейса. */}
             {p.hint && <div className="field-hint param-hint">{p.hint}</div>}
+            {p.helpUrl && <Подробнее адрес={p.helpUrl} />}
           </div>
         );
       })}
