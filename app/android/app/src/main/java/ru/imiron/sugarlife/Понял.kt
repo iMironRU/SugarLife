@@ -84,7 +84,7 @@ object Понял {
                 return@execute
             }
             for (з in записи) {
-                val принято = отдать(app, з.id)
+                val принято = отдать(app, з.id, з.нажатоМс)
                 if (!принято) continue
                 val prefs2 = app.getSharedPreferences(НАСТРОЙКИ, Context.MODE_PRIVATE)
                 prefs2.edit().putString(КЛЮЧ, ОчередьПонял.убрать(prefs2.getString(КЛЮЧ, ""), з.id)).commit()
@@ -93,9 +93,13 @@ object Понял {
     }
 
     /* Отдать один ответ. «Не принято» — законный исход, а не поломка: на ядре до 1.29 такого интента нет
-       вовсе. Тогда запись остаётся и уедет со следующей попыткой, а через сутки истечёт сама. */
-    private fun отдать(ctx: Context, alarmId: String): Boolean {
-        val json = """{"type":"acknowledgeAlarm","alarmId":"${экранировать(alarmId)}"}"""
+       вовсе. Тогда запись остаётся и уедет со следующей попыткой, а через сутки истечёт сама.
+
+       ВРЕМЯ НАЖАТИЯ, А НЕ ДОСТАВКИ (rev ≥ 1.30). Ответ, пролежавший на диске до утра, применяется тем
+       моментом, когда человек нажал: иначе снуз отсчитается от утра и съест остаток ночи. Поле в
+       контракте появилось ровно под этот случай, и очередь для того и хранит время. */
+    private fun отдать(ctx: Context, alarmId: String, нажатоМс: Long): Boolean {
+        val json = """{"type":"acknowledgeAlarm","alarmId":"${экранировать(alarmId)}","atMs":$нажатоМс}"""
         return runCatching {
             val ответ = EngineHolder.engine(ctx).sendIntent(json)
             val принято = ответ.contains("\"accepted\":true")
