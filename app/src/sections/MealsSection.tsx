@@ -10,6 +10,8 @@ import { отметкаДля, видПричины } from '@/domain/причи�
 import { useОтметкиПодъёмов } from '@/settings/подъёмы';
 import ПричинаПодъёмаSheet from '@/sheets/ПричинаПодъёмаSheet';
 import { подписьПриёма } from '@/domain/имяПриёма';
+import { ключГруппы } from '@/domain/foods';
+import { useMealNames } from '@/settings/mealNames';
 import MealEditSheet from '@/sheets/MealEditSheet';
 import FoodSheet from '@/sheets/FoodSheet';
 import type { Meal } from '@/domain/meals';
@@ -65,6 +67,10 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
     .map((t) => ({ id: 'ns' + t.t, t: t.t, carbs: t.carbs as number, kind: t.type, своё: false }));
 
   const все = [...свои, ...облачные].sort((a, b) => b.t - a.t);
+  /* Имя, данное человеком (#122), главнее нашей догадки о том, обед это или перекус.
+     Хранится оно на группе (тип + округлённые углеводы), поэтому и достаётся по ключу
+     группы, а не по записи: назвав «овсянку» однажды, человек назвал все свои овсянки. */
+  const { names: имена } = useMealNames();
   /* Подъёмы без записи — уже написанное правило (domain/mealMoment): рост 2,2 ммоль за
      45 минут, если рядом нет еды. Оно работало на подсказку «когда ели» при вводе задним
      числом; здесь тот же ответ показан списком. */
@@ -155,9 +161,16 @@ export default function MealsSection({ onClose }: { onClose: () => void }) {
               <div className="meal-what">
                 <b>{toCarbs(x.carbs, cu)} {carbUnitLabel(cu)}</b>
                 <span>
-                  {подписьПриёма({
-                    kind: x.kind, часЕды: new Date(x.t).getHours(), граммы: x.carbs,
-                  }).главное}
+                  {(() => {
+                    const п = подписьПриёма({
+                      имя: имена[ключГруппы(x.kind, x.carbs)],
+                      kind: x.kind, часЕды: new Date(x.t).getHours(), граммы: x.carbs,
+                    });
+                    /* Уточнение второй строкой, а не в скобках: «Овсянка» — то, что человек
+                       ищет глазами, а «завтрак» — то, чем это было по нашему счёту. Слепив
+                       их в одну строку, мы заставили бы читать обе, чтобы найти первую. */
+                    return <>{п.главное}{п.уточнение && <> · <span className="meal-kind">{п.уточнение}</span></>}</>;
+                  })()}
                   {!x.своё && <> · <IonIcon icon={cloudOutline} /> Nightscout</>}
                 </span>
               </div>

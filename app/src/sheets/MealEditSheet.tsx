@@ -5,6 +5,8 @@ import Sheet from '@/ui/Sheet';
 import { updateMeal, deleteMeal } from '@/sources/mealStore';
 import type { Meal } from '@/domain/meals';
 import { ВИДЫ, имяПриёма } from '@/domain/имяПриёма';
+import { ключГруппы } from '@/domain/foods';
+import { useMealNames, nameGroup, forgetGroupName } from '@/settings/mealNames';
 import { toCarbs, carbUnitLabel, getCarbUnit, XE_GRAMS } from '@/domain/units';
 
 /* Правка приёма (SugarLife#381).
@@ -19,7 +21,13 @@ import { toCarbs, carbUnitLabel, getCarbUnit, XE_GRAMS } from '@/domain/units';
 
    Время правится ЧАСАМИ И МИНУТАМИ, а не «полчаса назад»: от времени еды считается вся
    кривая активных углеводов, и человек, который вносит задним числом, помнит именно час,
-   а не смещение. */
+   а не смещение.
+
+   ИМЯ ПРАВИТСЯ ЗДЕСЬ ЖЕ, но принадлежит не записи, а ГРУППЕ — типу приёма и округлённым
+   углеводам (#122). Назвав эту овсянку «овсянкой», человек назвал все свои овсянки, и
+   это ровно то, чего он хочет: имя окупается столько раз, сколько он это ест. Поэтому
+   рядом с полем сказано прямо, к чему относится имя, — иначе оно выглядит подписью к
+   одной строке и удивит, появившись у соседних. */
 export default function MealEditSheet({ приём, onClose }: { приём: Meal; onClose: () => void }) {
   const cu = getCarbUnit();
   const [углеводы, setУглеводы] = useState(String(toCarbs(приём.carbs, cu)));
@@ -28,6 +36,9 @@ export default function MealEditSheet({ приём, onClose }: { приём: Mea
     return `${String(д.getHours()).padStart(2, '0')}:${String(д.getMinutes()).padStart(2, '0')}`;
   });
   const [вид, setВид] = useState<string>(приём.kind ?? '');
+  const { names: имена } = useMealNames();
+  const ключСейчас = ключГруппы(приём.kind, приём.carbs);
+  const [имя, setИмя] = useState<string>(имена[ключСейчас] ?? '');
   const [занят, setЗанят] = useState(false);
 
   const число = Number((углеводы || '').replace(',', '.'));
@@ -52,6 +63,13 @@ export default function MealEditSheet({ приём, onClose }: { приём: Mea
          иначе завтра она станет фактом, который никто не выбирал. */
       kind: вид || undefined,
     });
+    /* Имя пишем на группу ПОСЛЕ правки — по новым граммам и типу. Записав его по старому
+       ключу, мы назвали бы ту группу, из которой запись только что ушла: человек правил
+       «55 г» на «40 г», а имя осталось бы висеть на пятидесяти пяти. */
+    const ключПосле = ключГруппы(вид || undefined, граммы);
+    const чисто = имя.trim();
+    if (чисто) nameGroup(ключПосле, чисто);
+    else if (имена[ключПосле]) forgetGroupName(ключПосле);
     setЗанят(false);
     onClose();
   };
@@ -81,6 +99,18 @@ export default function MealEditSheet({ приём, onClose }: { приём: Mea
         <div className="field-hint param-hint">
           От времени еды считаются активные углеводы — если вносили задним числом,
           поправьте час.
+        </div>
+      </div>
+
+      <div className="param">
+        <div className="field-label">Название, если хотите</div>
+        <div className="field">
+          <IonInput value={имя} placeholder="овсянка с бананом"
+            onIonInput={(e) => setИмя(e.detail.value ?? '')} />
+        </div>
+        <div className="field-hint param-hint">
+          Так будут подписаны все такие приёмы — этот тип и примерно столько же углеводов.
+          Необязательно: без имени в журнале останется «{догадка.toLowerCase()}».
         </div>
       </div>
 

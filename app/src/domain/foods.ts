@@ -65,6 +65,16 @@ export function searchFoods(q: string, foods: Food[] = FOODS): Food[] {
    на кучу почти одинаковых строк, и повтор перестал бы быть виден. */
 const ШАГ = 5;
 
+/* Ключ группы — одной функцией на всех (SugarLife#381).
+
+   Имя блюда хранится не в записи, а на ГРУППЕ: тип приёма плюс округлённые углеводы. Ключ
+   собирался здесь, внутри группировки, и журналу приходилось бы повторять и округление, и
+   слово «Приём» для записей без типа. Две копии правила разошлись бы на первой же правке
+   шага — и человек увидел бы имя в одном месте и не увидел в другом. */
+export function ключГруппы(kind: string | null | undefined, carbs: number): string {
+  return `${kind ?? 'Приём'}|${Math.round(carbs / ШАГ) * ШАГ}`;
+}
+
 export interface Personal {
   id: string;
   kind: string;
@@ -85,7 +95,7 @@ export function personalFoods(
     if (m.carbs <= 0) continue;
     const carbs = Math.round(m.carbs / ШАГ) * ШАГ;
     const kind = m.kind ?? 'Приём';
-    const id = `${kind}|${carbs}`;
+    const id = ключГруппы(m.kind, m.carbs);
     const было = карта.get(id);
     if (было) { было.count++; было.lastAt = Math.max(было.lastAt, m.t); }
     else карта.set(id, { id, kind, carbs, count: 1, lastAt: m.t, name: names[id] });
