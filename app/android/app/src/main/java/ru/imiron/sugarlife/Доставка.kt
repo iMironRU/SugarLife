@@ -23,16 +23,6 @@ import java.util.concurrent.Executors
 object Доставка {
     private const val TAG = "SugarLifeДоставка"
 
-    /**
-     * На сколько система вправе сдвинуть наше пробуждение.
-     *
-     * Мы намеренно не просим разрешение на точный будильник, и Android в глубоком сне сдвигает
-     * `setAndAllowWhileIdle` до девяти минут. Порог, заданный человеком, движок обязан читать с этой
-     * поправкой и говорить фактическое время, а не заданное: «15 минут» на неточном будильнике — это
-     * до 24, и молчать об этом значит обещать то, чего платформа не даёт.
-     */
-    const val ТОЧНОСТЬ_МИН = 9
-
     private val поток = Executors.newSingleThreadExecutor()
     @Volatile private var последнееСказанное: String? = null
 
@@ -60,10 +50,15 @@ object Доставка {
         val app = ctx.applicationContext
         val ответ = runCatching { вывод(Тревоги.поломки(app).map { it.first }, тихийРежим(app)) }
             .getOrElse { return }
-        if (ответ == последнееСказанное) return
-        последнееСказанное = ответ
+        /* Точность — по факту, а не по желанию (Точность.kt): включённый выключатель без выданного
+           разрешения это по-прежнему девять минут, и доложить ноль значило бы дать движку пообещать
+           человеку время, которого система не даст. */
+        val точность = Точность.точностьМин(app)
+        val сказать = "$ответ/$точность"
+        if (сказать == последнееСказанное) return
+        последнееСказанное = сказать
         поток.execute {
-            val json = """{"type":"reportDelivery","canWake":"$ответ","tickPrecisionMin":$ТОЧНОСТЬ_МИН}"""
+            val json = """{"type":"reportDelivery","canWake":"$ответ","tickPrecisionMin":$точность}"""
             runCatching { EngineHolder.engine(app).sendIntent(json) }
                 .onSuccess { Log.i(TAG, "доложили: $ответ") }
                 .onFailure {

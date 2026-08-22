@@ -101,7 +101,10 @@ class AlarmWakeups(context: Context) : Wakeups {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
             val когда = System.currentTimeMillis() + ms
-            val точный = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()
+            /* Точность — решение человека (#482): выключатель `alarms.exactWakeups` плюс выданное
+               разрешение. Одного разрешения мало: на Android 12 система выдаёт его при установке сама,
+               и считать это согласием нельзя — человек ничего не выбирал. */
+            val точный = Точность.точныйБудильник(ctx)
             runCatching {
                 if (точный) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, когда, намерение)
                 else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, когда, намерение)

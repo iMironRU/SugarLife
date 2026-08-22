@@ -178,6 +178,13 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Автозапуск после перезагрузки и после обновления самого приложения (#380). -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Точный будильник (#482). Объявляем, но НЕ включаем сам: пробуждение по нему даёт заданное
+         время вместо «в пределах девяти минут», ценой отдельного разрешения и системного
+         предупреждения про батарею. Цена обеих сторон названа человеку числами, выбирает он —
+         выключателем `alarms.exactWakeups`. На Android 12 система выдаёт это разрешение при
+         установке сама, и именно поэтому одного разрешения нам мало: согласия в нём нет. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- Просьба об исключении из оптимизации батареи. Просим ЯВНО и с объяснением — молча такое
          не берут. Заявлено у xDrip+ и Juggluco с той же целью. -->
     <uses-permission-sdk-23 android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
