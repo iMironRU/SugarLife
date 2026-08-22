@@ -91,18 +91,20 @@
        минут, и «15» на деле означает «до 24». */
     alarmRules: [
       { id: 'гипо', level: 'Разбудить', kind: 'low', needsAck: true, throughSpeaker: true,
-        voice: 'always', settings: { 'targets.lowMmol': '3.9' },
+        voice: 'always', canDisable: false, enabled: true, settings: { 'targets.lowMmol': '3.9' },
         helpUrl: 'https://github.com/iMironRU/SugarLife/wiki/Тревоги' },
       { id: 'прогноз-падения', level: 'Сегодня', kind: 'forecast', voice: 'always',
-        settings: { 'alarms.forecast.windowMin': '15', 'alarms.forecast.horizonMin': '20',
+        canDisable: true, enabled: true,
+        settings: { 'alarms.прогноз-падения.enabled': 'on', 'alarms.forecast.windowMin': '15', 'alarms.forecast.horizonMin': '20',
           'alarms.forecast.ceilingMmol': '7.0', 'alarms.forecast.speedMmolPerMin': '0.15' },
         helpUrl: 'https://github.com/iMironRU/SugarLife/wiki/Прогноз-падения' },
       { id: 'молчание-во-сне', level: 'Разбудить', kind: 'silence', needsAck: true,
-        voice: 'asleep', settings: { 'alarms.silence.sleepMin': '15', 'alarms.exactWakeups': 'off' },
+        voice: 'asleep', canDisable: false, enabled: true, settings: { 'alarms.silence.sleepMin': '15', 'alarms.exactWakeups': 'off' },
         effectiveWords: 'порог 15 мин, фактически до 24 — будильник системы неточен',
         helpUrl: 'https://github.com/iMironRU/SugarLife/wiki/Точные-будильники' },
       { id: 'высокий', level: 'Сегодня', kind: 'high', voice: 'always',
-        settings: { 'targets.highMmol': '13.9', 'alarms.high.holdMin': '45' } },
+        canDisable: true, enabled: true,
+        settings: { 'alarms.высокий.enabled': 'on', 'targets.highMmol': '13.9', 'alarms.high.holdMin': '45' } },
     ],
     alarmEvents: [], activeAlarms: [],
     insights: null, pendingWrites: [], alerts: [],
@@ -491,6 +493,11 @@
           });
           if (!новые) return п;
           var правило = Object.assign({}, п, { settings: новые });
+          /* Выключатель правила меняет и признак: у движка выключенное правило вообще уходит из
+             профиля, и экран обязан это увидеть, а не только строку настройки. */
+          Object.keys(новые).forEach(function (к) {
+            if (к.endsWith('.enabled')) правило.enabled = новые[к] === 'on';
+          });
           /* Оговорка про точность пересчитывается сама — иначе она осталась бы от старого числа и
              врала бы ровно в том месте, ради которого её и завели. */
           if (п.kind === 'silence') {
