@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSnapshot } from '@/sources/bridge';
-import { готовностьТревог, настройкиТревоги, type ГотовностьТревог } from '@/platform/тревоги';
+import { готовностьТревог, type ГотовностьТревог } from '@/platform/тревоги';
 import { фонГотовность, бодрствование, type ФонОтвет } from '@/platform/фон';
 import { Capacitor } from '@capacitor/core';
 import { состояниеБаннера } from '@/platform/живойБаннер';
@@ -14,7 +14,6 @@ export function useОхрана(): { охрана: Охрана | null; обно
   const снимок = useSnapshot();
   const [готовность, setГотовность] = useState<ГотовностьТревог | null>(null);
   const [фон, setФон] = useState<ФонОтвет | null>(null);
-  const [включены, setВключены] = useState(false);
   const [баннер, setБаннер] = useState(false);
   const [звук, setЗвук] = useState(false);
   const [спросили, setСпросили] = useState(false);
@@ -26,10 +25,10 @@ export function useОхрана(): { охрана: Охрана | null; обно
 
   useEffect(() => {
     let жив = true;
-    void Promise.all([готовностьТревог(), фонГотовность(), настройкиТревоги(), состояниеБаннера(), бодрствование()])
-      .then(([г, ф, н, б, бд]) => {
+    void Promise.all([готовностьТревог(), фонГотовность(), состояниеБаннера(), бодрствование()])
+      .then(([г, ф, б, бд]) => {
         if (!жив) return;
-        setГотовность(г); setФон(ф); setВключены(!!н?.on); setБаннер(!!б?.включён);
+        setГотовность(г); setФон(ф); setБаннер(!!б?.включён);
         setЗвук(!!бд && бд.режим !== 'выключено');
         setСпросили(true);
       });
@@ -41,11 +40,20 @@ export function useОхрана(): { охрана: Охрана | null; обно
   const м = снимок?.monitor;
   const платформа: Платформа = !Capacitor.isNativePlatform() ? 'веб'
     : Capacitor.getPlatform() === 'ios' ? 'ios' : 'android';
+  /* Кто считает тревоги — видно в снимке: есть правила, значит считает движок (#482). Своей
+     настройки «тревоги включены» у нас больше нет, и спрашивать натив об этом нечего. */
+  const правила = снимок?.alarmRules ?? [];
+  const молчание = правила.find((п) => п.kind === 'silence');
+  const порогМолчания = молчание
+    ? Number(Object.values(молчание.settings ?? {})
+      .find((_, i) => Object.keys(молчание.settings ?? {})[i].includes('silence')))
+    : null;
   const итог = охрана({
     платформа,
     баннерВключён: баннер,
     ночнойЗвук: звук,
-    тревогиВключены: включены,
+    тревогиВедутся: правила.length > 0,
+    порогМолчанияМин: Number.isFinite(порогМолчания as number) ? (порогМолчания as number) : null,
     готовность,
     фон,
     сенсорМолчитМин: м?.latestAtMs ? Math.max(0, Math.round((Date.now() - м.latestAtMs) / 60_000)) : null,

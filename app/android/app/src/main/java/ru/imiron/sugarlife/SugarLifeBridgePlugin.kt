@@ -311,9 +311,7 @@ class SugarLifeBridgePlugin : Plugin() {
             JSObject()
                 .put("problem", нет.isNotEmpty())
                 .put("missing", список)
-                .put("problems", подробно)
-                .put("silenceWatchdogOn", Тревоги.молчаниеВключено(ctx))
-                .put("silenceThresholdMin", Тревоги.молчаниеПорог(ctx)),
+                .put("problems", подробно),
         )
     }
 
@@ -376,55 +374,6 @@ class SugarLifeBridgePlugin : Plugin() {
         else call.resolve(JSObject().put("opened", открыт))
     }
 
-    /**
-     * Настройки тревоги о низком сахаре (#418).
-     *
-     * Пороги и «включено ли» задаёт человек в приложении — здесь их только сохраняют. Считает и будит
-     * [Тревоги] в сервисе: ночью интерфейса нет, и решение «пора будить» принять некому.
-     */
-    @PluginMethod
-    fun setHypoAlarm(call: PluginCall) {
-        Тревоги.настроить(
-            context.applicationContext,
-            включено = call.getBoolean("on") ?: false,
-            порогMmol = call.getDouble("mmol") ?: Тревоги.ПОРОГ_ПО_УМОЛЧАНИЮ,
-            высокийВкл = call.getBoolean("highOn") ?: false,
-            высокийMmol = call.getDouble("highMmol") ?: Тревоги.ВЫСОКИЙ_ПО_УМОЛЧАНИЮ,
-            тихоС = call.getInt("quietFrom") ?: Тревоги.ТИХО_ВЫКЛ,
-            тихоДо = call.getInt("quietTo") ?: Тревоги.ТИХО_ВЫКЛ,
-            молчаниеВкл = call.getBoolean("silenceOn") ?: false,
-            молчаниеМин = call.getInt("silenceMin") ?: Тревоги.МОЛЧАНИЕ_ПО_УМОЛЧАНИЮ_МИН,
-        )
-        /* Сторожа заводим здесь же, а не при следующем запуске сервиса: человек включает тревогу
-           вечером и ложится спать — она обязана начать работать в ту же минуту (#243). */
-        SilenceWatchdog.поНастройке(context.applicationContext)
-        call.resolve()
-    }
-
-    @PluginMethod
-    fun hypoAlarm(call: PluginCall) {
-        val ctx = context.applicationContext
-        call.resolve(
-            JSObject()
-                .put("on", Тревоги.включено(ctx)).put("mmol", Тревоги.порог(ctx))
-                .put("highOn", Тревоги.высокийВключён(ctx)).put("highMmol", Тревоги.высокийПорог(ctx))
-                .put("quietFrom", Тревоги.тихоС(ctx)).put("quietTo", Тревоги.тихоДо(ctx))
-                .put("quietNow", Тревоги.тихоСейчас(ctx))
-                .put("silenceOn", Тревоги.молчаниеВключено(ctx)).put("silenceMin", Тревоги.молчаниеПорог(ctx)),
-        )
-    }
-
-    /**
-     * Проверочная тревога — тем же путём, что настоящая (#418).
-     *
-     * Иначе проверить нечем: человек включает тревоги вечером и узнаёт, работают ли они, только когда ночью
-     * случится гипогликемия. Это худший из возможных способов узнать.
-     */
-    /**
-     * Кто занял прибор (#422). Отдаём НАБЛЮДЕНИЕ, а не приговор: занят ли прибор на этом
-     * телефоне и кто из знакомых приложений установлен. Складывать это в фразу — дело
-     * интерфейса, и фраза не должна утверждать больше, чем мы знаем.
-     */
     @PluginMethod
     fun whoHolds(call: PluginCall) {
         val (занят, кандидаты) = КтоДержит.посмотреть(context.applicationContext, call.getString("address"))
