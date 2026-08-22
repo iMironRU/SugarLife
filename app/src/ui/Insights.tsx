@@ -5,6 +5,7 @@ import {
   helpCircleOutline, chevronForward,
 } from 'ionicons/icons';
 import type { Analysis, Insight, Severity } from '@/domain/analysis';
+import { словаНаходки } from '@/показ/находки';
 
 const SEV_COLOR: Record<Severity, string> = {
   good: 'var(--c-glu)',
@@ -16,19 +17,22 @@ const SEV_ICON: Record<Severity, string> = {
   good: checkmarkCircle, info: informationCircle, warn: warning, bad: alertCircle,
 };
 
+/* Слова находки берём в слое показа: разбор возвращает вид и числа, а как это назвать —
+   решается там (#324). Карточка остаётся про раскрытие и цвет. */
 function Card({ it, open, onToggle }: { it: Insight; open: boolean; onToggle: () => void }) {
+  const слова = словаНаходки(it);
   return (
     <div className="insight" style={{ borderLeftColor: SEV_COLOR[it.severity] }}>
       <button className="insight-top" onClick={onToggle}>
         <IonIcon icon={SEV_ICON[it.severity]} style={{ color: SEV_COLOR[it.severity] }} className="insight-sev" />
-        <span className="insight-title">{it.title}</span>
+        <span className="insight-title">{слова.title}</span>
         <IonIcon icon={chevronForward} className={'insight-chev' + (open ? ' open' : '')} />
       </button>
       {open && (
         <div className="insight-body">
-          <div className="insight-msg">{it.message}</div>
-          {it.question && (
-            <div className="insight-q"><IonIcon icon={helpCircleOutline} /><span>{it.question}</span></div>
+          <div className="insight-msg">{слова.message}</div>
+          {слова.question && (
+            <div className="insight-q"><IonIcon icon={helpCircleOutline} /><span>{слова.question}</span></div>
           )}
         </div>
       )}
