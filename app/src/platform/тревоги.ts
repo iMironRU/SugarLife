@@ -106,11 +106,26 @@ export async function проверитьТревогу(): Promise<boolean> {
    полноэкранные уведомления выдаёт человек руками, и пока он их не выдал, ночная тревога
    приходит беззвучной строкой. Поэтому список того, чего не хватает, показываем ДО ночи,
    а не выясняем после. */
+/* Код поломки — машине, фраза — человеку (#473, #475).
+
+   Дословную строку нельзя разложить по разделам экрана: «услышим ли тревогу» и «заметим ли
+   пропажу данных» — разные пункты, а все поломки разрешений валились в один. Код говорит,
+   К ЧЕМУ относится беда; фраза остаётся в ядре приложения, чтобы на двух платформах она
+   не разошлась. */
+export type КодПоломки = 'notifications-off' | 'dnd-access' | 'fullscreen' | 'channel-lowered';
+
+export interface Поломка {
+  код: КодПоломки | string;
+  текст: string;
+}
+
 export interface ГотовностьТревог {
   /** Есть ли о чём говорить. false — молчим, зелёных галочек не рисуем. */
   проблема: boolean;
   /** Чего не хватает — словами от натива: ответ один на обе платформы. */
   чегоНет: string[];
+  /** То же самое с кодами: по ним раскладываем по пунктам экрана. */
+  поломки: Поломка[];
   сторожМолчания: boolean;
   порогМолчанияМин: number;
 }
@@ -118,9 +133,11 @@ export interface ГотовностьТревог {
 interface ПлагинГотовности {
   alarmReadiness(): Promise<{
     problem: boolean; missing: string[];
+    problems?: { code: string; text: string }[];
     silenceWatchdogOn: boolean; silenceThresholdMin: number;
   }>;
   openDndAccess(): Promise<void>;
+  openFullScreenAccess(): Promise<void>;
 }
 const NativeГотовность = registerPlugin<ПлагинГотовности>('SugarLifeBridge');
 
@@ -131,6 +148,11 @@ export async function готовностьТревог(): Promise<Готовно
     return {
       проблема: !!r.problem,
       чегоНет: Array.isArray(r.missing) ? r.missing : [],
+      поломки: Array.isArray(r.problems)
+        ? r.problems.map((п) => ({ код: п.code, текст: п.text }))
+        /* Сборка старше кодов — раскладываем по старому, одной кучей: лучше показать
+           поломку не в том пункте, чем не показать вовсе. */
+        : (Array.isArray(r.missing) ? r.missing : []).map((т) => ({ код: 'dnd-access', текст: т })),
       сторожМолчания: !!r.silenceWatchdogOn,
       порогМолчанияМин: Number(r.silenceThresholdMin) || МОЛЧАНИЕ_ПО_УМОЛЧАНИЮ,
     };
@@ -145,4 +167,13 @@ export async function готовностьТревог(): Promise<Готовно
 export async function открытьДоступКТихомуРежиму(): Promise<boolean> {
   if (!тревогиДоступны()) return false;
   try { await NativeГотовность.openDndAccess(); return true; } catch { return false; }
+}
+
+/* Полноэкранные уведомления — второй системный экран, отдельный от «Не беспокоить»
+   (#468, #472). Появился в Android 14: право в манифесте есть, но система выдаёт его сама
+   только звонилкам и будильникам, остальным — руками человека. До Android 14 разрешение не
+   нужно, и натив отвечает отказом — поэтому кнопку показываем только при своём коде. */
+export async function открытьПолноэкранные(): Promise<boolean> {
+  if (!тревогиДоступны()) return false;
+  try { await NativeГотовность.openFullScreenAccess(); return true; } catch { return false; }
 }
