@@ -42,8 +42,11 @@
     activeChannel: 'c1',
   };
   var помпа = {
+    /* У помпы `deviceModel` НЕТ намеренно (#485): движок её опознал, а модель по нашему справочнику
+       ещё не выбрана — то самое состояние, ради которого заведена подсказка «похоже, это Paradigm
+       522/722». У сенсора она есть: так в демо видно оба случая сразу — записанный раньше прибор и
+       только что опознанный. */
     id: 'medtronic-722:923109', name: 'Medtronic 722', kind: 'pump', driverId: 'medtronic',
-    deviceModel: 'minimed-group-бывшая-medtronic-diabetes-paradigm-522-722',
     roles: ['PumpStateSource', 'DeliveryHistorySource'], connection: 'Disconnected', status: 'Disconnected',
     capabilities: {}, settings: { parameters: [{ key: 'serial', title: 'Серийный номер', type: 'Text', required: true, default: null, options: [], keyboard: 'numeric' }] },
     params: { serial: '923109' },

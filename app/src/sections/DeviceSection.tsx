@@ -6,13 +6,15 @@ import Row from '@/ui/Row';
 import Section from '@/ui/Section';
 import { chevronForward, flash, cloudOutline, bluetoothOutline, createOutline, trashOutline, hardwareChipOutline, gitNetworkOutline } from 'ionicons/icons';
 import { useState, useMemo } from 'react';
-import { useDeviceConfig, setDeviceConfig, setParam, forgetDevice } from '@/settings/deviceConfig';
+import { useDeviceConfig, setDeviceConfig, setParam, forgetDevice, isModelKnown } from '@/settings/deviceConfig';
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
 import { связь, предложениеСлияния, своиЖелезки, каналРоли } from '@/domain/deviceState';
 import { чтоЗаПрибор, ageText, ключиВыбора, имяМоделиПоId, драйверМодели } from './прибор/поКатегории';
 import { useМодели } from '@/показ/модели';
+import { догадкаМодели } from '@/domain/догадкаМодели';
+import ДогадкаМодели from './прибор/ДогадкаМодели';
 import { СейчасНаУстройстве, Расходники } from './прибор/Состояние';
 import Каналы from './прибор/Каналы';
 import ПоказанияГлюкометра from './прибор/ПоказанияГлюкометра';
@@ -82,6 +84,10 @@ export default function DeviceSection({ onClose, cat, title }: {
   const модели = useМодели();
   const модельПрибора = cat === 'pump' ? модели.pumpId : cat === 'sensor' ? модели.sensorId : null;
   const это = чтоЗаПрибор(cat, cfg, модельПрибора);
+  /* Что предложить вместо списка из 69 (#485). Пусто — движок молчит или модель уже выбрана. */
+  const догадки = (cat === 'pump' || cat === 'sensor')
+    ? догадкаМодели(cat, snap, isModelKnown(модельПрибора) ? модельПрибора : null)
+    : [];
   const hasModel = это.естьМодель;
   const modelKnown = это.модельИзвестна;
   const recordedNoModel = это.записанБезМодели;
@@ -495,6 +501,11 @@ export default function DeviceSection({ onClose, cat, title }: {
                   а не вместо него. Пометка «сейчас» — откуда данные приходят в эту минуту.
                 </div>
               </>
+            )}
+            {/* Модель не выбрана, а прибор уже назвался — предлагаем (#485). Стоит ДО строки
+                «Модель»: человек, которому подходит догадка, дальше не читает. */}
+            {hasModel && !modelKnown && (
+              <ДогадкаМодели догадки={догадки} onВыбрать={setModel} />
             )}
             {hasModel ? (
               <div className="list">
