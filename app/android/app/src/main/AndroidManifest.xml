@@ -141,14 +141,7 @@
             android:enabled="true"
             android:exported="false" />
 
-        <!-- Сторож молчания (#243): будит сам себя, чтобы заметить, что данные перестали идти.
-             exported=false — намерение приходит только от нас, снаружи звать его незачем. -->
-        <receiver
-            android:name=".SilenceWatchdog"
-            android:enabled="true"
-            android:exported="false" />
-
-        <provider
+<provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
             android:exported="false"
