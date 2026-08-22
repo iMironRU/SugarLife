@@ -3,7 +3,6 @@ import { IonIcon, IonToggle } from '@ionic/react';
 import { alarmOutline, notificationsOutline, playOutline, trendingUpOutline, phonePortraitOutline, cloudOfflineOutline, appsOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
-import ГотовностьТревогБлок from '@/ui/ГотовностьТревог';
 import {
   настройкиТревоги, задатьТревогу, проверитьТревогу, тревогиДоступны,
   ПОРОГ_ПО_УМОЛЧАНИЮ, МИН_ПОРОГ, МАКС_ПОРОГ,
@@ -81,9 +80,9 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
         </div>
       )}
 
-      {/* Чем разбудим — первым, до порогов (#468): пороги при беззвучной тревоге не
-          значат ничего. Тот же блок стоит на экране готовности приборов. */}
-      <ГотовностьТревогБлок />
+      {/* Блока «ночью может не разбудить» здесь БОЛЬШЕ НЕТ (#473): сюда попадают из
+          «Охраны», где этот ответ дан первым делом. Повторять его через экран — учить
+          пролистывать: два одинаковых предупреждения подряд читают как одно. */}
 
       <div className="section-label sec">Низкий сахар</div>
       <div className="list">

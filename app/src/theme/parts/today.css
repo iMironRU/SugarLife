@@ -447,3 +447,55 @@
 }
 .сегодня-история ion-icon { color: var(--color-neutral-500); font-size: 1.125rem; }
 .сегодня-история-шеврон { margin-left: auto; }
+
+/* СТРОКА ОХРАНЫ НА «СЕГОДНЯ» (#473).
+
+   Не карточка: в исправном состоянии это фон, и занимать полэкрана каждый день — учить
+   не замечать. В сломанном она краснеет и становится поводом, оставаясь одной строкой. */
+.охрана-строка {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 11px 13px; margin-top: 10px;
+  border-radius: 13px; border: 1px solid transparent;
+  background: var(--color-neutral-900); color: var(--color-text);
+  font-family: var(--font-body); text-align: left; cursor: pointer;
+}
+.охрана-строка.беда {
+  background: color-mix(in srgb, var(--c-danger) 11%, var(--color-neutral-900));
+  border-color: color-mix(in srgb, var(--c-danger) 40%, transparent);
+}
+.охрана-знак { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.охрана-знак.ок { background: var(--c-glu); }
+.охрана-знак.нет { background: var(--c-danger); }
+.охрана-текст { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.охрана-текст b { font-size: 0.875rem; font-weight: 600; }
+.охрана-текст span {
+  font-size: 0.75rem; color: var(--color-neutral-500);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.охрана-шеврон { margin-left: auto; color: var(--color-neutral-600); font-size: 1rem; flex: none; }
+
+/* РАЗДЕЛ «ОХРАНА» (#473). Ответ — крупно и цветом состояния; список ниже тише. */
+.охрана-ответ { border-radius: 16px; padding: 14px 15px; margin-top: 4px; }
+.охрана-ответ.да {
+  background: color-mix(in srgb, var(--c-glu) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-glu) 35%, transparent);
+}
+.охрана-ответ.нет {
+  background: color-mix(in srgb, var(--c-danger) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-danger) 42%, transparent);
+}
+.охрана-ответ-заг { font-size: 1.0625rem; font-weight: 600; margin-bottom: 4px; }
+.охрана-ответ.да .охрана-ответ-заг { color: var(--c-glu); }
+.охрана-ответ.нет .охрана-ответ-заг { color: var(--c-danger-2); }
+.охрана-ответ-текст { color: var(--color-neutral-400); font-size: 0.8125rem; line-height: 1.5; }
+.охрана-пункт { display: flex; align-items: center; gap: 11px; }
+/* Три знака, а не два: «этого мы не знаем» — не «плохо» и не «хорошо». */
+.охрана-знак-п { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.охрана-знак-п.ок { background: var(--c-glu); }
+.охрана-знак-п.нет { background: var(--c-danger); }
+.охрана-знак-п.незнаем { background: transparent; border: 2px dashed var(--c-carb); width: 12px; height: 12px; }
+.охрана-чинить {
+  margin-left: auto; background: none; border: 0; cursor: pointer;
+  color: var(--color-accent); font-size: 0.75rem; font-family: var(--font-body);
+  display: inline-flex; align-items: center; gap: 3px; min-height: 32px;
+}

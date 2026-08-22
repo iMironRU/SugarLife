@@ -1,9 +1,8 @@
-import { AlarmsSection, DiagnosticsSection, HealthSection, LoopSection, DataDevicesSection, AboutSection, AppearanceSection } from '@/sections/lazy';
-import { тревогиДоступны } from '@/platform/тревоги';
+import { ОхранаSection, DiagnosticsSection, HealthSection, LoopSection, DataDevicesSection, AboutSection, AppearanceSection } from '@/sections/lazy';
 import {
   optionsOutline, nutritionOutline,
   hardwareChipOutline, repeat, documentTextOutline, heartOutline, informationCircleOutline,
-  colorPaletteOutline, alarmOutline,
+  colorPaletteOutline, shieldCheckmarkOutline,
 } from 'ionicons/icons';
 import { useState, useEffect, useRef } from 'react';
 import { resetLocalData } from '@/settings/reset';
@@ -170,10 +169,14 @@ export default function Profile() {
                 и записывает врач (#156). */}
             <Row icon={heartOutline} title="Здоровье" sub={здоровьеПодпись}
               onClick={() => push(<HealthSection onClose={pop} />, { id: 'здоровье' })} />
-            {/* Тревоги — рядом со «Здоровьем», а не в диагностике: это не отладка, а то,
-                что решает, разбудят ли человека ночью (#418). */}
-            <Row icon={alarmOutline} title="Тревоги" sub={тревогиДоступны() ? 'что должно разбудить и при каких числах' : 'в браузере не работают'}
-              onClick={() => push(<AlarmsSection onClose={pop} />, { id: 'тревоги' })} />
+            {/* Охрана — единственный вход в тему «разбудят ли этой ночью» (#473). Пороги,
+                сторож молчания, разрешения и проверочная тревога — всё внутри. */}
+            <Row icon={shieldCheckmarkOutline} title="Охрана"
+              sub="разбудим ли этой ночью и что этому мешает"
+              onClick={() => push(<ОхранаSection onClose={pop} />, { id: 'охрана' })} />
+            {/* Тревог отдельной строкой здесь БОЛЬШЕ НЕТ (#473): два входа в одну тему
+                заставляли человека гадать, где искать ответ «разбудят ли». Пороги живут
+                внутри «Охраны» — там, где сказано, услышим ли мы их вообще. */}
           </div>
 
           {/* настройки */}
