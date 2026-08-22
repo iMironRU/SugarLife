@@ -1,3 +1,5 @@
+import { словоОжидания } from '@/слова/попытка';
+import { СЛОТ_ЖЕЛЕЗКИ as СЛОТ, ПОДПИСЬ_СЛОТА } from '@/слова/слоты';
 import { IonIcon } from '@ionic/react';
 import { сколькоНазад } from '@/слова/время';
 import Section from '@/ui/Section';
@@ -21,7 +23,7 @@ import ВПриложении from '@/ui/ВПриложении';
 import { спроситьЛи } from '@/domain/deviceParams';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
 import {
-  железоДиспетчера, СЛОТ, мостЖелезки, имяЖелезки, адресВЭфире,
+  железоДиспетчера, мостЖелезки, имяЖелезки, адресВЭфире,
   заМостомЛи, звеноЦепочки, словоЦепочки,
 } from '@/domain/nearby';
 import { связь } from '@/domain/deviceState';
@@ -30,13 +32,13 @@ import { свежесть, чтоСПрибором } from '@/domain/freshness';
 import { расходка, подписьРасходки } from '@/domain/supplies';
 
 import { sourceStatusLabel } from '@/domain/sourceStatus';
-import { слотПоСнимку, путьСлота, ПОДПИСЬ_СЛОТА } from '@/domain/slotStatus';
+import { слотПоСнимку, путьСлота } from '@/domain/slotStatus';
 import type { DeviceCatKey } from './DeviceSection';
 import { useStack } from '@/app/stackCtx';
 import RequirementsCatalogSheet from '@/sheets/RequirementsCatalogSheet';
 import HardwareSheet from '@/sheets/HardwareSheet';
 import {
-  словоОжидания, ходПопытки, СРОК_ОЖИДАНИЯ_МС, type Попытка, type Цель,
+  ходДляСтроки, ходПопытки, СРОК_ОЖИДАНИЯ_МС, type Попытка, type Цель,
 } from '@/domain/connectAttempt';
 
 /* Профиль → «Устройства» — отдельный полноэкранный раздел (не вложенная секция), как в
@@ -256,7 +258,7 @@ export default function DevicesSection({ onClose, встроенный, толь
                   h.busy === 'possibly' ? 'возможно, занят другим телефоном' : null,
                   с.вид === 'неслышно' && h.busy !== 'possibly' ? 'в эфире не слышно' : null,
                 ].filter(Boolean).join(' · ') : 'новый — рядом в эфире';
-                const ожидание = h ? словоОжидания(попытка, h.id, живой, сейчас) : null;
+                const ожидание = h ? словоОжидания(ходДляСтроки(попытка, h.id, живой, сейчас)) : null;
                 const адрес = h ? адресВЭфире(h) : с.вЭфире?.bleId ?? null;
                 return (
                   <button key={с.id} className={'list-row' + (с.вид === 'неслышно' ? ' is-soon' : '')}
