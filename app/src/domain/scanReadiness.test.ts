@@ -7,13 +7,16 @@ import type { UiSnapshot, ScanReadinessView } from '@/sources/bridge';
    Пустой эфир на чистом Android оказался выключенной службой геолокации, а приложение
    молчало — человек искал неисправность в приборе, которого это не касалось. */
 
+/* Образец снимка: нас интересует одно поле, а тип снимка большой. Приведение через
+   `unknown` — не небрежность, а прямое утверждение «здесь нарочно неполный снимок»:
+   без него компилятор справедливо возражает, что типы не пересекаются. */
 const снимок = (г?: Partial<ScanReadinessView>): UiSnapshot =>
-  ({ scanReadiness: г ? { canScan: false, ...г } : undefined } as UiSnapshot);
+  ({ scanReadiness: г ? { canScan: false, ...г } : undefined } as unknown as UiSnapshot);
 
 describe('что мешает', () => {
   it('движок не жалуется — не выдумываем', () => {
     expect(мешает(снимок())).toBe(null);
-    expect(мешает({ scanReadiness: { canScan: true, blockers: [] } } as UiSnapshot)).toBe(null);
+    expect(мешает({ scanReadiness: { canScan: true, blockers: [] } } as unknown as UiSnapshot)).toBe(null);
     expect(мешает(null)).toBe(null);
   });
 

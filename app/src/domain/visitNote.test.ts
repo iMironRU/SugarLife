@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { полнота, оценка, динамика, сравнимо, ЦЕЛИ, МИН_ДНЕЙ, МИН_ДОЛЯ, ШАГ_НМГ_МИН } from './visitNote';
+import { полнота, оценка, динамика, сравнимо, МИН_ДНЕЙ, МИН_ДОЛЯ, ШАГ_НМГ_МИН } from './visitNote';
 import type { Entry } from '@/sources/nightscout';
 
 /* Записку читает врач, а не мы. Ошибка здесь не роняет приложение — она молча меняет
