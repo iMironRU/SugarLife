@@ -286,6 +286,44 @@ class SugarLifeBridgePlugin : Plugin() {
     }
 
     /**
+     * ПРОБЬЁТСЯ ЛИ ТРЕВОГА НОЧЬЮ (#468).
+     *
+     * Разрешение в манифесте — только право спросить. Доступ к «Не беспокоить» и полноэкранные
+     * уведомления выдаёт человек руками, и пока он не выдал, система молча делает вид, что обход
+     * тихого режима работает: тревога приходит беззвучной. Утром в шторке она на месте — то есть
+     * поломка не выглядит поломкой ровно до той ночи, когда понадобится.
+     *
+     * Отдаём голые факты платформы и список того, чего не хватает, человеческим языком. Пустой
+     * `missing` — всё на месте.
+     */
+    @PluginMethod
+    fun alarmReadiness(call: PluginCall) {
+        val ctx = context.applicationContext
+        val нет = Тревоги.чегоНеХватаетДляНочи(ctx)
+        val список = com.getcapacitor.JSArray()
+        нет.forEach { список.put(it) }
+        call.resolve(
+            JSObject()
+                .put("problem", нет.isNotEmpty())
+                .put("missing", список)
+                .put("silenceWatchdogOn", Тревоги.молчаниеВключено(ctx))
+                .put("silenceThresholdMin", Тревоги.молчаниеПорог(ctx)),
+        )
+    }
+
+    /** Открыть системный экран доступа к «Не беспокоить» (#468). Без него обход тихого режима мёртв. */
+    @PluginMethod
+    fun openDndAccess(call: PluginCall) {
+        val i = Тревоги.экранДоступаКТихомуРежиму()
+        if (i == null) { call.reject("на этой версии Android такого экрана нет"); return }
+        runCatching {
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.applicationContext.startActivity(i)
+        }.onSuccess { call.resolve() }
+            .onFailure { call.reject("не удалось открыть настройки: ${it.message}") }
+    }
+
+    /**
      * Показать системную просьбу об исключении из оптимизации батареи (#380).
      *
      * Сначала пробуем прямой диалог: одно нажатие вместо блужданий по настройкам. Его может не быть на

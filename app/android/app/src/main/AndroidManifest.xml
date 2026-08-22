@@ -16,6 +16,26 @@
         <package android:name="com.sibionics.cgm" />
     </queries>
 
+    <!-- ЧЕМ БУДИМ НОЧЬЮ (#468).
+
+         Канал тревог заведён как будильник: громкость будильника, обход «Не беспокоить»,
+         полноэкранное намерение, вибрация. Всё это система исполняет ТОЛЬКО при заявленных
+         разрешениях, а без них молча делает вид, что исполнила:
+
+         ACCESS_NOTIFICATION_POLICY — без него setBypassDnd(true) игнорируется, и ночью, когда
+         телефон в «Не беспокоить», тревога приходит беззвучной. Промах приходится ровно на тот
+         случай, ради которого канал и заведён. Разрешение мало объявить — доступ выдаёт человек
+         в системных настройках, поэтому мы ещё и спрашиваем (см. Тревоги.проверитьГотовность).
+
+         USE_FULL_SCREEN_INTENT — с Android 14 без него полноэкранная тревога вырождается в
+         строку в шторке, которую утром смахнут вместе с почтой.
+
+         VIBRATE — для спящего человека вибрация второй канал после звука, а если телефон под
+         подушкой, то и первый. -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
