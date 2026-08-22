@@ -34,6 +34,9 @@ object EngineHolder {
                Ставим ДО startAsync: сторож заводится при старте, и будильник должен быть у него уже
                тогда, а не через минуту. */
             e.setWakeups(AlarmWakeups(appContext.applicationContext))
+            // Отдача показаний в AAPS (core#100). Сам вещатель проверяет выключатель на каждом показании:
+            // человек может передумать в любой момент, и перезапуск ради этого не нужен.
+            e.setGlucoseBroadcaster(AapsBroadcast(appContext.applicationContext))
             e.startAsync()
         }
         return e

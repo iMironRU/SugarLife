@@ -241,6 +241,24 @@ class SugarLifeBridgePlugin : Plugin() {
      * Просить об этом обязано приложение, а показывать просьбу — экран готовности (#333): человек должен
      * понимать, за что платит батареей, иначе такие разрешения снимают обратно.
      */
+    /**
+     * Отдача показаний в AAPS (core#100): узнать состояние и переключить.
+     *
+     * Держим отдельным выключателем, а не «включено, раз есть AAPS»: по этим числам петля считает дозу
+     * инсулина, и решение должно быть человеческим.
+     */
+    @PluginMethod
+    fun aapsBroadcast(call: PluginCall) {
+        call.resolve(JSObject().put("enabled", AapsBroadcast.включено(context.applicationContext)))
+    }
+
+    @PluginMethod
+    fun setAapsBroadcast(call: PluginCall) {
+        val on = call.getBoolean("enabled") ?: run { call.reject("не сказано, включать или выключать"); return }
+        AapsBroadcast.включить(context.applicationContext, on)
+        call.resolve(JSObject().put("enabled", on))
+    }
+
     @PluginMethod
     fun batteryOptimization(call: PluginCall) {
         val ctx = context.applicationContext
