@@ -220,3 +220,21 @@
    отрывались от своих чипов. Прокрутка вбок честнее сжатия — видно, что есть ещё. */
 .chips-scroll { overflow-x: auto; padding-bottom: 2px; } /* полоса прокрутки — в base.css */
 .chips-scroll .metric-chip { flex: 0 0 auto; white-space: nowrap; }
+
+/* Типовой день в записке к приёму (#156). Тот же график, что в «Метриках», но рисуется
+   SVG — потому что записку печатают, а холст на лист ложится как получится.
+
+   Цвета берём из тех же токенов, что и экранный график: две картинки об одном не должны
+   отличаться на глаз, иначе человек решит, что смотрит на разные периоды. */
+.agp-svg { display: block; width: 100%; height: auto; }
+.agp-цель { fill: var(--c-glu); opacity: 0.1; }
+.agp-широкий { fill: var(--c-trend); opacity: 0.14; }
+.agp-узкий { fill: var(--c-trend); opacity: 0.3; }
+.agp-медиана { fill: none; stroke: var(--c-trend); stroke-width: 2; stroke-linejoin: round; }
+.agp-медиана-точка { fill: var(--c-trend); }
+.agp-порог { stroke: var(--color-neutral-400); stroke-width: 0.7; stroke-dasharray: 3 3; opacity: 0.7; }
+/* Размер подписей задаёт сам компонент (charts/cssVar.ts): внутри viewBox это единицы
+   рисунка, а не экранные пиксели, и rem здесь растянул бы график, а не текст в нём.
+   Системную настройку крупного шрифта подписи всё равно слышат — тем же пересчётом,
+   что и оси остальных графиков (#325). */
+.agp-подпись { fill: var(--color-neutral-400); }
