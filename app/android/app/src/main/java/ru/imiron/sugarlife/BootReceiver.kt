@@ -25,6 +25,25 @@ import android.util.Log
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val ctx = context.applicationContext
+
+        /*
+         * ЛОВУШКА НОЧНОГО ОБНОВЛЕНИЯ (#476).
+         *
+         * Система ставит обновление ночью и перезагружает телефон. BOOT_COMPLETED на телефоне с
+         * шифрованием приходит ТОЛЬКО ПОСЛЕ первой разблокировки — а человек спит. Значит до утра нет
+         * ни мониторинга, ни тревог, и он об этом не знает: телефон выглядит обычно.
+         *
+         * LOCKED_BOOT_COMPLETED приходит сразу. Поднять здесь движок нельзя — его база зашифрована до
+         * ввода кода. Но СКАЗАТЬ можно, и это ровно то, что человек обязан узнать: защиты сейчас нет.
+         */
+        if (intent.action == Intent.ACTION_LOCKED_BOOT_COMPLETED) {
+            if (SugarLifeService.былВключёнДоРазблокировки(ctx)) {
+                Log.w(TAG, "перезагрузка до разблокировки — мониторинга нет, говорим вслух")
+                Тревоги.сказатьПроПерезагрузку(ctx)
+            }
+            return
+        }
+
         if (!SugarLifeService.былВключён(ctx)) {
             Log.i(TAG, "${intent.action}: мониторинг был выключен — не поднимаем")
             return
@@ -34,6 +53,8 @@ class BootReceiver : BroadcastReceiver() {
             return
         }
         Log.i(TAG, "${intent.action}: поднимаем мониторинг")
+        // Разблокировали — тревога о перезагрузке своё отработала.
+        Тревоги.снятьПроПерезагрузку(ctx)
         runCatching { SugarLifeService.start(ctx) }
             .onFailure { Log.w(TAG, "не удалось поднять сервис после загрузки: $it") }
     }

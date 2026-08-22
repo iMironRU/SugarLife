@@ -343,12 +343,15 @@ class SugarLifeService : Service() {
          *  загрузки, которому это разрешено отдельно. */
         fun start(ctx: Context) {
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ВКЛЮЧЁН, true).apply()
+            // Дубль в хранилище устройства: его читает приёмник загрузки до разблокировки (#476).
+            хранилищеУстройства(ctx).edit().putBoolean(KEY_ВКЛЮЧЁН, true).apply()
             val i = Intent(ctx, SugarLifeService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(i) else ctx.startService(i)
         }
 
         fun stop(ctx: Context) {
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ВКЛЮЧЁН, false).apply()
+            хранилищеУстройства(ctx).edit().putBoolean(KEY_ВКЛЮЧЁН, false).apply()
             ctx.stopService(Intent(ctx, SugarLifeService::class.java))
         }
 
@@ -356,5 +359,22 @@ class SugarLifeService : Service() {
          *  выключил человек — значит выключил. */
         fun былВключён(ctx: Context): Boolean =
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ВКЛЮЧЁН, false)
+
+        /**
+         * ТО ЖЕ, НО ЧИТАЕМОЕ ДО РАЗБЛОКИРОВКИ (#476).
+         *
+         * Обычные настройки лежат в хранилище, зашифрованном ключом человека: пока телефон не
+         * разблокирован после перезагрузки, их не прочитать. А узнать «был ли включён мониторинг»
+         * надо именно там — ночью, сразу после того как система поставила обновление и перезагрузилась.
+         *
+         * Поэтому один-единственный флаг дублируем в хранилище устройства. Секрета в нём нет: это
+         * «да/нет», а не данные о здоровье.
+         */
+        fun былВключёнДоРазблокировки(ctx: Context): Boolean =
+            хранилищеУстройства(ctx).getBoolean(KEY_ВКЛЮЧЁН, false)
+
+        private fun хранилищеУстройства(ctx: Context) =
+            ctx.createDeviceProtectedStorageContext()
+                .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     }
 }

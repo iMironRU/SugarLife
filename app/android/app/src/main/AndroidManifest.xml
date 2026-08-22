@@ -98,11 +98,21 @@
 
              QUICKBOOT_POWERON — «быстрая загрузка» вендорских прошивок (HTC/Xiaomi): при ней
              BOOT_COMPLETED не приходит вовсе. Строка взята у Juggluco, там она с той же целью. -->
+        <!-- НОЧНАЯ ПЕРЕЗАГРУЗКА (#476). BOOT_COMPLETED на телефоне с шифрованием приходит только
+             ПОСЛЕ первой разблокировки. Обновление системы ставится ночью, телефон перезагружается,
+             человек спит и не разблокирует — значит до утра не поднимется ни мониторинг, ни тревоги,
+             и узнает он об этом по дырке в графике, а не вовремя.
+
+             directBootAware + LOCKED_BOOT_COMPLETED дают приёмнику право проснуться до разблокировки.
+             Движок там поднять нельзя (его база зашифрована до ввода кода), но СКАЗАТЬ можно — и это
+             ровно уровень «обещание нарушено»: защиты нет, и человек должен об этом узнать. -->
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="true"
+            android:directBootAware="true">
             <intent-filter>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
