@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Описание виджета (SugarLife#449).
+
+    updatePeriodMillis — полчаса, и меньше система всё равно не даст. Это не беда: число обновляем
+    мы сами при каждом снимке, пока служба жива, а возраст считает Chronometer внутри лаунчера.
+    Периодическое обновление нужно на случай, когда служба остановлена: тогда виджет хотя бы
+    перерисуется и покажет, что показание давнее.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_description"
+    android:previewLayout="@layout/sugar_widget"
+    android:initialLayout="@layout/sugar_widget" />

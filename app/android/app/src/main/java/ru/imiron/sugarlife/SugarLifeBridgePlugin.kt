@@ -346,6 +346,34 @@ class SugarLifeBridgePlugin : Plugin() {
         call.resolve(JSObject().put("busyHere", занят).put("candidates", список))
     }
 
+    /**
+     * Поставить виджет на рабочий стол — из приложения, а не поиском в лаунчере (#449).
+     *
+     * Иначе путь такой: долго нажать на пустое место, найти «Виджеты», пролистать чужой список до
+     * буквы S, потянуть плитку. Половина людей до конца не доходит и решает, что виджета нет.
+     * Система умеет предложить это сама одним диалогом — спрашиваем её.
+     *
+     * Умеет не всякий лаунчер: до Android 8 такого механизма нет вовсе, а часть прошивок его не
+     * поддерживает. Тогда честно отвечаем «нет» — и экран скажет, как добавить руками.
+     */
+    @PluginMethod
+    fun pinWidget(call: PluginCall) {
+        val ctx = context.applicationContext
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            call.resolve(JSObject().put("supported", false).put("asked", false))
+            return
+        }
+        val менеджер = android.appwidget.AppWidgetManager.getInstance(ctx)
+        if (менеджер == null || !менеджер.isRequestPinAppWidgetSupported) {
+            call.resolve(JSObject().put("supported", false).put("asked", false))
+            return
+        }
+        val ок = runCatching {
+            менеджер.requestPinAppWidget(android.content.ComponentName(ctx, SugarWidget::class.java), null, null)
+        }.getOrDefault(false)
+        call.resolve(JSObject().put("supported", true).put("asked", ок))
+    }
+
     @PluginMethod
     fun testAlarm(call: PluginCall) {
         Тревоги.проверочная(context.applicationContext)
