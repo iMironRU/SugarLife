@@ -468,3 +468,30 @@ label.list-row { cursor: pointer; }
   display: inline-block; margin-top: 4px; margin-left: 14px;
   color: var(--color-neutral-600); font-size: 0.75rem; text-decoration: underline;
 }
+
+/* ПРАВИЛО ТРЕВОГИ — СТРОКА СПИСКА (#500).
+
+   Раскрытые разом, восемь правил давали простыню на пять пролистываний. Строка отвечает на обычный
+   вопрос: за чем следит, каким голосом и при каких числах; числа правятся в шторке снизу.
+
+   Шапка — три части в одной строке: кнопка раскрытия (растягивается), выключатель и шеврон.
+   Выключатель отдельной целью намеренно: «следить или нет» — частое решение, «поменять порог» — редкое,
+   и попадание пальцем не должно решать, какое из них случилось. */
+.правило {
+  margin-top: 10px; border-radius: 14px; background: var(--color-neutral-900);
+  border: 1px solid var(--color-neutral-800); overflow: hidden;
+}
+.правило-шапка { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+.правило-кнопка {
+  flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  background: none; border: 0; padding: 0; margin: 0; text-align: left;
+  font-family: inherit; color: inherit; cursor: pointer;
+}
+.правило-имя { font-size: 0.9375rem; font-weight: 600; }
+/* Сводка не переносится и не растёт: строка правила должна оставаться одной строкой, иначе список
+   снова превращается в простыню — просто с отступами. */
+.правило-сводка {
+  font-size: 0.8125rem; color: var(--color-neutral-400);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.правило-шеврон { font-size: 1rem; color: var(--color-neutral-500); flex: 0 0 auto; }
