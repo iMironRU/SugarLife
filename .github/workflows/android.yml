@@ -152,6 +152,8 @@ jobs:
         run: |
           npm ci
           npm run build
+          # Издания разъезжаются сборкой (#296): в Lite не должно быть команд прибору.
+          npm run edition:check
 
       - name: Capacitor sync (android)
         if: env.HAS_CORE_TOKEN == 'да'

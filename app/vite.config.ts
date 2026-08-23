@@ -6,6 +6,15 @@ import { readFileSync } from 'fs'
 import { execSync } from 'child_process'
 
 const isCap = process.env.CAP === '1' // нативная сборка (Capacitor)
+/* Издание сборки (#296). Имя переменной — то же, что читает `capacitor.config.ts`: одно издание, одна
+   переменная. Два имени означали бы сборку, где нативная часть называется Pro, а бандл собран как
+   Lite, — и молча, потому что оба по отдельности выглядят правильно.
+
+   ПОДСТАВЛЯЕМ значением, а не оставляем чтением: только так ветка «разделы Pro» в Lite становится
+   литеральной ложью, и сборщик выбрасывает её вместе со всем кодом управления подачей. Переменные
+   окружения оболочки Vite сам в `import.meta.env` не кладёт — только из .env-файлов, поэтому
+   подстановка здесь. */
+const издание = process.env.SUGARLIFE_EDITION === 'pro' ? 'pro' : 'lite'
 
 // версия из package.json + номер сборки (короткий git SHA)
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
@@ -28,6 +37,7 @@ export default defineConfig(({ command }) => ({
        другой»: SHA умеет отвечать только «совпадает или нет», и по нему одинаково
        выглядят свежая сборка и позавчерашняя (SugarLife#238). */
     __APP_BUILT_AT__: JSON.stringify(new Date().toISOString()),
+    __ИЗДАНИЕ__: JSON.stringify(издание),
   },
   plugins: [
     react(),

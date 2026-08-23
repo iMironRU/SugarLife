@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { разделProПоId } from '@/издание';
 import {
   AboutSection, ОхранаSection, AlarmsSection, AnalyticsSection, AppearanceSection, BasalProfileSection, CloudAccountsSection,
   CloudSection, DataDevicesSection, DeviceSection, DevicesSection, DiagnosticsSection,
@@ -41,7 +42,10 @@ export type Метка =
   | { id: 'сервисы' }
   | { id: 'источники' }
   | { id: 'разбор' }
-  | { id: 'кПриёму' };
+  | { id: 'кПриёму' }
+  /* Раздел издания Pro (#296). Метка общая, а какой именно раздел — строкой: в Lite-сборке их нет
+     вовсе, и знать их имена общему коду незачем. */
+  | { id: 'pro'; раздел: string };
 
 export function собрать(м: Метка, pop: () => void): ReactNode | null {
   switch (м.id) {
@@ -65,6 +69,13 @@ export function собрать(м: Метка, pop: () => void): ReactNode | nul
     case 'источники': return <SourcesSection onClose={pop} />;
     case 'разбор': return <AnalyticsSection onClose={pop} />;
     case 'кПриёму': return <VisitNoteSection onClose={pop} />;
+    /* Раздел Pro восстанавливаем, только если он есть в этой сборке И реестр уже загружен. Иначе
+       возвращаем null — восстановление остановится на нём, как и на любом незнакомом разделе. Это
+       честнее, чем открыть то, что было над ним. */
+    case 'pro': {
+      const р = разделProПоId(м.раздел);
+      return р ? <р.Экран onClose={pop} /> : null;
+    }
     default: return null;
   }
 }

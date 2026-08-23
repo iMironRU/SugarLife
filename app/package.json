@@ -12,7 +12,9 @@
     "cap:ios": "CAP=1 npm run build && cap sync ios && cap open ios",
     "cap:android": "CAP=1 npm run build && cap sync android && cap open android",
     "test": "tsc -p tsconfig.test.json && vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:pro": "SUGARLIFE_EDITION=pro npm run build",
+    "edition:check": "node scripts/edition-check.mjs"
   },
   "dependencies": {
     "@capacitor-mlkit/barcode-scanning": "^8.1.0",
