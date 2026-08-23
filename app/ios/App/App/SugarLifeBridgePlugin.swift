@@ -589,6 +589,8 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "testAlarm", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "alarmReadiness", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "openAlarmSettings", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "alarmVolume", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setAlarmVolume", returnType: CAPPluginReturnPromise),
     ]
 
     /**
@@ -882,6 +884,12 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
                 поломки.append(["code": "ios-keep-alive",
                                 "text": "фоновое бодрствование выключено — в фоне приложение уснёт, и тревога не прозвучит"])
             }
+            /* Убавленная громкость — поломка ровно до тех пор, пока мы не поднимаем её сами. Порог
+               низкий: на трети громкости из-под подушки тревогу уже можно проспать. */
+            if !Громкость.общая.поднимаем && Громкость.общая.сейчас < 0.35 {
+                поломки.append(["code": "ios-volume",
+                                "text": "громкость телефона убавлена, а поднимать её на тревоге запрещено"])
+            }
             call.resolve([
                 "problem": !поломки.isEmpty,
                 "missing": поломки.map { $0["text"] ?? "" },
@@ -896,6 +904,21 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
      Андроидному «доступу к не беспокоить» на айфоне соответствия нет: разрешение здесь одно, и
      ведёт к нему один экран — карточка приложения в системных настройках.
      */
+    /**
+     Громкость тревоги: поднимаем ли и какая она сейчас (#482).
+
+     Экран показывает и то и другое: «поднимаем» — это обещание, а текущий уровень — то, что человек
+     услышит, если обещание выключено.
+     */
+    @objc func alarmVolume(_ call: CAPPluginCall) {
+        call.resolve(["boost": Громкость.общая.поднимаем, "level": Double(Громкость.общая.сейчас)])
+    }
+
+    @objc func setAlarmVolume(_ call: CAPPluginCall) {
+        Громкость.общая.поднимаем = call.getBool("boost") ?? true
+        call.resolve(["boost": Громкость.общая.поднимаем])
+    }
+
     @objc func openAlarmSettings(_ call: CAPPluginCall) {
         открытьНастройкиПриложения()
         call.resolve()

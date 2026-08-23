@@ -57,7 +57,9 @@ export type КодПоломки =
   /* Айфонное: в фоне приложение засыпает, и звучать тревоге нечем. Чинится НЕ системными
      настройками, а нашим же переключателем фонового бодрствования — поэтому кнопки в настройки
      у этой поломки нет. */
-  | 'ios-keep-alive';
+  | 'ios-keep-alive'
+  /* Тоже айфонное и тоже наше: громкость убавлена, а поднимать её на тревоге запрещено. */
+  | 'ios-volume';
 
 export interface Поломка {
   код: КодПоломки | string;
@@ -105,6 +107,38 @@ export async function готовностьТревог(): Promise<Готовно
   }
 }
 
+/* ГРОМКОСТЬ ТРЕВОГИ — ТОЛЬКО НА АЙФОНЕ (#482).
+
+   Свой звук пробивает беззвучный режим, но не убавленную громкость: играем мы на общем уровне медиа.
+   Поэтому на время будящей тревоги поднимаем его сами и возвращаем обратно, когда она смолкла. На
+   Android этого вопроса нет — там канал тревоги играет громкостью будильника, отдельной от медиа. */
+export interface ГромкостьТревоги {
+  /** Поднимаем ли на время тревоги. */
+  поднимаем: boolean;
+  /** Какая громкость сейчас, 0…1 — то, что человек услышит, если не поднимать. */
+  уровень: number;
+}
+
+interface ПлагинГромкости {
+  alarmVolume(): Promise<{ boost: boolean; level: number }>;
+  setAlarmVolume(o: { boost: boolean }): Promise<{ boost: boolean }>;
+}
+const NativeГромкость = registerPlugin<ПлагинГромкости>('SugarLifeBridge');
+
+/** null — вопрос не про эту платформу (Android, браузер) или сборка старше. */
+export async function громкостьТревоги(): Promise<ГромкостьТревоги | null> {
+  if (!тревогиДоступны() || Capacitor.getPlatform() !== 'ios') return null;
+  try {
+    const r = await NativeГромкость.alarmVolume();
+    return { поднимаем: !!r.boost, уровень: Number(r.level) || 0 };
+  } catch { return null; }
+}
+
+export async function поднимитеГромкость(поднимаем: boolean): Promise<boolean> {
+  if (!тревогиДоступны() || Capacitor.getPlatform() !== 'ios') return false;
+  try { await NativeГромкость.setAlarmVolume({ boost: поднимаем }); return true; } catch { return false; }
+}
+
 /** Открыть системный экран доступа к «Не беспокоить» (Android). */
 export async function открытьДоступКТихомуРежиму(): Promise<boolean> {
   if (!тревогиДоступны()) return false;
@@ -113,7 +147,8 @@ export async function открытьДоступКТихомуРежиму(): Pr
 
 /** Есть ли среди поломок та, что чинится системными настройками. */
 export function чинитсяНастройками(поломки: Поломка[]): boolean {
-  return поломки.some((п) => п.код !== 'ios-keep-alive');
+  const наши = ['ios-keep-alive', 'ios-volume'];
+  return поломки.some((п) => !наши.includes(п.код));
 }
 
 /** Куда ведёт кнопка «Открыть настройки»: у платформ разные экраны, у экрана — один вопрос. */

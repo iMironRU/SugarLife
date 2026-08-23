@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- БЕЗ ЭТОГО КЛЮЧА НЕ СТАВИТСЯ ВСЁ ПРИЛОЖЕНИЕ (SugarLife#500). Расширение собиралось,
+	     подписывалось и выглядело целым, но installd отвергал бандл целиком:
+	     «missing or invalid CFBundleExecutable». Ни симулятор, ни телефон не принимали сборку,
+	     и по сообщению казалось, что виноват виджет, а не одна отсутствующая строка. -->
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleDisplayName</key>
 	<string>SugarLife</string>
 	<key>CFBundleIdentifier</key>

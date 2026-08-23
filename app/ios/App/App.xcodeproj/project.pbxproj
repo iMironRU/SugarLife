@@ -26,6 +26,7 @@
 		D1A0000000000000000014 /* СахарАтрибуты.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000013 /* СахарАтрибуты.swift */; };
 		D1A0000000000000000022 /* ИсторияСахара.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000021 /* ИсторияСахара.swift */; };
 		D1A0000000000000000032 /* Тревоги.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000031 /* Тревоги.swift */; };
+		D1A0000000000000000034 /* Громкость.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000033 /* Громкость.swift */; };
 		D1A0000000000000000015 /* СахарАтрибуты.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000013 /* СахарАтрибуты.swift */; };
 /* End PBXBuildFile section */
 
@@ -52,6 +53,7 @@
 		D1A0000000000000000013 /* СахарАтрибуты.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "СахарАтрибуты.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000021 /* ИсторияСахара.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ИсторияСахара.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000031 /* Тревоги.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Тревоги.swift"; sourceTree = "<group>"; };
+		D1A0000000000000000033 /* Громкость.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Громкость.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,6 +115,7 @@
 				1A2B3C4D5E6F708192A3B4D6 /* LoopFeed.swift */,
 				D1A0000000000000000021 /* ИсторияСахара.swift */,
 				D1A0000000000000000031 /* Тревоги.swift */,
+				D1A0000000000000000033 /* Громкость.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -318,6 +321,7 @@
 				1A2B3C4D5E6F708192A3B4D5 /* LoopFeed.swift in Sources */,
 				D1A0000000000000000022 /* ИсторияСахара.swift in Sources */,
 				D1A0000000000000000032 /* Тревоги.swift in Sources */,
+				D1A0000000000000000034 /* Громкость.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
