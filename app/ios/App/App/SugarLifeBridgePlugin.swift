@@ -589,6 +589,9 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "testAlarm", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "alarmReadiness", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "openAlarmSettings", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "statusNote", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "reportActiveInsulin", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setStatusNote", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "alarmVolume", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setAlarmVolume", returnType: CAPPluginReturnPromise),
     ]
@@ -835,16 +838,28 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
            экране блокировки она переносилась на вторую строку, съедая пол-карточки под слово,
            которое человек и так знает. Режем по первому пробелу: число остаётся ТЕМ ЖЕ, что
            посчитал движок, — второй дороги к нему мы не заводим. */
+        /* Разделитель — запятая, как везде в приложении (#500). Движок отдаёт «10.4 ммоль/л» с
+           точкой; на баннере рядом с русскими словами точка читается как чужая, а в приложении в
+           этот же момент стоит «10,4». Одно число в двух видах — повод усомниться в обоих. */
         let число = String(значение.split(separator: " ").first ?? "")
+            .replacingOccurrences(of: ".", with: ",")
         let итог = ЖивойБаннер.обновить(
             значение: число.isEmpty ? значение : число, стрелка: стрелка, разница: дельта(ряд),
             когдаМс: когдаМс, старое: старое,
             источник: (monitor["source"] as? String) ?? "сенсор",
             ряд: ряд
         )
+        /* Сводка идёт тем же путём и от того же показания, что баннер: два разных ответа об одном
+           числе в один момент — то, чего мы не заводим. Инсулин берём у движка (в фоне веб-слой спит,
+           и другого источника нет). */
+        Сводка.общая.обновить(
+            сахар: число.isEmpty ? значение : число, стрелка: стрелка, разница: дельта(ряд),
+            инсулин: monitor["confirmedIOB"] as? Double,
+            когдаМс: когдаМс, старое: старое)
+
         /* В лог — каждое ФАКТИЧЕСКОЕ обновление. Когда баннер снова застрянет, по логу будет видно,
            мы ли перестали отдавать или система перестала принимать. */
-        NSLog("SugarLife: баннер — \(итог), показание \(число) от \(Int(когдаМс / 1000))")
+        NSLog("SugarLife: баннер — \(итог), показание \(число), инс. \(monitor["confirmedIOB"] as? Double ?? -1)")
         return итог
     }
 
@@ -868,12 +883,23 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     /// Тренд движка — стрелкой. Незнакомое значение отдаём пустым: выдуманная стрелка
     /// хуже отсутствующей, по ней принимают решение о дозе.
     private func стрелкаТренда(_ t: String?) -> String {
+        /* ИМЕНА ОТ ДВИЖКА, А НЕ ОТ NIGHTSCOUT (#500). Здесь стояли `SingleUp`, `Flat`, `FortyFiveUp` —
+           словарь Nightscout, которого движок не знает: его тренды называются иначе. Ни одно имя не
+           совпадало никогда, поэтому стрелки на баннере не было вовсе — и заметить это можно было
+           только глазами, на живом экране блокировки: пустая стрелка выглядит как «тренда нет».
+
+           Символы те же, что в приложении (domain/trend.ts): одна и та же картина не должна
+           означать в двух местах разное. */
         switch t {
-        case "DoubleUp", "SingleUp": return "↑"
-        case "FortyFiveUp": return "↗"
-        case "Flat": return "→"
-        case "FortyFiveDown": return "↘"
-        case "SingleDown", "DoubleDown": return "↓"
+        case "RisingRapidly": return "⇈"
+        case "Rising": return "↑"
+        case "RisingSlowly": return "↗"
+        case "Stable": return "→"
+        case "FallingSlowly": return "↘"
+        case "Falling": return "↓"
+        case "FallingRapidly": return "⇊"
+        /* `Unknown` от драйвера и прочерк от старого моста — оба «не знаю», и рисовать нечего:
+           выдуманная стрелка хуже отсутствующей, по ней принимают решение о дозе. */
         default: return ""
         }
     }
@@ -951,6 +977,28 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
      Экран показывает и то и другое: «поднимаем» — это обещание, а текущий уровень — то, что человек
      услышит, если обещание выключено.
      */
+    /**
+     Активный инсулин от веб-слоя (#500).
+
+     В облачном режиме его считает не движок, а Nightscout, и приходит он в приложение, а не в
+     нативную часть. Для сводки в шторке этого числа иначе не достать: в фоне webview спит.
+     Пустое значение — «мы не знаем», и тогда сводка про инсулин молчит.
+     */
+    @objc func reportActiveInsulin(_ call: CAPPluginCall) {
+        Сводка.общая.принятьИнсулин(call.getDouble("iob"))
+        call.resolve()
+    }
+
+    /// Сводка в шторке: показывать ли (Сводка.swift).
+    @objc func statusNote(_ call: CAPPluginCall) {
+        call.resolve(["on": Сводка.общая.включена])
+    }
+
+    @objc func setStatusNote(_ call: CAPPluginCall) {
+        Сводка.общая.включена = call.getBool("on") ?? false
+        call.resolve(["on": Сводка.общая.включена])
+    }
+
     @objc func alarmVolume(_ call: CAPPluginCall) {
         call.resolve(["boost": Громкость.общая.поднимаем, "level": Double(Громкость.общая.сейчас)])
     }

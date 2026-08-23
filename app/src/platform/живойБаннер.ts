@@ -44,6 +44,44 @@ export async function состояниеБаннера(): Promise<Состоян
   }
 }
 
+/* СВОДКА В ШТОРКЕ — СОСЕД БАННЕРА, А НЕ ЕГО ЗАМЕНА (#500).
+
+   Баннер живёт на экране блокировки и в машине, но его смахивают, он гаснет через восемь часов и его
+   нет на часах. Сводка — обычное тихое уведомление, которое каждое новое показание ЗАМЕНЯЕТ собой:
+   одна свежая строка в центре уведомлений, а не лента из двенадцати за час. Она не звенит и не
+   заменяет тревогу — это фон.
+
+   Живёт здесь же, рядом с баннером: вопрос у человека один — «что я узнаю, не открывая приложение». */
+interface ПлагинСводки {
+  statusNote(): Promise<{ on: boolean }>;
+  setStatusNote(o: { on: boolean }): Promise<{ on: boolean }>;
+  reportActiveInsulin(o: { iob?: number }): Promise<void>;
+}
+const NativeСводка = registerPlugin<ПлагинСводки>('SugarLifeBridge');
+
+/** null — платформа не та или сборка старше сводки. */
+export async function сводкаВключена(): Promise<boolean | null> {
+  if (!баннерВозможен()) return null;
+  try { return !!(await NativeСводка.statusNote()).on; } catch { return null; }
+}
+
+export async function включитьСводку(on: boolean): Promise<boolean> {
+  if (!баннерВозможен()) return false;
+  try { await NativeСводка.setStatusNote({ on }); return true; } catch { return false; }
+}
+
+/* АКТИВНЫЙ ИНСУЛИН — НАТИВУ, ДЛЯ СВОДКИ (#500).
+
+   В облачном режиме его считает Nightscout, а не движок: движок отдаёт ноль, и сводка в шторке про
+   инсулин молчала бы, хотя на экране число есть. Отдаём его нативу, пока приложение живо; там оно
+   хранится со сроком годности — устаревшее не показывается, потому что инсулин расходуется и без нас.
+
+   Неизвестное шлём пустым: «0 ед» и «мы не знаем» — разные ответы, и путать их в шторке нельзя. */
+export async function сообщитьИнсулин(iob: number | null): Promise<void> {
+  if (!баннерВозможен()) return;
+  try { await NativeСводка.reportActiveInsulin(iob == null ? {} : { iob }); } catch { /* сборка старше */ }
+}
+
 export async function включитьБаннер(on: boolean): Promise<boolean> {
   if (!баннерВозможен()) return false;
   try { await Native.setLiveBanner({ on }); return true; } catch { return false; }

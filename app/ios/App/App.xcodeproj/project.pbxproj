@@ -27,6 +27,7 @@
 		D1A0000000000000000022 /* ИсторияСахара.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000021 /* ИсторияСахара.swift */; };
 		D1A0000000000000000032 /* Тревоги.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000031 /* Тревоги.swift */; };
 		D1A0000000000000000034 /* Громкость.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000033 /* Громкость.swift */; };
+		D1A0000000000000000036 /* Сводка.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000035 /* Сводка.swift */; };
 		D1A0000000000000000015 /* СахарАтрибуты.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000013 /* СахарАтрибуты.swift */; };
 /* End PBXBuildFile section */
 
@@ -54,6 +55,7 @@
 		D1A0000000000000000021 /* ИсторияСахара.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ИсторияСахара.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000031 /* Тревоги.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Тревоги.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000033 /* Громкость.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Громкость.swift"; sourceTree = "<group>"; };
+		D1A0000000000000000035 /* Сводка.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Сводка.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,6 +118,7 @@
 				D1A0000000000000000021 /* ИсторияСахара.swift */,
 				D1A0000000000000000031 /* Тревоги.swift */,
 				D1A0000000000000000033 /* Громкость.swift */,
+				D1A0000000000000000035 /* Сводка.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -322,6 +325,7 @@
 				D1A0000000000000000022 /* ИсторияСахара.swift in Sources */,
 				D1A0000000000000000032 /* Тревоги.swift in Sources */,
 				D1A0000000000000000034 /* Громкость.swift in Sources */,
+				D1A0000000000000000036 /* Сводка.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

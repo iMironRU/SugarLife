@@ -7,7 +7,10 @@ import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import { проверитьТревогу, тревогиДоступны } from '@/platform/тревоги';
 import { isNative, platform } from '@/platform/appUpdate';
-import { баннерВозможен, состояниеБаннера, включитьБаннер, type СостояниеБаннера } from '@/platform/живойБаннер';
+import {
+  баннерВозможен, состояниеБаннера, включитьБаннер, сводкаВключена, включитьСводку,
+  type СостояниеБаннера,
+} from '@/platform/живойБаннер';
 import { виджетВозможен, добавитьВиджет, type ИтогДобавления } from '@/platform/виджет';
 import { useSnapshot } from '@/sources/bridge';
 import ПравилаДвижка from './тревоги/ПравилаДвижка';
@@ -30,10 +33,12 @@ import { ядроУмеетТревоги } from '@/показ/правилаТ�
 export default function AlarmsSection({ onClose }: { onClose: () => void }) {
   const [проверил, setПроверил] = useState(false);
   const [баннер, setБаннер] = useState<СостояниеБаннера | null>(null);
+  const [сводка, setСводка] = useState<boolean | null>(null);
   const [виджет, setВиджет] = useState<ИтогДобавления | null>(null);
 
   useEffect(() => {
     void состояниеБаннера().then(setБаннер);
+    void сводкаВключена().then(setСводка);
   }, []);
 
   const снимок = useSnapshot();
@@ -131,6 +136,24 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
             виджет. Система гасит такие баннеры через восемь часов; приложение продлевает
             их само, пока получает данные.
           </div>
+
+          {/* СВОДКА — СОСЕД БАННЕРА (#500). Тот же вопрос «что я узнаю, не открывая приложение», но
+              другой ответ: уведомление переживает смахивание, доезжает до часов и лежит в центре
+              уведомлений. Выключено по умолчанию: постоянная строка в шторке — вещь на любителя. */}
+          {сводка != null && (
+            <>
+              <div className="list">
+                <Row icon={notificationsOutline} title="Сводка в шторке"
+                  sub="сахар, разница и активный инсулин — одной строкой, тихо"
+                  right={<Переключатель checked={сводка}
+                    onChange={(v) => { setСводка(v); void включитьСводку(v); }} />} />
+              </div>
+              <div className="sheet-note">
+                Каждое новое показание заменяет прежнюю строку, а не добавляет новую. Она не
+                звенит и не будит — тревога приходит отдельно и ведёт себя иначе.
+              </div>
+            </>
+          )}
         </>
       )}
 
