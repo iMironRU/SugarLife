@@ -855,6 +855,18 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         let json = call.getString("json") ?? ""
         // Экспорт лога перехватываем ДО движка (как Android): редактированный NDJSON → share sheet ОС.
         if json.contains("\"exportLog\"") { exportAndShare(); return call.resolve(["json": "{\"accepted\":true}"]) }
+        /* «Открыть настройки» — наше дело, а не движка (SugarLife#333, контракт: «куда вести, знает
+           движок, КАК открыть — натив»). Раньше интент уходил в движок, тот честно писал в журнал
+           `intent-not-handled` и всё равно отвечал `accepted: true`: кнопка выглядела рабочей и не
+           делала ничего.
+
+           На iOS системный экран ровно один — настройки нашего приложения. Отдельных страниц Bluetooth
+           или геолокации приложениям не открывают, и притворяться, что мы ведём именно туда, нельзя:
+           человек всё равно окажется на общей странице, и обещание разойдётся с тем, что он увидит. */
+        if json.contains("\"openSystemScreen\"") {
+            открытьНастройкиПриложения()
+            return call.resolve(["json": "{\"accepted\":true}"])
+        }
         // Скан и провайдер — на своей очереди вместе с движком (core#82): `ensureProvider` тянет за собой
         // восстановление приборов из базы, а это уже разговор с движком.
         engineQueue.async { [weak self] in
@@ -864,6 +876,12 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             else if json.contains("\"addDevice\"") || json.contains("\"addDiscovered\"") { self.ensureProvider() }
             call.resolve(["json": self.engine?.sendIntent(json: json) ?? "{\"accepted\":false,\"error\":\"engine not ready\"}"])
         }
+    }
+
+    /// Настройки приложения — единственный системный экран, который iOS даёт открыть из приложения.
+    private func открытьНастройкиПриложения() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        DispatchQueue.main.async { UIApplication.shared.open(url) }
     }
 
     /// Экспорт диагностического лога (редактированный NDJSON из движка) → UIActivityViewController
