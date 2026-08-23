@@ -590,6 +590,8 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "alarmReadiness", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "openAlarmSettings", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "statusNote", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "glucoseBadge", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setGlucoseBadge", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "reportActiveInsulin", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setStatusNote", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "alarmVolume", returnType: CAPPluginReturnPromise),
@@ -852,6 +854,10 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         /* Сводка идёт тем же путём и от того же показания, что баннер: два разных ответа об одном
            числе в один момент — то, чего мы не заводим. Инсулин берём у движка (в фоне веб-слой спит,
            и другого источника нет). */
+        /* Значок — от того же показания, что баннер и сводка: три разных числа об одном сахаре в
+           одну секунду это и есть то, чего мы не заводим. */
+        Значок.общий.обновить(mmol: monitor["glucoseMmol"] as? Double, старое: старое)
+
         Сводка.общая.обновить(
             сахар: число.isEmpty ? значение : число, стрелка: стрелка, разница: дельта(ряд),
             инсулин: monitor["confirmedIOB"] as? Double,
@@ -987,6 +993,24 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func reportActiveInsulin(_ call: CAPPluginCall) {
         Сводка.общая.принятьИнсулин(call.getDouble("iob"))
         call.resolve()
+    }
+
+    /**
+     Сахар цифрами на значке приложения (Значок.swift).
+
+     Отдаём и список возможных видов: экран не должен держать их копией — иначе новый вид появится в
+     нативе, а выбрать его будет негде.
+     */
+    @objc func glucoseBadge(_ call: CAPPluginCall) {
+        call.resolve([
+            "mode": Значок.общий.вид.rawValue,
+            "modes": Значок.Вид.allCases.map { $0.rawValue },
+        ])
+    }
+
+    @objc func setGlucoseBadge(_ call: CAPPluginCall) {
+        if let вид = Значок.Вид(rawValue: call.getString("mode") ?? "") { Значок.общий.вид = вид }
+        call.resolve(["mode": Значок.общий.вид.rawValue])
     }
 
     /// Сводка в шторке: показывать ли (Сводка.swift).
