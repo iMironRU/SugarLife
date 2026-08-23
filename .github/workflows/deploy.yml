@@ -34,11 +34,17 @@ jobs:
           cache: npm
           cache-dependency-path: stable/app/package-lock.json
 
-      - name: Build Ionic app (v2, from main)
+      - name: Build web app (v2, from main)
         working-directory: stable/app
         run: |
           npm ci
           npm run build
+
+      # Издание разъезжается сборкой, а не содержимым репозитория (#296). Веб и OTA — это Lite,
+      # и команд прибору в них быть не должно: проверяем собранное, а не намерения.
+      - name: Check edition boundary (lite)
+        working-directory: stable/app
+        run: npm run edition:check
 
       - name: Place v2 into site
         run: |
@@ -53,7 +59,9 @@ jobs:
         working-directory: stable/app
         env:
           CAP: '1'
-        run: npm run build
+        run: |
+          npm run build
+          npm run edition:check
 
       - name: Package OTA bundle + manifest
         run: |

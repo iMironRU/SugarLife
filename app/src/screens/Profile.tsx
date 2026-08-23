@@ -2,7 +2,7 @@ import { ОхранаSection, DiagnosticsSection, HealthSection, LoopSection, Da
 import {
   optionsOutline, nutritionOutline,
   hardwareChipOutline, repeat, documentTextOutline, heartOutline, informationCircleOutline,
-  colorPaletteOutline, shieldCheckmarkOutline,
+  colorPaletteOutline, shieldCheckmarkOutline, flashOutline,
 } from 'ionicons/icons';
 import { useState, useEffect, useRef } from 'react';
 import { resetLocalData } from '@/settings/reset';
@@ -19,6 +19,7 @@ import { useLoopProfile, LOOP_MODES } from '@/settings/loopProfile';
 import { useDeviceConfig, deviceStatus } from '@/settings/deviceConfig';
 import { pumpById, sensorById } from '@/domain/catalog';
 import { useМодели } from '@/показ/модели';
+import { взятьРазделыPro, type РазделPro } from '@/издание';
 import Row from '@/ui/Row';
 import UnitsModal from '@/sheets/UnitsModal';
 import CarbUnitsModal from '@/sheets/CarbUnitsModal';
@@ -78,6 +79,10 @@ export default function Profile() {
      «настроено» одинаково выглядит и когда всё верно, и когда записана не та модель. */
   const devCfg = useDeviceConfig();
   const модели = useМодели();
+  /* Разделы издания Pro (#296). В Lite `разделыPro` — литеральный null, и вся ветка вместе с их кодом
+     до сборки не доживает: издания разъезжаются сборкой, а не условием на экране. */
+  const [проРазделы, setПроРазделы] = useState<РазделPro[]>([]);
+  useEffect(() => { void взятьРазделыPro().then(setПроРазделы); }, []);
   const устройства = [pumpById(модели.pumpId)?.model, sensorById(модели.sensorId)?.name]
     .filter(Boolean).join(' · ') || 'ничего не записано';
   /* Справа — только то, что требует действия. Строка молчит, пока всё в порядке:
@@ -182,7 +187,20 @@ export default function Profile() {
           </div>
 
           {/* настройки */}
-          <div className="section-label sec">Настройки</div>
+          {проРазделы.length > 0 && (
+        <>
+          <div className="section-label sec">Управление подачей</div>
+          <div className="list">
+            {проРазделы.map((р) => (
+              <Row key={р.id} icon={flashOutline} title={р.название}
+                sub="издание Pro: команды помпе"
+                onClick={() => push(<р.Экран onClose={pop} />, { id: 'pro', раздел: р.id })} />
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className="section-label sec">Настройки</div>
           <div className="list">
             <Row icon={optionsOutline} title="Единицы глюкозы" value={unitLabel(unit)} onClick={() => setUnitsOpen(true)} />
             <Row icon={nutritionOutline} title="Единицы еды" value={carbUnitLabel(carbUnit)} onClick={() => setCarbUnitsOpen(true)} />

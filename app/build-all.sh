@@ -45,6 +45,16 @@ for ED in $EDITIONS; do
   if CAP=1 SUGARLIFE_EDITION="$ED" npm run build >/dev/null 2>&1 \
      && SUGARLIFE_EDITION="$ED" npx cap sync >/dev/null 2>&1; then
     note "веб+sync $ED: ✅"
+    # Граница изданий проверяется на собранном, а не на намерениях (#296): в Lite не должно быть
+    # ни экранов, ни строк управления подачей. Проверяем только Lite — в Pro они и должны быть.
+    if [ "$ED" = "lite" ]; then
+      if node scripts/edition-check.mjs >/dev/null 2>&1; then
+        note "граница изданий lite: ✅"
+      else
+        node scripts/edition-check.mjs || true
+        note "граница изданий lite: ❌ (в Lite попали команды прибору)"
+      fi
+    fi
   else
     note "веб+sync $ED: ❌ (дальше по этому изданию не идём)"
     continue
