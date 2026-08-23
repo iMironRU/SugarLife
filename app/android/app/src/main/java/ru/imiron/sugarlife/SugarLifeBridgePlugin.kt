@@ -15,6 +15,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.net.Uri
+import android.provider.Settings
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.location.LocationManagerCompat
@@ -138,9 +140,76 @@ class SugarLifeBridgePlugin : Plugin() {
     private fun hasBlePermissions(): Boolean =
         blePermissions().all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
 
+    /**
+     * Открыть системный экран, где чинят помеху поиску (SugarLife#333).
+     *
+     * Куда вести — решает движок (`scanReadiness.settingsTarget`), потому что он один знает, что
+     * именно мешает. Как открыть — знаем только мы: у каждой ОС свои экраны, и у Android они ещё и
+     * меняются по версиям.
+     *
+     * ЗАПАСНОЙ ПУТЬ ОБЯЗАТЕЛЕН. Экран может отсутствовать: у части прошивок нет отдельного экрана
+     * Bluetooth, а вендорские оболочки любят переносить настройки к себе. Тогда ведём в настройки
+     * приложения — оттуда до нужного места два шага, и это лучше, чем кнопка, которая не делает
+     * ничего.
+     */
+    private fun открытьСистемныйЭкран(куда: String): Boolean {
+        val адреса = when (куда) {
+            "bluetooth" -> listOf(Settings.ACTION_BLUETOOTH_SETTINGS, Settings.ACTION_SETTINGS)
+            "location" -> listOf(Settings.ACTION_LOCATION_SOURCE_SETTINGS, Settings.ACTION_SETTINGS)
+            /* «Разрешения приложения» отдельным экраном есть не везде; сведения о приложении есть
+               всегда, и разрешения — первый пункт внутри. */
+            else -> listOf(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Settings.ACTION_SETTINGS)
+        }
+        for (адрес in адреса) {
+            val i = Intent(адрес).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (адрес == Settings.ACTION_APPLICATION_DETAILS_SETTINGS) {
+                i.data = Uri.fromParts("package", context.packageName, null)
+            }
+            val получилось = runCatching {
+                (activity ?: context).startActivity(i)
+                true
+            }.getOrElse { false }
+            if (получилось) {
+                Log.i(TAG, "открыли системный экран: $куда ($адрес)")
+                return true
+            }
+        }
+        Log.w(TAG, "не нашлось системного экрана для: $куда")
+        return false
+    }
+
     private fun requestBlePermissions() {
         val missing = blePermissions().filter { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }
-        if (missing.isNotEmpty()) activity?.let { ActivityCompat.requestPermissions(it, missing.toTypedArray(), 7401) }
+        if (missing.isEmpty()) return
+        activity?.let {
+            /* Запоминаем сам ФАКТ вопроса — без него нельзя отличить «ещё не спрашивали» от «отказали
+               насовсем»: система в обоих случаях отвечает `shouldShowRationale = false` (см. ниже). */
+            context.getSharedPreferences(НАСТРОЙКИ_ДОСТУПА, Context.MODE_PRIVATE).edit()
+                .putBoolean(КЛЮЧ_СПРАШИВАЛИ, true).apply()
+            ActivityCompat.requestPermissions(it, missing.toTypedArray(), 7401)
+        }
+    }
+
+    /**
+     * ПОКАЖЕТ ЛИ СИСТЕМА ДИАЛОГ ЕЩЁ РАЗ (SugarLife#333).
+     *
+     * Движок по этому признаку меняет и слова, и кнопку: «сейчас спросим» против «включите в настройках
+     * приложения». Без него человек, отказавший дважды, видит кнопку «Разрешить», которая не делает
+     * ничего, — тупик, из которого он выходит с выводом, что сломано приложение.
+     *
+     * Одного `shouldShowRequestPermissionRationale` мало: он отвечает `false` И до первого вопроса, И
+     * после окончательного отказа. Различает их только память о том, что мы спрашивали.
+     *
+     * Activity нет (сервис в фоне) — не отвечаем вовсе: выдумать здесь хуже, чем промолчать.
+     */
+    private fun спроситьМожноЕщёРаз(): Boolean? {
+        val a = activity ?: return null
+        val спрашивали = context.getSharedPreferences(НАСТРОЙКИ_ДОСТУПА, Context.MODE_PRIVATE)
+            .getBoolean(КЛЮЧ_СПРАШИВАЛИ, false)
+        if (!спрашивали) return true
+        return blePermissions()
+            .filter { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }
+            .any { ActivityCompat.shouldShowRequestPermissionRationale(a, it) }
     }
 
     /**
@@ -161,10 +230,14 @@ class SugarLifeBridgePlugin : Plugin() {
             val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
             lm?.let { LocationManagerCompat.isLocationEnabled(it) }
         }
+        val можноЕщёРаз = if (hasBlePermissions()) null else спроситьМожноЕщёРаз()
         val json = buildString {
             append("{\"bluetoothOn\":").append(bt?.isEnabled ?: false)
             append(",\"permissionsGranted\":").append(hasBlePermissions())
             if (locationOn != null) append(",\"locationEnabled\":").append(locationOn)
+            /* Только когда есть что сказать: поле отсутствует — движок не знает, и это честнее
+               выдуманного `true`, по которому он пообещал бы диалог. */
+            if (можноЕщёРаз != null) append(",\"canAskAgain\":").append(можноЕщёРаз)
             append("}")
         }
         Log.i(TAG, "scan readiness: $json")
@@ -441,6 +514,26 @@ class SugarLifeBridgePlugin : Plugin() {
             requestBlePermissions()
         }
         if (json.contains("\"exportLog\"")) { exportAndShare(); return call.resolve(JSObject().put("json", """{"accepted":true}""")) }
+        /* ЭТИ ДВА ИНТЕНТА — НАШИ, А НЕ ДВИЖКА (SugarLife#333, контракт: «куда вести, знает движок,
+           КАК открыть — натив»).
+
+           До этой правки они уходили в движок, тот честно писал в журнал `intent-not-handled` и всё
+           равно отвечал `accepted: true`. То есть кнопки «Разрешить» и «Открыть настройки» в блоке
+           «что мешает найти приборы» не делали ничего, а выглядели рабочими. Худший вид тупика:
+           человек нажимает, ничего не происходит, и он решает, что сломано приложение. */
+        if (json.contains("\"requestScanPermissions\"")) {
+            requestBlePermissions()
+            return call.resolve(JSObject().put("json", """{"accepted":true}"""))
+        }
+        if (json.contains("\"openSystemScreen\"")) {
+            val куда = Regex("\"target\"\\s*:\\s*\"([^\"]+)\"").find(json)?.groupValues?.get(1) ?: "appSettings"
+            val ок = открытьСистемныйЭкран(куда)
+            return call.resolve(JSObject().put("json",
+                if (ок) """{"accepted":true}"""
+                /* Не открылось — говорим об этом. Молчаливый отказ здесь неотличим от «открылось и
+                   закрылось», и человек будет жать снова. */
+                else """{"accepted":false,"error":"экран настроек не открылся"}"""))
+        }
         // Всё остальное — за очередью движка, то есть НЕ здесь (core#82).
         onEngineThread(call) {
             when {
@@ -483,6 +576,8 @@ class SugarLifeBridgePlugin : Plugin() {
 
     companion object {
         private const val TAG = "SugarLifeBridge"
+        private const val НАСТРОЙКИ_ДОСТУПА = "sugarlife-доступ"
+        private const val КЛЮЧ_СПРАШИВАЛИ = "ble-perm-asked"
     }
 }
 
