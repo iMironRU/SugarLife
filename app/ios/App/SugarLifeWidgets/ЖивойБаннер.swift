@@ -51,6 +51,21 @@ struct ГрафикСахара: View {
     private static let зелёный = Color(red: 0.576, green: 0.780, blue: 0.608)
     private static let красный = Color(red: 0.788, green: 0.420, blue: 0.478)
 
+    /* МАСШТАБ ПО ДАННЫМ, А НЕ ПО ДИАПАЗОНУ (#500). Раньше окно всегда включало 3,9 и 10 — и ровный
+       вечер 7,7…7,9 превращался в прямую черту: линия есть, а сказать ей нечего. Соседи по экрану
+       блокировки в тот же момент показывали ту же историю с формой.
+
+       Окно считаем по самим показаниям, но не уже двух с половиной ммоль: иначе шум ±0,2 нарисовался
+       бы горами, и спокойная ночь выглядела бы тревожной. */
+    private static func окно(_ все: [СахарАтрибуты.ContentState.Точка]) -> (Double, Double) {
+        let низ = (все.map(\.в).min() ?? НИЗ) - 0.5
+        let верх = (все.map(\.в).max() ?? ВЕРХ) + 0.5
+        let ОКНО = 2.5
+        guard верх - низ < ОКНО else { return (низ, верх) }
+        let центр = (верх + низ) / 2
+        return (центр - ОКНО / 2, центр + ОКНО / 2)
+    }
+
     private var сегменты: [[СахарАтрибуты.ContentState.Точка]] {
         var итог: [[СахарАтрибуты.ContentState.Точка]] = []
         var текущий: [СахарАтрибуты.ContentState.Точка] = []
@@ -70,8 +85,7 @@ struct ГрафикСахара: View {
             let t0 = все.first?.т.timeIntervalSince1970 ?? 0
             let t1 = все.last?.т.timeIntervalSince1970 ?? 1
             let диапазонT = max(t1 - t0, 60)
-            let vmin = min(все.map(\.в).min() ?? Self.НИЗ, Self.НИЗ) - 0.7
-            let vmax = max(все.map(\.в).max() ?? Self.ВЕРХ, Self.ВЕРХ) + 0.7
+            let (vmin, vmax) = Self.окно(все)
             let x: (Date) -> CGFloat = { д in
                 CGFloat((д.timeIntervalSince1970 - t0) / диапазонT) * г.size.width
             }
@@ -80,11 +94,24 @@ struct ГрафикСахара: View {
             }
 
             ZStack(alignment: .topLeading) {
-                // Целевой диапазон полосой: видно не только «растёт», но и «уже вышел».
+                /* Целевой диапазон полосой: видно не только «растёт», но и «уже вышел». Окно теперь
+                   бывает уже диапазона — тогда полоса выходит за края, и это правильно: значит всё
+                   показанное время сахар был внутри. */
                 Rectangle()
                     .fill(Self.зелёный.opacity(0.13))
-                    .frame(height: max(y(Self.НИЗ) - y(Self.ВЕРХ), 1))
-                    .offset(y: y(Self.ВЕРХ))
+                    .frame(height: max(y(max(Self.НИЗ, vmin)) - y(min(Self.ВЕРХ, vmax)), 1))
+                    .offset(y: y(min(Self.ВЕРХ, vmax)))
+
+                /* Границы диапазона пунктиром — но только те, что попали в окно. Линия, нарисованная
+                   по краю кадра, читалась бы как граница кадра, а не как порог. */
+                ForEach([Self.НИЗ, Self.ВЕРХ].filter { $0 > vmin && $0 < vmax }, id: \.self) { порог in
+                    Path { п in
+                        п.move(to: CGPoint(x: 0, y: y(порог)))
+                        п.addLine(to: CGPoint(x: г.size.width, y: y(порог)))
+                    }
+                    .stroke(Self.зелёный.opacity(0.35),
+                            style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                }
 
                 ForEach(Array(сегменты.enumerated()), id: \.offset) { _, сегмент in
                     Path { п in
@@ -144,11 +171,17 @@ struct ЖивойБаннер: Widget {
                Эта же раскладка едет на приборную панель: в машине читать надо быстро и
                боковым зрением, поэтому число берёт всю высоту, а линии отдаётся всё, что
                осталось. Кольца здесь нет намеренно — размером говорит само число. */
-            HStack(alignment: .center, spacing: 16) {
+            HStack(alignment: .center, spacing: 14) {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        /* Число НИКОГДА не переносится (#500). Раньше сюда приезжала строка вместе с
+                           единицами, «7,9 ммоль/л» ломалось на две строки и занимало пол-карточки —
+                           ради слова, которое человек и так знает. Единицы теперь не приезжают
+                           вовсе, а на случай длинного числа стоит запрет переноса. */
                         Text(контекст.state.значение)
-                            .font(.system(size: 44, weight: .semibold, design: .rounded))
+                            .font(.system(size: 46, weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                             .foregroundStyle(контекст.state.старое ? .secondary : .primary)
                         if !контекст.state.стрелка.isEmpty {
                             Text(контекст.state.стрелка).font(.system(size: 24, weight: .semibold))
@@ -157,18 +190,29 @@ struct ЖивойБаннер: Widget {
                     }
                     /* Возраст показания считает система: так он идёт вперёд сам и не врёт
                        между обновлениями. Наше дело — сказать, ОТ КАКОГО момента считать.
-                       Рядом с графиком он обязателен: линия выглядит живой всегда. */
-                    Text(контекст.state.когда, style: .timer)
-                        .font(.system(size: 14, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: 62, alignment: .leading)
+                       Рядом с графиком он обязателен: линия выглядит живой всегда.
+
+                       Разница рядом с ним, а не под числом: «+0,1» и «2 мин» — это один ответ на
+                       вопрос «что происходит», и читаются они вместе. */
+                    HStack(spacing: 6) {
+                        if !контекст.state.разница.isEmpty {
+                            Text(контекст.state.разница)
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                        Text(контекст.state.когда, style: .timer)
+                            .font(.system(size: 14, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: 58, alignment: .leading)
+                    }
                 }
+                .fixedSize(horizontal: true, vertical: false)
                 /* Ряда нет — сборка старше графика или показаний ещё не накопилось. Тогда
                    пусто, а не выдуманная линия по одной точке. */
                 if контекст.state.ряд.count >= 2 {
                     ГрафикСахара(ряд: контекст.state.ряд, старое: контекст.state.старое)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 62)
+                        .frame(height: 66)
                 } else {
                     Spacer()
                 }
