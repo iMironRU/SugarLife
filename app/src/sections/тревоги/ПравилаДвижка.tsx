@@ -1,5 +1,6 @@
 import Иконка from '@/ui/Иконка';
-import { IonToggle } from '@ionic/react';
+import Переключатель from '@/ui/Переключатель';
+
 import { openOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import { sendIntent } from '@/sources/bridge';
@@ -81,8 +82,8 @@ export default function ПравилаДвижка({ правила }: { пра�
               поле.выключатель ? (
                 <div key={поле.ключ} className="basal-row">
                   <span>{поле.имя}</span>
-                  <IonToggle checked={поле.включено} disabled={ждём === поле.ключ}
-                    onIonChange={(e) => void править(поле.ключ, e.detail.checked ? 'on' : 'off')} />
+                  <Переключатель checked={поле.включено} disabled={ждём === поле.ключ}
+                    onChange={(v) => void править(поле.ключ, v ? 'on' : 'off')} />
                 </div>
               ) : строкаЧисла(поле)
             ))}

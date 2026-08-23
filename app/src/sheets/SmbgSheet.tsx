@@ -1,5 +1,6 @@
-import { IonInput } from '@ionic/react';
+
 import Иконка from '@/ui/Иконка';
+import Поле from '@/ui/Поле';
 import {waterOutline} from 'ionicons/icons';
 import { useState } from 'react';
 import { addSmbg, SMBG_REASONS, type Smbg } from '@/settings/smbg';
@@ -45,12 +46,12 @@ export default function SmbgSheet({ isOpen, onClose }: { isOpen: boolean; onClos
               а мы весь сахар показываем именно с запятой («6,5»), и человек её и
               наберёт. Поле оказывалось пустым без единого объяснения. Клавиатуру
               всё равно получаем числовую, через inputmode. */}
-          <IonInput
+          <Поле
             value={текст}
             type="text"
             inputmode="decimal"
             placeholder={u === 'mgdl' ? '120' : '6,5'}
-            onIonInput={(e) => setТекст(e.detail.value ?? '')}
+            onInput={(v: string) => setТекст(v)}
           />
         </div>
         {ошибка && (

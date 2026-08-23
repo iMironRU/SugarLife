@@ -1,4 +1,4 @@
-import { IonSpinner } from '@ionic/react';
+import Крутилка from './Крутилка';
 
 /* Заглушка страницы, пока её код едет.
 
@@ -31,7 +31,7 @@ export default function PageLoading({ title }: { title?: string }) {
         </div>
 
         <div className="pl-spin">
-          <IonSpinner name="crescent" />
+          <Крутилка />
           <span>Загружаю…</span>
         </div>
       </div>

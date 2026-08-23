@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { IonToggle } from '@ionic/react';
+import Переключатель from '@/ui/Переключатель';
+
 import Иконка from '@/ui/Иконка';
 import { notificationsOutline, playOutline, phonePortraitOutline, appsOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
@@ -106,9 +107,9 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
               sub={баннер?.умеет === false
                 ? 'нужен iOS 16.2 или новее'
                 : 'и в «Динамическом острове», и на панели CarPlay'}
-              right={<IonToggle checked={!!баннер?.включён} disabled={баннер?.умеет === false}
-                onIonChange={(e) => {
-                  const on = e.detail.checked;
+              right={<Переключатель checked={!!баннер?.включён} disabled={баннер?.умеет === false}
+                onChange={(v) => {
+                  const on = v;
                   setБаннер((б) => (б ? { ...б, включён: on } : б));
                   void включитьБаннер(on);
                 }} />} />

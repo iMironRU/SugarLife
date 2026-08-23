@@ -1,5 +1,6 @@
-import { IonInput } from '@ionic/react';
+
 import Иконка from '@/ui/Иконка';
+import Поле from '@/ui/Поле';
 import { датаПолная } from '@/слова/время';
 import {
   bodyOutline, heartOutline, flaskOutline, calendarOutline, checkmarkOutline, trashOutline,
@@ -145,10 +146,9 @@ export default function HealthSection({ onClose }: { onClose: () => void }) {
                 шторку и открывают. */}
             <div className="bas-stepper">
               <div className="bas-stepval num-field num-date">
-                <IonInput type="date" value={выбранная.когда ? вводДаты(выбранная.когда) : ''}
-                  onIonChange={(e) => {
-                    const v = e.detail.value;
-                    if (v) { отметитьПроверку(выбранная.проверка.id, new Date(v + 'T12:00:00').getTime()); }
+                <Поле type="date" value={выбранная.когда ? вводДаты(выбранная.когда) : ''}
+                  onInput={(v: string) => {
+                    if (v) отметитьПроверку(выбранная.проверка.id, new Date(v + 'T12:00:00').getTime());
                   }} />
                 <small>{выбранная.когда ? `${месяцевНазад(выбранная.когда, Date.now())} мес назад` : 'дата не указана'}</small>
               </div>
@@ -232,14 +232,14 @@ function ЗамерШторка({ что, onClose, h }: {
           <div className="field-label">Верхнее и нижнее, мм рт. ст.</div>
           <div className="bas-stepper">
             <div className="bas-stepval num-field">
-              <IonInput type="text" inputmode="numeric" placeholder="120" value={a}
-                onIonInput={(e) => setA(e.detail.value ?? '')} />
+              <Поле type="text" inputmode="numeric" placeholder="120" value={a}
+                onInput={(v: string) => setA(v)} />
               <small>верхнее</small>
             </div>
             <div className="bas-stepval num-field" style={{ flex: 'none', fontWeight: 400, opacity: 0.4 }}>/</div>
             <div className="bas-stepval num-field">
-              <IonInput type="text" inputmode="numeric" placeholder="80" value={b}
-                onIonInput={(e) => setB(e.detail.value ?? '')} />
+              <Поле type="text" inputmode="numeric" placeholder="80" value={b}
+                onInput={(v: string) => setB(v)} />
               <small>нижнее</small>
             </div>
           </div>
@@ -249,7 +249,7 @@ function ЗамерШторка({ что, onClose, h }: {
           {/* Родное поле времени, а не свои плюс-минус: телефон покажет привычный выбор
               часов, а «плюс-минус пять минут» к времени подъёма никому не нужен. */}
           <div className="field">
-            <IonInput type="time" value={a} onIonInput={(e) => setA(e.detail.value ?? '')} />
+            <Поле type="time" value={a} onInput={(v: string) => setA(v)} />
           </div>
           <div className="sheet-note">
             {что === 'подъём'
