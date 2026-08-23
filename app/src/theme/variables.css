@@ -25,23 +25,9 @@
 
   --font-body: "Inter", system-ui, sans-serif;
 
-  /* ==== Проброс в Ionic ==== */
-  --ion-background-color: var(--color-bg);
-  --ion-background-color-rgb: 22, 24, 38;
-  --ion-text-color: var(--color-text);
-  --ion-text-color-rgb: 233, 233, 237;
-  --ion-font-family: var(--font-body);
-  --ion-color-primary: var(--color-accent);
-  --ion-color-primary-rgb: 145, 132, 217;
-  --ion-color-primary-contrast: #ffffff;
-  --ion-color-primary-shade: #7f74bf;
-  --ion-color-primary-tint: #9c90dd;
-  --ion-toolbar-background: var(--color-bg);
-  --ion-tab-bar-background: color-mix(in srgb, var(--color-neutral-900) 70%, var(--color-bg));
-  --ion-tab-bar-color: var(--color-neutral-500);
-  --ion-tab-bar-color-selected: var(--color-text);
-  --ion-item-background: var(--color-neutral-900);
-  --ion-border-color: var(--color-neutral-800);
+  /* Проброса в Ionic здесь больше нет (#405, #500): библиотеки нет, и полтора десятка `--ion-*`
+     переменных ничего не красили — но выглядели работающей настройкой темы. Из-за этого же я
+     решил, что вид главной кнопки задан у нас, и оставил её без заливки. */
 }
 
 /* Светлая тема */
@@ -73,8 +59,6 @@
   --c-act: #6152c8; --c-act-3: #9a8ee0;
   --c-danger: #b44a5c; --c-danger-2: #9c3b4d;
   --c-trend: #9a5f2e; --c-trend-2: #c08a56;
-  --ion-background-color-rgb: 244, 244, 248;
-  --ion-text-color-rgb: 20, 21, 28;
 }
 
 /* ==== Размер текста подчиняется системной настройке (#325) ====

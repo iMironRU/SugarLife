@@ -70,7 +70,9 @@
 .field-copy { position: relative; }
 .field-copy::after { content: ''; position: absolute; inset: -7px; }
 .field-copy.ok { color: var(--c-glu); }
-.connect-btn { --border-radius: 16px; margin-top: 4px; font-weight: 600; }
+/* Скругление правилось ionic-переменной `--border-radius`, которая без библиотеки ничего не
+   значит: вид кнопки теперь целиком в `.кнопка-во-всю` (свои.css), здесь остаётся отступ. */
+.connect-btn { margin-top: 4px; }
 .sheet-msg { min-height: 18px; font-size: 0.8125rem; color: var(--color-neutral-300); text-align: center; margin: 12px 0; }
 .sheet-subtitle { font-size: 0.6875rem; color: var(--color-neutral-400); margin-top: 3px; }
 .sheet-note { font-size: 0.6875rem; color: var(--color-neutral-500); margin-top: 14px; text-wrap: pretty; }

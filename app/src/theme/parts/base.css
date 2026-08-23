@@ -28,9 +28,6 @@
     border-left: 1px solid var(--color-neutral-800);
     border-right: 1px solid var(--color-neutral-800);
   }
-  /* На десктопе Ionic делает модалку центрированной карточкой 600px — заставляем
-     её быть шириной с колонку (как нижняя шторка на телефоне). */
-  html:not(.plt-hybrid) body ion-modal { --width: 100%; --max-width: 100%; }
 }
 
 /* Страница не ездит по горизонтали ни при каких обстоятельствах. Приложение — оболочка
