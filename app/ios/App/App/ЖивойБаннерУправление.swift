@@ -24,6 +24,19 @@ enum ЖивойБаннер {
     #if canImport(ActivityKit)
     private static var текущий: Activity<СахарАтрибуты>?
 
+    /* КОГДА ЧИСЛУ НА БАННЕРЕ ВЕРИТЬ УЖЕ НЕЛЬЗЯ (#500).
+
+       Баннер может застрять: приложение усыпили, система придержала обновления, сеть пропала. Число
+       при этом остаётся на экране блокировки и выглядит текущим — самый опасный вид вранья, какой
+       здесь возможен. Срок годности показания система знает от нас и по нему приглушает карточку
+       сама, даже если приложение уже не исполняется.
+
+       Двенадцать минут — две обычные паузы НМГ плюс запас, тот же порог, по которому мы рвём линию
+       графика на разрыве. */
+    private static func устарело(_ когдаМс: Double) -> Date {
+        Date(timeIntervalSince1970: когдаМс / 1000 + 12 * 60)
+    }
+
     static func обновить(
         значение: String, стрелка: String, разница: String, когдаМс: Double, старое: Bool, источник: String,
         ряд: [СахарАтрибуты.ContentState.Точка] = []
@@ -44,14 +57,14 @@ enum ЖивойБаннер {
 
         if let активный = текущий ?? Activity<СахарАтрибуты>.activities.first {
             текущий = активный
-            Task { await активный.update(ActivityContent(state: состояние, staleDate: nil)) }
+            Task { await активный.update(ActivityContent(state: состояние, staleDate: устарело(когдаМс))) }
             return "обновлено"
         }
 
         do {
             текущий = try Activity.request(
                 attributes: СахарАтрибуты(источник: источник),
-                content: ActivityContent(state: состояние, staleDate: nil),
+                content: ActivityContent(state: состояние, staleDate: устарело(когдаМс)),
                 pushType: nil
             )
             return "запущено"
