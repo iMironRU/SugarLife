@@ -586,6 +586,9 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setLiveBanner", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loopFeed", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setLoopFeed", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "testAlarm", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "alarmReadiness", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openAlarmSettings", returnType: CAPPluginReturnPromise),
     ]
 
     /**
@@ -668,6 +671,9 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         ФоновоеБодрствование.shared.установить(режим)
+        /* Возможность разбудить изменилась — говорим движку сразу (#482). Иначе он до перезапуска
+           считает, что мы можем то, чего уже не можем (или наоборот). */
+        Тревоги.общие.доложитьОДоставке()
         call.resolve(["mode": режим.rawValue])
     }
 
@@ -756,8 +762,18 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
                        человек и так смотрит на экран, — то есть когда баннер не нужен. */
                     self?.последнийСнимок = json
                     if #available(iOS 16.2, *) { _ = self?.обновитьЖивойБаннер(json) }
+                    /* Тревоги показываем ОТСЮДА же и по той же причине, что баннер (#482): ночью и в
+                       кармане webview усыплён, а этот код живёт, пока живёт приложение. */
+                    Тревоги.общие.приСнимке(json)
                 }
             })
+            /* Доставка тревог: категория с кнопкой «Понял», делегат и разгрузка очереди ответов.
+               Отправителя ставим сюда же — сам движок в Тревоги не виден и не должен быть. */
+            Тревоги.общие.отправить = { [weak self] json in
+                self?.engine?.sendIntent(json: json) ?? ""
+            }
+            Тревоги.общие.настроить()
+            Тревоги.общие.доложитьОДоставке()
             e.startAsync()
             // Boot-реконнект BLE: если доступ к Bluetooth уже выдан — цепляем провайдер сразу, движок
             // переподнимет сохранённые сенсор/помпу из БД (без ожидания скана). notDetermined — отложим
@@ -833,6 +849,56 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             )
             self?.engineQueue.async { self?.engine?.attachDriverProvider(provider: provider) }
         }
+    }
+
+    /**
+     Проверочная тревога — тем же путём, что настоящая (#418, #482).
+
+     Иначе узнать, работают ли тревоги, можно только когда ночью случится гипогликемия. Проходит весь
+     путь целиком: разрешение, уведомление, свой звук поверх беззвучного режима.
+     */
+    @objc func testAlarm(_ call: CAPPluginCall) {
+        Тревоги.общие.спроситьРазрешение { _ in
+            Тревоги.общие.проверочная()
+            call.resolve()
+        }
+    }
+
+    /**
+     Готовность тревог на айфоне (#468, #482).
+
+     Ответ короче андроидного и держится на двух фактах: разрешены ли уведомления и живём ли мы в фоне.
+     Третьего у iOS нет: ни канала, ни обхода «не беспокоить», ни полноэкранных уведомлений.
+     */
+    @objc func alarmReadiness(_ call: CAPPluginCall) {
+        UNUserNotificationCenter.current().getNotificationSettings { s in
+            var поломки: [[String: String]] = []
+            let разрешено = s.authorizationStatus == .authorized || s.authorizationStatus == .provisional
+            if !разрешено {
+                поломки.append(["code": "notifications-off",
+                                "text": "уведомления выключены — показать тревогу нечем"])
+            }
+            if ФоновоеБодрствование.shared.режим == .выключено {
+                поломки.append(["code": "ios-keep-alive",
+                                "text": "фоновое бодрствование выключено — в фоне приложение уснёт, и тревога не прозвучит"])
+            }
+            call.resolve([
+                "problem": !поломки.isEmpty,
+                "missing": поломки.map { $0["text"] ?? "" },
+                "problems": поломки,
+            ])
+        }
+    }
+
+    /**
+     Настройки уведомлений приложения (#468).
+
+     Андроидному «доступу к не беспокоить» на айфоне соответствия нет: разрешение здесь одно, и
+     ведёт к нему один экран — карточка приложения в системных настройках.
+     */
+    @objc func openAlarmSettings(_ call: CAPPluginCall) {
+        открытьНастройкиПриложения()
+        call.resolve()
     }
 
     @objc func requestSnapshot(_ call: CAPPluginCall) {

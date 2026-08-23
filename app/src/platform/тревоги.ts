@@ -15,9 +15,18 @@ interface Плагин {
 }
 const Native = registerPlugin<Плагин>('SugarLifeBridge');
 
-/** Умеет ли эта сборка будить в фоне. false — браузер или сборка старше методов. */
+/* ТЕПЕРЬ И АЙФОН (#482).
+
+   Раньше здесь стоял только Android — и это было честно: своей доставки на iOS у нас не было, тревога
+   приходила, лишь пока приложение открыто. Теперь у айфона есть своя половина: уведомления с действием
+   «Понял», очередь подтверждений и свой звук поверх беззвучного режима, пока держится фоновое
+   бодрствование. Правила при этом одни и те же — их считает движок.
+
+   Чего у iOS нет и не будет без платного аккаунта: обхода «не беспокоить» (Critical Alerts) и
+   полноэкранных уведомлений. Про это говорит `готовностьТревог`, а не молчание этой функции. */
 export function тревогиДоступны(): boolean {
-  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+  const п = Capacitor.getPlatform();
+  return Capacitor.isNativePlatform() && (п === 'android' || п === 'ios');
 }
 
 /** Проверочная тревога — тем же путём, что настоящая: канал, звук, обход «не беспокоить». */
@@ -43,7 +52,12 @@ export async function проверитьТревогу(): Promise<boolean> {
    пропажу данных» — разные пункты, а все поломки разрешений валились в один. Код говорит,
    К ЧЕМУ относится беда; фраза остаётся в ядре приложения, чтобы на двух платформах она
    не разошлась. */
-export type КодПоломки = 'notifications-off' | 'dnd-access' | 'fullscreen' | 'channel-lowered';
+export type КодПоломки =
+  | 'notifications-off' | 'dnd-access' | 'fullscreen' | 'channel-lowered'
+  /* Айфонное: в фоне приложение засыпает, и звучать тревоге нечем. Чинится НЕ системными
+     настройками, а нашим же переключателем фонового бодрствования — поэтому кнопки в настройки
+     у этой поломки нет. */
+  | 'ios-keep-alive';
 
 export interface Поломка {
   код: КодПоломки | string;
@@ -66,6 +80,8 @@ interface ПлагинГотовности {
   }>;
   openDndAccess(): Promise<void>;
   openFullScreenAccess(): Promise<void>;
+  /** Айфонный близнец `openDndAccess`: там доступ один и экран один — карточка приложения. */
+  openAlarmSettings(): Promise<void>;
 }
 const NativeГотовность = registerPlugin<ПлагинГотовности>('SugarLifeBridge');
 
@@ -89,10 +105,24 @@ export async function готовностьТревог(): Promise<Готовно
   }
 }
 
-/** Открыть системный экран доступа к «Не беспокоить». */
+/** Открыть системный экран доступа к «Не беспокоить» (Android). */
 export async function открытьДоступКТихомуРежиму(): Promise<boolean> {
   if (!тревогиДоступны()) return false;
   try { await NativeГотовность.openDndAccess(); return true; } catch { return false; }
+}
+
+/** Есть ли среди поломок та, что чинится системными настройками. */
+export function чинитсяНастройками(поломки: Поломка[]): boolean {
+  return поломки.some((п) => п.код !== 'ios-keep-alive');
+}
+
+/** Куда ведёт кнопка «Открыть настройки»: у платформ разные экраны, у экрана — один вопрос. */
+export async function открытьНастройкиТревог(): Promise<boolean> {
+  if (!тревогиДоступны()) return false;
+  if (Capacitor.getPlatform() === 'ios') {
+    try { await NativeГотовность.openAlarmSettings(); return true; } catch { return false; }
+  }
+  return открытьДоступКТихомуРежиму();
 }
 
 /* Полноэкранные уведомления — второй системный экран, отдельный от «Не беспокоить»
