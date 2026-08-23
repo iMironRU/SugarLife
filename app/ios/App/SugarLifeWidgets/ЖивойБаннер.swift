@@ -189,16 +189,18 @@ struct КомпактныйБаннер: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            HStack(spacing: 5) {
+            /* Тот же порядок, что на большом: сначала возраст, потом разница. За рулём вопрос «это
+               число живое?» задаётся раньше, чем «насколько выросло». */
+            HStack(spacing: 6) {
+                Text(состояние.когда, style: .timer)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: 56, alignment: .leading)
                 if !состояние.разница.isEmpty {
                     Text(состояние.разница)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 13, design: .rounded))
+                        .foregroundStyle(.tertiary)
                 }
-                Text(состояние.когда, style: .timer)
-                    .font(.system(size: 13, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: 52, alignment: .leading)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
