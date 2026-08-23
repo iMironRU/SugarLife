@@ -18,6 +18,7 @@ import android.os.Build
 import android.net.Uri
 import android.provider.Settings
 import android.util.Log
+import org.json.JSONArray
 import androidx.core.app.ActivityCompat
 import androidx.core.location.LocationManagerCompat
 import androidx.core.content.ContextCompat
@@ -369,6 +370,25 @@ class SugarLifeBridgePlugin : Plugin() {
      * Отдаём голые факты платформы и список того, чего не хватает, человеческим языком. Пустой
      * `missing` — всё на месте.
      */
+    /**
+     * Сахар цифрами на значке приложения (Значок.kt).
+     *
+     * Список видов отдаём вместе со значением: экран не держит их копией, иначе новый вид появится в
+     * нативе, а выбрать его будет негде. Имена те же, что на айфоне.
+     */
+    @PluginMethod
+    fun glucoseBadge(call: PluginCall) {
+        call.resolve(JSObject()
+            .put("mode", Значок.вид(context))
+            .put("modes", JSONArray(Значок.ВИДЫ)))
+    }
+
+    @PluginMethod
+    fun setGlucoseBadge(call: PluginCall) {
+        Значок.задать(context, call.getString("mode") ?: "выключен")
+        call.resolve(JSObject().put("mode", Значок.вид(context)))
+    }
+
     @PluginMethod
     fun alarmReadiness(call: PluginCall) {
         val ctx = context.applicationContext

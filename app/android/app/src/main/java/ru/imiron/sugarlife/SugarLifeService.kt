@@ -85,6 +85,7 @@ class SugarLifeService : Service() {
                 ТревогиДвижка.приСнимке(applicationContext, json)
                 показатьСахар(json)   // человек чаще всего смотрит сюда (#449)
                 SugarWidget.приСнимке(applicationContext, json)   // и на рабочий стол (#449)
+                Значок.приСнимке(applicationContext, json)         // и на сам значок (#500)
             }
         }.onFailure { Log.w(TAG, "не удалось подписаться на снимки для тревог: $it") }
     }
