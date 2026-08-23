@@ -1,0 +1,362 @@
+import Foundation
+import UserNotifications
+import AVFoundation
+import UIKit
+
+/**
+ ДОСТАВКА ТРЕВОГ НА АЙФОНЕ (SugarLife#482).
+
+ Раздел с ядром тот же, что на Android: движок решает, что случилось и какого это уровня, оболочка
+ показывает и даёт ответить. Здесь вторая половина — для iOS.
+
+ ПОЧЕМУ ЭТО НЕ КОПИЯ ANDROID-ВЕРСИИ. Отличий три, и все существенные.
+
+  1. **Звук пробивает беззвучный режим только СВОЙ.** Уведомление со стандартным звуком на беззвучном
+     телефоне молчит, каким бы важным мы его ни объявили: Critical Alerts требуют разрешения Apple,
+     которого у нас нет. Единственный способ — играть звук самим через аудио-сессию, ту же, что держит
+     приложение живым в фоне (#388). Поэтому будящая тревога здесь = уведомление ПЛЮС свой звук.
+
+  2. **Мы можем не жить.** На Android процесс держит foreground-сервис; на iOS приложение засыпает, если
+     его нечем будить. При работе от облака это решает фоновое бодрствование, и оно — выбор человека.
+     Отсюда честный доклад движку (`reportDelivery`): нет бодрствования — «разбудить не сможем».
+
+  3. **Повторов не заводим.** На Android их отмеряет будильник системы; здесь единственный источник
+     тиканья — снимки движка. Повтор придёт со следующим событием `repeat` от него же, и заводить своё
+     расписание значило бы завести второе мнение о том, когда напоминать.
+
+ ПРАВИЛА ПОКАЗА ПОВТОРЯЮТ Тревоги/ПравилаПоказа.kt. Это осознанное дублирование: общего кода у наших
+ оболочек нет, а класть правила показа в движок нельзя — они про интерфейс, а не про решение. Список
+ случаев тот же, и менять его надо в двух местах разом: уровень → как звучит, `cleared` → снять, сверка
+ с `activeAlarms`, ключ по `id`.
+ */
+final class Тревоги: NSObject {
+
+    static let общие = Тревоги()
+
+    private let категория = "sugarlife.тревога"
+    private let действиеПонял = "sugarlife.понял"
+    private let ключОчереди = "sugarlife.понял.очередь"
+    /// Сутки: ответ, не доехавший за это время, отвечает на тревогу, которой давно нет (#482).
+    private let живётОчередь: TimeInterval = 24 * 60 * 60
+
+    /// Что уже показано: id тревоги → уровень. По нему снимаем лишнее и решаем, звучать ли снова.
+    private var показано: [String: String] = [:]
+    private var дежуритДвижок = false
+    private var сирена: AVAudioPlayer?
+
+    /// Отправитель интентов в движок. Ставит плагин: сам движок здесь не виден и не должен быть.
+    var отправить: ((String) -> String)?
+
+    // MARK: — запуск
+
+    /// Категория с кнопкой «Понял» и делегат. Зовётся один раз при старте плагина.
+    func настроить() {
+        let понял = UNNotificationAction(identifier: действиеПонял, title: "Понял", options: [])
+        let к = UNNotificationCategory(identifier: категория, actions: [понял],
+                                       intentIdentifiers: [], options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([к])
+        UNUserNotificationCenter.current().delegate = self
+        разгрестиОчередь()
+    }
+
+    /// Спросить разрешение на уведомления. Без него тревог не будет вовсе — и об этом скажет доклад.
+    func спроситьРазрешение(_ готово: ((Bool) -> Void)? = nil) {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { ок, _ in
+            DispatchQueue.main.async {
+                self.доложитьОДоставке()
+                готово?(ок)
+            }
+        }
+    }
+
+    /// Первый и единственный раз: система всё равно покажет диалог только однажды.
+    private func спроситьРазрешениеОдинРаз() {
+        UNUserNotificationCenter.current().getNotificationSettings { [weak self] s in
+            guard s.authorizationStatus == .notDetermined else { return }
+            self?.спроситьРазрешение()
+        }
+    }
+
+    /// Проверочная тревога: тот же путь, что у настоящей будящей — уведомление и свой звук.
+    func проверочная() {
+        let к = UNMutableNotificationContent()
+        к.title = "Проверка тревоги"
+        к.body = "Так будет звучать тревога о низком сахаре. Это проверка — сахар в порядке."
+        к.sound = .default
+        к.categoryIdentifier = категория
+        if #available(iOS 15.0, *) { к.interruptionLevel = .timeSensitive }
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: "sugarlife.проверка", content: к, trigger: nil))
+        зазвучать()
+        /* Сама себя гасит через пять секунд: проверка, которую надо выключать руками, пугает больше,
+           чем показывает. Настоящая тревога звучит до «понял» — в этом и разница. */
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in self?.замолчать() }
+    }
+
+    // MARK: — снимок
+
+    /// Снимок пришёл: показать новое, снять лишнее, отдать накопившиеся «понял».
+    func приСнимке(_ json: String) {
+        guard let data = json.data(using: .utf8),
+              let корень = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+
+        let правил = (корень["alarmRules"] as? [[String: Any]])?.count ?? 0
+        let ведёт = ядроУмеет(корень["bridgeRevision"] as? String) && правил > 0
+        if ведёт != дежуритДвижок {
+            NSLog("SugarLife: тревоги \(ведёт ? "ведёт движок" : "движок не считает")")
+            if !ведёт { показано.keys.forEach { снять($0) }; замолчать() }
+            дежуритДвижок = ведёт
+            /* Разрешение спрашиваем ЗДЕСЬ, а не при первом запуске приложения. Системный диалог
+               показывается один раз за установку: спросить его на пустом экране, до того как человек
+               завёл источник данных, — значит потратить единственную попытку на вопрос без контекста.
+               Здесь у движка уже есть правила, то есть следить действительно есть за чем. */
+            if ведёт { спроситьРазрешениеОдинРаз() }
+        }
+        guard ведёт else { return }
+
+        let события = (корень["alarmEvents"] as? [[String: Any]]) ?? []
+        for с in события { применить(с) }
+
+        /* Сверка со списком висящих — для тех тревог, о которых «отбоя» не приходило вовсе: движок
+           перезапустился, сменился профиль. Списка нет в снимке — не трогаем ничего: отсутствующий
+           список и пустой означают разное. */
+        if let активные = корень["activeAlarms"] as? [String] {
+            let живые = Set(активные)
+            for id in показано.keys where !живые.contains(id) { снять(id) }
+        }
+        разгрестиОчередь()
+    }
+
+    /* Своя логика решений у нас не осталась, поэтому старое ядро означает «тревог нет вовсе».
+       Проверяем ревизию прямо: пустой список правил бывает и у нового. */
+    private func ядроУмеет(_ ревизия: String?) -> Bool {
+        let части = (ревизия ?? "").split(separator: ".")
+        guard части.count >= 2, let с = Int(части[0]), let м = Int(части[1]) else { return false }
+        return с > 1 || (с == 1 && м >= 30)
+    }
+
+    private func применить(_ с: [String: Any]) {
+        guard let id = с["id"] as? String, !id.isEmpty else { return }
+        let что = (с["what"] as? String) ?? "started"
+        if что == "cleared" { снять(id); return }
+
+        let уровень = (с["level"] as? String) ?? "Сегодня"
+        switch какЗвучит(уровень) {
+        case .молчим: return
+        case .тихо: показать(id: id, с: с, звук: false, будить: false)
+        case .обычно: показать(id: id, с: с, звук: true, будить: false)
+        case .будить: показать(id: id, с: с, звук: true, будить: true)
+        }
+        показано[id] = уровень
+    }
+
+    private enum Как { case молчим, тихо, обычно, будить }
+
+    private func какЗвучит(_ уровень: String) -> Как {
+        switch уровень {
+        case "Состояние": return .молчим          // видно на экране приложения, звучать нечему
+        case "Заметка": return .тихо              // копится молча
+        case "Сегодня": return .обычно
+        case "Разбудить": return .будить
+        /* НЕ ВОЕМ О ТОМ, ЧТО НЕ СМОЖЕМ РАЗБУДИТЬ (#482). Свежая установка нарушает обещание сразу:
+           фоновое бодрствование выключено, значит разбудить нечем. Встречать человека сиреной за
+           это — пугать на ровном месте; сказать надо, но обычным голосом. */
+        case "ОбещаниеНарушено": return .обычно
+        /* Незнакомый уровень показываем обычным звуком, а не молчим: список у движка открытый, и новый
+           уровень — повод показать иначе, а не потерять тревогу. */
+        default: return .обычно
+        }
+    }
+
+    // MARK: — показ
+
+    private func показать(id: String, с: [String: Any], звук: Bool, будить: Bool) {
+        let нуженОтвет = (с["needsAck"] as? Bool) ?? false
+        let (заголовок, текст) = слова(id: id, уровень: (с["level"] as? String) ?? "", mmol: с["mmol"] as? Double)
+
+        let к = UNMutableNotificationContent()
+        к.title = заголовок
+        к.body = текст
+        к.sound = звук ? .default : nil
+        if нуженОтвет { к.categoryIdentifier = категория }
+        if #available(iOS 15.0, *) { к.interruptionLevel = будить ? .timeSensitive : .active }
+
+        let запрос = UNNotificationRequest(identifier: id, content: к, trigger: nil)
+        UNUserNotificationCenter.current().add(запрос)
+
+        /* Своим звуком — только будящие. Он и есть то единственное, что слышно на беззвучном телефоне;
+           играть его для «сегодня» значило бы будить человека там, где обещали не будить. */
+        if будить { зазвучать() }
+    }
+
+    private func снять(_ id: String) {
+        показано.removeValue(forKey: id)
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [id])
+        if показано.values.contains(where: { какЗвучит($0) == .будить }) == false { замолчать() }
+    }
+
+    /* СЛОВА ВРЕМЕННО НАШИ (#482): у события в контракте формулировки нет. Табличка узкая намеренно, а
+       незнакомый id получает честное общее слово, а не выдуманное частное. Ядру отправлен запрос на
+       `words` — по той же причине, по какой они запретили нам сочинять формулировки для `learning`. */
+    private func слова(id: String, уровень: String, mmol: Double?) -> (String, String) {
+        let основа = id.split(separator: ":").first.map(String.init) ?? id
+        let сахар = mmol.map { String(format: "%.1f", $0).replacingOccurrences(of: ".", with: ",") + " ммоль" }
+        let заголовок: String
+        if id.contains("не-разбудит") || уровень == "ОбещаниеНарушено" {
+            заголовок = "Тревога может не разбудить"
+        } else if основа.hasPrefix("гипо") { заголовок = "Низкий сахар" }
+        else if основа.hasPrefix("высок") { заголовок = "Высокий сахар" }
+        else if основа.hasPrefix("прогноз") || основа.contains("падени") { заголовок = "Сахар падает" }
+        else if основа.hasPrefix("молчание") { заголовок = "Данных нет" }
+        else if основа.hasPrefix("залип") { заголовок = "Линия не меняется" }
+        else if основа.hasPrefix("подача") { заголовок = "Подача инсулина стоит" }
+        else if основа.hasPrefix("резервуар") { заголовок = "Резервуар заканчивается" }
+        else if основа.hasPrefix("батаре") { заголовок = "Батарея помпы" }
+        else { заголовок = "Тревога" }
+
+        /* «Тревога может не разбудить» с сахаром в тексте читается как тревога ПРО САХАР, и человек
+           закрывает её, решив, что 10,2 не повод (#482). Беда здесь другая — в самой доставке. */
+        let текст: String
+        if заголовок == "Тревога может не разбудить" {
+            текст = "Проверьте «Охрану»: сейчас разбудить не сможем"
+        } else {
+            текст = сахар ?? (заголовок == "Тревога" ? "Приложение сообщает: \(id)" : "Приложение сообщает о состоянии")
+        }
+        return (заголовок, текст)
+    }
+
+    // MARK: — звук, который слышно на беззвучном
+
+    private func зазвучать() {
+        guard сирена == nil else { return }
+        do {
+            /* Та же категория, что у фонового бодрствования, но БЕЗ `.mixWithOthers`: тревога имеет
+               право приглушить музыку — иначе её не услышат именно тогда, когда она нужна. */
+            try AVAudioSession.sharedInstance().setCategory(.playback, options: [.duckOthers])
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            NSLog("SugarLife: аудио-сессия занята — тревога прозвучит только уведомлением (\(error))")
+            return
+        }
+        сирена = try? AVAudioPlayer(data: сигнал())
+        сирена?.numberOfLoops = -1      // до «понял» или отбоя: тревога, замолкающая сама, не тревога
+        сирена?.volume = 1
+        сирена?.play()
+    }
+
+    private func замолчать() {
+        сирена?.stop()
+        сирена = nil
+    }
+
+    /* Сигнал строим в коде, а не носим файлом — как и тишину для бодрствования (#388): так его видно
+       целиком и не надо объяснять ресурс тому, кто откроет проект. Две секунды: секунда тона 880 Гц и
+       секунда паузы, чтобы звук читался как тревога, а не как гул. */
+    private func сигнал() -> Data {
+        let частота = 44100.0, длительность = 2.0, тон = 880.0
+        let всего = Int(частота * длительность)
+        var сэмплы = [Int16](repeating: 0, count: всего)
+        for i in 0..<всего {
+            let t = Double(i) / частота
+            guard t < 1.0 else { break }
+            /* Плавные края: щелчок в начале и конце режет слух и звучит как поломка динамика. */
+            let края = min(1.0, min(t, 1.0 - t) * 40)
+            сэмплы[i] = Int16(sin(2 * .pi * тон * t) * 12000 * края)
+        }
+        var d = Data()
+        func u32(_ v: UInt32) { withUnsafeBytes(of: v.littleEndian) { d.append(contentsOf: $0) } }
+        func u16(_ v: UInt16) { withUnsafeBytes(of: v.littleEndian) { d.append(contentsOf: $0) } }
+        let байтДанных = UInt32(сэмплы.count * 2)
+        d.append(contentsOf: Array("RIFF".utf8)); u32(36 + байтДанных)
+        d.append(contentsOf: Array("WAVE".utf8))
+        d.append(contentsOf: Array("fmt ".utf8)); u32(16); u16(1); u16(1)
+        u32(UInt32(частота)); u32(UInt32(частота) * 2); u16(2); u16(16)
+        d.append(contentsOf: Array("data".utf8)); u32(байтДанных)
+        сэмплы.withUnsafeBufferPointer { d.append(UnsafeBufferPointer(start: $0.baseAddress, count: $0.count)) }
+        return d
+    }
+
+    // MARK: — «понял» и его очередь
+
+    /* Ответ человека записываем ДО попытки отдать. Уведомление переживает смерть процесса: человек
+       жмёт «понял» ночью, движка в памяти может не быть, и потерянное нажатие означает продолжение
+       эскалации после ответа — то есть кнопку, которая соврала. */
+    private func запомнитьПонял(_ id: String, когдаМс: Double) {
+        var очередь = UserDefaults.standard.dictionary(forKey: ключОчереди) as? [String: Double] ?? [:]
+        if очередь[id] == nil { очередь[id] = когдаМс }   // повторное нажатие не двигает время ответа
+        UserDefaults.standard.set(очередь, forKey: ключОчереди)
+    }
+
+    private func разгрестиОчередь() {
+        var очередь = UserDefaults.standard.dictionary(forKey: ключОчереди) as? [String: Double] ?? [:]
+        guard !очередь.isEmpty else { return }
+        let сейчас = Date().timeIntervalSince1970 * 1000
+        for (id, когда) in очередь {
+            /* Просроченное выбрасываем: оно отвечает на тревогу, которая давно кончилась, а
+               доставленное через неделю погасило бы не ту. */
+            if сейчас - когда > живётОчередь * 1000 { очередь.removeValue(forKey: id); continue }
+            let json = "{\"type\":\"acknowledgeAlarm\",\"alarmId\":\(jsonStr(id)),\"atMs\":\(Int(когда))}"
+            let ответ = отправить?(json) ?? ""
+            /* «Не принято» — законный исход: на ядре без модели тревог такого интента нет вовсе.
+               Тогда запись остаётся и уедет со следующей попыткой. */
+            if ответ.contains("\"accepted\":true") { очередь.removeValue(forKey: id) }
+        }
+        UserDefaults.standard.set(очередь, forKey: ключОчереди)
+    }
+
+    // MARK: — что мы можем прямо сейчас
+
+    /**
+     Доложить движку, чем располагаем (`reportDelivery`, контракт 1.30).
+
+     На айфоне ответ короче, чем на Android, и держится на одном: живём ли мы в фоне. Уведомление,
+     которое некому показать, не разбудит никого, поэтому без фонового бодрствования честный ответ —
+     «нет». С ним — «да»: свой звук пробивает беззвучный режим.
+     */
+    func доложитьОДоставке() {
+        UNUserNotificationCenter.current().getNotificationSettings { s in
+            let разрешено = s.authorizationStatus == .authorized || s.authorizationStatus == .provisional
+            let живём = ФоновоеБодрствование.shared.режим != .выключено
+            let ответ = !разрешено ? "no" : (живём ? "yes" : "no")
+            /* Точность у нас не от будильника, а от того, как часто движок присылает снимки: своих
+               пробуждений мы не заводим вовсе. Ноль — не обещание мгновенности, а отсутствие ЕЩЁ
+               одной задержки поверх движковой. */
+            let json = "{\"type\":\"reportDelivery\",\"canWake\":\"\(ответ)\",\"tickPrecisionMin\":0}"
+            _ = self.отправить?(json)
+            NSLog("SugarLife: доложили о доставке — \(ответ)")
+        }
+    }
+}
+
+// MARK: — ответ человека
+
+extension Тревоги: UNUserNotificationCenterDelegate {
+
+    /// Показываем и когда приложение открыто: тревога, видимая только в свёрнутом виде, — половина тревоги.
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler:
+                                @escaping (UNNotificationPresentationOptions) -> Void) {
+        if #available(iOS 14.0, *) { completionHandler([.banner, .sound, .list]) }
+        else { completionHandler([.alert, .sound]) }
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        let id = response.notification.request.identifier
+        if response.actionIdentifier == действиеПонял {
+            запомнитьПонял(id, когдаМс: Date().timeIntervalSince1970 * 1000)
+            снять(id)
+            замолчать()
+            разгрестиОчередь()
+        } else if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+            /* Открыл приложение — сирену глушим, но «понял» НЕ засчитываем: это разные вещи. Увидеть
+               тревогу и подтвердить её — два разных ответа, и решать за человека второй мы не вправе.
+               Кнопка ждёт его на «Сегодня» полосой, которую видно сразу (ui/ЖивыеТревоги.tsx). */
+            замолчать()
+        }
+        completionHandler()
+    }
+}
