@@ -117,7 +117,7 @@ export default function AlarmsSection({ onClose }: { onClose: () => void }) {
           <div className="list">
             <Row icon={phonePortraitOutline} title="Показывать сахар на экране блокировки"
               sub={баннер?.умеет === false
-                ? 'нужен iOS 16.2 или новее'
+                ? 'нужен iOS 18 или новее'
                 : 'и в «Динамическом острове», и на панели CarPlay'}
               right={<Переключатель checked={!!баннер?.включён} disabled={баннер?.умеет === false}
                 onChange={(v) => {
