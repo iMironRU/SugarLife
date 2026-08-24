@@ -92,3 +92,34 @@ describe('что за прибор', () => {
     expect(ключи(к.оПриборе)).toContain('адрес');
   });
 });
+
+/* ПОПУТЧИК И УСТУПКА (мост 1.36/1.40, #422). Ядро попросило показывать это словом: «подключено» без
+   уточнения человек читает как «мы основные» и ждёт полной истории, которой у попутчика нет. */
+describe('попутчик и очередь', () => {
+  const железка = (о: Partial<HardwareView> = {}): HardwareView => ({
+    id: 'h1', kind: 'cgm', name: 'Sensor', connection: 'Connected', ...о,
+  } as HardwareView);
+
+  it('попутчик назван словом, а не выведен из связи', () => {
+    const snap = { devices: [{ id: 'h1', companion: true }] } as unknown as UiSnapshot;
+    const к = картаПрибора(железка(), snap, Date.now());
+    expect(к.попутчик).toBe(true);
+    expect(к.сейчас.find((с) => с.ключ === 'попутчик')?.значение).toBe('другая программа');
+  });
+
+  /* Уступка важнее: пока мы ждём очереди, прибор вообще не наш — и молчание тут читается как поломка. */
+  it('когда уступаем, говорим кому — и это перебивает бейдж попутчика', () => {
+    const snap = {
+      devices: [{ id: 'h1', companion: true }], yieldingTo: 'Juggluco',
+    } as unknown as UiSnapshot;
+    const к = картаПрибора(железка(), snap, Date.now());
+    expect(к.сейчас.find((с) => с.ключ === 'уступаем')?.значение).toBe('Juggluco');
+    expect(к.сейчас.find((с) => с.ключ === 'попутчик')).toBeUndefined();
+  });
+
+  it('обычный прибор ничего лишнего не показывает', () => {
+    const к = картаПрибора(железка(), { devices: [{ id: 'h1' }] } as unknown as UiSnapshot, Date.now());
+    expect(к.попутчик).toBe(false);
+    expect(к.сейчас.find((с) => с.ключ === 'попутчик' || с.ключ === 'уступаем')).toBeUndefined();
+  });
+});
