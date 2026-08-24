@@ -499,3 +499,55 @@
   color: var(--color-accent); font-size: 0.75rem; font-family: var(--font-body);
   display: inline-flex; align-items: center; gap: 3px; min-height: 32px;
 }
+
+/* ТРЕВОЖНАЯ ПОЛОСА (макет v2, #500).
+
+   Была набрана как рядовое обращение — и владелец, прочитав её на телефоне спросонья, сказал прямо:
+   мелко. Теперь по макету: число крупным, голос тревоги подписью справа, пара «возраст и инсулин»
+   столбиком у правого края, «Понял» — кнопка во всю ширину карточки.
+
+   Цвет по зоне: сахарные тревоги красятся, прочие поводы (молчание прибора, резервуар) остаются
+   нейтральными. Красить их тревожным цветом значило бы уравнять «сахар 3,1» и «данных нет». */
+.тревога {
+  margin: 10px 0; padding: 16px 18px; border-radius: 20px;
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+  display: flex; flex-direction: column; gap: 13px;
+}
+.тревога.низкий { background: color-mix(in srgb, var(--c-low, #e58a95) 12%, transparent); border-color: #e58a95; }
+.тревога.высокий { background: color-mix(in srgb, var(--c-high, #e8b980) 12%, transparent); border-color: #e8b980; }
+
+.тревога-шапка { display: flex; align-items: center; gap: 10px; }
+.тревога-знак {
+  width: 22px; height: 22px; border-radius: 7px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-neutral-700); color: var(--color-bg);
+  font-size: 0.8125rem; font-weight: 600;
+}
+.тревога.низкий .тревога-знак { background: #e58a95; }
+.тревога.высокий .тревога-знак { background: #e8b980; }
+.тревога-имя { font-size: 0.9375rem; font-weight: 600; }
+/* Голос — у правого края: «чем эта тревога себя проявит» читается заодно с именем. */
+.тревога-голос { margin-left: auto; font-size: 0.8125rem; color: var(--color-neutral-400); }
+
+.тревога-число-ряд { display: flex; align-items: center; gap: 14px; }
+.тревога-число {
+  font-size: 2.875rem; font-weight: 300; line-height: 1;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+}
+.тревога.низкий .тревога-число { color: #e58a95; }
+.тревога.высокий .тревога-число { color: #e8b980; }
+.тревога-мелочи {
+  margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+  font-size: 0.78125rem; color: var(--color-neutral-400); font-variant-numeric: tabular-nums;
+}
+.тревога-инсулин { color: #a8b6d9; }
+
+/* Кнопка во всю ширину и ростом под палец: в неё попадают спросонья, не целясь. */
+.тревога-понял {
+  height: 44px; border: 0; border-radius: 14px; cursor: pointer;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text); font-family: inherit; font-size: 0.9375rem; font-weight: 500;
+}
+.тревога-понял:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+/* Пояснение вместо числа — когда тревога не про число («данных нет», «линия не меняется»). */
+.тревога-текст { font-size: 0.9375rem; color: var(--color-neutral-300); max-width: 62%; }
