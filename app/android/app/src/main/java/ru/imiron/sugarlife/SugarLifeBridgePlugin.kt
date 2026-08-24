@@ -503,6 +503,24 @@ class SugarLifeBridgePlugin : Plugin() {
         call.resolve(JSObject().put("supported", true).put("asked", ок))
     }
 
+    /**
+     * ОПЫТ: слушать мост помпы, ничего не отправляя (SugarLifeCore#124).
+     *
+     * Вызывается вручную во время проверки на железе. Аргументы: `address` — адрес моста, `minutes` —
+     * сколько слушать (по умолчанию полчаса). Без адреса — остановить.
+     */
+    @PluginMethod
+    fun listenPump(call: PluginCall) {
+        val адрес = call.getString("address")
+        if (адрес.isNullOrBlank()) {
+            ПодслушатьМост.стоп()
+            call.resolve(JSObject().put("stopped", true).put("frames", ПодслушатьМост.сколько()))
+            return
+        }
+        val слов = ПодслушатьМост.начать(context.applicationContext, адрес, call.getInt("minutes") ?: 30)
+        call.resolve(JSObject().put("started", слов).put("frames", ПодслушатьМост.сколько()))
+    }
+
     @PluginMethod
     fun testAlarm(call: PluginCall) {
         Тревоги.проверочная(context.applicationContext)
