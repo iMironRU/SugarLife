@@ -105,6 +105,17 @@ object ТревогиДвижка {
             words = о.optString("words", "").takeIf { it.isNotBlank() },
             needsAck = о.optBoolean("needsAck", false),
             mmol = if (о.isNull("mmol")) null else о.optDouble("mmol").takeIf { !it.isNaN() },
+            /* Светофор доставки (мост 1.31…1.35). Умолчания — как у старого ядра: «show» уводит
+               решение к прежнему выводу из уровня, и молчаливой тревога не станет. */
+            sound = о.optBoolean("sound", true),
+            loudness = о.optString("loudness", "show"),
+            soundKind = о.optString("soundKind", "none"),
+            bypassQuiet = о.optBoolean("bypassQuiet", false),
+            fullScreen = о.optBoolean("fullScreen", false),
+            repeatUntilAck = о.optBoolean("repeatUntilAck", false),
+            distinctLook = о.optBoolean("distinctLook", false),
+            raiseVolumeTo = if (о.isNull("raiseVolumeTo")) null else о.optInt("raiseVolumeTo").takeIf { it > 0 },
+            inCar = о.optBoolean("inCar", false),
         )
     }
 
@@ -138,8 +149,15 @@ object ТревогиДвижка {
         if (как == ПравилаПоказа.Как.БУДИТЬ) {
             b.setPriority(NotificationCompat.PRIORITY_MAX)
                 .setDefaults(NotificationCompat.DEFAULT_ALL)
-                .setFullScreenIntent(открыть, true)
                 .setOngoing(с.needsAck)
+            /* ПОЛНЫЙ ЭКРАН — ПО ПРИКАЗУ, А НЕ ПО НАШЕЙ ДОГАДКЕ (мост 1.34). В машине движок присылает
+               false: тревога поверх всего перед человеком за рулём отвлекает сильнее, чем помогает.
+               Старое ядро поля не шлёт — тогда ведём себя как раньше и разворачиваем. */
+            if (с.fullScreen || (с.loudness == "show" && !с.inCar)) b.setFullScreenIntent(открыть, true)
+            /* ГРОМКОСТЬ БУДИЛЬНИКА — ДО УКАЗАННОГО ПРОЦЕНТА. «Не беспокоить», беззвучный режим и ноль
+               громкости — три разных состояния, и от последнего не спасает ни канал, ни обход тихого:
+               спасает только подъём. Поднимаем ТОЛЬКО вверх и возвращаем после отбоя. */
+            с.raiseVolumeTo?.let { если -> if (!с.inCar) ГромкостьТревоги.поднять(ctx, если) }
         } else {
             b.setPriority(
                 if (как == ПравилаПоказа.Как.ОБЫЧНО) NotificationCompat.PRIORITY_DEFAULT
@@ -155,6 +173,8 @@ object ТревогиДвижка {
 
     private fun снять(ctx: Context, id: String) {
         показано.remove(id)
+        /* Чужую громкость себе не оставляем: подняли ради тревоги — вернули, когда её не стало. */
+        if (показано.isEmpty()) ГромкостьТревоги.вернуть(ctx)
         runCatching {
             (ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .cancel(ПравилаПоказа.ключУведомления(id))
