@@ -3,73 +3,97 @@ import SwiftUI
 import WidgetKit
 
 /*
- Живой баннер: сахар на экране блокировки, в «Динамическом острове» и в CarPlay (#428).
+ Живой баннер: сахар на экране блокировки, в «Динамическом острове», в CarPlay и на часах (#428, #500).
 
  ПОЧЕМУ ЭТО ВАЖНЕЕ ОБЫЧНОГО ВИДЖЕТА. Человек за рулём не достаёт телефон; человек ночью не
- разблокирует экран. Число, ради которого приложение существует, должно быть видно там,
- куда взгляд падает и так, — а падает он на экран блокировки и на приборную панель.
+ разблокирует экран. Число, ради которого приложение существует, должно быть видно там, куда взгляд
+ падает и так, — а падает он на экран блокировки и на приборную панель.
 
- ЧТО ЗДЕСЬ ЕСТЬ И ЧЕГО НЕТ. Live Activity рисует то, что ей передали: значение, стрелку,
- разницу с прошлым, время последнего показания. Считать здесь нечего и незачем — это
- расширение, оно живёт в отдельном процессе и данных не имеет. Всё, что оно показывает,
- приезжает из приложения одним состоянием.
+ ВИД v2 — ПО МАКЕТУ ВЛАДЕЛЬЦА. На поверхности пять величин, и каждая отвечает на свой вопрос:
 
- СРОК ЖИЗНИ. Система сама гасит Live Activity через восемь часов после старта и через
- двенадцать снимает окончательно. Поэтому приложение обязано её продлевать, а не
- запускать однажды и забыть; когда данные перестают приходить, баннер должен об этом
- сказать, а не показывать вчерашнее число как сегодняшнее.
+   показание и направление  — «сколько сейчас и куда идёт»;
+   возраст                  — «верить ли этому числу»;
+   сколько до следующего    — «ждать или уже беспокоиться»;
+   три часа на фиксированной оси — «как именно шёл сахар»;
+   активный инсулин         — «продолжится ли падение».
+
+ Ось ФИКСИРОВАННАЯ (2…16 ммоль) намеренно. Автомасштаб рисует спокойный вечер и качели от 3,8 до 13,1
+ одинаково — линия всегда во весь кадр; фиксированная ось платит масштабом (мелкое колебание выглядит
+ плоским), но не врёт про амплитуду, а на баннере важнее второе.
+
+ ЧТО ЗДЕСЬ ЕСТЬ И ЧЕГО НЕТ. Расширение живёт отдельным процессом и данных не имеет: всё, что оно
+ рисует, приезжает из приложения одним состоянием. Никаких порогов, целей и расчётов здесь нет.
  */
 
+/// Палитра баннера — из макета v2. Значения зон отдельно от акцента: цвет здесь означает зону и
+/// ничего больше (правило проекта), поэтому «выше» и «ниже» не берут акцентный фиолетовый.
+private enum Цвета {
+    static let текст = Color(red: 0.914, green: 0.914, blue: 0.929)     // #e9e9ed
+    static let тускло = Color(red: 0.545, green: 0.565, blue: 0.639)    // #8b90a3
+    static let акцент = Color(red: 0.569, green: 0.518, blue: 0.851)    // #9184d9
+    static let выше = Color(red: 0.910, green: 0.725, blue: 0.502)      // #e8b980
+    static let ниже = Color(red: 0.898, green: 0.541, blue: 0.584)      // #e58a95
+    static let разрыв = Color(red: 0.788, green: 0.663, blue: 0.478)    // #c9a97a
+    static let устарело = Color(red: 0.639, green: 0.655, blue: 0.722)  // #a3a7b8
+    static let инсулин = Color(red: 0.659, green: 0.714, blue: 0.851)   // #a8b6d9
+    static let линияТускло = Color(red: 0.435, green: 0.455, blue: 0.518) // #6f7484
+    static let коридор = Color(red: 0.576, green: 0.780, blue: 0.608)   // #93c79b
+}
+
+/// Цвета конкретного состояния — один расчёт на все поверхности, чтобы остров и блокировка не
+/// разошлись в том, что означает «ниже коридора».
+private struct Вид {
+    let число: Color
+    let линия: Color
+
+    init(_ с: СахарАтрибуты.ContentState) {
+        if с.разрыв { число = Цвета.разрыв; линия = Цвета.линияТускло }
+        else if с.старое { число = Цвета.устарело; линия = Цвета.линияТускло }
+        else if с.зона == "выше" { число = Цвета.выше; линия = Цвета.выше }
+        else if с.зона == "ниже" { число = Цвета.ниже; линия = Цвета.ниже }
+        else { число = Цвета.текст; линия = Цвета.акцент }
+    }
+}
 
 /*
- График сахара за час — крупно и цветом (#428).
+ ТРИ ЧАСА НА ФИКСИРОВАННОЙ ОСИ.
 
- ЗАЧЕМ ОН ЗДЕСЬ. Стрелка отвечает «растёт», но не отвечает «как»: разгоняется подъём или
- выдыхается, идёт он полчаса или начался пять минут назад. За рулём вопрос именно такой, и
- по одному мгновенному тренду решение принять нельзя. Форма линии отвечает на него без
- чтения — взгляд, а не разбор.
+ Коридор 3,9–10 показан полосой и двумя линиями с подписями — по ним читается «где я относительно
+ нормы» без чтения цифр. Деления по часам вертикальными штрихами: они превращают «линия ползёт вверх»
+ в «ползёт третий час».
 
- ЦВЕТ ПО ЗНАЧЕНИЮ, а не по последней точке: линия зелёная там, где сахар в диапазоне, и
- красная выше и ниже, с переломом ровно на границах. Правило то же, что в круге на экране
- «Сегодня» (charts/CircleSparkline.tsx) — иначе одна и та же картина в приложении и на
- экране блокировки означала бы разное.
+ Линия темнеет к началу: слева прошлое, справа сейчас. Это заменяет подписи времени, на которые здесь
+ нет места, и работает боковым зрением.
 
- РАЗРЫВ ВМЕСТО ПРЯМОЙ. Если между точками больше двенадцати минут, линия прерывается.
- Соединять концы молчания отрезком нельзя: ровная линия через полчаса тишины читается как
- ровный сахар, а это худшее враньё, какое здесь можно нарисовать.
+ ПРОГНОЗ ТАЮЩИМ ХВОСТОМ за правый край — и только если он есть. Выдуманное продолжение хуже
+ отсутствующего: по нему принимают решение о дозе.
  */
 @available(iOS 16.1, *)
 struct ГрафикСахара: View {
-    let ряд: [СахарАтрибуты.ContentState.Точка]
-    var старое: Bool = false
+    let состояние: СахарАтрибуты.ContentState
+    /// Показывать подписи «10» и «3,9». В компактных видах для них нет места.
+    var подписи: Bool = true
 
     private static let НИЗ = 3.9
     private static let ВЕРХ = 10.0
-    /// Больше этого промежутка — не линия, а дыра. Две обычные паузы НМГ плюс запас.
+    /// Границы оси. Не по данным: см. объяснение в шапке файла.
+    private static let ОСЬ_НИЗ = 2.0
+    private static let ОСЬ_ВЕРХ = 16.0
+    /// Больше этого промежутка — не линия, а дыра: ровная линия через полчаса тишины читается как
+    /// ровный сахар, и это худшее враньё, какое здесь можно нарисовать.
     private static let РАЗРЫВ: TimeInterval = 12 * 60
+    /// Сколько времени показываем. Точки старше просто не приезжают, но подстрахуемся и здесь.
+    private static let ОКНО: TimeInterval = 3 * 60 * 60
 
-    private static let зелёный = Color(red: 0.576, green: 0.780, blue: 0.608)
-    private static let красный = Color(red: 0.788, green: 0.420, blue: 0.478)
-
-    /* МАСШТАБ ПО ДАННЫМ, А НЕ ПО ДИАПАЗОНУ (#500). Раньше окно всегда включало 3,9 и 10 — и ровный
-       вечер 7,7…7,9 превращался в прямую черту: линия есть, а сказать ей нечего. Соседи по экрану
-       блокировки в тот же момент показывали ту же историю с формой.
-
-       Окно считаем по самим показаниям, но не уже двух с половиной ммоль: иначе шум ±0,2 нарисовался
-       бы горами, и спокойная ночь выглядела бы тревожной. */
-    private static func окно(_ все: [СахарАтрибуты.ContentState.Точка]) -> (Double, Double) {
-        let низ = (все.map(\.в).min() ?? НИЗ) - 0.5
-        let верх = (все.map(\.в).max() ?? ВЕРХ) + 0.5
-        let ОКНО = 2.5
-        guard верх - низ < ОКНО else { return (низ, верх) }
-        let центр = (верх + низ) / 2
-        return (центр - ОКНО / 2, центр + ОКНО / 2)
+    private var точки: [СахарАтрибуты.ContentState.Точка] {
+        let край = Date().addingTimeInterval(-Self.ОКНО)
+        return состояние.ряд.filter { $0.т >= край }.sorted { $0.т < $1.т }
     }
 
-    private var сегменты: [[СахарАтрибуты.ContentState.Точка]] {
+    private func сегменты(_ все: [СахарАтрибуты.ContentState.Точка]) -> [[СахарАтрибуты.ContentState.Точка]] {
         var итог: [[СахарАтрибуты.ContentState.Точка]] = []
         var текущий: [СахарАтрибуты.ContentState.Точка] = []
-        for т in ряд.sorted(by: { $0.т < $1.т }) {
+        for т in все {
             if let прошлая = текущий.last, т.т.timeIntervalSince(прошлая.т) > Self.РАЗРЫВ {
                 итог.append(текущий); текущий = []
             }
@@ -80,191 +104,278 @@ struct ГрафикСахара: View {
     }
 
     var body: some View {
+        let вид = Вид(состояние)
         GeometryReader { г in
-            let все = ряд.sorted(by: { $0.т < $1.т })
-            let t0 = все.first?.т.timeIntervalSince1970 ?? 0
-            let t1 = все.last?.т.timeIntervalSince1970 ?? 1
-            let диапазонT = max(t1 - t0, 60)
-            let (vmin, vmax) = Self.окно(все)
+            let все = точки
+            let ш = г.size.width, в = г.size.height
+            /* Ось времени привязана к ЧАСАМ, а не к первой точке: иначе после перерыва в данных
+               кривая растянулась бы на весь кадр и полчаса выглядели бы как три. */
+            let конец = все.last?.т ?? Date()
+            let начало = конец.addingTimeInterval(-Self.ОКНО)
             let x: (Date) -> CGFloat = { д in
-                CGFloat((д.timeIntervalSince1970 - t0) / диапазонT) * г.size.width
+                CGFloat(д.timeIntervalSince(начало) / Self.ОКНО) * ш * 0.86
             }
-            let y: (Double) -> CGFloat = { в in
-                г.size.height - CGFloat((в - vmin) / (vmax - vmin)) * г.size.height
+            let y: (Double) -> CGFloat = { v in
+                let доля = (Self.ОСЬ_ВЕРХ - min(max(v, Self.ОСЬ_НИЗ), Self.ОСЬ_ВЕРХ))
+                    / (Self.ОСЬ_ВЕРХ - Self.ОСЬ_НИЗ)
+                return CGFloat(доля) * в
             }
 
             ZStack(alignment: .topLeading) {
-                /* Целевой диапазон полосой: видно не только «растёт», но и «уже вышел». Окно теперь
-                   бывает уже диапазона — тогда полоса выходит за края, и это правильно: значит всё
-                   показанное время сахар был внутри. */
+                // Коридор полосой: «где я относительно нормы» — без чтения чисел.
                 Rectangle()
-                    .fill(Self.зелёный.opacity(0.13))
-                    .frame(height: max(y(max(Self.НИЗ, vmin)) - y(min(Self.ВЕРХ, vmax)), 1))
-                    .offset(y: y(min(Self.ВЕРХ, vmax)))
+                    .fill(LinearGradient(
+                        stops: [.init(color: Цвета.коридор.opacity(0), location: 0),
+                                .init(color: Цвета.коридор.opacity(0.08), location: 0.18),
+                                .init(color: Цвета.коридор.opacity(0.08), location: 0.88),
+                                .init(color: Цвета.коридор.opacity(0), location: 1)],
+                        startPoint: .leading, endPoint: .trailing))
+                    .frame(height: max(y(Self.НИЗ) - y(Self.ВЕРХ), 1))
+                    .offset(y: y(Self.ВЕРХ))
 
-                /* Границы диапазона пунктиром — но только те, что попали в окно. Линия, нарисованная
-                   по краю кадра, читалась бы как граница кадра, а не как порог. */
-                ForEach([Self.НИЗ, Self.ВЕРХ].filter { $0 > vmin && $0 < vmax }, id: \.self) { порог in
-                    Path { п in
-                        п.move(to: CGPoint(x: 0, y: y(порог)))
-                        п.addLine(to: CGPoint(x: г.size.width, y: y(порог)))
-                    }
-                    .stroke(Self.зелёный.opacity(0.35),
-                            style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                ForEach([Self.ВЕРХ, Self.НИЗ], id: \.self) { порог in
+                    Rectangle()
+                        .fill(LinearGradient(
+                            stops: [.init(color: Цвета.текст.opacity(0), location: 0),
+                                    .init(color: Цвета.текст.opacity(0.14), location: 0.16),
+                                    .init(color: Цвета.текст.opacity(0.14), location: 0.88),
+                                    .init(color: Цвета.текст.opacity(0), location: 1)],
+                            startPoint: .leading, endPoint: .trailing))
+                        .frame(height: 1)
+                        .offset(y: y(порог))
                 }
 
-                ForEach(Array(сегменты.enumerated()), id: \.offset) { _, сегмент in
+                // Деления по часам — превращают «ползёт вверх» в «ползёт третий час».
+                ForEach(часы(начало: начало, конец: конец), id: \.self) { момент in
+                    Rectangle()
+                        .fill(LinearGradient(
+                            stops: [.init(color: Цвета.текст.opacity(0), location: 0),
+                                    .init(color: Цвета.текст.opacity(0.11), location: 0.5),
+                                    .init(color: Цвета.текст.opacity(0), location: 1)],
+                            startPoint: .top, endPoint: .bottom))
+                        .frame(width: 1, height: в * 0.85)
+                        .offset(x: x(момент), y: в * 0.075)
+                }
+
+                if let прогноз = состояние.прогноз, let последняя = все.last {
+                    Path { п in
+                        п.move(to: CGPoint(x: x(последняя.т), y: y(последняя.в)))
+                        п.addLine(to: CGPoint(x: ш, y: y(прогноз)))
+                    }
+                    .stroke(LinearGradient(
+                        colors: [вид.линия.opacity(0.3), вид.линия.opacity(0)],
+                        startPoint: .leading, endPoint: .trailing),
+                        style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                }
+
+                ForEach(Array(сегменты(все).enumerated()), id: \.offset) { _, сегмент in
                     Path { п in
                         for (i, т) in сегмент.enumerated() {
                             let точка = CGPoint(x: x(т.т), y: y(т.в))
                             if i == 0 { п.move(to: точка) } else { п.addLine(to: точка) }
                         }
                     }
-                    .stroke(градиент(vmin: vmin, vmax: vmax),
-                            style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+                    /* Прошлое тусклее настоящего: слева старое, справа свежее. Заменяет подписи
+                       времени, на которые здесь нет места. */
+                    .stroke(LinearGradient(
+                        stops: [.init(color: вид.линия.opacity(0.16), location: 0),
+                                .init(color: вид.линия.opacity(0.7), location: 0.45),
+                                .init(color: вид.линия.opacity(1), location: 1)],
+                        startPoint: .leading, endPoint: .trailing),
+                        style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                 }
 
                 if let последняя = все.last {
-                    Circle()
-                        .fill(цвет(последняя.в))
-                        .frame(width: 10, height: 10)
-                        .position(x: x(последняя.т), y: y(последняя.в))
+                    Circle().fill(вид.линия.opacity(0.18)).frame(width: 14, height: 14)
+                        .offset(x: x(последняя.т) - 7, y: y(последняя.в) - 7)
+                    Circle().fill(вид.линия).frame(width: 6, height: 6)
+                        .offset(x: x(последняя.т) - 3, y: y(последняя.в) - 3)
+                }
+
+                if подписи {
+                    // Подписи коридора — у правого края, где кончается линия.
+                    Text("10").font(.system(size: 11, design: .rounded))
+                        .foregroundStyle(Цвета.тускло)
+                        .offset(x: ш - 20, y: y(Self.ВЕРХ) - 7)
+                    Text("3,9").font(.system(size: 11, design: .rounded))
+                        .foregroundStyle(Цвета.тускло)
+                        .offset(x: ш - 22, y: min(в - 14, y(Self.НИЗ) - 7))
                 }
             }
-            .opacity(старое ? 0.5 : 1)
         }
     }
 
-    private func цвет(_ в: Double) -> Color {
-        (в >= Self.НИЗ && в <= Self.ВЕРХ) ? Self.зелёный : Self.красный
-    }
-
-    /// Вертикальный градиент с переломами ровно на границах диапазона — тот же приём, что в
-    /// вебе: цвет линии тогда зависит от значения, а не от того, где линия началась.
-    private func градиент(vmin: Double, vmax: Double) -> LinearGradient {
-        let доля: (Double) -> Double = { в in min(max((vmax - в) / (vmax - vmin), 0), 1) }
-        var стопы: [Gradient.Stop] = [.init(color: цвет(vmax), location: 0)]
-        if Self.ВЕРХ < vmax && Self.ВЕРХ > vmin {
-            let о = доля(Self.ВЕРХ)
-            стопы.append(.init(color: цвет(Self.ВЕРХ + 0.01), location: о))
-            стопы.append(.init(color: цвет(Self.ВЕРХ - 0.01), location: о))
+    /// Границы часов внутри окна — по ним и рисуются деления.
+    private func часы(начало: Date, конец: Date) -> [Date] {
+        var итог: [Date] = []
+        let календарь = Calendar.current
+        var т = календарь.date(bySetting: .minute, value: 0, of: начало) ?? начало
+        т = календарь.date(bySetting: .second, value: 0, of: т) ?? т
+        while т < конец {
+            if т > начало { итог.append(т) }
+            т = т.addingTimeInterval(3600)
         }
-        if Self.НИЗ < vmax && Self.НИЗ > vmin {
-            let о = доля(Self.НИЗ)
-            стопы.append(.init(color: цвет(Self.НИЗ + 0.01), location: о))
-            стопы.append(.init(color: цвет(Self.НИЗ - 0.01), location: о))
-        }
-        стопы.append(.init(color: цвет(vmin), location: 1))
-        return LinearGradient(stops: стопы.sorted { $0.location < $1.location },
-                              startPoint: .top, endPoint: .bottom)
+        return итог
     }
 }
 
 /*
- ВИД ДЛЯ МАШИНЫ И ЧАСОВ (#500).
+ ПАРА ВРЕМЁН: сколько прошло и сколько осталось.
 
- В CarPlay наш баннер выглядел болванкой: имя приложения и строка «7.6 mmol/L». Причина не в
- раскладке — система рисует там ОТДЕЛЬНОЕ, «маленькое» семейство баннера, и приложение обязано
- объявить, что умеет его рисовать (`supplementalActivityFamilies`, iOS 18). Пока оно не объявлено,
- CarPlay показывает служебную заглушку, и никакой правкой большого вида это не чинится.
+ Возраст отвечает «верить ли числу», секундомер — «ждать или уже беспокоиться». Обе величины считает
+ система по датам, поэтому идут сами и не застывают между обновлениями баннера — это важнее точности
+ формата: застывший счётчик хуже некрасивого.
 
- ЧТО ЗДЕСЬ ПОКАЗЫВАЕМ. Место — с почтовую марку, взгляд — на полсекунды и с дороги. Значит число,
- стрелка и возраст: график в такой ширине превращается в закорючку, а решение по нему всё равно не
- принимают за рулём. Дельту оставляем — она отвечает «насколько», и это одно слово, а не картинка.
+ ПЯТЬ МИНУТ — ПОКА НАШЕ ДОПУЩЕНИЕ. Движок не отдаёт, когда ждать следующее показание; шаг НМГ обычно
+ пятиминутный, и до появления поля в контракте мы считаем по нему. Как только поле появится, счёт
+ переедет на него — здесь менять будет нечего, дата приходит готовой.
  */
 @available(iOS 16.1, *)
-struct КомпактныйБаннер: View {
+struct ПараВремён: View {
     let состояние: СахарАтрибуты.ContentState
+    var размер: CGFloat = 11.5
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text(состояние.значение)
-                    .font(.system(size: 34, weight: .semibold, design: .rounded))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .foregroundStyle(состояние.старое ? .secondary : .primary)
-                if !состояние.стрелка.isEmpty {
-                    Text(состояние.стрелка).font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(.secondary)
+        HStack(spacing: 10) {
+            HStack(spacing: 5) {
+                Image(systemName: "clock").font(.system(size: размер))
+                if состояние.разрыв {
+                    // В разрыве место возраста занимает последнее известное: числа нет, а что было — есть.
+                    Text(состояние.последнее)
+                } else {
+                    Text(состояние.когда, style: .timer).frame(maxWidth: размер * 4.2, alignment: .leading)
                 }
             }
-            /* Тот же порядок, что на большом: сначала возраст, потом разница. За рулём вопрос «это
-               число живое?» задаётся раньше, чем «насколько выросло». */
-            HStack(spacing: 6) {
+            .foregroundStyle(состояние.разрыв ? Цвета.разрыв : Цвета.тускло)
+
+            if let следующее = состояние.следующее, !состояние.разрыв {
+                HStack(spacing: 5) {
+                    Image(systemName: "timer").font(.system(size: размер))
+                    if состояние.старое {
+                        /* Обещать время, когда прошлое уже просрочено, нельзя: показание задержалось,
+                           и следующее может не прийти вовсе. */
+                        Text("ждём")
+                    } else {
+                        Text(следующее, style: .timer).frame(maxWidth: размер * 4.2, alignment: .leading)
+                    }
+                }
+                .foregroundStyle(Цвета.тускло)
+            }
+        }
+        .font(.system(size: размер, design: .rounded))
+        .monospacedDigit()
+    }
+}
+
+/// Инсулин на борту — ответ на «продолжится ли падение». Пусто: движок не считал, и врать нечем.
+@available(iOS 16.1, *)
+struct ИнсулинНаБорту: View {
+    let текст: String
+    var размер: CGFloat = 11.5
+
+    var body: some View {
+        if !текст.isEmpty {
+            HStack(spacing: 5) {
+                Image(systemName: "drop.fill").font(.system(size: размер - 2.5))
+                Text(текст)
+            }
+            .font(.system(size: размер, design: .rounded))
+            .foregroundStyle(Цвета.инсулин)
+        }
+    }
+}
+
+/// Показание и направление — левая колонка всех крупных видов.
+@available(iOS 16.1, *)
+struct Показание: View {
+    let состояние: СахарАтрибуты.ContentState
+    var кегль: CGFloat = 42
+
+    var body: some View {
+        let вид = Вид(состояние)
+        if состояние.разрыв {
+            /* РАЗРЫВ — НЕ ТУСКЛОЕ ЧИСЛО, А ДРУГОЙ ОТВЕТ. Показывать последнее известное крупно
+               значит выдавать позавчерашнее за сейчас; вместо него причина и сколько это длится. */
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Нет связи")
+                    .font(.system(size: кегль * 0.36, weight: .semibold))
                 Text(состояние.когда, style: .timer)
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: 56, alignment: .leading)
-                if !состояние.разница.isEmpty {
-                    Text(состояние.разница)
-                        .font(.system(size: 13, design: .rounded))
-                        .foregroundStyle(.tertiary)
+                    .font(.system(size: кегль * 0.57, weight: .light, design: .rounded))
+                    .monospacedDigit()
+                    .frame(maxWidth: кегль * 2.2, alignment: .leading)
+            }
+            .foregroundStyle(Цвета.разрыв)
+        } else {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(состояние.значение)
+                    .font(.system(size: кегль, weight: .light, design: .rounded))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .foregroundStyle(вид.число)
+                if !состояние.стрелка.isEmpty {
+                    Text(состояние.стрелка)
+                        .font(.system(size: кегль * 0.42, weight: .medium))
+                        .foregroundStyle(вид.число)
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
 /*
- Экран блокировки: тёмный фон и крупное число — читают его в темноте, боковым зрением и не
- разблокируя телефон. Отдельной структурой, потому что в машине и на часах показывается другой,
- маленький вид (см. `КомпактныйБаннер`), и выбирать между ними надо в одном месте.
+ Экран блокировки: 361 × 110 pt. Слева показание, справа три часа, внизу пара времён и инсулин.
  */
 @available(iOS 16.1, *)
 struct БольшойБаннер: View {
     let состояние: СахарАтрибуты.ContentState
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    /* Число НИКОГДА не переносится (#500). Раньше сюда приезжала строка вместе с
-                       единицами, «7,9 ммоль/л» ломалось на две строки и занимало пол-карточки —
-                       ради слова, которое человек и так знает. Единицы теперь не приезжают
-                       вовсе, а на случай длинного числа стоит запрет переноса. */
-                    Text(состояние.значение)
-                        .font(.system(size: 46, weight: .semibold, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .foregroundStyle(состояние.старое ? .secondary : .primary)
-                    if !состояние.стрелка.isEmpty {
-                        Text(состояние.стрелка).font(.system(size: 24, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                /* Возраст показания считает система: так он идёт вперёд сам и не врёт
-                   между обновлениями. Наше дело — сказать, ОТ КАКОГО момента считать.
-                   Рядом с графиком он обязателен: линия выглядит живой всегда.
-
-                   Разница рядом с ним, а не под числом: «+0,1» и «2 мин» — это один ответ на
-                   вопрос «что происходит», и читаются они вместе. */
-                HStack(spacing: 6) {
-                    if !состояние.разница.isEmpty {
-                        Text(состояние.разница)
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
-                    }
-                    Text(состояние.когда, style: .timer)
-                        .font(.system(size: 14, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: 58, alignment: .leading)
-                }
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: 10) {
+                Показание(состояние: состояние)
+                    .frame(width: 116, alignment: .leading)
+                ГрафикСахара(состояние: состояние)
+                    .frame(height: 52)
             }
-            .fixedSize(horizontal: true, vertical: false)
-            /* Ряда нет — сборка старше графика или показаний ещё не накопилось. Тогда
-               пусто, а не выдуманная линия по одной точке. */
-            if состояние.ряд.count >= 2 {
-                ГрафикСахара(ряд: состояние.ряд, старое: состояние.старое)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 66)
-            } else {
-                Spacer()
+            Spacer(minLength: 6)
+            HStack(spacing: 10) {
+                ПараВремён(состояние: состояние)
+                Spacer(minLength: 8)
+                ИнсулинНаБорту(текст: состояние.инсулин)
             }
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 16)
         .padding(.vertical, 12)
+    }
+}
+
+/*
+ ВИД ДЛЯ МАШИНЫ И ЧАСОВ (#500).
+
+ CarPlay и Apple Watch рисуют ОТДЕЛЬНОЕ, «маленькое» семейство баннера, и приложение обязано
+ объявить, что умеет его рисовать (`supplementalActivityFamilies`, iOS 18). Пока оно не объявлено,
+ CarPlay показывает служебную заглушку, и правкой большого вида это не чинится.
+
+ В машине те же пять величин, но раскладка другая: сверху число, времена и инсулин, снизу график во
+ всю ширину — три часа читаются одним взглядом, не поворачивая головы.
+ */
+@available(iOS 16.1, *)
+struct КомпактныйБаннер: View {
+    let состояние: СахарАтрибуты.ContentState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center, spacing: 12) {
+                Показание(состояние: состояние, кегль: 34)
+                Spacer(minLength: 6)
+                ПараВремён(состояние: состояние, размер: 13)
+            }
+            ГрафикСахара(состояние: состояние, подписи: false)
+                .frame(height: 34)
+            ИнсулинНаБорту(текст: состояние.инсулин, размер: 12)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -287,69 +398,67 @@ struct ВыборБаннера: View {
 }
 
 /*
- «Динамический остров» — общий для обеих обёрток виджета. Вынесен отдельно по той же причине, что и
- виды: рисуется он одинаково, а конфигураций теперь две (с маленьким семейством и без).
+ «Динамический остров» — общий для обеих обёрток виджета.
+
+ Компактное состояние — то, что видно всегда: число, направление и секундомер. Инсулин и история сюда
+ не влезают и не нужны: это состояние «мимо», а не «разбираюсь».
  */
 @available(iOS 16.1, *)
 enum ОстровБаннера {
     static func остров(_ контекст: ActivityViewContext<СахарАтрибуты>) -> DynamicIsland {
-        DynamicIsland {
+        let с = контекст.state
+        let вид = Вид(с)
+        return DynamicIsland {
             DynamicIslandExpandedRegion(.leading) {
-                Text(контекст.state.значение)
-                    .font(.system(size: 26, weight: .semibold, design: .rounded))
-                    .padding(.leading, 6)
+                Показание(состояние: с, кегль: 40).padding(.leading, 6)
             }
             DynamicIslandExpandedRegion(.trailing) {
-                Text(контекст.state.когда, style: .timer)
-                    .font(.system(size: 16, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: 70, alignment: .trailing)
-                    .padding(.trailing, 6)
+                ПараВремён(состояние: с, размер: 12.5).padding(.trailing, 6)
             }
             DynamicIslandExpandedRegion(.bottom) {
-                VStack(spacing: 6) {
-                    if контекст.state.ряд.count >= 2 {
-                        ГрафикСахара(ряд: контекст.state.ряд, старое: контекст.state.старое)
-                            .frame(height: 44)
-                    }
+                VStack(spacing: 8) {
+                    ГрафикСахара(состояние: с).frame(height: 62)
                     HStack(spacing: 8) {
-                        if !контекст.state.стрелка.isEmpty { Text(контекст.state.стрелка) }
-                        if !контекст.state.разница.isEmpty {
-                            Text(контекст.state.разница).foregroundStyle(.secondary)
+                        if !с.разница.isEmpty {
+                            Text(с.разница)
+                                .font(.system(size: 12.5, design: .rounded))
+                                .foregroundStyle(Цвета.тускло)
                         }
                         Spacer()
-                        Text(контекст.attributes.источник).font(.caption).foregroundStyle(.secondary)
+                        ИнсулинНаБорту(текст: с.инсулин, размер: 12.5)
                     }
                 }
                 .padding(.horizontal, 6)
             }
         } compactLeading: {
-            /* Сжатый вид — то, что видно всегда, пока баннер жив. Здесь помещается
-               ровно число и стрелка, и это правильный выбор: время можно спросить,
-               сахар — нет. */
-            Text(контекст.state.значение).font(.system(size: 15, weight: .semibold))
+            if с.разрыв {
+                Image(systemName: "wifi.slash").foregroundStyle(Цвета.разрыв)
+            } else {
+                Text(с.значение).font(.system(size: 15, weight: .medium)).monospacedDigit()
+                    .foregroundStyle(вид.число)
+            }
         } compactTrailing: {
-            Text(контекст.state.стрелка).font(.system(size: 15, weight: .semibold))
+            if !с.разрыв && !с.стрелка.isEmpty {
+                Text(с.стрелка).font(.system(size: 15, weight: .semibold)).foregroundStyle(вид.число)
+            }
         } minimal: {
-            Text(контекст.state.значение).font(.system(size: 13, weight: .semibold))
+            Text(с.разрыв ? "—" : с.значение)
+                .font(.system(size: 13, weight: .medium)).monospacedDigit()
+                .foregroundStyle(вид.число)
         }
-        .keylineTint(Color.white)
+        .keylineTint(вид.линия)
     }
 }
 
 /*
  ЖИВОЙ БАННЕР ТРЕБУЕТ iOS 18 — И ЭТО ОСОЗНАННО СУЖЕННОЕ ОБЕЩАНИЕ (#500).
 
- Раньше он объявлялся с iOS 16.1, но в машине выглядел болванкой: CarPlay рисует ОТДЕЛЬНОЕ,
- маленькое семейство баннера, и приложение обязано сказать, что умеет его рисовать —
- `supplementalActivityFamilies`, а он появился в iOS 18.
-
- Держать две конфигурации (старую без семейства и новую с ним) Swift не даёт: сборщик виджетов
- понимает только `if #available` без «иначе», а модификатор возвращает свой тип, и развилку внутри
- одного `body` не выразить. Значит выбор: либо баннер на iOS 16–17 без машины, либо машина начиная
- с iOS 18. Выбрана машина — ради неё эта функция и делалась (концепция, «за рулём»), а телефонов на
- iOS 16–17 у нас нет. Приложение обязано говорить об этом прямо: `liveBanner` отвечает
- «не умеем» на старых системах, а не молчит.
+ Раньше он объявлялся с iOS 16.1, но в машине выглядел болванкой: CarPlay рисует отдельное маленькое
+ семейство, а объявить его умеет только iOS 18. Держать две конфигурации Swift не даёт: сборщик
+ виджетов понимает `if #available` без «иначе», а модификатор возвращает свой тип. Значит выбор: либо
+ баннер на iOS 16–17 без машины, либо машина начиная с iOS 18. Выбрана машина — ради неё функция и
+ делалась, а телефонов на iOS 16–17 у нас нет. Приложение говорит об этом прямо: `liveBanner`
+ отвечает «не умеем» на старых системах.
  */
 @available(iOS 18.0, *)
 struct ЖивойБаннерСемейства: Widget {
@@ -357,7 +466,7 @@ struct ЖивойБаннерСемейства: Widget {
         ActivityConfiguration(for: СахарАтрибуты.self) { контекст in
             ВыборБаннера(состояние: контекст.state)
                 .activityBackgroundTint(Color.black)
-                .activitySystemActionForegroundColor(Color.white)
+                .activitySystemActionForegroundColor(Цвета.текст)
         } dynamicIsland: { контекст in
             ОстровБаннера.остров(контекст)
         }
