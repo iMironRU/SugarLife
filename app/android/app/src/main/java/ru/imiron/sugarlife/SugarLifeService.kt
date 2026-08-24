@@ -88,6 +88,17 @@ class SugarLifeService : Service() {
             EngineHolder.engine(applicationContext).subscribe { json ->
                 ТревогиДвижка.приСнимке(applicationContext, json)
                 показатьСахар(json)   // человек чаще всего смотрит сюда (#449)
+                /* Адреса приборов приезжают снимком (мост 1.39) — по ним проверяем, не держит ли
+                   прибор сосед, и передокладываем движку при каждом изменении картины (#422). */
+                runCatching {
+                    val устройства = org.json.JSONObject(json).optJSONArray("devices")
+                    if (устройства != null) {
+                        адресаПриборов = (0 until устройства.length()).mapNotNull {
+                            устройства.optJSONObject(it)?.optString("bleId", "")?.takeIf { a -> a.isNotBlank() }
+                        }
+                    }
+                    доложитьСоседей()
+                }
                 SugarWidget.приСнимке(applicationContext, json)   // и на рабочий стол (#449)
                 Значок.приСнимке(applicationContext, json)         // и на сам значок (#500)
             }
@@ -174,13 +185,27 @@ class SugarLifeService : Service() {
      * Факты считает [КтоДержит] — он у нас давно, но отдавал их только экрану. Решение о подключении
      * принимает движок, и без этих фактов он принимал его вслепую.
      */
+    @Volatile private var прошлыйДоклад: String? = null
+
+    /** Адреса наших BLE-приборов из последнего снимка (мост ≥ 1.39): по ним и спрашиваем систему. */
+    @Volatile private var адресаПриборов: List<String> = emptyList()
+
     private fun доложитьСоседей() {
         runCatching {
-            val (занят, кандидаты) = КтоДержит.посмотреть(applicationContext, null)
+            /*
+             * ЗАНЯТОСТЬ ПРОВЕРЯЕТСЯ ПО АДРЕСУ, А БЕЗ АДРЕСА ОТВЕТ ВСЕГДА «СВОБОДЕН» — из-за этого
+             * попутчик не включался: доклад говорил busyHere=false, движок подключал полный режим,
+             * запрашивал историю, получал нули и мигал карточкой (поймано владельцем дважды).
+             */
+            val занят = адресаПриборов.any { адрес ->
+                КтоДержит.посмотреть(applicationContext, адрес).first
+            }
+            val (_, кандидаты) = КтоДержит.посмотреть(applicationContext, null)
             val список = кандидаты.joinToString(",") { "\"$it\"" }
-            EngineHolder.engine(applicationContext).sendIntent(
-                """{"type":"reportNeighbours","busyHere":$занят,"competitors":[$список]}""",
-            )
+            val доклад = """{"type":"reportNeighbours","busyHere":$занят,"competitors":[$список]}"""
+            if (доклад == прошлыйДоклад) return
+            прошлыйДоклад = доклад
+            EngineHolder.engine(applicationContext).sendIntent(доклад)
             Log.i(TAG, "соседи: заняты=$занят, кандидаты=$кандидаты")
         }.onFailure { Log.w(TAG, "не удалось доложить о соседях: $it") }
     }
