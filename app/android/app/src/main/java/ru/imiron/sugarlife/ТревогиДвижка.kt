@@ -102,6 +102,7 @@ object ТревогиДвижка {
             baseLevel = о.optString("baseLevel", о.optString("level", "Сегодня")),
             atMs = о.optLong("atMs", 0L),
             throughSpeaker = о.optBoolean("throughSpeaker", false),
+            words = о.optString("words", "").takeIf { it.isNotBlank() },
             needsAck = о.optBoolean("needsAck", false),
             mmol = if (о.isNull("mmol")) null else о.optDouble("mmol").takeIf { !it.isNaN() },
         )
@@ -114,7 +115,7 @@ object ТревогиДвижка {
             ПравилаПоказа.Как.ОБЫЧНО -> { тихиеКаналы(nm); КАНАЛ_ДЕНЬ }
             else -> { тихиеКаналы(nm); КАНАЛ_ЗАМЕТКА }
         }
-        val (заголовок, текст) = ПравилаПоказа.слова(с.id, с.level, с.mmol)
+        val (заголовок, текст) = ПравилаПоказа.слова(с.id, с.level, с.mmol, с.words)
         val открыть = PendingIntent.getActivity(
             ctx, ПравилаПоказа.ключУведомления(с.id),
             ctx.packageManager.getLaunchIntentForPackage(ctx.packageName) ?: Intent(Intent.ACTION_MAIN),
