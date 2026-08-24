@@ -10,6 +10,10 @@
 	     Имя вычисляется из команды разработчика, ровно как у iAPS (`group.com.$(DEVELOPMENT_TEAM).loopkit.LoopGroup`),
 	     поэтому обе программы, собранные одним человеком, попадают в одну группу. Собранные разными — не попадут,
 	     и это не наша прихоть, а правило подписи Apple. -->
+	<!-- Срочные уведомления — то же право, что в Тревоги.entitlements: файл прав у сборки один,
+	     и выбрав платный (ради петли), нельзя потерять бесплатное право тревог. -->
+	<key>com.apple.developer.usernotifications.time-sensitive</key>
+	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>$(APP_GROUP_ID)</string>

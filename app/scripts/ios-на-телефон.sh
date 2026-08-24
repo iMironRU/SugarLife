@@ -29,13 +29,29 @@ if [ -z "${УСТР:-}" ]; then
   exit 1
 fi
 cd ios/App
-# Права (общая группа с петлёй) подключаются переменной SL_ENTITLEMENTS — по умолчанию их нет:
-# личная команда разработчика такую группу не поддерживает, и подпись падала бы у всех подряд.
-xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
-  -destination "id=$УСТР" -allowProvisioningUpdates \
-  ${DEVELOPMENT_TEAM:+DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM"} \
-  ${SL_ENTITLEMENTS:+SL_ENTITLEMENTS="$SL_ENTITLEMENTS"} \
-  build
+# ПРАВА — СНАЧАЛА С НИМИ, НЕ ВЫШЛО — БЕЗ НИХ (SugarLife#500).
+#
+# По умолчанию просим право на срочные уведомления (App/Тревоги.entitlements): без него «Не беспокоить»
+# молча прячет карточку тревоги — сирена звучит, а на экране пусто, и владелец прожил это вживую.
+# Но бесплатной личной команде Apple это право может не выдать (у Loop так и задокументировано).
+# Тогда не ломаем установку, как когда-то ломала платная группа (#466), а собираем без права и говорим
+# об этом вслух — а в приложении «Охрана» сама покажет «сборка без права на срочные».
+собрать() {
+  xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
+    -destination "id=$УСТР" -allowProvisioningUpdates \
+    ${DEVELOPMENT_TEAM:+DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM"} \
+    SL_ENTITLEMENTS="$1" \
+    build
+}
+ПРАВА="${SL_ENTITLEMENTS:-App/Тревоги.entitlements}"
+if ! собрать "$ПРАВА"; then
+  echo
+  echo "Подпись с правами ($ПРАВА) не прошла — похоже, команда разработчика их не выдаёт." >&2
+  echo "Собираю без прав: тревоги будут работать, но «Не беспокоить» сможет спрятать карточку —" >&2
+  echo "добавьте SugarLife в разрешённые приложения фокуса (Настройки → Фокусирование)." >&2
+  echo
+  собрать ""
+fi
 
 echo
 echo

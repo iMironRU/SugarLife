@@ -20,5 +20,7 @@ APP_GROUP_ID = group.com.$(DEVELOPMENT_TEAM).loopkit.LoopGroup
 //   SL_ENTITLEMENTS=App/App.entitlements bash scripts/ios-на-телефон.sh
 //
 // Без прав отдача честно скажет, что контейнер недоступен (LoopFeed.доступность), — а не промолчит.
-SL_ENTITLEMENTS =
+// Умолчание — права тревог (срочные уведомления): они бесплатные и нужны каждому, у кого
+// приложение вообще следит за сахаром. Платная группа остаётся по просьбе, как и была.
+SL_ENTITLEMENTS = App/Тревоги.entitlements
 CODE_SIGN_ENTITLEMENTS = $(SL_ENTITLEMENTS)
