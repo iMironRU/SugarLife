@@ -291,10 +291,22 @@ class SugarLifeBridgePlugin : Plugin() {
         // затянувшийся старт превращался в «приложение не отвечает».
         val permitted = hasBlePermissions()   // спрашивать разрешения можно только с главного потока
         onEngineThread("boot: subscribe+provider") {
-            // Снимок из движка-синглтона (переживает пересоздание Activity) → в webview на UI-потоке.
+            /* СНИМОК В WEBVIEW — С ФОНА И НЕ ЧАЩЕ, ЧЕМ ЭКРАН УСПЕВАЕТ (#517).
+             *
+             * Поймано на эмуляторе: приложение вставало в ANR, и в трейсе главный поток сидел
+             * внутри `JSONObject.toString` капаситоровского `notifyListeners`. Снимок — большой
+             * объект (монитор, приборы, все правила тревог), а приходит он пачками: при загрузке
+             * истории движок эмитит десятки штук в секунду. Каждый такой снимок сериализовался НА
+             * ГЛАВНОМ ПОТОКЕ — и телефон переставал отвечать на касания ровно тогда, когда человек
+             * открывает приложение.
+             *
+             * Чиним двумя правилами. Первое: сериализация уходит с главного потока — `notifyListeners`
+             * потокобезопасен, ему нужна не очередь UI, а сам факт вызова. Второе: шлём не чаще
+             * четверти секунды, и всегда ПОСЛЕДНИЙ снимок — экран не успевает показать больше, а
+             * промежуточные состояния никому не нужны: снимок это «как сейчас», а не журнал. */
             unsubscribe = engine.subscribe { json ->
-                val data = JSObject().put("json", json)
-                activity?.runOnUiThread { notifyListeners("snapshot", data) }
+                последнийСнимокДляЭкрана.set(json)
+                отправитьСнимокЭкрану()
             }
             // Разрешения уже выданы — цепляем провайдер сразу, движок переподнимет сохранённые сенсор/помпу
             // из БД (без ожидания скана). Нет — отложим до первого скана, чтобы не спамить запросом на старте.
@@ -302,6 +314,27 @@ class SugarLifeBridgePlugin : Plugin() {
         }
         reportScanReadiness()
         watchSystemState()
+    }
+
+    /** Последний снимок, который ещё не доехал до экрана. Промежуточные затираются: нужен свежий. */
+    private val последнийСнимокДляЭкрана = java.util.concurrent.atomic.AtomicReference<String?>(null)
+    private val отправкаЗапланирована = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val отправщикСнимков = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r ->
+        Thread(r, "sl-snapshot-ui").apply { isDaemon = true }
+    }
+
+    /** Не чаще, чем экран успевает перерисоваться. Четверть секунды — шаг, незаметный человеку. */
+    private val ПАУЗА_СНИМКОВ_МС = 250L
+
+    private fun отправитьСнимокЭкрану() {
+        if (!отправкаЗапланирована.compareAndSet(false, true)) return
+        отправщикСнимков.schedule({
+            отправкаЗапланирована.set(false)
+            val json = последнийСнимокДляЭкрана.getAndSet(null) ?: return@schedule
+            /* Сериализация тяжёлая — и потому здесь, на своём потоке, а не на главном. */
+            runCatching { notifyListeners("snapshot", JSObject().put("json", json)) }
+                .onFailure { Log.w(TAG, "снимок не доехал до экрана: $it") }
+        }, ПАУЗА_СНИМКОВ_МС, java.util.concurrent.TimeUnit.MILLISECONDS)
     }
 
     /**
