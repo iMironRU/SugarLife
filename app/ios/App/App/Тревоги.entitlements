@@ -12,6 +12,11 @@
 
 	     Этот файл — умолчание для всех сборок: право бесплатное, личная команда его выдаёт.
 	     Платная группа (App.entitlements) остаётся отдельной и по просьбе. -->
+	<!-- Общая полка с виджетом (#542): какой бы файл прав ни выбрали, виджет должен видеть данные. -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)ru.imiron.sugarlife.общее</string>
+	</array>
 	<key>com.apple.developer.usernotifications.time-sensitive</key>
 	<true/>
 </dict>

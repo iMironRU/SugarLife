@@ -12,6 +12,11 @@
 	     и это не наша прихоть, а правило подписи Apple. -->
 	<!-- Срочные уведомления — то же право, что в Тревоги.entitlements: файл прав у сборки один,
 	     и выбрав платный (ради петли), нельзя потерять бесплатное право тревог. -->
+	<!-- Общая полка с виджетом (#542): какой бы файл прав ни выбрали, виджет должен видеть данные. -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)ru.imiron.sugarlife.общее</string>
+	</array>
 	<key>com.apple.developer.usernotifications.time-sensitive</key>
 	<true/>
 	<key>com.apple.security.application-groups</key>

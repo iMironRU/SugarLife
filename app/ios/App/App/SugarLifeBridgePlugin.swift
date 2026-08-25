@@ -2,6 +2,7 @@ import Foundation
 import Capacitor
 import CoreBluetooth
 import UIKit
+import WidgetKit
 import SugarLifeKit
 
 /// Нативная сторона моста: держит KMP-движок (SugarLifeEngine) + реальные драйверы через колбэк-мосты
@@ -775,6 +776,10 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
                        человек и так смотрит на экран, — то есть когда баннер не нужен. */
                     self?.последнийСнимок = json
                     if #available(iOS 16.2, *) { _ = self?.обновитьЖивойБаннер(json) }
+                    /* Виджет на рабочем столе — ОТДЕЛЬНОЙ дорогой, а не внутри баннера (#542).
+                       Баннер человек может выключить, виджет при этом остаётся на экране: одна
+                       общая ветка означала бы, что выключенный баннер молча гасит и виджет. */
+                    if #available(iOS 16.0, *) { self?.обновитьВиджет(json) }
                     /* Тревоги показываем ОТСЮДА же и по той же причине, что баннер (#482): ночью и в
                        кармане webview усыплён, а этот код живёт, пока живёт приложение. */
                     Тревоги.общие.приСнимке(json)
@@ -812,6 +817,53 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
        xDrip показывает свежее. Помним, что отдали, и отдаём заново, только когда правда изменилось. */
     private var показанноеПоказаниеМс: Double = 0
     private var показанноеСтарое = false
+
+    /* ЧТО ПОКАЗАНО НА ВИДЖЕТЕ. Своя отметка, отдельно от баннерной: поверхности живут независимо,
+       и общая память означала бы, что выключенный баннер лишает виджет обновлений. */
+    private var показанноеВВиджете: Double = 0
+
+    /**
+     Снимок движка — на рабочий стол (#542).
+
+     Виджет читает общую запись сам, когда система решит его перерисовать; наше дело — положить
+     свежее и сказать системе, что оно появилось. Просить перерисовку на каждый снимок нельзя:
+     их несколько в минуту, а бюджет обновлений виджета система считает и урезает.
+     */
+    @available(iOS 16.0, *)
+    private func обновитьВиджет(_ json: String?) {
+        guard let json, let data = json.data(using: .utf8),
+              let корень = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let monitor = корень["monitor"] as? [String: Any] else { return }
+        let значение = (monitor["glucose"] as? String) ?? ""
+        guard !значение.isEmpty, значение != "—" else { return }
+        let когдаМс = (monitor["latestAtMs"] as? Double) ?? Date().timeIntervalSince1970 * 1000
+        if когдаМс == показанноеВВиджете { return }
+        показанноеВВиджете = когдаМс
+
+        let mmol = monitor["glucoseMmol"] as? Double
+        /* Ряд берём тот же, что у баннера: одна история на все поверхности — иначе график на
+           рабочем столе и на экране блокировки нарисуют разные три часа. */
+        let ряд: [СахарАтрибуты.ContentState.Точка]
+        if let mmol, mmol > 0 {
+            ряд = ИсторияСахара.добавить(значение: mmol, когдаМс: когдаМс)
+        } else {
+            ряд = ИсторияСахара.ряд()
+        }
+        let число = String(значение.split(separator: " ").first ?? "")
+            .replacingOccurrences(of: ".", with: ",")
+
+        ОбщаяЗапись.записать(ОбщаяЗапись.Снимок(
+            значение: число.isEmpty ? значение : число,
+            стрелка: стрелкаТренда(monitor["trend"] as? String),
+            разница: дельта(ряд),
+            mmol: mmol,
+            зона: зонаСахара(mmol),
+            инсулин: инсулинСтрокой(),
+            когдаМс: когдаМс,
+            ряд: ряд.map { .init(т: $0.т.timeIntervalSince1970, в: $0.в) }
+        ))
+        WidgetCenter.shared.reloadTimelines(ofKind: "ru.imiron.sugarlife.виджет")
+    }
 
     /* Из снимка — в состояние баннера.
 
