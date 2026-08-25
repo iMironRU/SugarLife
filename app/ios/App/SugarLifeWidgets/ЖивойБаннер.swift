@@ -371,18 +371,58 @@ struct БольшойБаннер: View {
 struct КомпактныйБаннер: View {
     let состояние: СахарАтрибуты.ContentState
 
+    /* ЭТО ВИД ДЛЯ МАШИНЫ, А НЕ УМЕНЬШЕННЫЙ БАННЕР (замечание владельца: «в машине баннер так себе,
+       всё самое важное уехало за экран»).
+
+       Мы складывали сюда всё то же, что на экран блокировки, только теснее: число, времена, график и
+       инсулин в три яруса. На приборной панели места по высоте почти нет, и нижний ярус вместе с
+       левым краем числа уезжал за границу — оставалась «,4 →» и обрезанный инсулин.
+
+       За рулём смотрят полсекунды и на одно: сколько сейчас и куда идёт. Поэтому одна строка, и в
+       ней по убыванию важности — число, направление, возраст. График убран намеренно: на полоске
+       высотой в палец он превращается в кривую без масштаба, а место отнимает у числа.
+
+       ВОЗРАСТ ОСТАЁТСЯ ВСЕГДА. Число без возраста в машине опаснее всего: человек видит его боковым
+       зрением и не проверяет, а решение по нему может принять на ближайшем светофоре. */
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .center, spacing: 12) {
-                Показание(состояние: состояние, кегль: 34)
-                Spacer(minLength: 6)
-                ПараВремён(состояние: состояние, размер: 13)
+        let вид = Вид(состояние)
+        HStack(alignment: .center, spacing: 10) {
+            if состояние.разрыв {
+                Image(systemName: "wifi.slash")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Цвета.разрыв)
+                Text("нет связи")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(Цвета.разрыв)
+                    .lineLimit(1)
+            } else {
+                Text(состояние.значение)
+                    .font(.system(size: 34, weight: .light, design: .rounded))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .foregroundStyle(вид.число)
+                if !состояние.стрелка.isEmpty && !состояние.старое {
+                    Text(состояние.стрелка)
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(вид.число)
+                }
             }
-            ГрафикСахара(состояние: состояние, подписи: false)
-                .frame(height: 34)
-            ИнсулинНаБорту(текст: состояние.инсулин, размер: 12)
+
+            Spacer(minLength: 4)
+
+            HStack(spacing: 5) {
+                Image(systemName: "clock").font(.system(size: 12))
+                Text(состояние.когда, style: .timer)
+                    .monospacedDigit()
+                    .frame(maxWidth: 54, alignment: .trailing)
+            }
+            .font(.system(size: 13, design: .rounded))
+            .foregroundStyle(состояние.старое || состояние.разрыв ? Цвета.устарело : Цвета.тускло)
+            .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 2)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }
 
