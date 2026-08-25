@@ -7,7 +7,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        /* НА КАКОМ ЯЗЫКЕ ГОВОРЯТ СИСТЕМНЫЕ ЧАСТИ (#534).
+
+           Меню «Скопировать / Вставить» над текстом, кнопки системных запросов, «Отменить» в
+           диалогах рисует UIKit, и язык он берёт не из телефона, а из списка локализаций самого
+           приложения. Список короткий и меняется редко — зато когда над русским текстом внезапно
+           всплывает «Copy · Paste», без этой строки в логе остаётся только гадать. */
+        NSLog("SugarLife: язык интерфейса — \(Bundle.main.preferredLocalizations.joined(separator: ", "))")
         return true
     }
 
