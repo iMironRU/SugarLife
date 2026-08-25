@@ -13,6 +13,11 @@
 	<!-- Срочные уведомления — то же право, что в Тревоги.entitlements: файл прав у сборки один,
 	     и выбрав платный (ради петли), нельзя потерять бесплатное право тревог. -->
 	<!-- Общая полка с виджетом (#542): какой бы файл прав ни выбрали, виджет должен видеть данные. -->
+	<!-- Чтение «Здоровья» (#557): какой бы файл прав ни выбрали, вес и давление должны читаться. -->
+	<key>com.apple.developer.healthkit</key>
+	<true/>
+	<key>com.apple.developer.healthkit.access</key>
+	<array/>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)ru.imiron.sugarlife.общее</string>

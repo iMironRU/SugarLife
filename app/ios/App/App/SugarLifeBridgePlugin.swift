@@ -596,6 +596,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setGlucoseBadge", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "reportActiveInsulin", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setStatusNote", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "healthRead", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "permissions", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestPermission", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "openPermissionSettings", returnType: CAPPluginReturnPromise),

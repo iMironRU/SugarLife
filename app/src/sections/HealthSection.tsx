@@ -10,6 +10,7 @@ import { useRef, useState } from 'react';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
 import Sheet from '@/ui/Sheet';
+import { взятьИзЗдоровья, здоровьеТелефонаВозможно } from '@/platform/здоровьеТелефона';
 import NumberStepper from '@/ui/NumberStepper';
 import {
   useHealth, записатьЗдоровье, отметитьПроверку, забытьПроверку, type Здоровье,
@@ -39,6 +40,30 @@ const сегодняЛи = (t: number | null | undefined) =>
 const вводДаты = (t: number) => new Date(t - new Date(t).getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 
 export default function HealthSection({ onClose }: { onClose: () => void }) {
+  /* «Взять из Здоровья» — вместо того, чтобы просить ввести заново (#557). Кнопка появляется только
+     там, где есть что брать: на Android и в браузере этих данных нет, и предлагать их значило бы
+     обещать несуществующее. */
+  const [берём, setБерём] = useState(false);
+  const [итогЗдоровья, setИтогЗдоровья] = useState<string | null>(null);
+
+  const изЗдоровья = async () => {
+    setБерём(true);
+    const о = await взятьИзЗдоровья();
+    setБерём(false);
+    if (!о || (!о.вес && !о.давление)) {
+      /* Пусто — это либо «не дали читать», либо «там ничего нет», и различить их нельзя: Apple
+         намеренно не говорит о запрете, чтобы по нему нельзя было догадаться о диагнозе. Так и
+         пишем, вместо того чтобы изображать поломку. */
+      setИтогЗдоровья('В «Здоровье» пусто или доступ не выдан — можно ввести руками');
+      return;
+    }
+    записатьЗдоровье({
+      ...(о.вес ? { вес: { значение: о.вес.значение, когда: о.вес.когда } } : {}),
+      ...(о.давление ? { давление: о.давление } : {}),
+    });
+    setИтогЗдоровья(null);
+  };
+
   const h = useHealth();
   const [что, setЧто] = useState<'вес' | 'hba1c' | 'давление' | 'подъём' | 'отбой' | null>(null);
   const [проверка, setПроверка] = useState<string | null>(null);
@@ -57,6 +82,17 @@ export default function HealthSection({ onClose }: { onClose: () => void }) {
         Это то, что приложение не видит само: вес, давление, анализы и даты обследований.
         Отсюда они попадут в отчёт к приёму — и здесь же видно, чему вышел срок.
       </div>
+
+      {/* «Взять из Здоровья» — над списком, а не внутри: это действие, а не показатель, и стоять
+          оно должно там, где человек ещё не начал вводить руками (#557). */}
+      {здоровьеТелефонаВозможно() && (
+        <>
+          <button className="changed-btn is-undo во-всю" disabled={берём} onClick={() => void изЗдоровья()}>
+            {берём ? 'Смотрю в «Здоровье»…' : 'Взять вес и давление из «Здоровья»'}
+          </button>
+          {итогЗдоровья && <div className="metric-note">{итогЗдоровья}</div>}
+        </>
+      )}
 
       <div className="section-label sec">Мои показатели</div>
       <div className="list">

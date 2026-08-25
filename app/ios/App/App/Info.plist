@@ -117,6 +117,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Чтобы не спрашивать вес и давление заново — их уже записали ваши весы, тонометр или часы. Мы только читаем эти два показателя и ничего не записываем.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Чтобы прочитать код сенсора с коробки — вводить восемь символов руками легко с ошибкой</string>
 </dict>
