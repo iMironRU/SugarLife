@@ -8,7 +8,7 @@ import { useМодели } from '@/показ/модели';
 import HoldButton from '@/ui/HoldButton';
 import Section from '@/ui/Section';
 import {
-  LOOP_MODES, limitsFor, outOfRec, anyOutOfRec, fmtLimit,
+  LOOP_MODES, limitsFor, outOfRec, anyOutOfRec, fmtLimit, уровеньРиска, сторонаРиска,
   useLoopProfile, saveLoopProfile, type LoopModeId, type LoopLimit,
 } from '@/settings/loopProfile';
 
@@ -37,6 +37,9 @@ const ОПИСАНИЕ_ШАГА = [
 ];
 
 type Check = { ok: 'yes' | 'no' | 'maybe'; name: string; note: string };
+
+/** Уровень риска классом: «норма» — без класса, иначе цвет числа задаёт CSS (loop.css). */
+const классРиска = (у: ReturnType<typeof уровеньРиска>) => (у === 'норма' ? '' : у);
 
 export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
   const profile = useLoopProfile();
@@ -192,6 +195,12 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
                 {limits.map((l) => {
                   const v = profile.values[l.id];
                   const warn = outOfRec(l, v);
+                  /* Цвет числа — по тому, насколько ушли в рискованную сторону, и рискованная
+                     сторона у каждого предела своя. Кнопки при этом НЕ заливаем: нажатие само по
+                     себе ничем не грозит, опасно то, где число окажется. Красная заливка 62×62 в
+                     ночной шторке — фонарь в глаза; хватает тонкого контура и цвета знака. */
+                  const риск = уровеньРиска(l, v);
+                  const хуже = сторонаРиска(l);
                   const open = editing === l.id;
                   // на пределах кнопки гаснут и объясняют, что это предел приложения
                   const atMin = v <= l.min + 1e-9;
@@ -213,12 +222,14 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
                         <>
                           <div className="wz-why">{l.why}</div>
                           <div className="wz-stepper">
-                            <button className={atMin ? 'off' : ''} disabled={atMin} onClick={() => bump(l, -l.step)} aria-label="Меньше">−</button>
+                            <button className={(atMin ? 'off' : '') + (хуже === -1 ? ' хуже' : '')}
+                              disabled={atMin} onClick={() => bump(l, -l.step)} aria-label="Меньше">−</button>
                             <span className="wz-big">
-                              <b className={warn ? 'warn' : ''}>{fmtLimit(l, v)}</b>
+                              <b className={классРиска(риск)}>{fmtLimit(l, v)}</b>
                               <i>{l.unit} · шаг {num(l.step)}</i>
                             </span>
-                            <button className={atMax ? 'off' : ''} disabled={atMax} onClick={() => bump(l, l.step)} aria-label="Больше">+</button>
+                            <button className={(atMax ? 'off' : '') + (хуже === 1 ? ' хуже' : '')}
+                              disabled={atMax} onClick={() => bump(l, l.step)} aria-label="Больше">+</button>
                           </div>
                           <div className="wz-impact"><b>Станет так:</b> {l.impact(v)}</div>
 
@@ -247,7 +258,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
                       ) : (
                         <>
                           <span className="wz-big collapsed">
-                            <b className={warn ? 'warn' : ''}>{fmtLimit(l, v)}</b><i>{l.unit}</i>
+                            <b className={классРиска(риск)}>{fmtLimit(l, v)}</b><i>{l.unit}</i>
                           </span>
                           <div className="wz-why">{l.why}</div>
                           <div className="wz-why2">{l.why2}</div>
@@ -285,7 +296,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
                   {limits.map((l) => (
                     <div key={l.id} className="wz-srow">
                       <span>{l.name}</span>
-                      <b className={outOfRec(l, profile.values[l.id]) ? 'warn' : ''}>
+                      <b className={классРиска(уровеньРиска(l, profile.values[l.id]))}>
                         {fmtLimit(l, profile.values[l.id])} {l.unit}
                       </b>
                     </div>
