@@ -335,7 +335,18 @@ export interface Problem {
 export interface Alert { level: 'info' | 'warn' | 'critical'; text: string; problem?: Problem | null }
 
 // rev ≥ 1.4: состояние логирования (раздел «Настройки логирования»)
-export interface LoggingState { level: 'Trace' | 'Debug' | 'Info' | 'Warn' | 'Error'; capturingFile: boolean; capturingRaw: boolean; retentionHours: number }
+export interface LoggingState {
+  level: 'Trace' | 'Debug' | 'Info' | 'Warn' | 'Error';
+  capturingFile: boolean; capturingRaw: boolean; retentionHours: number;
+  /* Анонимный номер установки (rev ≥ 1.30, SugarLifeCore#31).
+
+     По нему склеиваются отчёты одного человека: без него каждое сообщение о проблеме приходит как
+     от нового, и «у меня опять то же самое» проверить нечем. Личного в нём ничего нет — он
+     рождается на устройстве и живёт до переустановки.
+
+     Показываем рядом с диагностикой и кладём в отчёт: человек должен видеть, что именно уходит. */
+  installId?: string | null;
+}
 
 /* Журнал обмена по ПРИБОРАМ (rev ≥ 1.25, SugarLifeCore#72).
 
@@ -531,6 +542,68 @@ export interface HardwareView {
   progress?: string | null;
 }
 
+/* КУДА МЫ ПИШЕМ — ОТДЕЛЬНО ОТ ТОГО, ОТКУДА ЧИТАЕМ (rev ≥ 1.38, SugarLifeCore#127).
+
+   Nightscout бывает и источником, и приёмником, и это два разных вопроса. Как источник он давно
+   виден на экране (это устройство), а как приёмник был невидим совсем: доезжают ли записи, сколько
+   их в очереди, когда ушла последняя — узнать было неоткуда. Человек считает, что данные в облаке,
+   потому что «приложение же работает».
+
+   `uploadEveryMin` — как часто выгружаем сахар. Ноль означает «каждое показание», и это законный
+   выбор: поминутная запись за восемь месяцев дала владельцу 900 тысяч записей и подвела базу к
+   лимиту. Мы называем цену, а не решаем за человека. */
+export interface ConnectorView {
+  id: string;
+  displayName: string;
+  /** Направления обмена по потокам: что читаем, что пишем. */
+  enabled?: Record<string, unknown>;
+  connection?: string;
+  /** Сколько записей ждёт отправки. Растущая очередь — это «не доезжает». */
+  outboxPending?: number;
+  /** Последняя ошибка доставки. null — доезжает. */
+  outboxLastError?: string | null;
+  lastSentAtMs?: number | null;
+  uploadEveryMin?: number;
+}
+
+/* СКОЛЬКО ИНСУЛИНА ОСТАЛОСЬ И ХВАТИТ ЛИ ДО УТРА (rev ≥ 1.36, SugarLifeCore#121).
+
+   Считает движок: он знает и остаток, и скорость расхода, и ночной базал. Слова тоже его
+   (`words`) — по тому же правилу, что у тревог: одна формулировка на обе платформы, и придумывать
+   свою нам нечем, потому что расчёта мы не видели. */
+export interface InsulinLeftView {
+  units: number;
+  perHour?: number | null;
+  runsOutAtMs?: number | null;
+  /** null — сказать нечего: не хватило истории расхода. Не «да» и не «нет». */
+  enoughUntilMorning?: boolean | null;
+  words: string;
+}
+
+/* ПРОФИЛЬ ТЕРАПИИ ИЗ ОБЛАКА (rev ≥ 1.43, SugarLife#528).
+
+   Базал, углеводный коэффициент, чувствительность и цели — то, по чему считается доза. До сих пор
+   их доставал наш веб-слой из Nightscout: последний кусок второго источника.
+
+   Отрезками, а не одним числом на всё: коэффициенты у человека разные по времени суток, и «КУ = 10»
+   без времени — это среднее по больнице. `fromMin` — минуты от полуночи в зоне профиля
+   (`timezone`), а не в зоне телефона: в поездке это разные вещи, и править человек стал бы не тот
+   интервал. */
+export interface ProfileSegmentView { fromMin: number; value: number }
+
+export interface TherapyProfileView {
+  name: string;
+  basal?: ProfileSegmentView[];
+  carbRatio?: ProfileSegmentView[];
+  sensitivity?: ProfileSegmentView[];
+  targetLow?: ProfileSegmentView[];
+  targetHigh?: ProfileSegmentView[];
+  diaHours?: number | null;
+  units?: string | null;
+  timezone?: string | null;
+  updatedAtMs?: number | null;
+}
+
 export interface UiSnapshot {
   bridgeRevision: string;
   coreCommit?: string; // штамп коммита ядра — сверка идентичности сборок Android/iOS
@@ -540,6 +613,14 @@ export interface UiSnapshot {
      тогда считаем 'lite', потому что издание без управления безопаснее в любом сомнении. */
   edition?: 'lite' | 'pro';
   monitor: Monitor;
+  /* Приёмники (rev ≥ 1.38). Отсутствуют — старое ядро или шим: тогда раздела доставки нет вовсе,
+     потому что сказать о ней нечего, а пустой блок читается как «ничего не уходит». */
+  connectors?: ConnectorView[];
+  /* Остаток инсулина с прогнозом (rev ≥ 1.36). Отсутствует — движок не считал: показывать нечего. */
+  insulinLeft?: InsulinLeftView | null;
+  /* Профиль терапии из облака (rev ≥ 1.43). Отсутствует — движок его ещё не прочитал: тогда
+     остаётся прежний путь через веб-слой. */
+  therapyProfile?: TherapyProfileView | null;
   devices: DeviceView[];
   insights: Insights | null;
   pendingWrites: PendingWrite[];
@@ -931,6 +1012,13 @@ export type Intent =
      через минуту после укола. Признак `long` отделяет длинный от короткого — они и
      считаются, и показываются по-разному. */
   | { type: 'logInsulin'; id: string; atMs: number; units: number; long?: boolean; note?: string | null }
+  /* ЗАМЕР ГЛЮКОМЕТРОМ (rev ≥ 1.12). Вторая ступень калибровки: сенсор считает по своей модели,
+     а поправку по капле крови вводит человек. Про неё написана статья в вики, движок её принимает —
+     а ввести число до сих пор было негде, и половина калибровочной истории не достраивалась.
+
+     `note` — зачем мерили («калибровка», «низкий», «высокий»): для статистики диапазона такие замеры
+     считать нельзя (они редки и делаются в особые моменты), и по этой пометке движок их отделяет. */
+  | { type: 'logGlucose'; id: string; atMs: number; mmol: number; note?: string | null }
   | { type: 'recordDevice'; kind: 'sensor' | 'pump' | 'bridge' | 'meter'; driverType?: string | null; params?: Record<string, string> }
   /* «ПОНЯЛ» ПО ТРЕВОГЕ (rev ≥ 1.29, SugarLife#482).
 
