@@ -790,6 +790,12 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             Тревоги.общие.отправить = { [weak self] json in
                 self?.engine?.sendIntent(json: json) ?? ""
             }
+            /* Сеть вернулась — будим облако движка немедленно, не досиживая его паузу (#544). */
+            Сеть.общая.сообщить = { [weak self] json in
+                self?.engineQueue.async { _ = self?.engine?.sendIntent(json: json) }
+            }
+            Сеть.общая.слушать()
+
             /* Куда вести из уведомления — решают тревоги (они знают, о чём событие), а доставляем
                цель мы: событие уходит в веб, а если слушать ещё некому — ждёт своей очереди. */
             Тревоги.общие.повестиВ = { [weak self] цель in

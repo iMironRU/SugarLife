@@ -280,8 +280,39 @@ class SugarLifeBridgePlugin : Plugin() {
         call.resolve(JSObject().put("цель", ЦельПерехода.забрать()))
     }
 
+    /* СЕТЬ ВЕРНУЛАСЬ — СКАЗАТЬ ДВИЖКУ СРАЗУ (#544, мост 1.42).
+
+       Облачные потоки движка переподключаются сами, с нарастающей паузой до минуты. Пауза бережёт
+       недоступный сервер, но после возвращения Wi-Fi мы досиживаем её впустую: ночью это стоит
+       пропущенных показаний, а за ними — тревоги о молчании, которой не должно было быть.
+
+       Слушаем только переход «не было → есть»: `onAvailable` система шлёт и при смене сети, а
+       будить движок на каждое переключение Wi-Fi↔LTE незачем. Интент идемпотентен — поток жив,
+       значит ничего не случится, — поэтому лишний раз безвреден, а вот молчание стоит дорого. */
+    private var сетьБыла = true
+    private var подпискаНаСеть: android.net.ConnectivityManager.NetworkCallback? = null
+
+    private fun слушатьСеть() {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE)
+            as? android.net.ConnectivityManager ?: return
+        val обратно = object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: android.net.Network) {
+                if (сетьБыла) return
+                сетьБыла = true
+                Log.i(TAG, "сеть вернулась — будим облако")
+                deviceEvents.execute { engine.sendIntent(СЕТЬ_ВЕРНУЛАСЬ) }
+            }
+
+            override fun onLost(network: android.net.Network) { сетьБыла = false }
+        }
+        runCatching { cm.registerDefaultNetworkCallback(обратно) }
+            .onSuccess { подпискаНаСеть = обратно }
+            .onFailure { Log.w(TAG, "не удалось следить за сетью: " + it.message) }
+    }
+
     override fun load() {
         Log.i(TAG, "load: attach to engine")
+        слушатьСеть()
         ЦельПерехода.слушатель = { цель ->
             runCatching { notifyListeners("цель", JSObject().put("цель", цель)) }
                 .onFailure { Log.w(TAG, "цель перехода не доехала: ${it.message}") }
@@ -769,6 +800,7 @@ class SugarLifeBridgePlugin : Plugin() {
         private const val TAG = "SugarLifeBridge"
         private const val НАСТРОЙКИ_ДОСТУПА = "sugarlife-доступ"
         private const val КЛЮЧ_СПРАШИВАЛИ = "ble-perm-asked"
+        private const val СЕТЬ_ВЕРНУЛАСЬ = "{\"type\":\"networkBack\"}"
     }
 }
 
