@@ -22,7 +22,7 @@ import type { ReactNode } from 'react';
    браузеру и читалке экрана; right — своё содержимое справа вместо шеврона там,
    где строка не ведёт дальше, а показывает состояние (галочка выбранного,
    переключатель настройки). */
-export default function Row({ icon, title, sub, value, valueMuted, chevron = true, onClick, href, right, disabled, titleMuted, oneLine, className }: {
+export default function Row({ icon, title, sub, value, valueMuted, chevron = true, onClick, href, right, disabled, titleMuted, oneLine, className, бейдж }: {
   icon?: string;
   title: ReactNode;
   sub?: ReactNode;
@@ -39,6 +39,12 @@ export default function Row({ icon, title, sub, value, valueMuted, chevron = tru
   /** длинный текст (адрес сайта) — в одну строку с многоточием вместо переноса */
   oneLine?: boolean;
   className?: string;
+  /* СКОЛЬКО ЗДЕСЬ КРАСНОГО (#523). Цифра отвечает на «где искать беду»: без неё список выглядит
+     одинаково спокойным и когда всё в порядке, и когда ночью нас не услышат.
+
+     Ноль сюда не передают — отсутствие значка и есть «всё в порядке»; «0» в кружке читается как
+     «что-то есть, но ноль» и заставляет открывать раздел зря. */
+  бейдж?: number;
 }) {
   const tcls = 'list-title' + (titleMuted ? ' muted' : '') + (oneLine ? ' one-line' : '');
   const cls = 'list-row' + (className ? ' ' + className : '');
@@ -54,6 +60,7 @@ export default function Row({ icon, title, sub, value, valueMuted, chevron = tru
       ) : (
         <span className={tcls}>{title}</span>
       )}
+      {бейдж != null && бейдж > 0 && <span className="list-бейдж">{бейдж}</span>}
       {value != null && <span className={'list-value' + (valueMuted ? ' muted' : '')}>{value}</span>}
       {right}
       {!right && (onClick || href) && chevron && <Иконка icon={chevronForward} className="list-chev" />}

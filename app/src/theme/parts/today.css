@@ -542,12 +542,27 @@
 }
 .тревога-инсулин { color: #a8b6d9; }
 
-/* Кнопка во всю ширину и ростом под палец: в неё попадают спросонья, не целясь. */
-.тревога-понял {
-  height: 44px; border: 0; border-radius: 14px; cursor: pointer;
+/* Кнопка во всю ширину и ростом под палец: в неё попадают спросонья, не целясь.
+
+   Тревожная кнопка не акцентная намеренно: заливка цветом приложения читалась бы как призыв
+   («нажми меня»), а гасить тревогу — не то, к чему стоит призывать. */
+.тревога-понял.hold-btn {
+  width: 100%; min-height: 46px; border-radius: 14px;
   background: color-mix(in srgb, var(--color-text) 8%, transparent);
-  color: var(--color-text); font-family: inherit; font-size: 0.9375rem; font-weight: 500;
+  color: var(--color-text); font-weight: 500;
 }
-.тревога-понял:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+.тревога-понял.hold-btn .hold-fill {
+  background: color-mix(in srgb, var(--color-text) 16%, transparent);
+}
 /* Пояснение вместо числа — когда тревога не про число («данных нет», «линия не меняется»). */
 .тревога-текст { font-size: 0.9375rem; color: var(--color-neutral-300); max-width: 62%; }
+
+/* Пункт «из чего состоит» — кликабельный, если у него есть подробность (#529). */
+.охрана-пункт-кнопка {
+  flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  background: none; border: 0; padding: 0; margin: 0; text-align: left;
+  font-family: inherit; color: inherit; cursor: pointer;
+}
+.охрана-шеврон-п { font-size: 0.9375rem; color: var(--color-neutral-500); flex: 0 0 auto; }
+/* В шторке текст не обрезается — ради этого её и открывают. Абзацы разделены пустой строкой. */
+.охрана-подробно { white-space: pre-line; line-height: 1.55; color: var(--color-neutral-300); }

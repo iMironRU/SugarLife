@@ -1,3 +1,4 @@
+import { useКрасноеВОхране } from '@/показ/охранаХук';
 import { ОхранаSection, DiagnosticsSection, HealthSection, LoopSection, DataDevicesSection, AboutSection, AppearanceSection } from '@/sections/lazy';
 import {
   optionsOutline, nutritionOutline,
@@ -26,6 +27,7 @@ import CarbUnitsModal from '@/sheets/CarbUnitsModal';
 import Screen from '@/ui/Screen';
 
 export default function Profile() {
+  const красноеВОхране = useКрасноеВОхране();
   const { theme } = useTheme();
   const unit = useUnit();
   const [unitsOpen, setUnitsOpen] = useState(false);
@@ -178,8 +180,13 @@ export default function Profile() {
               onClick={() => push(<HealthSection onClose={pop} />, { id: 'здоровье' })} />
             {/* Охрана — единственный вход в тему «разбудят ли этой ночью» (#473). Пороги,
                 сторож молчания, разрешения и проверочная тревога — всё внутри. */}
+            {/* ЦИФРА ГОВОРИТ, ГДЕ ИСКАТЬ КРАСНОЕ (#523). Без неё человек угадывает, в каком разделе
+                беда: список выглядит одинаково спокойным и когда всё в порядке, и когда ночью нас
+                не услышат. Считает её тот же хук, что рисует сам раздел, — одно число, один
+                источник. */}
             <Row icon={shieldCheckmarkOutline} title="Охрана"
               sub="разбудим ли этой ночью и что этому мешает"
+              бейдж={красноеВОхране || undefined}
               onClick={() => push(<ОхранаSection onClose={pop} />, { id: 'охрана' })} />
             {/* Тревог отдельной строкой здесь БОЛЬШЕ НЕТ (#473): два входа в одну тему
                 заставляли человека гадать, где искать ответ «разбудят ли». Пороги живут
