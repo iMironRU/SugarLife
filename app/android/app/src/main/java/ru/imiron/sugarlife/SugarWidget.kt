@@ -39,6 +39,20 @@ class SugarWidget : AppWidgetProvider() {
         for (id in ids) нарисовать(ctx, менеджер, id)
     }
 
+    /* БУДИЛЬНИК НА МОМЕНТ, КОГДА ЧИСЛУ ВЕРИТЬ НЕЛЬЗЯ (#530).
+
+       Виджет рисует то, что ему положили в последний раз. Пока приложение живо, оно кладёт заново
+       каждые пять минут, и всё честно. Но когда оно замолчало — а замолкает оно ровно тогда, когда
+       пропала связь, — на рабочем столе остаётся яркое число, под которым лаунчер бодро отсчитывает
+       сорок минут. Сам себя виджет перерисовать не может: система разрешает не чаще раза в полчаса.
+
+       Поэтому мы будим себя сами — один раз, на момент устаревания показания. Это дешевле, чем
+       периодические обновления, и попадает точно в ту секунду, когда картинку надо изменить. */
+    override fun onReceive(ctx: Context, намерение: Intent) {
+        super.onReceive(ctx, намерение)
+        if (намерение.action == УСТАРЕЛО) обновитьВсе(ctx)
+    }
+
     companion object {
         private const val TAG = "SugarLifeВиджет"
         private const val НАСТРОЙКИ = "sugarlife-widget"
@@ -64,6 +78,10 @@ class SugarWidget : AppWidgetProvider() {
         private const val ОСЬ_ВЕРХ = 16.0
         /** Больше этого промежутка — не линия, а дыра: две обычные паузы НМГ плюс запас. */
         private const val РАЗРЫВ_МС = 12 * 60 * 1000L
+        /* Через сколько числу перестают верить. Тот же порог, что у живого баннера на айфоне: одно
+           молчание не может называться на двух телефонах разными сроками. */
+        private const val УСТАРЕЛО_МС = 15 * 60 * 1000L
+        private const val УСТАРЕЛО = "ru.imiron.sugarlife.ВИДЖЕТ_УСТАРЕЛ"
 
         private const val ТЕКСТ = 0xFFE9E9ED.toInt()
         private const val ТУСКЛО = 0xFF8B90A3.toInt()
@@ -165,7 +183,7 @@ class SugarWidget : AppWidgetProvider() {
                 в.setImageViewBitmap(R.id.sugar_chart, график(ctx, emptyList(), ширина, узкий))
             } else {
                 val стрелка = стрелкаТренда(н.getString(К_ТРЕНД, "") ?: "")
-                val устарело = System.currentTimeMillis() - когда > 15 * 60 * 1000L
+                val устарело = System.currentTimeMillis() - когда > УСТАРЕЛО_МС
                 в.setTextViewText(R.id.sugar_value, "%.1f".format(сахар).replace('.', ',') + стрелка)
                 /* Устаревшее число гаснет — то же правило, что на баннере айфона: цифра без возраста
                    выглядит текущей всегда, а на рабочем столе на неё смотрят мельком. */
@@ -197,9 +215,18 @@ class SugarWidget : AppWidgetProvider() {
                 } else {
                     в.setViewVisibility(R.id.sugar_next, android.view.View.GONE)
                 }
+                /* У устаревшего показания подпись меняется целиком: «инс. 1,2 ед» рядом с числом
+                   сорокаминутной давности — это не уточнение, а второе устаревшее утверждение.
+                   Слово «данных нет» вместе с возрастом отвечает на единственный вопрос, который
+                   тут остался: почему число не меняется. */
                 val сырое = if (н.getBoolean(К_СЫРОЕ, false)) "сырое" else ""
                 val иоб = н.getString(К_ИНСУЛИН, "") ?: ""
-                в.setTextViewText(R.id.sugar_sub, listOf(сырое, иоб).filter { it.isNotEmpty() }.joinToString(" · "))
+                в.setTextViewText(
+                    R.id.sugar_sub,
+                    if (устарело) "данных нет"
+                    else listOf(сырое, иоб).filter { it.isNotEmpty() }.joinToString(" · "),
+                )
+                if (!устарело) разбудитьКогдаУстареет(ctx, когда + УСТАРЕЛО_МС)
                 в.setImageViewBitmap(
                     R.id.sugar_chart,
                     график(ctx, разобратьРяд(н.getString(К_РЯД, "") ?: ""), ширина, узкий),
@@ -219,6 +246,24 @@ class SugarWidget : AppWidgetProvider() {
             )
             runCatching { менеджер.updateAppWidget(id, в) }
                 .onFailure { Log.w(TAG, "не удалось обновить виджет $id: $it") }
+        }
+
+        /**
+         * Разбудить себя один раз — в момент, когда показание протухнет.
+         *
+         * Неточный будильник намеренно: минута туда-сюда здесь ничего не решает, а точный на Android 12+
+         * требует отдельного разрешения и тратит батарею ради секундной разницы. Заводится заново при
+         * каждой отрисовке со свежим показанием, так что живое приложение просто переносит его вперёд.
+         */
+        private fun разбудитьКогдаУстареет(ctx: Context, когда: Long) {
+            val менеджер = ctx.getSystemService(Context.ALARM_SERVICE) as? android.app.AlarmManager ?: return
+            val намерение = PendingIntent.getBroadcast(
+                ctx, 8,
+                Intent(ctx, SugarWidget::class.java).setAction(УСТАРЕЛО),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            runCatching { менеджер.set(android.app.AlarmManager.RTC, когда + 2000, намерение) }
+                .onFailure { Log.w(TAG, "будильник устаревания не поставлен: $it") }
         }
 
         private fun если(видно: Boolean) =
