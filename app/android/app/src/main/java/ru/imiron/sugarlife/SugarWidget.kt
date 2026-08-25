@@ -112,7 +112,10 @@ class SugarWidget : AppWidgetProvider() {
                 .putBoolean(К_СЫРОЕ, !monitor.optBoolean("glucoseCalibrated", false))
                 .putString(К_ИНСУЛИН, инсулинИз(monitor))
                 .putLong(К_СЛЕДУЮЩЕЕ, monitor.optLong("nextExpectedAtMs", 0L))
-                .putString(К_РЯД, дописатьРяд(ctx, сахар, monitor.optLong("latestAtMs", System.currentTimeMillis())))
+                /* Ряд — от движка, когда он ответил; своя копилка остаётся запасным путём: до
+                   первого ответа и на случай, если истории у него ещё нет (#562). */
+                .putString(К_РЯД, историяИзДвижка(ctx)?.let { собратьРяд(проредить(it)) }
+                    ?: дописатьРяд(ctx, сахар, monitor.optLong("latestAtMs", System.currentTimeMillis())))
                 .apply()
             обновитьВсе(ctx)
         }
@@ -122,6 +125,54 @@ class SugarWidget : AppWidgetProvider() {
             val иоб = monitor.optDouble("confirmedIOB")
             if (иоб.isNaN() || иоб <= 0.05) return ""
             return "инс. " + "%.1f".format(иоб).replace('.', ',') + " ед"
+        }
+
+        /* ИСТОРИЯ ДЛЯ ГРАФИКА — У ДВИЖКА, А НЕ ИЗ СВОЕЙ КОПИЛКИ (#562).
+
+           Виджет копил ряд сам: по точке на снимок, начиная с момента, когда служба работает. Дыры в
+           линии — это не пропажи данных, а часы, когда система нас усыпляла; на айфоне то же самое
+           владелец увидел первым и спросил, не разучились ли мы догружать историю.
+
+           У движка она есть целиком — он тянет её из облака и держит в своей базе. Спрашиваем ЕГО.
+
+           Не чаще раза в пять минут: запрос идёт в базу, а снимки приходят пачками. Пять минут — общий
+           такт внешних поверхностей (docs/поверхности-показа.md).
+
+           Прореживаем сами: `maxPoints` в постоянном хранилище движка означает «последние N», а не
+           «прореди окно» (SugarLifeCore#132), и при минутном такте мы получили бы сорок восемь минут
+           вместо трёх часов. */
+        private var историяВзятаМс = 0L
+
+        fun историяИзДвижка(ctx: Context): List<Pair<Long, Double>>? {
+            val сейчас = System.currentTimeMillis()
+            if (сейчас - историяВзятаМс < 5 * 60 * 1000L) return null
+            историяВзятаМс = сейчас
+            val от = сейчас - ОКНО_МС
+            val запрос = "{\"kind\":\"Glucose\",\"fromMs\":$от,\"toMs\":$сейчас}"
+            val ответ = runCatching { EngineHolder.engine(ctx).query(запрос) }.getOrNull() ?: return null
+            val список = runCatching { JSONObject(ответ).optJSONArray("glucose") }.getOrNull() ?: return null
+            val точки = ArrayList<Pair<Long, Double>>(список.length())
+            for (i in 0 until список.length()) {
+                val т = список.optJSONObject(i) ?: continue
+                val когда = т.optLong("atMs", 0L)
+                val ммоль = т.optDouble("mmol", 0.0)
+                if (когда > 0 && ммоль > 0) точки.add(когда to ммоль)
+            }
+            return точки.takeIf { it.isNotEmpty() }?.sortedBy { it.first }
+        }
+
+        /* Не чаще точки в пять минут: на карточке шириной в ладонь соседние минуты ложатся в один
+           пиксель, а строка в настройках раздувается впятеро. Последняя точка сохраняется всегда —
+           она и есть текущее показание. */
+        private fun проредить(точки: List<Pair<Long, Double>>, шагМс: Long = 5 * 60 * 1000L): List<Pair<Long, Double>> {
+            if (точки.isEmpty()) return точки
+            val итог = ArrayList<Pair<Long, Double>>()
+            for (т in точки) {
+                val прошлая = итог.lastOrNull()
+                if (прошлая == null || т.first - прошлая.first >= шагМс) итог.add(т)
+            }
+            if (итог.lastOrNull()?.first != точки.last().first) итог.add(точки.last())
+            return итог
         }
 
         /**
@@ -140,8 +191,11 @@ class SugarWidget : AppWidgetProvider() {
             /* То же показание приходит несколько раз: снимок эмитится на любое изменение, и без
                этой проверки один момент времени породил бы десяток точек подряд. */
             if (точки.none { kotlin.math.abs(it.first - когда) < 1000 }) точки.add(когда to сахар)
-            return точки.sortedBy { it.first }.joinToString(",") { it.first.toString() + ":" + it.second }
+            return собратьРяд(точки.sortedBy { it.first })
         }
+
+        private fun собратьРяд(точки: List<Pair<Long, Double>>): String =
+            точки.joinToString(",") { it.first.toString() + ":" + it.second }
 
         private fun разобратьРяд(строка: String): List<Pair<Long, Double>> =
             строка.split(',').mapNotNull { пара ->
