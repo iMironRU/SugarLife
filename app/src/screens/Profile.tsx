@@ -1,9 +1,9 @@
 import { useКрасноеВОхране } from '@/показ/охранаХук';
-import { ОхранаSection, DiagnosticsSection, HealthSection, LoopSection, DataDevicesSection, AboutSection, AppearanceSection } from '@/sections/lazy';
+import { ОхранаSection, DiagnosticsSection, HealthSection, LoopSection, DataDevicesSection, AboutSection, AppearanceSection, PermissionsSection } from '@/sections/lazy';
 import {
   optionsOutline, nutritionOutline,
   hardwareChipOutline, repeat, documentTextOutline, heartOutline, informationCircleOutline,
-  colorPaletteOutline, shieldCheckmarkOutline, flashOutline,
+  colorPaletteOutline, shieldCheckmarkOutline, flashOutline, lockClosedOutline,
 } from 'ionicons/icons';
 import { useState, useEffect, useRef } from 'react';
 import { resetLocalData } from '@/settings/reset';
@@ -12,6 +12,8 @@ import { useTheme } from '../theme/useTheme';
 import { APP_EDITION, APP_VERSION, APP_BUILD, isNative } from '@/platform/appUpdate';
 import { useStack } from '@/app/stackCtx';
 import { разделИзАдреса } from '@/platform/deepLink';
+import { прочитатьПрава } from '@/platform/права';
+import { сколькоНеВПорядке, type ПунктНатива } from '@/показ/разрешения';
 import { setTab } from '@/app/nav';
 import { useSnapshot } from '@/sources/bridge';
 import { useHealth } from '@/settings/health';
@@ -30,6 +32,9 @@ export default function Profile() {
   const красноеВОхране = useКрасноеВОхране();
   const { theme } = useTheme();
   const unit = useUnit();
+  /* Список разрешений читаем здесь только ради цифры рядом со строкой: без неё раздел заметит
+     лишь тот, кто уже пошёл его искать, — то есть тот, у кого уже что-то не сработало. */
+  const [права, setПрава] = useState<ПунктНатива[] | null>(null);
   const [unitsOpen, setUnitsOpen] = useState(false);
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
   const carbUnit = useCarbUnit();
@@ -85,6 +90,15 @@ export default function Profile() {
      до сборки не доживает: издания разъезжаются сборкой, а не условием на экране. */
   const [проРазделы, setПроРазделы] = useState<РазделPro[]>([]);
   useEffect(() => { void взятьРазделыPro().then(setПроРазделы); }, []);
+  /* Перечитываем при возвращении на экран: человек мог уйти в настройки телефона и что-то там
+     поменять — цифра, оставшаяся прежней, сказала бы, что это не помогло. */
+  useEffect(() => {
+    const спросить = () => { void прочитатьПрава().then(setПрава); };
+    спросить();
+    const слушатель = () => { if (document.visibilityState === 'visible') спросить(); };
+    document.addEventListener('visibilitychange', слушатель);
+    return () => document.removeEventListener('visibilitychange', слушатель);
+  }, []);
   const устройства = [pumpById(модели.pumpId)?.model, sensorById(модели.sensorId)?.name]
     .filter(Boolean).join(' · ') || 'ничего не записано';
   /* Справа — только то, что требует действия. Строка молчит, пока всё в порядке:
@@ -249,6 +263,24 @@ export default function Profile() {
               value={theme === 'system' ? 'системная' : undefined}
               onClick={() => push(<AppearanceSection onClose={pop} />, { id: 'оформление' })} />
           </div>
+
+          {/* РАЗРЕШЕНИЯ — РЯДОМ С «О ПРИЛОЖЕНИИ», А НЕ В ОФОРМЛЕНИИ (#538).
+
+              Это не настройка вида и не настройка поведения: это инвентарь того, что телефон нам
+              позволил. Сюда идут с вопросом «почему не сработало» — то есть примерно тогда же,
+              когда открывают «О приложении», чтобы посмотреть версию. Цифра рядом показывает, есть
+              ли о чём говорить, — иначе строку заметят только те, кто уже ищет. */}
+          {права !== null && (
+            <>
+              <div className="section-label sec">Доступ</div>
+              <div className="list">
+                <Row icon={lockClosedOutline} title="Разрешения"
+                  sub="что мы просили у телефона и что нам дали"
+                  бейдж={сколькоНеВПорядке(права) || undefined}
+                  onClick={() => push(<PermissionsSection onClose={pop} />, { id: 'разрешения' })} />
+              </div>
+            </>
+          )}
 
           <div className="section-label sec">О приложении</div>
           <div className="list">

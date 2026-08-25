@@ -384,6 +384,126 @@ class SugarLifeBridgePlugin : Plugin() {
         call.resolve(JSObject().put("enabled", on))
     }
 
+    /* ЧТО НАМ РАЗРЕШЕНО — ОДНИМ СПИСКОМ (#538).
+
+       Разрешения Android раскиданы так, что собрать картину невозможно: уведомления в одном месте,
+       Bluetooth в разрешениях приложения, батарея в третьем, показ поверх экрана в четвёртом.
+       Человек узнаёт о запрете не когда его дал, а когда ночью не сработала тревога.
+
+       Список ЧИТАЕТСЯ, а меняется по возможности: часть переключателей держит система, и для них
+       единственное честное действие — открыть нужный экран. Коды пунктов те же, что на iOS, а слова
+       живут в вебе: одно разрешение не может называться на двух телефонах по-разному. Платформенные
+       пункты (батарея, поверх экрана) есть только здесь — придумывать им пару на iOS не станем. */
+    @PluginMethod
+    fun permissions(call: PluginCall) {
+        call.resolve(JSObject().put("список", собратьРазрешения()))
+    }
+
+    @PluginMethod
+    fun requestPermission(call: PluginCall) {
+        when (call.getString("id")) {
+            "уведомления" -> if (Build.VERSION.SDK_INT >= 33) спроситьРазрешение(Manifest.permission.POST_NOTIFICATIONS)
+            "bluetooth" -> requestBlePermissions()
+            "камера" -> спроситьРазрешение(Manifest.permission.CAMERA)
+            else -> {}
+        }
+        /* Отвечаем свежим списком, а не «да/нет»: системный диалог живёт своей жизнью, и к моменту
+           ответа состояние соседних строк тоже могло измениться. Сам ответ человека придёт позже —
+           экран перечитает список, когда вернётся из фона. */
+        call.resolve(JSObject().put("список", собратьРазрешения()))
+    }
+
+    /* У каждого запрета свой экран, и общий «о приложении» для них — не ответ: до исключения из
+       энергосбережения оттуда четыре шага, а до показа поверх экрана человек просто не дойдёт.
+       Ведём точно, а в настройки приложения падаем только когда точного экрана нет. */
+    @PluginMethod
+    fun openPermissionSettings(call: PluginCall) {
+        val ctx = context.applicationContext
+        val адрес = when (call.getString("id")) {
+            "батарея" -> Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                .setData(Uri.parse("package:" + ctx.packageName))
+            "поверх-экрана" ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+                    Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
+                        .setData(Uri.parse("package:" + ctx.packageName))
+                else null
+            else -> null
+        }
+        val открыли = адрес?.let {
+            runCatching { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true }.getOrDefault(false)
+        } ?: открытьСистемныйЭкран("appSettings")
+        call.resolve(JSObject().put("ok", открыли))
+    }
+
+    private fun спроситьРазрешение(имя: String) {
+        if (ContextCompat.checkSelfPermission(context, имя) == PackageManager.PERMISSION_GRANTED) return
+        context.getSharedPreferences(НАСТРОЙКИ_ДОСТУПА, Context.MODE_PRIVATE).edit()
+            .putBoolean(КЛЮЧ_СПРАШИВАЛИ + имя, true).apply()
+        activity?.let { ActivityCompat.requestPermissions(it, arrayOf(имя), 7402) }
+    }
+
+    /**
+     * Состояние одного обычного разрешения.
+     *
+     * «Не спрашивали» и «отказано насовсем» система не различает вовсе: в обоих случаях
+     * `shouldShowRationale` отвечает false. Поэтому факт вопроса помним сами — без него список
+     * предлагал бы «спросить» там, где диалог уже не покажется, и кнопка не делала бы ничего.
+     */
+    private fun состояние(имя: String): Pair<String, Boolean> {
+        if (ContextCompat.checkSelfPermission(context, имя) == PackageManager.PERMISSION_GRANTED) {
+            return "разрешено" to false
+        }
+        val спрашивали = context.getSharedPreferences(НАСТРОЙКИ_ДОСТУПА, Context.MODE_PRIVATE)
+            .getBoolean(КЛЮЧ_СПРАШИВАЛИ + имя, false)
+        if (!спрашивали) return "не спрашивали" to true
+        val покажут = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, имя) } ?: false
+        return "нет" to покажут
+    }
+
+    private fun пункт(id: String, статус: String, спросить: Boolean): JSObject =
+        JSObject().put("id", id).put("статус", статус).put("спросить", спросить)
+
+    private fun собратьРазрешения(): JSONArray {
+        val список = JSONArray()
+        val ctx = context.applicationContext
+
+        /* Уведомления — основание всего остального: без них нет ни тревоги, ни сводки. До Android 13
+           разрешения не существовало, но человек мог выключить канал целиком — спрашиваем менеджера. */
+        if (Build.VERSION.SDK_INT >= 33) {
+            val (с, ещё) = состояние(Manifest.permission.POST_NOTIFICATIONS)
+            список.put(пункт("уведомления", с, ещё))
+        } else {
+            val вкл = androidx.core.app.NotificationManagerCompat.from(ctx).areNotificationsEnabled()
+            список.put(пункт("уведомления", if (вкл) "разрешено" else "нет", false))
+        }
+
+        /* Bluetooth: на облаке не нужен вовсе, с сенсором без него нет ничего. До Android 12 радио
+           требовало геопозиции — это одно и то же разрешение по сути, поэтому и пункт один. */
+        val нужноBle = blePermissions()
+        val естьBle = нужноBle.all { ContextCompat.checkSelfPermission(ctx, it) == PackageManager.PERMISSION_GRANTED }
+        val можноBle = if (естьBle) false else (спроситьМожноЕщёРаз() ?: false)
+        список.put(пункт("bluetooth", if (естьBle) "разрешено" else "нет", можноBle))
+
+        val (кам, камЕщё) = состояние(Manifest.permission.CAMERA)
+        список.put(пункт("камера", кам, камЕщё))
+
+        /* Батарея: без исключения система усыпляет службу, и ночью тревоги приходят с опозданием
+           или не приходят вовсе. Спросить нельзя — только отправить на системный экран. */
+        val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        val батарея = pm.isIgnoringBatteryOptimizations(ctx.packageName)
+        список.put(пункт("батарея", if (батарея) "разрешено" else "нет", false))
+
+        /* Показ поверх экрана: этим тревога разворачивается на заблокированном телефоне, а не лежит
+           строкой в шторке, которую утром смахнут вместе с почтой. */
+        if (Build.VERSION.SDK_INT >= 34) {
+            val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            val можно = runCatching { nm.canUseFullScreenIntent() }.getOrDefault(true)
+            список.put(пункт("поверх-экрана", if (можно) "разрешено" else "нет", false))
+        }
+
+        return список
+    }
+
     @PluginMethod
     fun batteryOptimization(call: PluginCall) {
         val ctx = context.applicationContext

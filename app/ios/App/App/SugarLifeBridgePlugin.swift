@@ -595,6 +595,9 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setGlucoseBadge", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "reportActiveInsulin", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setStatusNote", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "permissions", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "requestPermission", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openPermissionSettings", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "alarmVolume", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setAlarmVolume", returnType: CAPPluginReturnPromise),
     ]
@@ -1114,12 +1117,35 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
     /// Сводка в шторке: показывать ли (Сводка.swift).
     @objc func statusNote(_ call: CAPPluginCall) {
-        call.resolve(["on": Сводка.общая.включена])
+        call.resolve(["on": Сводка.общая.включена, "pop": Сводка.общая.всплывает])
     }
 
     @objc func setStatusNote(_ call: CAPPluginCall) {
-        Сводка.общая.включена = call.getBool("on") ?? false
-        call.resolve(["on": Сводка.общая.включена])
+        if let on = call.getBool("on") { Сводка.общая.включена = on }
+        /* Повадку меняем отдельно от самого переключателя: экран шлёт то, что человек тронул, а не
+           оба значения разом — иначе включение сводки заодно молча сбрасывало бы всплытие. */
+        if let pop = call.getBool("pop") { Сводка.общая.всплывает = pop }
+        call.resolve(["on": Сводка.общая.включена, "pop": Сводка.общая.всплывает])
+    }
+
+    /* ЧТО НАМ РАЗРЕШЕНО — СПИСКОМ (#538). Слова живут в вебе, здесь только коды и состояния:
+       иначе одно и то же разрешение называлось бы по-разному на двух платформах. */
+    @objc func permissions(_ call: CAPPluginCall) {
+        Разрешения.собрать { список in call.resolve(["список": список]) }
+    }
+
+    @objc func requestPermission(_ call: CAPPluginCall) {
+        let id = call.getString("id") ?? ""
+        Разрешения.спросить(id) { _ in
+            /* Отвечаем не «да/нет», а свежим списком: система могла изменить и соседние строки —
+               разрешив уведомления, человек включает заодно экран блокировки и срочные. */
+            Разрешения.собрать { список in call.resolve(["список": список]) }
+        }
+    }
+
+    @objc func openPermissionSettings(_ call: CAPPluginCall) {
+        открытьНастройкиПриложения()
+        call.resolve()
     }
 
     @objc func alarmVolume(_ call: CAPPluginCall) {
