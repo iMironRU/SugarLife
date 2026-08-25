@@ -589,6 +589,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "testAlarm", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "alarmReadiness", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "openAlarmSettings", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "ожидающаяЦель", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "statusNote", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "glucoseBadge", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setGlucoseBadge", returnType: CAPPluginReturnPromise),
@@ -781,6 +782,15 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             Тревоги.общие.отправить = { [weak self] json in
                 self?.engine?.sendIntent(json: json) ?? ""
             }
+            /* Куда вести из уведомления — решают тревоги (они знают, о чём событие), а доставляем
+               цель мы: событие уходит в веб, а если слушать ещё некому — ждёт своей очереди. */
+            Тревоги.общие.повестиВ = { [weak self] цель in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    SugarLifeBridgePlugin.ожидающаяЦельПерехода = цель
+                    self.notifyListeners("цель", data: ["цель": цель])
+                }
+            }
             Тревоги.общие.настроить()
             Тревоги.общие.доложитьОДоставке()
             e.startAsync()
@@ -861,7 +871,11 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             инсулин: инсулинСтрокой(),
             прогноз: nil,
             разрыв: разрыв,
-            последнее: разрыв ? последнееПоказание(число: число, когдаМс: когдаМс) : ""
+            /* ПОСЛЕДНЕЕ ИЗВЕСТНОЕ ОТДАЁМ ВСЕГДА (#530), а не только в разрыве: в разрыв баннер
+               теперь умеет уйти сам, по сроку годности, — и если строки в состоянии нет, показать
+               ему будет нечего. Сочинить её на месте расширение не может: там нет ни форматов, ни
+               единиц. */
+            последнее: последнееПоказание(число: число, когдаМс: когдаМс)
         )
         /* Сводка идёт тем же путём и от того же показания, что баннер: два разных ответа об одном
            числе в один момент — то, чего мы не заводим. Инсулин берём у движка (в фоне веб-слой спит,
@@ -1073,6 +1087,19 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
      Отдаём и список возможных видов: экран не должен держать их копией — иначе новый вид появится в
      нативе, а выбрать его будет негде.
      */
+    /* КУДА ВЕЛИ ЧЕЛОВЕКА, ПОКА ЭКРАНА ЕЩЁ НЕ БЫЛО (#524).
+
+       Приложение могли выгрузить: нажатие на уведомление поднимет его с нуля, и цель придёт раньше,
+       чем веб успеет подписаться. Держим последнюю здесь и отдаём, когда спросят, — иначе теряли бы
+       её ровно в самом важном случае. */
+    private static var ожидающаяЦельПерехода: String?
+
+    @objc func ожидающаяЦель(_ call: CAPPluginCall) {
+        let цель = SugarLifeBridgePlugin.ожидающаяЦельПерехода ?? ""
+        SugarLifeBridgePlugin.ожидающаяЦельПерехода = nil
+        call.resolve(["цель": цель])
+    }
+
     @objc func glucoseBadge(_ call: CAPPluginCall) {
         call.resolve([
             "mode": Значок.общий.вид.rawValue,

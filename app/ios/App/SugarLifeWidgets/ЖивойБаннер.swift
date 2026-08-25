@@ -406,7 +406,7 @@ struct ВыборБаннера: View {
 @available(iOS 16.1, *)
 enum ОстровБаннера {
     static func остров(_ контекст: ActivityViewContext<СахарАтрибуты>) -> DynamicIsland {
-        let с = контекст.state
+        let с = контекст.state.состаренное(контекст.isStale)
         let вид = Вид(с)
         return DynamicIsland {
             DynamicIslandExpandedRegion(.leading) {
@@ -481,7 +481,7 @@ enum ОстровБаннера {
 struct ЖивойБаннерСемейства: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: СахарАтрибуты.self) { контекст in
-            ВыборБаннера(состояние: контекст.state)
+            ВыборБаннера(состояние: контекст.state.состаренное(контекст.isStale))
                 .activityBackgroundTint(Color.black)
                 .activitySystemActionForegroundColor(Цвета.текст)
         } dynamicIsland: { контекст in

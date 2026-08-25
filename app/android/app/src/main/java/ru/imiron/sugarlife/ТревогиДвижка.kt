@@ -127,9 +127,12 @@ object ТревогиДвижка {
             else -> { тихиеКаналы(nm); КАНАЛ_ЗАМЕТКА }
         }
         val (заголовок, текст) = ПравилаПоказа.слова(с.id, с.level, с.mmol, с.words)
+        /* ЦЕЛЬ ПЕРЕХОДА ЕДЕТ В САМОМ УВЕДОМЛЕНИИ (#524): открывать «где остановились» — значит
+           встречать разбуженного человека тем экраном, который он листал вчера вечером. */
+        val куда = Intent(ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)
+            ?: Intent(Intent.ACTION_MAIN)).putExtra(ЦЕЛЬ, ПравилаПоказа.цель(с.id))
         val открыть = PendingIntent.getActivity(
-            ctx, ПравилаПоказа.ключУведомления(с.id),
-            ctx.packageManager.getLaunchIntentForPackage(ctx.packageName) ?: Intent(Intent.ACTION_MAIN),
+            ctx, ПравилаПоказа.ключУведомления(с.id), куда,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val b = NotificationCompat.Builder(ctx, канал)

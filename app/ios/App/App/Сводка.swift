@@ -107,6 +107,8 @@ final class Сводка {
            в шторке через час выглядит текущим. */
         строки.append(старое ? "данные устарели" : "только что")
         к.body = строки.joined(separator: " · ")
+        /* Сводка — про сахар, значит ведёт на «Сегодня» (#524). */
+        к.userInfo = ["цель": "сегодня"]
         к.sound = nil
         if #available(iOS 15.0, *) { к.interruptionLevel = .passive }
 
