@@ -148,7 +148,15 @@ export default function HeroPanel() {
      облачного числа нет ни возраста, ни принадлежности к конкретной помпе, и «37 ед»
      часовой давности выглядят так же, как свежие. */
   const расх = расходка(снимок, { reservoir: dev?.reservoir, pumpBattery: dev?.pumpBattery, at: dev?.at });
-  const reservoir = расх.остаток != null ? Math.round(расх.остаток) + ' ед' : DASH;
+  /* ОСТАТОК — ОТ ДВИЖКА, КОГДА ОН ЕГО СЧИТАЕТ (мост 1.36, SugarLifeCore#121).
+
+     Наш расчёт строился по истории `devicestatus` из веб-слоя: тот же второй источник, что у
+     инсулина и углеводов. У движка он полнее (он видит и подачу, и заправки) и снабжён прогнозом —
+     на его основе он же поднимает тревогу «инсулина не хватит до утра». Показывать при этом два
+     разных остатка — верный способ получить вопрос «какому верить». */
+  const остатокДвижка = снимок?.insulinLeft?.units ?? null;
+  const остаток = остатокДвижка ?? расх.остаток;
+  const reservoir = остаток != null ? Math.round(остаток) + ' ед' : DASH;
   const pumpStatus = shortStatus(dev?.status);
   /* Активный инсулин в круге. Раньше строка просто исчезала, когда цикл молчал, —
      и пустота читалась как «инсулина нет». Теперь она на месте всегда, а неизвестное
@@ -264,7 +272,7 @@ export default function HeroPanel() {
   const sensorDay = status !== 'off' && ages.sensor ? ages.sensor.days + 1 : null;
   const nmgSub = sensorDay != null ? 'датчик' : 'обновлено';
   const nmgVal = sensorDay != null ? 'день ' + sensorDay : fresh;
-  const daysLeft = расх.остаток != null && extras.tdd ? расх.остаток / extras.tdd : null;
+  const daysLeft = остаток != null && extras.tdd ? остаток / extras.tdd : null;
   const resSub2 = daysLeft != null ? '≈ ' + дниЧасы(daysLeft) : 'резервуар';
   // часики на значениях из кеша, пока идёт свежая загрузка (текст не подменяем)
   const staleSensor = extras.stale && sensorDay != null;

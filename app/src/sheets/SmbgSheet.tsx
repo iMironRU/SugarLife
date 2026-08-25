@@ -7,6 +7,7 @@ import { addSmbg, SMBG_REASONS, type Smbg } from '@/settings/smbg';
 import { getUnit, unitLabel } from '@/domain/units';
 import { MGDL_PER_MMOL } from '@/domain/types';
 import Sheet from '@/ui/Sheet';
+import { sendIntent } from '@/sources/bridge';
 
 /* Ввод показания глюкометра.
 
@@ -34,7 +35,32 @@ export default function SmbgSheet({ isOpen, onClose }: { isOpen: boolean; onClos
   const ошибка = текст.trim() !== '' && !годно;
 
   const закрыть = () => { setТекст(''); onClose(); };
-  const сохранить = () => { if (годно && mmol != null) { addSmbg(mmol, reason); закрыть(); } };
+
+  /* ЗАМЕР УХОДИТ ДВИЖКУ, А НЕ ТОЛЬКО К НАМ В ХРАНИЛИЩЕ (#547, SugarLifeCore#127).
+
+     Экран ввода был, движок интент принимал — а не соединял их никто: половина калибровочной
+     истории не достраивалась, и заметно это стало бы ровно тогда, когда человек решит проверить
+     сенсор глюкометром и не увидит поправки.
+
+     `note` — зачем мерили: по этой пометке движок отделяет замеры с пальца от ленты сенсора.
+     Считать их в статистике диапазона нельзя — они редки и делаются в особые моменты, а среднее по
+     ним говорило бы о привычках человека мерить, а не о его сахаре.
+
+     Локальную запись пока оставляем: на неё смотрят экраны сверки «сенсор не врёт». Уберём, когда
+     они переедут на историю движка (там замеры лежат с `kind: Meter`). */
+  const сохранить = () => {
+    if (!годно || mmol == null) return;
+    addSmbg(mmol, reason);
+    const когда = Date.now();
+    void sendIntent({
+      type: 'logGlucose',
+      id: 'smbg-' + когда,
+      atMs: когда,
+      mmol,
+      note: reason ?? null,
+    });
+    закрыть();
+  };
 
   return (
     <Sheet isOpen={isOpen} onClose={закрыть} title="Показание глюкометра" subtitle="С пальца, сейчас">

@@ -117,6 +117,30 @@ export default function DiagnosticsSection({ onClose }: { onClose: () => void })
       {готовность}
       {коды}
 
+      {/* НОМЕР УСТАНОВКИ — ВИДЕН ЧЕЛОВЕКУ, А НЕ ТОЛЬКО НАМ (#547, SugarLifeCore#31).
+
+          По нему склеиваются отчёты одного человека: без него каждое сообщение о проблеме приходит
+          как от нового, и «у меня опять то же самое» проверить нечем. Личного в нём ничего нет — он
+          рождается на устройстве и живёт до переустановки.
+
+          Показываем здесь, а не прячем в отчёте: то, что уходит наружу, человек должен видеть
+          глазами, иначе это не согласие, а умолчание. */}
+      {logging.installId && (
+        <>
+          <div className="section-label sec">Номер установки</div>
+          <div className="list">
+            <div className="list-row">
+              <span className="pick-main">
+                <span className="list-title" style={{ fontFamily: 'ui-monospace, monospace' }}>
+                  {logging.installId}
+                </span>
+                <span className="pick-sub">по нему склеиваются ваши отчёты; личного в нём нет</span>
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+
       <div className="section-label sec">Подробность</div>
       <div className="list">
         {УРОВНИ.map((у) => (
