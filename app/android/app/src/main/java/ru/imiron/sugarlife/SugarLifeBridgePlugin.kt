@@ -286,9 +286,14 @@ class SugarLifeBridgePlugin : Plugin() {
        недоступный сервер, но после возвращения Wi-Fi мы досиживаем её впустую: ночью это стоит
        пропущенных показаний, а за ними — тревоги о молчании, которой не должно было быть.
 
-       Слушаем только переход «не было → есть»: `onAvailable` система шлёт и при смене сети, а
-       будить движок на каждое переключение Wi-Fi↔LTE незачем. Интент идемпотентен — поток жив,
-       значит ничего не случится, — поэтому лишний раз безвреден, а вот молчание стоит дорого. */
+       Слушаем ЛЮБОЕ изменение, а не только возврат (уточнение ядра, SugarLife#549). Повод не один:
+       кроме «разбудить ожидающих» есть второй, важнее. Сеть с белым списком выглядит как обычная —
+       мессенджеры работают, полоски на месте, — но до Nightscout не достучаться; так же выглядят
+       гостиничный портал и выключенный VPN. Отличить «связи нет» от «связь есть, а нас не пускают»
+       движок может только по мнению телефона о сети, и знать его он должен постоянно, а не однажды.
+
+       Интент идемпотентен: поток жив — ничего не произойдёт. Переключения Wi-Fi↔LTE случаются
+       несколько раз в день, так что «часто» здесь всё равно редко. */
     private var сетьБыла = true
     private var подпискаНаСеть: android.net.ConnectivityManager.NetworkCallback? = null
 
@@ -297,9 +302,20 @@ class SugarLifeBridgePlugin : Plugin() {
             as? android.net.ConnectivityManager ?: return
         val обратно = object : android.net.ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: android.net.Network) {
-                if (сетьБыла) return
+                Log.i(TAG, if (сетьБыла) "сеть сменилась — говорим движку, что связь есть"
+                           else "сеть вернулась — будим облако")
                 сетьБыла = true
-                Log.i(TAG, "сеть вернулась — будим облако")
+                deviceEvents.execute { engine.sendIntent(СЕТЬ_ВЕРНУЛАСЬ) }
+            }
+
+            /* Смена возможностей — это и есть «сеть та же, а ходить по ней стало можно или нельзя»:
+               подключился VPN, портал пустил дальше, пропал интернет при живом Wi-Fi. */
+            override fun onCapabilitiesChanged(
+                network: android.net.Network,
+                caps: android.net.NetworkCapabilities,
+            ) {
+                if (!caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)) return
+                сетьБыла = true
                 deviceEvents.execute { engine.sendIntent(СЕТЬ_ВЕРНУЛАСЬ) }
             }
 
