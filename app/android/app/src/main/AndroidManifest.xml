@@ -127,6 +127,9 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <!-- Собственное пробуждение виджета в момент, когда показание протухло (#530):
+                     сам себя чаще раза в полчаса он обновлять не вправе, а погаснуть должен вовремя. -->
+                <action android:name="ru.imiron.sugarlife.ВИДЖЕТ_УСТАРЕЛ" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
