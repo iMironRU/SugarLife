@@ -268,8 +268,26 @@ class SugarLifeBridgePlugin : Plugin() {
             .onFailure { Log.w(TAG, "не удалось подписаться на состояние системы: ${it.message}") }
     }
 
+    /* ПЕРЕХОД ПО УВЕДОМЛЕНИЮ (#524). Webview подписывается сам, но цель может прийти раньше него —
+       тогда она ждёт в ЦельПерехода и уедет наверх, как только появится слушатель. */
+    override fun handleOnNewIntent(intent: Intent) {
+        super.handleOnNewIntent(intent)
+        ЦельПерехода.из(intent)
+    }
+
+    @PluginMethod
+    fun ожидающаяЦель(call: PluginCall) {
+        call.resolve(JSObject().put("цель", ЦельПерехода.забрать()))
+    }
+
     override fun load() {
         Log.i(TAG, "load: attach to engine")
+        ЦельПерехода.слушатель = { цель ->
+            runCatching { notifyListeners("цель", JSObject().put("цель", цель)) }
+                .onFailure { Log.w(TAG, "цель перехода не доехала: ${it.message}") }
+        }
+        /* Холодный старт из уведомления: активность уже создана с намерением, onNewIntent не будет. */
+        ЦельПерехода.из(activity?.intent)
         telemetrySink = { json -> deviceEvents.execute { engine.submitTelemetry(json) } }   // натив→движок телеметрия (issue #38)
         // BLE-слой → ОБЩИЙ журнал (core#72). Раньше эти строки жили только в logcat, то есть не доходили ни
         // до человека, ни до выгрузки диагностики — а именно они решили разбор помпы. deviceId отдаём MAC-ом:

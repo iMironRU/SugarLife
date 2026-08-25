@@ -160,13 +160,16 @@ object Тревоги {
         )
     }
 
-    private fun показать(ctx: Context, заголовок: String, текст: String, id: Int = ID_ГИПО) {
+    private fun показать(ctx: Context, заголовок: String, текст: String, id: Int = ID_ГИПО,
+                         цель: String = "охрана") {
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         канал(nm)
+        /* Проверку тревоги запускают из «Охраны» — туда и возвращаем (#524): человек проверяет
+           настройку и хочет увидеть её же, а не главный экран. */
+        val куда = Intent(ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)
+            ?: Intent(Intent.ACTION_MAIN)).putExtra(ЦЕЛЬ, цель)
         val открыть = PendingIntent.getActivity(
-            ctx, 2,
-            ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)
-                ?: Intent(Intent.ACTION_MAIN),
+            ctx, 2, куда,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val n: Notification = NotificationCompat.Builder(ctx, КАНАЛ)

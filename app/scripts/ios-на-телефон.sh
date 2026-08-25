@@ -22,8 +22,19 @@ echo "2/3 · capacitor sync ios"
 npx cap sync ios
 
 echo "3/3 · сборка и установка"
-УСТР=$(xcrun devicectl list devices 2>/dev/null | awk '/connected/ {print $NF; exit}' || true)
-if [ -z "${УСТР:-}" ]; then
+# ИМЯ ПЕРЕМЕННОЙ ЛАТИНИЦЕЙ — ВЫНУЖДЕННО. bash (в macOS он версии 3.2) не умеет имён переменных вне
+# ASCII: `УСТР=…` он читает как команду и падает с «command not found», а из-за `|| true` в конце
+# строки скрипт при этом заканчивался с нулём — то есть молча ничего не ставил. Остальные слова здесь
+# по-прежнему русские; ограничение касается только имён.
+#
+# Ищем устройство и по «connected», и по «available»: спаренный по Wi-Fi телефон пишется вторым словом,
+# а ставится на него ровно так же.
+# Берём идентификатор по его виду (UUID), а не по номеру колонки: имя телефона у человека из двух
+# слов сдвигает все колонки, и разбор по позиции достаёт из строки слово «iPhone» вместо адреса.
+DEVICE_ID=$(xcrun devicectl list devices 2>/dev/null \
+  | grep -E '(connected|available)' \
+  | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}' | head -1 || true)
+if [ -z "${DEVICE_ID:-}" ]; then
   echo "Телефон не найден. Подключи его кабелем, разблокируй и разреши доверие — потом повтори." >&2
   echo "Либо открой app/ios/App/App.xcworkspace и нажми Run: результат тот же." >&2
   exit 1
@@ -36,22 +47,34 @@ cd ios/App
 # Но бесплатной личной команде Apple это право может не выдать (у Loop так и задокументировано).
 # Тогда не ломаем установку, как когда-то ломала платная группа (#466), а собираем без права и говорим
 # об этом вслух — а в приложении «Охрана» сама покажет «сборка без права на срочные».
-собрать() {
+build_app() {   # имя латиницей — см. про bash 3.2 выше
+
   xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
-    -destination "id=$УСТР" -allowProvisioningUpdates \
+    -destination "id=$DEVICE_ID" -allowProvisioningUpdates \
     ${DEVELOPMENT_TEAM:+DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM"} \
     SL_ENTITLEMENTS="$1" \
     build
 }
-ПРАВА="${SL_ENTITLEMENTS:-App/Тревоги.entitlements}"
-if ! собрать "$ПРАВА"; then
+RIGHTS="${SL_ENTITLEMENTS:-App/Тревоги.entitlements}"
+if ! build_app "$RIGHTS"; then
   echo
-  echo "Подпись с правами ($ПРАВА) не прошла — похоже, команда разработчика их не выдаёт." >&2
+  echo "Подпись с правами ($RIGHTS) не прошла — похоже, команда разработчика их не выдаёт." >&2
   echo "Собираю без прав: тревоги будут работать, но «Не беспокоить» сможет спрятать карточку —" >&2
   echo "добавьте SugarLife в разрешённые приложения фокуса (Настройки → Фокусирование)." >&2
   echo
-  собрать ""
+  build_app ""
 fi
+
+# СОБРАТЬ — ЕЩЁ НЕ ПОСТАВИТЬ. `xcodebuild build` с телефоном в качестве назначения только собирает
+# под его архитектуру; на сам телефон ничего не уезжает. Скрипт при этом бодро заканчивался нулём, и
+# «поставил» отличалось от «собрал» только тем, что на телефоне оставалась вчерашняя сборка — а это
+# ровно тот случай, ради которого скрипт и написан («правка не приехала»).
+echo
+echo "Ставлю на телефон"
+APP_PATH=$(xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
+  -destination "id=$DEVICE_ID" -showBuildSettings 2>/dev/null \
+  | awk -F' = ' '/ BUILT_PRODUCTS_DIR = /{print $2; exit}')
+xcrun devicectl device install app --device "$DEVICE_ID" "$APP_PATH/App.app"
 
 echo
 echo
