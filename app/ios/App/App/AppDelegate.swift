@@ -18,8 +18,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
-        // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
-        // Use this method to pause ongoing tasks, disable timers, and invalidate graphics rendering callbacks. Games should use this method to pause the game.
+        /* ПОСЛЕДНЯЯ СЕКУНДА, КОГДА БАННЕР ЕЩЁ МОЖНО ПОДНЯТЬ (#559).
+
+           Дальше приложение уходит в фон, и система перестаёт разрешать запуск живых уведомлений —
+           «Target is not foreground». Если баннера сейчас нет, следующие часы человек проведёт без
+           него, а узнает об этом ночью. */
+        if #available(iOS 16.2, *) { SugarLifeBridgePlugin.общий?.оживитьБаннер("уходим в фон") }
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
@@ -32,6 +36,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
            событий не получает (#544). Человек смотрит на экран и ждёт свежего числа — худший момент
            досиживать минутную паузу движка. Интент идемпотентен: лишний раз безвреден. */
         Сеть.общая.приВозвращении()
+        /* Баннер мог закрыться, пока приложение спало, а поднять его из фона нельзя (#559). Сейчас
+           мы активны — момент подходящий. */
+        if #available(iOS 16.2, *) { SugarLifeBridgePlugin.общий?.оживитьБаннер("вернулись") }
         // Called as part of the transition from the background to the active state; here you can undo many of the changes made on entering the background.
     }
 

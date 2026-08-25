@@ -697,6 +697,14 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     // load() дедлочит (K/N-рантайм ↔ WKWebView) → webview/JS не стартует. На реальном устройстве это стабильно.
     // Отложив за пределы фазы load(), получаем максимум кратковременную заминку, а не вечный сплэш.
     // Провайдер реальных драйверов цепляем ещё позже — по первому «Подключить»/скану (attachDriverProvider).
+    /* ССЫЛКА ДЛЯ ЖИЗНЕННОГО ЦИКЛА ПРИЛОЖЕНИЯ (#559).
+
+       AppDelegate знает моменты, которых не знает плагин: приложение стало активным, уходит в фон.
+       Для живого баннера это ключевые моменты — поднять его можно ТОЛЬКО пока мы на переднем плане
+       (система отвечает «Target is not foreground» и не запускает). Слабая, чтобы не держать плагин
+       живым дольше, чем он есть. */
+    static weak var общий: SugarLifeBridgePlugin?
+
     private var engine: SugarLifeEngine?
     private lazy var scanner = SugarLifeScanner { [weak self] json in _ = self?.engine?.submitAdvertisement(json: json) }
     private var unsubscribe: (() -> Void)?
@@ -721,6 +729,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     private let engineQueue = DispatchQueue(label: "ru.imiron.sugarlife.engine")
 
     override public func load() {
+        SugarLifeBridgePlugin.общий = self
         // Уход в фон и возвращение — на них подписываемся сразу: без этого настройка была бы мёртвой (#388).
         ФоновоеБодрствование.shared.начать()
         engineQueue.async { [weak self] in
@@ -869,6 +878,30 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         }.sorted { $0.т < $1.т }
         guard !точки.isEmpty else { return }
         DispatchQueue.main.async { self.историяДвижка = точки }
+    }
+
+    /* ПОДНЯТЬ БАННЕР, ПОКА МЫ НА ПЕРЕДНЕМ ПЛАНЕ (#559).
+
+       Live Activity запускается только из активного приложения: из фона система отвечает «Target is
+       not foreground» и не делает ничего. Это и был вчерашний случай — баннер закрылся, пока телефон
+       лежал в кармане, а поднять его оттуда мы не могли; человек увидел мёртвую карточку, которая
+       ждала, пока он сам откроет приложение.
+
+       Поэтому проверяем в двух местах, и оба — когда мы точно активны: когда приложение открыли и
+       когда его сворачивают. Второе важнее: это последняя секунда, когда мы ещё вправе запустить
+       баннер на ближайшие часы фона.
+
+       Своих данных не сочиняем: берём последний снимок движка. Нет снимка — значит показывать нечего
+       и запускать нечего. */
+    @available(iOS 16.2, *)
+    func оживитьБаннер(_ повод: String) {
+        guard UserDefaults.standard.bool(forKey: "sl.live-banner") else { return }
+        guard !ЖивойБаннер.живой, let json = последнийСнимок else { return }
+        NSLog("SugarLife: баннера нет (\(повод)) — поднимаем, пока можно")
+        /* Отметку сбрасываем: иначе `обновитьЖивойБаннер` решит, что это то же показание, и не станет
+           ничего делать — а нам нужно именно создать активность заново. */
+        показанноеПоказаниеМс = 0
+        _ = обновитьЖивойБаннер(json)
     }
 
     /* ЧТО УЖЕ ПОКАЗАНО НА БАННЕРЕ (#500). Снимки движка приходят пачкой — по несколько раз в минуту,
