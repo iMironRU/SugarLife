@@ -1,37 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Виджет сахара (SugarLife#449).
+    Виджет сахара — по макету v2 (SugarLife#449, #511).
 
-    Раскладка ровно та, что человек уже видит в приложении: кольцо слева, число крупно, под ним
-    возраст показания и мелкая строка про инсулин и сырое значение.
+    ЧТО ИЗМЕНИЛОСЬ. Было: кольцо-шкала слева, число, возраст, подстрочник. Стало то же, что на живом
+    баннере айфона, — пять величин: показание со стрелкой, возраст, сколько до следующего, тренд за три
+    часа и активный инсулин. Одна и та же поверхность на двух платформах должна отвечать одинаково;
+    кольцо отвечало только на «где я по шкале», а «как я сюда пришёл» — не отвечало вовсе.
 
-    Возраст — Chronometer, а не текст: он считает сам, внутри процесса лаунчера, и продолжает идти,
-    когда наша служба остановлена. Виджет с застывшим «2 мин» врал бы убедительнее, чем пустой.
+    ГРАФИК КАРТИНКОЙ. Лаунчер разворачивает чужой процесс и знает узкий список вьюх: ни дуг, ни путей
+    там нет. Поэтому линия рисуется на холсте и отдаётся готовым изображением, а числа остаются
+    настоящим текстом — иначе они не подчинялись бы системному размеру шрифта.
 
-    Ширины фиксированные, потому что RemoteViews не умеет constraint-раскладок: горизонтальный ряд
-    с весами — самое надёжное, что переживает и 4×2, и 2×2 (resizeMode в описании виджета).
+    ВОЗРАСТ И СЕКУНДОМЕР СЧИТАЕТ ЛАУНЧЕР. Два Chronometer идут сами, внутри его процесса, и продолжают
+    идти, когда наша служба остановлена. Виджет с застывшим «2 мин» врал бы убедительнее пустого.
+
+    РАСКЛАДКА ПЕРЕЖИВАЕТ ОБА РАЗМЕРА. RemoteViews не умеет constraint-раскладок, поэтому колонка с
+    весами: в узком виджете (2×1) график и нижняя строка прячутся кодом, остаётся число со стрелкой.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/sugar_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
-    android:gravity="center_vertical"
+    android:orientation="vertical"
     android:padding="14dp"
     android:background="@drawable/sugar_widget_bg">
 
-    <ImageView
-        android:id="@+id/sugar_ring"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        android:contentDescription="@string/widget_ring_desc" />
-
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:layout_marginStart="12dp"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
         <TextView
             android:id="@+id/sugar_value"
@@ -39,23 +37,55 @@
             android:layout_height="wrap_content"
             android:textColor="#E9E9ED"
             android:textSize="34sp"
-            android:textStyle="bold"
             android:includeFontPadding="false"
             android:text="—" />
 
+        <!-- Возраст у правого края: «верить ли числу» — второй вопрос после самого числа. -->
         <Chronometer
             android:id="@+id/sugar_age"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#9397AB"
-            android:textSize="14sp"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:textColor="#8B90A3"
+            android:textSize="13sp"
+            android:includeFontPadding="false" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/sugar_chart"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="6dp"
+        android:scaleType="fitXY"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/widget_ring_desc" />
+
+    <LinearLayout
+        android:id="@+id/sugar_bottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- Сколько до следующего показания: «ждать или уже беспокоиться». -->
+        <Chronometer
+            android:id="@+id/sugar_next"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#8B90A3"
+            android:textSize="12sp"
             android:includeFontPadding="false" />
 
         <TextView
             android:id="@+id/sugar_sub"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#9397AB"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:textColor="#A8B6D9"
             android:textSize="12sp"
             android:includeFontPadding="false"
             android:maxLines="1"
