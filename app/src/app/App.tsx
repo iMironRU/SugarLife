@@ -1,4 +1,4 @@
-import { создатьЖест } from '@/ui/Жест';
+import { IonApp, createGesture } from '@ionic/react';
 import Иконка from '@/ui/Иконка';
 import { Suspense, lazy, useEffect, useRef } from 'react';
 import { barChart, pulse, home, water, settingsOutline, medkit } from 'ionicons/icons';
@@ -65,8 +65,10 @@ function Pager() {
     // по вкладке, даже если ширина вьюпорта менялась — адресная строка, поворот)
     const rest = (i: number) => { t.style.transform = `translate3d(${-i * 100}%,0,0)`; };
 
-    const gesture = создатьЖест({
+    const gesture = createGesture({
       el: vp,
+      gestureName: 'tab-pager',
+      direction: 'x',
       threshold: 8,
       /* Внутри открытого раздела горизонтальный жест значит «назад», а не «другая
          вкладка». Иначе два жеста спорят за одно движение, и побеждает то один, то
@@ -236,9 +238,9 @@ export default function App() {
   if (status === 'off' && !bridgeHasData && !onboarded) мастерОткрыт.current = true;
   if (onboarded) мастерОткрыт.current = false;
   if (мастерОткрыт.current) {
-    return <div className="приложение"><Suspense fallback={<Loader />}><Onboarding /></Suspense></div>;
+    return <IonApp><Suspense fallback={<Loader />}><Onboarding /></Suspense></IonApp>;
   }
-  if (!data && !bridgeHasData && (status === 'idle' || status === 'loading')) return <div className="приложение"><Loader /></div>;
+  if (!data && !bridgeHasData && (status === 'idle' || status === 'loading')) return <IonApp><Loader /></IonApp>;
 
   /* Первого снимка ещё не было — показываем ожидание, а не пустую оболочку (#420).
 
@@ -250,16 +252,16 @@ export default function App() {
      Только для натива и только до ПЕРВОГО снимка. Дальше данные могут пропадать и
      возвращаться — это уже другая история, и рассказывают её экраны, у которых есть что
      показать: последнее известное значение важнее пустоты. */
-  if (isNative && !snap) return <div className="приложение"><ПервыйСнимок /></div>;
+  if (isNative && !snap) return <IonApp><ПервыйСнимок /></IonApp>;
 
   return (
-    <div className="приложение">
+    <IonApp>
       <div className="app-shell">
         <HeroPanel />
         <Pager />
         <TabBar insIcon={insIcon} новых={новыхНаходок} />
       </div>
       <InstallPrompt />
-    </div>
+    </IonApp>
   );
 }

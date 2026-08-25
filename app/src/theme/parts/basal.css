@@ -74,13 +74,15 @@
    ввести первое значение, поэтому по цифре можно ткнуть и набрать её целиком.
    Выглядит при этом ровно как цифра: рамка поля здесь только мешала бы — она обещает
    ввод там, где чаще правят кнопками. */
-.num-field .поле {
-  padding: 0; background: transparent; color: var(--color-text);
+.num-field ion-input {
+  --padding-start: 0; --padding-end: 0; --padding-top: 0; --padding-bottom: 0;
+  --background: transparent; --color: var(--color-text);
   font-size: min(2rem, 40px); font-weight: 700; text-align: center; min-height: 38px;
 }
+.num-field ion-input input { text-align: center; }
 /* Дата в том же виде, что число, но чуть мельче: «13 августа 2026 г.» длиннее любого
    числа и в 32 пункта не помещается на узком телефоне. */
-.num-date .поле { font-size: min(1.375rem, 27.5px); }
+.num-date ion-input { font-size: min(1.375rem, 27.5px); }
 
 .bas-chk {
   display: flex; gap: 12px; align-items: flex-start; width: 100%; margin-bottom: 8px;

@@ -1,6 +1,5 @@
-
+import { IonToggle } from '@ionic/react';
 import Иконка from '@/ui/Иконка';
-import Переключатель from '@/ui/Переключатель';
 import { сколькоНазад } from '@/слова/время';
 import { BasalProfileSection } from '@/sections/lazy';
 import Row from '@/ui/Row';
@@ -55,6 +54,7 @@ import { toSegs, daily } from '@/domain/basal';
    в списке каналов писалось «Через облако», а человеку нужно знать, через какое. */
 
 export type DeviceCatKey = 'sensor' | 'pump' | 'meter' | 'loop';
+
 
 /* ЕДИНАЯ карточка устройства (docs/CONNECT-UX.md §7): состояние + способ подключения
    в одном месте. Сюда ведут все входы — и «Профиль → Устройства», и плитки на экранах
@@ -576,8 +576,8 @@ export default function DeviceSection({ onClose, cat, title }: {
                         <span className="list-title">Подключаться автоматически</span>
                         <span className="pick-sub">при запуске приложения</span>
                       </span>
-                      <Переключатель checked={ble.autoConnect}
-                        onChange={(v) => sendIntent({ type: 'setAutoConnect', deviceId: ble.id, autoConnect: v })} />
+                      <IonToggle checked={ble.autoConnect}
+                        onIonChange={(e) => sendIntent({ type: 'setAutoConnect', deviceId: ble.id, autoConnect: e.detail.checked })} />
                     </div>
                   </div>
                 )}
@@ -613,7 +613,7 @@ export default function DeviceSection({ onClose, cat, title }: {
                       <span className="list-title">Предупредить о разряде</span>
                       <span className="pick-sub">один раз, когда заряд упадёт ниже {alert.threshold}%</span>
                     </span>
-                    <Переключатель checked={alert.on} onChange={(v) => setBridgeAlert({ on: v })} />
+                    <IonToggle checked={alert.on} onIonChange={(e) => setBridgeAlert({ on: e.detail.checked })} />
                   </div>
                 </div>
 

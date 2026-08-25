@@ -1,6 +1,5 @@
 import Иконка from '@/ui/Иконка';
-import Переключатель from '@/ui/Переключатель';
-
+import { IonToggle } from '@ionic/react';
 import { openOutline, chevronForward } from 'ionicons/icons';
 import { useState } from 'react';
 import { sendIntent } from '@/sources/bridge';
@@ -97,8 +96,8 @@ export default function ПравилаДвижка({ правила }: { пра�
             {/* Выключатель — снаружи шторки и вне кнопки раскрытия: это два разных действия, и
                 попадание пальцем не должно решать, какое из них случилось. */}
             {выключатель && (
-              <Переключатель checked={выключатель.включено} disabled={ждём === выключатель.ключ}
-                onChange={(v) => void править(выключатель.ключ, v ? 'on' : 'off')} />
+              <IonToggle checked={выключатель.включено} disabled={ждём === выключатель.ключ}
+                onIonChange={(e) => void править(выключатель.ключ, e.detail.checked ? 'on' : 'off')} />
             )}
             <Иконка icon={chevronForward} className="правило-шеврон" />
           </div>

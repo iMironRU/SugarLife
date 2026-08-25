@@ -1,4 +1,4 @@
-import Поле from './Поле';
+import { IonInput } from '@ionic/react';
 
 /* Ввод числа: крупная цифра по центру, «минус» и «плюс» по бокам (SugarLife#203).
 
@@ -44,8 +44,8 @@ export default function NumberStepper({
         <button className="bas-pm" disabled={число == null || число <= min}
           onClick={() => сдвинуть(-1)} aria-label="Меньше">−</button>
         <div className="bas-stepval num-field">
-          <Поле type="text" inputmode="decimal" placeholder={подсказка}
-            value={значение} onInput={(v: string) => onChange(v)} />
+          <IonInput type="text" inputmode="decimal" placeholder={подсказка}
+            value={значение} onIonInput={(e) => onChange(e.detail.value ?? '')} />
           <small>{единица} · шаг {String(шаг).replace('.', ',')}</small>
         </div>
         <button className="bas-pm" disabled={число == null || число >= max}

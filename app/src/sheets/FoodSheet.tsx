@@ -1,6 +1,5 @@
-
+import { IonInput } from '@ionic/react';
 import Иконка from '@/ui/Иконка';
-import Поле from '@/ui/Поле';
 import {timeOutline, searchOutline, sparklesOutline, warningOutline} from 'ionicons/icons';
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/sources/store';
@@ -180,8 +179,8 @@ export default function FoodSheet({ isOpen, onClose, времяПодъёма }:
         <div className="param">
           <div className="field-label">Название — необязательно</div>
           <div className="field">
-            <Поле value={имя} onInput={(v: string) => setИмя(v)}
-              placeholder="например, гречка с курицей" />
+            <IonInput value={имя} onIonInput={(e) => setИмя(e.detail.value ?? '')}
+              placeholder="например, гречка с курицей" autocapitalize="sentences" />
           </div>
           <div className="field-hint param-hint">
             Пригодится, чтобы отличать два разных обеда по 55 г. Не назовёте — ничего не
@@ -236,10 +235,10 @@ export default function FoodSheet({ isOpen, onClose, времяПодъёма }:
           <div className="fs-value">
             <div className="fs-cap">Углеводы</div>
             <div className="fs-input">
-              <Поле value={carbsТекст ?? toCarbs(carbs, cu)} type="text" inputmode="decimal"
-                onFocus={(el) => подтянуть(el)}
-                onInput={(v: string) => ввестиУглеводы(v)}
-                onBlur={() => setCarbsТекст(null)} />
+              <IonInput value={carbsТекст ?? toCarbs(carbs, cu)} type="text" inputmode="decimal"
+                onIonFocus={(e) => подтянуть(e.target as unknown as HTMLElement)}
+                onIonInput={(e) => ввестиУглеводы(e.detail.value ?? '')}
+                onIonBlur={() => setCarbsТекст(null)} />
               <span>{clabel}</span>
             </div>
           </div>
@@ -369,8 +368,8 @@ export default function FoodSheet({ isOpen, onClose, времяПодъёма }:
           <>
             <div className="field" style={{ marginTop: 10 }}>
               <Иконка icon={searchOutline} className="field-ico" />
-              <Поле value={запрос} placeholder="Приём, блюдо, напиток"
-                onInput={(v: string) => setЗапрос(v)} />
+              <IonInput value={запрос} placeholder="Приём, блюдо, напиток"
+                onIonInput={(e) => setЗапрос(e.detail.value ?? '')} />
             </div>
             <div className="food-cats">
               {(запрос ? [найдено] : группы).map((группа, i) => (

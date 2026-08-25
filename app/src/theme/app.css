@@ -3,7 +3,6 @@
    Порядок импортов значим: base задаёт токены, дальше — от общего к частному. */
 
 @import './parts/base.css';
-@import './parts/свои.css';
 @import './parts/onboarding.css';
 @import './parts/shell.css';
 @import './parts/today.css';
