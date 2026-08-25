@@ -12,7 +12,7 @@ import { useTheme } from '../theme/useTheme';
 import { APP_EDITION, APP_VERSION, APP_BUILD, isNative } from '@/platform/appUpdate';
 import { useStack } from '@/app/stackCtx';
 import { разделИзАдреса } from '@/platform/deepLink';
-import { прочитатьПрава } from '@/platform/права';
+import { прочитатьПрава, слушатьПрава } from '@/platform/права';
 import { состояниеБаннера } from '@/platform/живойБаннер';
 import { сводкаВключена } from '@/platform/живойБаннер';
 import { состояниеЗначка } from '@/platform/значок';
@@ -113,7 +113,13 @@ export default function Profile() {
     спросить();
     const слушатель = () => { if (document.visibilityState === 'visible') спросить(); };
     document.addEventListener('visibilitychange', слушатель);
-    return () => document.removeEventListener('visibilitychange', слушатель);
+    /* И на ответ системного диалога: цифра у входа должна гаснуть в тот же миг, когда человек
+       нажал «Разрешить», а не при следующем открытии экрана (#558). */
+    const отписаться = слушатьПрава(setПрава);
+    return () => {
+      document.removeEventListener('visibilitychange', слушатель);
+      отписаться();
+    };
   }, []);
   const устройства = [pumpById(модели.pumpId)?.model, sensorById(модели.sensorId)?.name]
     .filter(Boolean).join(' · ') || 'ничего не записано';
