@@ -26,6 +26,7 @@ final class Сводка {
     static let общая = Сводка()
 
     private let ключ = "sl.status-note"
+    private let ключВсплытия = "sl.status-note.pop"
     private let идентификатор = "sugarlife.сводка"
     /// Реже, чем приходят показания: пять минут — шаг НМГ, чаще обновлять нечего.
     private let нечаще: TimeInterval = 4 * 60
@@ -81,6 +82,21 @@ final class Сводка {
         }
     }
 
+    /* ВСПЛЫВАТЬ ИЛИ ЛЕЖАТЬ ТИХО (#539).
+
+       Тихая сводка живёт в центре уведомлений: чтобы её прочесть, надо потянуть шторку. Владелец
+       смотрит на соседей (xDrip) и хочет иначе — чтобы число само показывалось поверх экрана, как
+       только пришло. Это разные повадки одной и той же строки, и выбирать между ними должен тот,
+       чей это телефон: одному «мелькает каждые пять минут» — то, ради чего всё ставилось, другому —
+       повод выключить совсем.
+
+       Звука нет ни в одном из двух: всплывающая сводка не тревога и звенеть не должна. Разбудить
+       ночью она тоже не может — по построению, и это правильно: для этого есть тревоги. */
+    var всплывает: Bool {
+        get { UserDefaults.standard.bool(forKey: ключВсплытия) }
+        set { UserDefaults.standard.set(newValue, forKey: ключВсплытия) }
+    }
+
     func снять() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [идентификатор])
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [идентификатор])
@@ -127,7 +143,10 @@ final class Сводка {
         /* Сводка — про сахар, значит ведёт на «Сегодня» (#524). */
         к.userInfo = ["цель": "сегодня"]
         к.sound = nil
-        if #available(iOS 15.0, *) { к.interruptionLevel = .passive }
+        /* `active` — всплыть поверх экрана и не звенеть; `passive` — молча лечь в центр уведомлений.
+           Выше этого не поднимаемся никогда: `timeSensitive` пробивает «Не беспокоить», а сводка
+           этого права не имеет — им пользуются тревоги, и разбавлять его фоном значит обесценить. */
+        if #available(iOS 15.0, *) { к.interruptionLevel = всплывает ? .active : .passive }
 
         UNUserNotificationCenter.current().add(
             UNNotificationRequest(identifier: идентификатор, content: к, trigger: nil))

@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { разделProПоId } from '@/издание';
 import {
-  AboutSection, ОхранаSection, AlarmsSection, AnalyticsSection, AppearanceSection, BasalProfileSection, CloudAccountsSection,
+  AboutSection, ОхранаSection, AlarmsSection, AnalyticsSection, AppearanceSection, PermissionsSection,
+  BasalProfileSection, CloudAccountsSection,
   CloudSection, DataDevicesSection, DeviceSection, DevicesSection, DiagnosticsSection,
   HealthSection, HistorySection, LoopSection, LoopSetupSection, MealsSection, ServicesSection,
   SourcesSection, VisitNoteSection,
@@ -35,6 +36,7 @@ export type Метка =
   | { id: 'тревоги' }
   | { id: 'диагностика' }
   | { id: 'оформление' }
+  | { id: 'разрешения' }
   | { id: 'оПриложении' }
   | { id: 'история' }
   | { id: 'приёмы' }
@@ -61,6 +63,7 @@ export function собрать(м: Метка, pop: () => void): ReactNode | nul
     case 'тревоги': return <AlarmsSection onClose={pop} />;
     case 'диагностика': return <DiagnosticsSection onClose={pop} />;
     case 'оформление': return <AppearanceSection onClose={pop} />;
+    case 'разрешения': return <PermissionsSection onClose={pop} />;
     case 'оПриложении': return <AboutSection onClose={pop} />;
     case 'история': return <HistorySection onClose={pop} />;
     case 'приёмы': return <MealsSection onClose={pop} />;

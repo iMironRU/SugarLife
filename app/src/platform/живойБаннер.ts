@@ -53,8 +53,8 @@ export async function состояниеБаннера(): Promise<Состоян
 
    Живёт здесь же, рядом с баннером: вопрос у человека один — «что я узнаю, не открывая приложение». */
 interface ПлагинСводки {
-  statusNote(): Promise<{ on: boolean }>;
-  setStatusNote(o: { on: boolean }): Promise<{ on: boolean }>;
+  statusNote(): Promise<{ on: boolean; pop?: boolean }>;
+  setStatusNote(o: { on?: boolean; pop?: boolean }): Promise<{ on: boolean; pop?: boolean }>;
   reportActiveInsulin(o: { iob?: number }): Promise<void>;
 }
 const NativeСводка = registerPlugin<ПлагинСводки>('SugarLifeBridge');
@@ -68,6 +68,22 @@ export async function сводкаВключена(): Promise<boolean | null> {
 export async function включитьСводку(on: boolean): Promise<boolean> {
   if (!баннерВозможен()) return false;
   try { await NativeСводка.setStatusNote({ on }); return true; } catch { return false; }
+}
+
+/* ВСПЛЫВАТЬ ИЛИ ЛЕЖАТЬ ТИХО (#539). Одна и та же строка, две повадки: показаться поверх экрана,
+   как только пришло показание, или молча лечь в центр уведомлений. Выбор человека — «мелькает
+   каждые пять минут» это ровно то, ради чего сводку ставят, и ровно то, из-за чего её выключают.
+
+   `false` при старой сборке, а не null: повадка — уточнение к сводке, а не отдельная возможность,
+   и переключателю на экране достаточно знать, что всплытия сейчас нет. */
+export async function сводкаВсплывает(): Promise<boolean> {
+  if (!баннерВозможен()) return false;
+  try { return !!(await NativeСводка.statusNote()).pop; } catch { return false; }
+}
+
+export async function включитьВсплытие(pop: boolean): Promise<boolean> {
+  if (!баннерВозможен()) return false;
+  try { await NativeСводка.setStatusNote({ pop }); return true; } catch { return false; }
 }
 
 /* АКТИВНЫЙ ИНСУЛИН — НАТИВУ, ДЛЯ СВОДКИ (#500).

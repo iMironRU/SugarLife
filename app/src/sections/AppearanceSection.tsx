@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { useTheme } from '@/theme/useTheme';
 import {
   баннерВозможен, состояниеБаннера, включитьБаннер, сводкаВключена, включитьСводку,
+  сводкаВсплывает, включитьВсплытие,
   type СостояниеБаннера,
 } from '@/platform/живойБаннер';
 import { виджетВозможен, добавитьВиджет, type ИтогДобавления } from '@/platform/виджет';
@@ -45,12 +46,14 @@ export default function AppearanceSection({ onClose }: { onClose: () => void }) 
   const { theme, setTheme } = useTheme();
   const [баннер, setБаннер] = useState<СостояниеБаннера | null>(null);
   const [сводка, setСводка] = useState<boolean | null>(null);
+  const [всплытие, setВсплытие] = useState(false);
   const [значок, setЗначок] = useState<ЗначокСостояние | null>(null);
   const [виджет, setВиджет] = useState<ИтогДобавления | null>(null);
 
   useEffect(() => {
     void состояниеБаннера().then(setБаннер);
     void сводкаВключена().then(setСводка);
+    void сводкаВсплывает().then(setВсплытие);
     void состояниеЗначка().then(setЗначок);
   }, []);
 
@@ -99,6 +102,14 @@ export default function AppearanceSection({ onClose }: { onClose: () => void }) 
                 sub="сахар, разница и активный инсулин — одной строкой, тихо"
                 right={<Переключатель checked={сводка}
                   onChange={(v) => { setСводка(v); void включитьСводку(v); }} />} />
+            )}
+            {/* Повадка сводки — только когда она включена: переключатель у выключенной строки
+                предлагает настроить то, чего нет, и человек решает, что настройка не работает. */}
+            {сводка && (
+              <Row icon={notificationsOutline} title="Всплывать поверх экрана"
+                sub="показываться сверху, как только пришло показание — беззвучно"
+                right={<Переключатель checked={всплытие}
+                  onChange={(v) => { setВсплытие(v); void включитьВсплытие(v); }} />} />
             )}
           </div>
           <div className="metric-note">
