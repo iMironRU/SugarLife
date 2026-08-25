@@ -35,7 +35,10 @@ export type Метка =
   | { id: 'охрана' }
   | { id: 'тревоги' }
   | { id: 'диагностика' }
-  | { id: 'оформление' }
+  /* Часть раздела — чтобы восстановление после перезапуска возвращало туда же, откуда ушли
+     (два входа, #554). Без неё человек, закрывший телефон на «Экране блокировки и значке»,
+     возвращался бы в общий список. */
+  | { id: 'оформление'; часть?: 'показ' | 'вид' }
   | { id: 'разрешения' }
   | { id: 'оПриложении' }
   | { id: 'история' }
@@ -62,7 +65,7 @@ export function собрать(м: Метка, pop: () => void): ReactNode | nul
     case 'охрана': return <ОхранаSection onClose={pop} />;
     case 'тревоги': return <AlarmsSection onClose={pop} />;
     case 'диагностика': return <DiagnosticsSection onClose={pop} />;
-    case 'оформление': return <AppearanceSection onClose={pop} />;
+    case 'оформление': return <AppearanceSection onClose={pop} часть={м.часть} />;
     case 'разрешения': return <PermissionsSection onClose={pop} />;
     case 'оПриложении': return <AboutSection onClose={pop} />;
     case 'история': return <HistorySection onClose={pop} />;

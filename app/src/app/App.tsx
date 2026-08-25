@@ -1,7 +1,7 @@
 import { создатьЖест } from '@/ui/Жест';
 import Иконка from '@/ui/Иконка';
 import { Suspense, lazy, useEffect, useRef } from 'react';
-import { barChart, pulse, home, water, personCircle, medkit } from 'ionicons/icons';
+import { barChart, pulse, home, water, settingsOutline, medkit } from 'ionicons/icons';
 
 import Today from '@/screens/Today';
 import Profile from '@/screens/Profile';
@@ -133,7 +133,16 @@ function TabBar({ insIcon, новых }: { insIcon: string; новых: number }
     { i: 1, label: 'НМГ', icon: pulse },
     { i: 2, label: 'Сегодня', icon: home },
     { i: 3, label: 'Инсулин', icon: insIcon },
-    { i: 4, label: 'Профиль', icon: personCircle },
+    /* «НАСТРОЙКИ», А НЕ «ПРОФИЛЬ» (решение владельца).
+
+       Профиля там нет и не было: ни имени, ни медицинской карточки, ни переключателя между людьми —
+       всё это убрали ещё в #212, потому что имя приезжало из Nightscout, а без него в аватаре
+       стояло слово «Профиль». Осталось то, что и так там лежало: приборы, единицы, охрана,
+       диагностика, оформление. Это настройки, и называть их надо своим именем.
+
+       Мульти-профили появятся — станут отдельным входом ВНУТРИ настроек, а не именем вкладки:
+       переключатель между людьми это не то же самое, что «где всё настраивается». */
+    { i: 4, label: 'Настройки', icon: settingsOutline },
   ];
   return (
     <div className="tabbar">

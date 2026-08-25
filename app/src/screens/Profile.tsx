@@ -3,7 +3,7 @@ import { ОхранаSection, DiagnosticsSection, HealthSection, LoopSection, Da
 import {
   optionsOutline, nutritionOutline,
   hardwareChipOutline, repeat, documentTextOutline, heartOutline, informationCircleOutline,
-  colorPaletteOutline, shieldCheckmarkOutline, flashOutline, lockClosedOutline,
+  colorPaletteOutline, shieldCheckmarkOutline, flashOutline, lockClosedOutline, phonePortraitOutline,
 } from 'ionicons/icons';
 import { useState, useEffect, useRef } from 'react';
 import { resetLocalData } from '@/settings/reset';
@@ -221,7 +221,9 @@ export default function Profile() {
         </>
       )}
 
-      <div className="section-label sec">Настройки</div>
+      {/* «Единицы», а не «Настройки»: экран теперь сам называется «Настройки», и заголовок
+          повторял бы его — настройки внутри настроек. Слово должно называть содержимое блока. */}
+      <div className="section-label sec">Единицы</div>
           <div className="list">
             <Row icon={optionsOutline} title="Единицы глюкозы" value={unitLabel(unit)} onClick={() => setUnitsOpen(true)} />
             <Row icon={nutritionOutline} title="Единицы еды" value={carbUnitLabel(carbUnit)} onClick={() => setCarbUnitsOpen(true)} />
@@ -253,15 +255,27 @@ export default function Profile() {
               какая версия стоит. */}
           {/* Оформление — над «О приложении»: это настройка, а «О приложении» —
               справка. Настройки человек меняет, справку читает. */}
+          {/* ДВА ВХОДА ВМЕСТО ОДНОГО (решение владельца).
+
+              Была одна строка «Тема», а за ней — баннер на экране блокировки, сводка в шторке,
+              цифры на значке, тема, палитра и язык. Слово на двери оказалось меньше того, что за
+              дверью: человек, который ищет, где включить баннер, по слову «Тема» туда не пойдёт.
+
+              Экран остался один — это по-прежнему «Оформление», и решение из #500 держать показ
+              вместе с видом мы не отменяем. Разошлись только входы, потому что вопросов за дверью
+              два и приходят с ними по отдельности: «что я вижу, не открывая приложение» и «как
+              выглядит само приложение». */}
           <div className="section-label sec">Оформление</div>
           <div className="list">
-            {/* Строка называется «Тема», а не «Оформление»: заголовок над ней уже сказал
-                это слово, и повторять его значит потратить строку на эхо. Ровно от этого
-                здесь уходили, убирая заголовки над каждой одиночной строкой. */}
-            <Row icon={colorPaletteOutline} title="Тема"
-              sub={theme === 'system' ? 'как в настройках телефона' : theme === 'light' ? 'светлая' : 'тёмная'}
-              value={theme === 'system' ? 'системная' : undefined}
-              onClick={() => push(<AppearanceSection onClose={pop} />, { id: 'оформление' })} />
+            <Row icon={phonePortraitOutline} title="Экран блокировки и значок"
+              sub="живой баннер, сводка в шторке, цифры на иконке"
+              onClick={() => push(<AppearanceSection onClose={pop} часть="показ" />,
+                { id: 'оформление', часть: 'показ' })} />
+            <Row icon={colorPaletteOutline} title="Вид приложения"
+              sub={theme === 'system' ? 'тема как в настройках телефона · язык, палитра'
+                : (theme === 'light' ? 'светлая тема' : 'тёмная тема') + ' · язык, палитра'}
+              onClick={() => push(<AppearanceSection onClose={pop} часть="вид" />,
+                { id: 'оформление', часть: 'вид' })} />
           </div>
 
           {/* РАЗРЕШЕНИЯ — РЯДОМ С «О ПРИЛОЖЕНИИ», А НЕ В ОФОРМЛЕНИИ (#538).
