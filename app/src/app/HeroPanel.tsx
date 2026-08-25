@@ -17,6 +17,7 @@ import { предупредитьОСыром, МЕТКА_СЫРОГО, ПОЯС
 import { useEntries } from '@/sources/db';
 import { выбратьПоказание, ОТСТАВАНИЕ_МС } from '@/domain/latestGlucose';
 import { activeInsulin } from '@/domain/loopValue';
+import { useЧужаяПетля } from '@/показ/чужаяПетля';
 import { useSnapshot } from '@/sources/bridge';
 import { расходка } from '@/domain/supplies';
 import CircleSparkline from '@/charts/CircleSparkline';
@@ -152,8 +153,12 @@ export default function HeroPanel() {
   /* Активный инсулин в круге. Раньше строка просто исчезала, когда цикл молчал, —
      и пустота читалась как «инсулина нет». Теперь она на месте всегда, а неизвестное
      показано прочерком и приглушённым цветом (см. domain/loopValue.ts). */
-  const ai = activeInsulin(dev);
-  const iobText = ai.known ? 'инс. ' + fmt(dev!.iob as number) + ' ед' : 'инс. ' + DASH;
+  /* Число петли — из движка, когда он его отдаёт (#528). Раньше здесь стоял результат нашей
+     собственной загрузки Nightscout: два источника об одном числе, и расходились они в самый
+     неудобный момент — когда связь рвалась и движок объявлял молчание. */
+  const петля = useЧужаяПетля();
+  const ai = activeInsulin({ iob: петля.iob, loopAt: петля.loopAt } as typeof dev);
+  const iobText = ai.known ? 'инс. ' + fmt(петля.iob as number) + ' ед' : 'инс. ' + DASH;
 
   // Полоса зарядов устройств над панелью — расширяемо: помпа, телефон-аплоадер, мост
   // (OrangeLink/RileyLink, pump.extended.OrangeLinkBattery от AAPS). Показываем только

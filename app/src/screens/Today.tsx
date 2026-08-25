@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore, refresh } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt } from '@/domain/units';
 import { activeCarbs } from '@/domain/loopValue';
+import { useЧужаяПетля } from '@/показ/чужаяПетля';
 import ChangedButton from '@/ui/ChangedButton';
 import ReleaseBle from '@/ui/ReleaseBle';
 import NearbyTile from '@/ui/NearbyTile';
@@ -127,8 +128,13 @@ export default function Today() {
   const последний = свежие.length ? свежие[свежие.length - 1] : null;
   /* Активные углеводы тоже считает цикл, а не помпа: когда он молчит, это
      «неизвестно», а не «ноль». Прочерк плюс причина — см. domain/loopValue.ts. */
-  const ac = activeCarbs(dev);
-  const cob = ac.known ? Math.round(dev!.cob as number) : null;
+  /* Углеводы — из движка, когда он их отдаёт (#528). Это ЧУЖОЙ расчёт: их считает петля человека
+     (AAPS, iAPS), а не мы, и своей модели усвоения у нас нет намеренно — это медицинское решение.
+     Поэтому под числом стоит имя автора: «по расчёту AndroidAPS», а не «активные углеводы» без
+     оговорок. Человек должен знать, чьё это число, чтобы понимать, почему оно такое. */
+  const петля = useЧужаяПетля();
+  const ac = activeCarbs({ cob: петля.cob, loopAt: петля.loopAt } as typeof dev);
+  const cob = ac.known ? Math.round(петля.cob as number) : null;
 
   // авторитетный флаг паузы (AAPS pump.extended.PumpSuspended), если известен —
   // иначе фолбэк на текстовую эвристику по статусу
@@ -374,7 +380,9 @@ export default function Today() {
               <div className={'carb-big' + (ac.known ? '' : ' is-unknown')}>{cob != null ? toCarbs(cob, cu) : DASH}<span>{carbUnitLabel(cu)}</span></div>
               <div className="carb-now-t">
                 <div className="carb-lbl">активные углеводы</div>
-                {ac.reason && <div className="carb-sub">{ac.reason}</div>}
+                {ac.reason
+                  ? <div className="carb-sub">{ac.reason}</div>
+                  : петля.by && <div className="carb-sub">по расчёту {петля.by}</div>}
               </div>
               {/* Действие названо глаголом. «Еда» была существительным: что случится по
                   нажатию — открытие журнала или ввод — приходилось угадывать. */}

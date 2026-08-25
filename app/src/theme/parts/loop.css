@@ -131,15 +131,30 @@
 }
 .page-next:disabled { opacity: .4; cursor: default; }
 
-/* Удержание для применения: случайный тап не должен ничего применять */
+/* УДЕРЖАНИЕ ДЛЯ ПРИМЕНЕНИЯ: случайный тап не должен ничего применять.
+
+   И это должно быть видно ДО нажатия (замечание владельца). Полоса заполнения объясняет
+   происходящее тому, кто уже держит; тому, кто просто смотрит, она не говорит ничего — он нажмёт
+   как обычно, ничего не случится, и кнопка будет выглядеть сломанной.
+
+   Отличаем тремя способами сразу, потому что каждый по отдельности слаб: пунктирная рамка (видна
+   боковым зрением и не зависит от цвета), значок времени и слово «держите». Слово главное — значок
+   можно прочесть как «долго грузится». */
 .hold-btn {
-  position: relative; overflow: hidden; min-height: 48px; border-radius: 16px; border: 0;
+  position: relative; overflow: hidden; min-height: 48px; border-radius: 16px;
+  border: 1.5px dashed color-mix(in srgb, #fff 55%, transparent);
   cursor: pointer; background: var(--color-accent); color: #fff; font-family: inherit;
   font-size: 0.9375rem; font-weight: 600; touch-action: none; user-select: none;
 }
 .hold-btn.off { opacity: .4; cursor: default; }
 .hold-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: rgba(255,255,255,.28); }
-.hold-label { position: relative; }
+.hold-label { position: relative; display: inline-flex; align-items: center; gap: 7px; justify-content: center; }
+.hold-label .иконка { font-size: 1rem; opacity: .85; }
+/* «держите» тише названия действия: это указание, как нажимать, а не что произойдёт. */
+.hold-hint {
+  font-size: 0.6875rem; font-weight: 500; letter-spacing: .02em; opacity: .8;
+  padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, #fff 16%, transparent);
+}
 
 /* Карточка лимита: пределы, диапазон и выход «вернуть рекомендованное» (из прототипа) */
 .wz-edge {
