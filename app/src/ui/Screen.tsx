@@ -1,5 +1,5 @@
+import { IonPage, IonContent, IonRefresher, IonRefresherContent } from '@ionic/react';
 import КрайПрокрутки from './КрайПрокрутки';
-import ПотянутьОбновить from './ПотянутьОбновить';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { reportContentScroll, серединаЛи, полшага, плавно, syncToActiveScreen } from '@/app/panel';
 import { useTab, useGoHome } from '@/app/nav';
@@ -54,7 +54,7 @@ export default function Screen({ tab, panel = 'compact', обновить, child
      Имя берём из одного списка, а не пишем на каждом экране: два места для одного
      названия разошлись бы в первый же день, когда вкладку переименуют. */
   const active = useTab();
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLIonContentElement>(null);
   const тело = useRef<HTMLDivElement>(null);
 
   /* Полупустой экран держит панель на середине, а не в тонкой строке.
@@ -122,7 +122,7 @@ export default function Screen({ tab, panel = 'compact', обновить, child
      важнее сохранённого места на одной из них. */
   useEffect(() => {
     if (active === tab) return;
-    ref.current?.scrollTo({ top: 0 });
+    void ref.current?.scrollToTop();
   }, [active, tab]);
 
   /* Нажал свою вкладку ещё раз — «наверх».
@@ -147,25 +147,33 @@ export default function Screen({ tab, panel = 'compact', обновить, child
   useEffect(() => {
     if (!домой || active !== tab) return;
     if (document.querySelector('.pager-pane.is-active .stack-page')) return;
-    ref.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    void ref.current?.scrollToTop(250);
   }, [домой, active, tab]);
 
   return (
-    <div className="страница">
-      {/* Скроллер свой, а не `ion-content` (#405). Событие прокрутки отдаём панели в том же виде,
-          в каком его отдавал Ionic: панель считает по нему, насколько свернуться, и менять её
-          вход ради замены оболочки значило бы трогать две вещи вместо одной. */}
-      <div ref={ref} className="страница-тело"
-        onScroll={(e) => reportContentScroll({ target: e.currentTarget, detail: { scrollTop: e.currentTarget.scrollTop } })}>
-        <ПотянутьОбновить скроллер={ref} обновить={обновить}>
-          <div ref={тело} className={'screen' + (panel === 'compact' ? ' is-compact' : '') + (середина ? ' is-mid' : '')}>
-            {children}
-            {/* Вкладка ничем не отличается от раздела: список настроек такой же длинный,
-                и где он кончается, человеку так же не видно (#272, #285). */}
-            <КрайПрокрутки />
-          </div>
-        </ПотянутьОбновить>
-      </div>
-    </div>
+    /* СТРАНИЦА И ПРОКРУТКА — СНОВА БИБЛИОТЕЧНЫЕ (#564).
+
+       Свой скроллер и своё «потянуть — обновить» стоили двух поломок подряд: резина на «Сегодня»
+       перерисовывала весь экран на каждое движение пальца, а до этого жест шторки вешался в пустоту.
+       У IonContent прокрутка, резинка и обновление — одно целое, и это целое отлажено не нами. */
+    <IonPage>
+      <IonContent ref={ref} fullscreen forceOverscroll scrollEvents onIonScroll={reportContentScroll}>
+        {обновить && (
+          /* Порог побольше стандартного: панель здесь и так ездит за пальцем, и случайный потяг
+             при обычной прокрутке запускал бы опрос по десять раз. */
+          <IonRefresher slot="fixed" pullMin={90} pullMax={200}
+            onIonRefresh={(e) => { void обновить().finally(() => e.detail.complete()); }}>
+            <IonRefresherContent pullingText="Потяните, чтобы обновить"
+              refreshingSpinner="crescent" refreshingText="Спрашиваю…" />
+          </IonRefresher>
+        )}
+        <div ref={тело} className={'screen' + (panel === 'compact' ? ' is-compact' : '') + (середина ? ' is-mid' : '')}>
+          {children}
+          {/* Вкладка ничем не отличается от раздела: список настроек такой же длинный,
+              и где он кончается, человеку так же не видно (#272, #285). */}
+          <КрайПрокрутки />
+        </div>
+      </IonContent>
+    </IonPage>
   );
 }
