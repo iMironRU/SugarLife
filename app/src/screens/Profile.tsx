@@ -13,6 +13,10 @@ import { APP_EDITION, APP_VERSION, APP_BUILD, isNative } from '@/platform/appUpd
 import { useStack } from '@/app/stackCtx';
 import { разделИзАдреса } from '@/platform/deepLink';
 import { прочитатьПрава } from '@/platform/права';
+import { состояниеБаннера } from '@/platform/живойБаннер';
+import { сводкаВключена } from '@/platform/живойБаннер';
+import { состояниеЗначка } from '@/platform/значок';
+import { подписьПоказа, type СостояниеПоказа } from '@/показ/подписьПоказа';
 import { сколькоНеВПорядке, type ПунктНатива } from '@/показ/разрешения';
 import { setTab } from '@/app/nav';
 import { useSnapshot } from '@/sources/bridge';
@@ -35,6 +39,10 @@ export default function Profile() {
   /* Список разрешений читаем здесь только ради цифры рядом со строкой: без неё раздел заметит
      лишь тот, кто уже пошёл его искать, — то есть тот, у кого уже что-то не сработало. */
   const [права, setПрава] = useState<ПунктНатива[] | null>(null);
+  /* Состояние показа — ради подписи у входа (#556). Название двери говорит, ЧТО за ней настраивают;
+     человек приходит с вопросом «почему я не вижу сахар на блокировке», и ответ на него — состояние,
+     а не перечень возможностей. */
+  const [показ, setПоказ] = useState<СостояниеПоказа>({ баннер: null, сводка: null, значок: null });
   const [unitsOpen, setUnitsOpen] = useState(false);
   const [carbUnitsOpen, setCarbUnitsOpen] = useState(false);
   const carbUnit = useCarbUnit();
@@ -93,7 +101,15 @@ export default function Profile() {
   /* Перечитываем при возвращении на экран: человек мог уйти в настройки телефона и что-то там
      поменять — цифра, оставшаяся прежней, сказала бы, что это не помогло. */
   useEffect(() => {
-    const спросить = () => { void прочитатьПрава().then(setПрава); };
+    const спросить = () => {
+      void прочитатьПрава().then(setПрава);
+      void Promise.all([состояниеБаннера(), сводкаВключена(), состояниеЗначка()])
+        .then(([б, св, зн]) => setПоказ({
+          баннер: б ? б.включён : null,
+          сводка: св,
+          значок: зн ? зн.вид : null,
+        }));
+    };
     спросить();
     const слушатель = () => { if (document.visibilityState === 'visible') спросить(); };
     document.addEventListener('visibilitychange', слушатель);
@@ -268,7 +284,7 @@ export default function Profile() {
           <div className="section-label sec">Оформление</div>
           <div className="list">
             <Row icon={phonePortraitOutline} title="Экран блокировки и значок"
-              sub="живой баннер, сводка в шторке, цифры на иконке"
+              sub={подписьПоказа(показ)}
               onClick={() => push(<AppearanceSection onClose={pop} часть="показ" />,
                 { id: 'оформление', часть: 'показ' })} />
             <Row icon={colorPaletteOutline} title="Вид приложения"
