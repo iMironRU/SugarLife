@@ -56,7 +56,7 @@ export const ОхранаSection = ленивый<{ onClose: () => void }>(
   () => import('./ОхранаSection'), 'Охрана',
 );
 
-export const AppearanceSection = ленивый<{ onClose: () => void }>(
+export const AppearanceSection = ленивый<{ onClose: () => void; часть?: 'показ' | 'вид' }>(
   () => import('./AppearanceSection'), 'Оформление');
 export const PermissionsSection = ленивый<{ onClose: () => void }>(
   () => import('./PermissionsSection'), 'Разрешения');
