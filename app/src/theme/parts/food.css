@@ -55,7 +55,7 @@
 }
 .field-ico { font-size: 1.0625rem; color: var(--color-neutral-500); flex-shrink: 0; }
 .field-hint { font-size: 0.6875rem; color: var(--color-neutral-500); margin: -8px 0 12px; }
-.field .поле { padding-left: 0; padding-right: 0; font-size: max(0.875rem, 1rem); }
+.field ion-input { --padding-start: 0; --padding-end: 0; font-size: 0.875rem; }
 .field-copy {
   flex-shrink: 0; display: flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; border-radius: 9px; border: none; cursor: pointer;
@@ -70,9 +70,10 @@
 .field-copy { position: relative; }
 .field-copy::after { content: ''; position: absolute; inset: -7px; }
 .field-copy.ok { color: var(--c-glu); }
-/* Скругление правилось ionic-переменной `--border-radius`, которая без библиотеки ничего не
-   значит: вид кнопки теперь целиком в `.кнопка-во-всю` (свои.css), здесь остаётся отступ. */
-.connect-btn { margin-top: 4px; }
+/* Скругление и вес — ionic-переменными: заливку и высоту главной кнопки рисует библиотека
+   (#565). Ровно на этом я обжёгся в #500, когда её не было: класс правил только скругление,
+   а кнопка без библиотеки становилась белой браузерной полоской. */
+.connect-btn { --border-radius: 16px; margin-top: 4px; font-weight: 600; }
 .sheet-msg { min-height: 18px; font-size: 0.8125rem; color: var(--color-neutral-300); text-align: center; margin: 12px 0; }
 .sheet-subtitle { font-size: 0.6875rem; color: var(--color-neutral-400); margin-top: 3px; }
 .sheet-note { font-size: 0.6875rem; color: var(--color-neutral-500); margin-top: 14px; text-wrap: pretty; }
@@ -223,6 +224,12 @@
   font-size: 0.8125rem; color: var(--color-neutral-300);
 }
 .ins-calm .иконка { font-size: 1.125rem; flex-shrink: 0; }
+ion-toggle {
+  --track-background: var(--color-neutral-800);
+  --track-background-checked: var(--color-accent);
+  --handle-background: var(--color-neutral-100);
+  --handle-background-checked: #ffffff;
+}
 
 /* Параметр драйвера в форме по спеке (ui/ParamsForm.tsx). Заголовок и поле —
    те же .field-label/.field, что и везде; отдельный класс нужен только ради отступа
@@ -314,9 +321,10 @@
 .fs-input { display: flex; align-items: baseline; justify-content: center; gap: 4px; }
 /* Поле ввода, а не текст: «двадцать восемь» степпером набирается шестью нажатиями,
    а руками одним. */
-.fs-input .поле {
-  padding: 0; max-width: 3.6ch; font-size: min(1.875rem, 37.5px); font-weight: 600;
-  letter-spacing: -.02em; color: var(--c-carb); text-align: center;
+.fs-input ion-input {
+  --padding-start: 0; --padding-end: 0; --padding-top: 0; --padding-bottom: 0;
+  max-width: 3.6ch; font-size: min(1.875rem, 37.5px); font-weight: 600; letter-spacing: -.02em;
+  color: var(--c-carb); text-align: center;
 }
 .fs-input span { font-size: 0.875rem; font-weight: 500; color: var(--c-carb-2); }
 

@@ -5,7 +5,7 @@ import {
 } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import Row from '@/ui/Row';
-import Переключатель from '@/ui/Переключатель';
+import { IonToggle } from '@ionic/react';
 import { useEffect, useState } from 'react';
 import { useTheme } from '@/theme/useTheme';
 import {
@@ -119,8 +119,9 @@ export default function AppearanceSection({ onClose, часть }: {
               sub={баннер?.умеет === false
                 ? 'нужен iOS 18 или новее'
                 : 'живой баннер — и в «Динамическом острове», и на панели CarPlay'}
-              right={<Переключатель checked={!!баннер?.включён} disabled={баннер?.умеет === false}
-                onChange={(v) => {
+              right={<IonToggle checked={!!баннер?.включён} disabled={баннер?.умеет === false}
+                onIonChange={(e) => {
+                  const v = e.detail.checked;
                   setБаннер((б) => (б ? { ...б, включён: v } : б));
                   void включитьБаннер(v);
                 }} />} />
@@ -129,16 +130,16 @@ export default function AppearanceSection({ onClose, часть }: {
             {сводка != null && (
               <Row icon={notificationsOutline} title="Сводка в шторке"
                 sub="сахар, разница и активный инсулин — одной строкой, тихо"
-                right={<Переключатель checked={сводка}
-                  onChange={(v) => { setСводка(v); void включитьСводку(v); }} />} />
+                right={<IonToggle checked={сводка}
+                  onIonChange={(e) => { const v = e.detail.checked; setСводка(v); void включитьСводку(v); }} />} />
             )}
             {/* Повадка сводки — только когда она включена: переключатель у выключенной строки
                 предлагает настроить то, чего нет, и человек решает, что настройка не работает. */}
             {сводка && (
               <Row icon={notificationsOutline} title="Всплывать поверх экрана"
                 sub="показываться сверху, как только пришло показание — беззвучно"
-                right={<Переключатель checked={всплытие}
-                  onChange={(v) => { setВсплытие(v); void включитьВсплытие(v); }} />} />
+                right={<IonToggle checked={всплытие}
+                  onIonChange={(e) => { const v = e.detail.checked; setВсплытие(v); void включитьВсплытие(v); }} />} />
             )}
           </div>
           <div className="metric-note">

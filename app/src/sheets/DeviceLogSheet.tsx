@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import Переключатель from '@/ui/Переключатель';
-
+import { IonToggle } from '@ionic/react';
 import Иконка from '@/ui/Иконка';
 import { shareOutline, checkmarkCircle } from 'ionicons/icons';
 import Sheet from '@/ui/Sheet';
@@ -87,7 +86,7 @@ export default function DeviceLogSheet({ прибор, onClose }: {
               : 'каждый кадр — сотни записей в минуту; включают, чтобы повторить проблему'}
           </div>
         </div>
-        <Переключатель checked={подробно} onChange={(v) => void переключить(v)} />
+        <IonToggle checked={подробно} onIonChange={(e) => void переключить(e.detail.checked)} />
       </div>
 
       {видимые.length > 0 ? (

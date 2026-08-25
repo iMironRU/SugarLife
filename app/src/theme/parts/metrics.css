@@ -131,7 +131,7 @@
   background: color-mix(in srgb, var(--c-carb) 8%, var(--color-neutral-900));
   border: 1px solid color-mix(in srgb, var(--c-carb) 30%, transparent);
 }
-.gather-note .крутилка { width: 16px; height: 16px; color: var(--c-carb); }
+.gather-note ion-spinner { width: 16px; height: 16px; min-width: 16px; --color: var(--c-carb); }
 
 /* AGP / TIR */
 .agp-card { border-radius: 20px; padding: 12px; margin-top: 12px; background: color-mix(in srgb, var(--color-accent) 9%, var(--color-neutral-900)); }

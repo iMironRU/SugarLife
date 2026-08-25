@@ -1,6 +1,4 @@
-
-import Поле from '@/ui/Поле';
-import Переключатель from '@/ui/Переключатель';
+import { IonInput, IonToggle, IonButton } from '@ionic/react';
 import Иконка from '@/ui/Иконка';
 import { DeviceSection } from '@/sections/lazy';
 import Section from '@/ui/Section';
@@ -142,7 +140,7 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
         <div className="field-label">Адрес сайта</div>
         <div className="field">
           <Иконка icon={linkOutline} className="field-ico" />
-          <Поле value={url} onInput={(v: string) => setUrl(v)} placeholder="https://ваш-сайт.nightscout…" inputmode="url" />
+          <IonInput value={url} onIonInput={(e) => setUrl(e.detail.value ?? '')} placeholder="https://ваш-сайт.nightscout…" inputmode="url" autocapitalize="off" />
           {/* Адрес длинный и набирать его руками мучительно — а перенести на другое
               устройство или отправить в поддержку хочется целиком. Выделять пальцем
               внутри поля неудобно: попадаешь в правку. */}
@@ -161,7 +159,7 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
             </div>
             <div className="field">
               <Иконка icon={keyOutline} className="field-ico" />
-              <Поле value={token} onInput={(v: string) => setToken(v)} placeholder="токен из Nightscout" />
+              <IonInput value={token} onIonInput={(e) => setToken(e.detail.value ?? '')} placeholder="токен из Nightscout" autocapitalize="off" />
             </div>
           </>
         )}
@@ -171,10 +169,10 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
           </button>
         )}
 
-        <button className="кнопка-во-всю connect-btn" onClick={save} disabled={checking}>
+        <IonButton expand="block" className="connect-btn" onClick={save} disabled={checking}>
           <Иконка icon={gitNetworkOutline} slot="start" />
           Проверить и сохранить
-        </button>
+        </IonButton>
 
         {msg && <div className="sheet-msg">{msg}</div>}
 
@@ -183,7 +181,7 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
             <div className="sync-toggle-title">Подключено</div>
             <div className="sync-toggle-sub">{cloud.enabled ? 'включено' : 'выключено'}</div>
           </div>
-          <Переключатель checked={cloud.enabled} onChange={(v) => onToggleEnabled(v)} />
+          <IonToggle checked={cloud.enabled} onIonChange={(e) => onToggleEnabled(e.detail.checked)} />
         </div>
 
         <div className="section-label sec">Забираем отсюда</div>
@@ -200,7 +198,7 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
               </span>
               <Иконка icon={chevronForward} className="list-chev" />
             </button>
-            <Переключатель checked={cloud.sourceGlucose} disabled={!sensorRecorded} onChange={(v) => onToggleSensor(v)} />
+            <IonToggle checked={cloud.sourceGlucose} disabled={!sensorRecorded} onIonChange={(e) => onToggleSensor(e.detail.checked)} />
           </div>
           <div className="list-row src-row">
             <button className="src-main" onClick={() => push(<DeviceSection cat="pump" title="Помпа" onClose={pop} />, { id: 'категория', cat: 'pump', title: 'Помпа' })}>
@@ -211,7 +209,7 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
               </span>
               <Иконка icon={chevronForward} className="list-chev" />
             </button>
-            <Переключатель checked={cloud.sourcePumpStatus} disabled={!pumpRecorded} onChange={(v) => onTogglePump(v)} />
+            <IonToggle checked={cloud.sourcePumpStatus} disabled={!pumpRecorded} onIonChange={(e) => onTogglePump(e.detail.checked)} />
           </div>
         </div>
         {noRoles && (

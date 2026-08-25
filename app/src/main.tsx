@@ -1,24 +1,31 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { setupIonicReact } from '@ionic/react'
 
 // Рано регистрируем нативный мост: в оболочке ставит window.SugarLifeBridge,
 // в браузере — no-op (getBridge подхватит Nightscout-шим).
 import './native/sugarLifeBridge'
 
-/* Наша тема. Базовых стилей Ionic больше нет (#405): нормализацию и раскладку мы задаём сами —
-   тем меньше правил, которые надо переспорить своими. */
+/* Базовые стили Ionic */
+import '@ionic/react/css/core.css'
+import '@ionic/react/css/normalize.css'
+import '@ionic/react/css/structure.css'
+import '@ionic/react/css/typography.css'
+import '@ionic/react/css/padding.css'
+import '@ionic/react/css/flex-utils.css'
+import '@ionic/react/css/palettes/dark.class.css'
+
+/* Наша тема (токены Nocturne + проброс в Ionic) */
 import './theme/variables.css'
 import './theme/app.css'
 
 import App from '@/app/App'
-import { notifyAppReady, запомнитьНативнуюСборку, APP_BUILD, isNative } from '@/platform/appUpdate'
+import { notifyAppReady, запомнитьНативнуюСборку, APP_BUILD } from '@/platform/appUpdate'
 import { отметитьСборку } from '@/sources/дневникStore'
 import { следитьЗаРазмером } from '@/platform/размерТекста'
 import { завестиСторожа } from '@/platform/rescue'
 
-/* Признак нативной сборки — на корне документа. Раньше его ставил Ionic (`plt-hybrid`), и на нём
-   держится настольная рамка: в приложении на телефоне её быть не должно ни при каких признаках. */
-if (isNative) document.documentElement.classList.add('натив')
+setupIonicReact({ mode: 'ios' })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

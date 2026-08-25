@@ -1,11 +1,20 @@
-import Модалка, { type УправлениеМодалкой } from './Модалка';
+import { IonModal } from '@ionic/react';
 import Иконка from './Иконка';
 import { closeOutline, chevronBack } from 'ionicons/icons';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { закрыватьЛи, сдвиг, тянемШторку, начинатьЛи, ПОРОГ_СТАРТА, ОКНО_СКОРОСТИ } from './sheetGesture';
 import КрайПрокрутки from './КрайПрокрутки';
 
-/* Оболочка шторки — единственное место, где собирается модалка.
+/* БИБЛИОТЕКА ВЕРНУЛАСЬ (#565, решение владельца).
+
+   Свою модалку мы завели ради веса первого экрана (#405), и это стоило дороже, чем сэкономило:
+   смахивание не работало вовсе, «Сегодня» тормозил на резине, поломки чинились по кругу. Слова
+   владельца: «вводили её как раз для того, чтобы всё начало работать».
+
+   Показ, затемнение, анимация ухода и `dismiss` снова на IonModal. Наше остаётся нашим: разметка
+   шторки и жест смахивания — он свой по причине, описанной ниже.
+
+   Оболочка шторки — единственное место, где собирается модалка.
 
    Их было восемь, и ни одна не настроена как соседняя: четыре разные высоты
    открытия (0.75, 0.85, 0.9, авто), три набора классов, два способа закрытия
@@ -47,7 +56,7 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
   footer?: ReactNode;
   children: ReactNode;
 }) {
-  const модалка = useRef<УправлениеМодалкой>(null);
+  const модалка = useRef<HTMLIonModalElement>(null);
   /* УЗЕЛ ЧЕРЕЗ СОСТОЯНИЕ, А НЕ ЧЕРЕЗ ref — И ЭТО НЕ ПРИДИРКА К СТИЛЮ (#541).
 
      Смахивание не работало НИ РАЗУ с тех пор, как модалка стала своей. Причина в порядке: React
@@ -72,7 +81,7 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
 
      Теперь путь один: dismiss() у модалки, а наружу мы сообщаем в onDidDismiss —
      когда уход уже случился. */
-  const закрыть = () => { модалка.current?.dismiss(); };
+  const закрыть = () => { void модалка.current?.dismiss(); };
 
   /* Смахивание вниз — и прокрутка, одновременно, а не вместо друг друга.
 
@@ -187,7 +196,15 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
   }, [isOpen, оболочка]);
 
   return (
-    <Модалка ref={модалка} isOpen={isOpen} onClose={onClose} className="sheet-modal">
+    <IonModal
+      ref={модалка}
+      isOpen={isOpen}
+      /* Содержимое держим смонтированным: жест вешается на узлы шторки, и без этого вешать не на
+         что — ровно та поломка, из-за которой смахивание не работало ни разу (#541). */
+      keepContentsMounted
+      onDidDismiss={onClose}
+      className="sheet-modal"
+    >
       <div className="sheet-shell" ref={setОболочка}>
         <div className="sheet-head">
           {/* Полоска-ручка: она же подсказка, что шторку можно смахнуть. Без неё жест
@@ -211,6 +228,6 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
         <div className="sheet-body">{children}<КрайПрокрутки /></div>
         {footer}
       </div>
-    </Модалка>
+    </IonModal>
   );
 }

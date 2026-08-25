@@ -1,6 +1,5 @@
-
+import { IonSpinner } from '@ionic/react';
 import Иконка from '@/ui/Иконка';
-import Крутилка from '@/ui/Крутилка';
 import Row from '@/ui/Row';
 import {bluetoothOutline, radioOutline, checkmarkCircle} from 'ionicons/icons';
 import { useEffect, useState } from 'react';
@@ -124,10 +123,11 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
   return (
     <Sheet isOpen={isOpen} onClose={onClose} title="Подключение по BLE" subtitle={title}>
 
+
         {step.kind === 'list' && (
           <>
             <div className={'scan-state' + (scanning ? ' on' : '')}>
-              {scanning ? <Крутилка /> : <Иконка icon={bluetoothOutline} />}
+              {scanning ? <IonSpinner name="crescent" /> : <Иконка icon={bluetoothOutline} />}
               <span>{scanning ? 'Ищу устройства рядом…' : 'Поиск остановлен'}</span>
             </div>
             <div className="list">
