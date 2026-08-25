@@ -61,6 +61,9 @@ class SugarWidget : AppWidgetProvider() {
         private const val К_ТРЕНД = "trend"
         private const val К_СЫРОЕ = "raw"
         private const val К_ИНСУЛИН = "iob"
+        /* Когда движок ждёт следующее показание (мост 1.41). Раньше виджет считал по своей
+           пятиминутке — у минутного сенсора счётчик врал вчетверо. */
+        private const val К_СЛЕДУЮЩЕЕ = "next"
         /* Ряд показаний за три часа — тем же способом, что на айфоне: снимок несёт одно число,
            а линии нужна история, и взять её в лаунчере неоткуда. Храним строкой «время:значение»
            через запятую: два десятка пар — это сотни байт, и разбирать их дешевле, чем заводить базу. */
@@ -77,7 +80,9 @@ class SugarWidget : AppWidgetProvider() {
         private const val ОСЬ_НИЗ = 2.0
         private const val ОСЬ_ВЕРХ = 16.0
         /** Больше этого промежутка — не линия, а дыра: две обычные паузы НМГ плюс запас. */
-        private const val РАЗРЫВ_МС = 12 * 60 * 1000L
+        /* Дыра в линии — тот же порог, что «показание устарело» (docs/поверхности-показа.md).
+           Было двенадцать минут против пятнадцати у устаревания: два числа про одно молчание. */
+        private const val РАЗРЫВ_МС = 15 * 60 * 1000L
         /* Через сколько числу перестают верить. Тот же порог, что у живого баннера на айфоне: одно
            молчание не может называться на двух телефонах разными сроками. */
         private const val УСТАРЕЛО_МС = 15 * 60 * 1000L
@@ -106,6 +111,7 @@ class SugarWidget : AppWidgetProvider() {
                 .putString(К_ТРЕНД, monitor.optString("trend"))
                 .putBoolean(К_СЫРОЕ, !monitor.optBoolean("glucoseCalibrated", false))
                 .putString(К_ИНСУЛИН, инсулинИз(monitor))
+                .putLong(К_СЛЕДУЮЩЕЕ, monitor.optLong("nextExpectedAtMs", 0L))
                 .putString(К_РЯД, дописатьРяд(ctx, сахар, monitor.optLong("latestAtMs", System.currentTimeMillis())))
                 .apply()
             обновитьВсе(ctx)
@@ -202,7 +208,10 @@ class SugarWidget : AppWidgetProvider() {
                 )
                 /* Секундомер до следующего показания — «ждать или уже беспокоиться». Считает тоже
                    лаунчер, обратным ходом; когда время вышло, показываем прочерк вместо обещания. */
-                val осталось = когда + ШАГ_МС - System.currentTimeMillis()
+                /* Момент следующего показания знает движок — он измеряет такт источника. Своей
+                   пятиминутки держимся только если он молчит (старое ядро). */
+                val ждёмК = н.getLong(К_СЛЕДУЮЩЕЕ, 0L).let { if (it > 0) it else когда + ШАГ_МС }
+                val осталось = ждёмК - System.currentTimeMillis()
                 if (осталось > 0) {
                     в.setViewVisibility(R.id.sugar_next, android.view.View.VISIBLE)
                     в.setChronometer(
