@@ -28,6 +28,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
+        /* Пока приложение спало, сеть могла уйти и вернуться, а наблюдатель в усыплённом процессе
+           событий не получает (#544). Человек смотрит на экран и ждёт свежего числа — худший момент
+           досиживать минутную паузу движка. Интент идемпотентен: лишний раз безвреден. */
+        Сеть.общая.приВозвращении()
         // Called as part of the transition from the background to the active state; here you can undo many of the changes made on entering the background.
     }
 
