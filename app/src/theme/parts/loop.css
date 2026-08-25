@@ -66,7 +66,29 @@
 }
 .wz-big { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .wz-big b { font-size: min(2.5rem, 50px); font-weight: 700; font-family: ui-monospace, monospace; letter-spacing: -.02em; }
-.wz-big b.warn { color: var(--c-carb); }
+/* ЦВЕТ ЧИСЛА — ЧЕРЕЗ ЖЁЛТЫЙ К КРАСНОМУ (#566, решение владельца).
+
+   Красится число, а не кнопка. Нажатие «+0,1» само по себе ничем не грозит — опасно то, где число
+   в итоге окажется, и читают его первым. Заливать красным кнопку 62×62 в ночной шторке значило бы
+   поставить фонарь туда, куда и так смотрят.
+
+   `.warn` оставлен: на него завязана сводка режима. Новые два — шаги той же шкалы. */
+.wz-big b.warn, .wz-big b.край { color: var(--c-carb); }
+.wz-big b.предел { color: var(--c-danger); }
+.wz-srow b.край { color: var(--c-carb); }
+.wz-srow b.предел { color: var(--c-danger); }
+
+/* СТОРОНА, КОТОРАЯ УВОДИТ В РИСК — контуром и цветом знака, без заливки.
+
+   Какая это сторона, зависит от предела, а не от знака: у лимита активного инсулина хуже наверх, у
+   целевого сахара — вниз. Поэтому метка ставится из кода (`сторонаРиска`), а не привязана здесь к
+   «минусу» или «плюсу». Обратную сторону НЕ красим зелёным намеренно: зелёный обещал бы «сюда
+   лучше», а лучше там не всегда — уменьшив лимит подачи, человек теряет управление сахаром. */
+.wz-stepper > button.хуже {
+  color: var(--c-danger);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c-danger) 45%, transparent);
+}
+.wz-stepper > button.хуже.off { box-shadow: none; }
 .wz-big i { font-style: normal; font-size: 0.75rem; color: var(--color-neutral-500); font-family: ui-monospace, monospace; }
 .wz-big.collapsed { flex-direction: row; align-items: baseline; gap: 6px; margin-top: 6px; }
 .wz-big.collapsed b { font-size: min(2rem, 40px); }

@@ -516,3 +516,12 @@ label.list-row { cursor: pointer; }
   background: var(--c-danger); color: var(--color-bg);
   font-size: 0.75rem; font-weight: 700; font-variant-numeric: tabular-nums;
 }
+
+/* ЧЕРНОВИК ПОРОГА ТРЕВОГИ (#566): что станет — обычным цветом, что было — зачёркнутым рядом.
+   Пока не записано удержанием, движок живёт по старому числу, и это должно быть видно в строке,
+   а не только по кнопке внизу. */
+.basal-row b.правлено { color: var(--color-accent); }
+.basal-row b.правлено s {
+  margin-right: 8px; color: var(--color-neutral-500);
+  font-weight: 400; text-decoration-thickness: 1px;
+}

@@ -120,9 +120,17 @@ class SugarWidget : AppWidgetProvider() {
             обновитьВсе(ctx)
         }
 
+        /* ТО ЖЕ ЧИСЛО, ЧТО НА ЭКРАНЕ (#566).
+
+           Виджет знал только наш `confirmedIOB` и потому расходился с кругом на «Сегодня», где
+           стоит расчёт петли. Наш занижен, пока временный базал приезжает без ставки и длительности:
+           на замкнутом цикле им подаётся большая часть инсулина. Заниженный инсулин — ошибка в
+           сторону опасности, по нему решают, колоть ли ещё. Подробности — в шапке `инсулинИзСнимка`
+           на айфоне, порядок здесь тот же. */
         private fun инсулинИз(monitor: JSONObject): String {
-            if (monitor.isNull("confirmedIOB")) return ""
-            val иоб = monitor.optDouble("confirmedIOB")
+            val чужой = monitor.optDouble("loopIOB", Double.NaN)
+            val наш = monitor.optDouble("confirmedIOB", Double.NaN)
+            val иоб = if (!чужой.isNaN() && чужой > 0.05) чужой else наш
             if (иоб.isNaN() || иоб <= 0.05) return ""
             return "инс. " + "%.1f".format(иоб).replace('.', ',') + " ед"
         }
