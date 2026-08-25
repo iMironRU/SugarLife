@@ -27,6 +27,7 @@
 		D1A0000000000000000096 /* ОбщаяЗапись.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000093 /* ОбщаяЗапись.swift */; };
 		D1A0000000000000000094 /* ВиджетСахара.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000095 /* ВиджетСахара.swift */; };
 		D1A0000000000000000097 /* Сеть.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000098 /* Сеть.swift */; };
+		D1A0000000000000000099 /* Здоровье.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A000000000000000009A /* Здоровье.swift */; };
 		D1A0000000000000000014 /* СахарАтрибуты.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000013 /* СахарАтрибуты.swift */; };
 		D1A0000000000000000022 /* ИсторияСахара.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000021 /* ИсторияСахара.swift */; };
 		D1A0000000000000000032 /* Тревоги.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000031 /* Тревоги.swift */; };
@@ -60,6 +61,7 @@
 		D1A0000000000000000093 /* ОбщаяЗапись.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ОбщаяЗапись.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000095 /* ВиджетСахара.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ВиджетСахара.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000098 /* Сеть.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Сеть.swift"; sourceTree = "<group>"; };
+		D1A000000000000000009A /* Здоровье.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Здоровье.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000013 /* СахарАтрибуты.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "СахарАтрибуты.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000021 /* ИсторияСахара.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ИсторияСахара.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000031 /* Тревоги.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Тревоги.swift"; sourceTree = "<group>"; };
@@ -132,6 +134,7 @@
 				D1A0000000000000000031 /* Тревоги.swift */,
 				D1A0000000000000000033 /* Громкость.swift */,
 				D1A0000000000000000091 /* Разрешения.swift */,
+				D1A000000000000000009A /* Здоровье.swift */,
 				D1A0000000000000000035 /* Сводка.swift */,
 				D1A0000000000000000037 /* Значок.swift */,
 			);
@@ -339,6 +342,7 @@
 				D1A0000000000000000012 /* ЖивойБаннерУправление.swift in Sources */,
 				D1A0000000000000000014 /* СахарАтрибуты.swift in Sources */,
 				D1A0000000000000000092 /* ОбщаяЗапись.swift in Sources */,
+				D1A0000000000000000099 /* Здоровье.swift in Sources */,
 				D1A0000000000000000097 /* Сеть.swift in Sources */,
 				1A2B3C4D5E6F708192A3B4D5 /* LoopFeed.swift in Sources */,
 				D1A0000000000000000022 /* ИсторияСахара.swift in Sources */,
