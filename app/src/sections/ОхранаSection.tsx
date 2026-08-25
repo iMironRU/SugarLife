@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Иконка from '@/ui/Иконка';
 import { playOutline, chevronForward } from 'ionicons/icons';
 import Section from '@/ui/Section';
+import Sheet from '@/ui/Sheet';
 import Row from '@/ui/Row';
 import { useStack } from '@/app/stackCtx';
 import { AlarmsSection } from '@/sections/lazy';
@@ -31,6 +32,8 @@ export default function ОхранаSection({ onClose }: { onClose: () => void }
   const { охрана: о, обновить } = useОхрана();
   const [занят, setЗанят] = useState<string | null>(null);
   const [проверил, setПроверил] = useState(false);
+  /** Какой пункт раскрыт шторкой. Один: шторка перекрывает экран, двух сразу не бывает. */
+  const [открыт, setОткрыт] = useState<number | null>(null);
 
   const починить = async (что: NonNullable<Строка['действие']>) => {
     setЗанят(что);
@@ -96,23 +99,52 @@ export default function ОхранаSection({ onClose }: { onClose: () => void }
             );
           })()}
 
+          {/* СТРОКА ОТВЕЧАЕТ «ЧТО», ШТОРКА — «ПОЧЕМУ И ЧТО ДЕЛАТЬ» (#529).
+
+              Длинный текст обрывался многоточием прямо в строке: человек видел «нет доступа к
+              „Не беспокоить" — ноч…» и не мог ни дочитать, ни понять, как с этим быть. Тот же
+              приём, что у правил тревог: список сверху, объяснение по нажатию. */}
           <div className="section-label sec">Из чего это состоит</div>
           <div className="list">
             {о.строки.map((с, i) => (
               <div key={i} className="list-row охрана-пункт">
                 <span className={'охрана-знак-п ' + (с.знак === 'ок' ? 'ок' : с.знак === 'нет' ? 'нет' : 'незнаем')} />
-                <span className="pick-main">
-                  <span className="list-title">{с.имя}</span>
-                  {с.под && <span className="pick-sub">{с.под}</span>}
-                </span>
-                {с.знак === 'нет' && с.действие && (
+                {с.подробно ? (
+                  <button className="охрана-пункт-кнопка" onClick={() => setОткрыт(i)}>
+                    <span className="list-title">{с.имя}</span>
+                    {с.под && <span className="pick-sub">{с.под}</span>}
+                  </button>
+                ) : (
+                  <span className="pick-main">
+                    <span className="list-title">{с.имя}</span>
+                    {с.под && <span className="pick-sub">{с.под}</span>}
+                  </span>
+                )}
+                {с.знак === 'нет' && с.действие ? (
                   <button className="охрана-чинить" onClick={() => void починить(с.действие!)}>
                     исправить <Иконка icon={chevronForward} />
                   </button>
-                )}
+                ) : с.подробно ? (
+                  <Иконка icon={chevronForward} className="охрана-шеврон-п" />
+                ) : null}
               </div>
             ))}
           </div>
+
+          {/* Подробность — шторкой снизу: полный текст и что с этим делать. */}
+          {открыт != null && о.строки[открыт] && (
+            <Sheet isOpen onClose={() => setОткрыт(null)}
+              title={о.строки[открыт].имя} subtitle={о.строки[открыт].под}>
+              <div className="охрана-подробно">{о.строки[открыт].подробно}</div>
+              {о.строки[открыт].знак === 'нет' && о.строки[открыт].действие && (
+                <button className="changed-btn is-undo во-всю" style={{ marginTop: 14 }}
+                  disabled={занят === о.строки[открыт].действие}
+                  onClick={() => { const д = о.строки[открыт!].действие!; setОткрыт(null); void починить(д); }}>
+                  Исправить
+                </button>
+              )}
+            </Sheet>
+          )}
 
           {/* Проверочная тревога — здесь же: услышать, как это прозвучит ночью, не
               дожидаясь ночи. Узнать, что тревоги молчат, во время гипогликемии — худший

@@ -7,8 +7,15 @@ import { useRef } from 'react';
    иначе непонятно, что от тебя хотят. */
 const HOLD_MS = 1100;
 
-export default function HoldButton({ label, disabled, onComplete }: {
-  label: string; disabled?: boolean; onComplete: () => void;
+export default function HoldButton({ label, disabled, className, holdMs, onComplete }: {
+  label: string; disabled?: boolean;
+  /** Свой вид кнопки — для тревожной полосы, где акцентная заливка была бы призывом. */
+  className?: string;
+  /* Насколько держать. Умолчание — 1100 мс, столько же, сколько у подачи инсулина. Тревоге
+     хватает меньше: там цена ошибки — «не то применил», здесь — «случайно погасил», и держать
+     секунду спросонья дольше, чем нужно. */
+  holdMs?: number;
+  onComplete: () => void;
 }) {
   const fill = useRef<HTMLSpanElement>(null);
   const timer = useRef<number | null>(null);
@@ -22,9 +29,10 @@ export default function HoldButton({ label, disabled, onComplete }: {
     if (disabled) return;
     e.preventDefault();
     const t0 = Date.now();
+    const держать = holdMs ?? HOLD_MS;
     stop();
     timer.current = window.setInterval(() => {
-      const p = Math.min(1, (Date.now() - t0) / HOLD_MS);
+      const p = Math.min(1, (Date.now() - t0) / держать);
       if (fill.current) fill.current.style.width = p * 100 + '%';
       if (p >= 1) { stop(); onComplete(); }
     }, 16);
@@ -32,7 +40,7 @@ export default function HoldButton({ label, disabled, onComplete }: {
 
   return (
     <button
-      className={'hold-btn' + (disabled ? ' off' : '')}
+      className={'hold-btn' + (disabled ? ' off' : '') + (className ? ' ' + className : '')}
       disabled={disabled}
       onPointerDown={start}
       onPointerUp={stop}

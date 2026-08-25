@@ -495,3 +495,12 @@ label.list-row { cursor: pointer; }
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .правило-шеврон { font-size: 1rem; color: var(--color-neutral-500); flex: 0 0 auto; }
+
+/* Цифра «сколько здесь красного» в строке списка (#523). Красная, потому что означает беду, а не
+   счёт непрочитанного: спутать эти два смысла — значит приучить не замечать оба. */
+.list-бейдж {
+  flex: 0 0 auto; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--c-danger); color: var(--color-bg);
+  font-size: 0.75rem; font-weight: 700; font-variant-numeric: tabular-nums;
+}
