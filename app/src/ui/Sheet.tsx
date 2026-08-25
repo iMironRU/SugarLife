@@ -1,7 +1,7 @@
 import Модалка, { type УправлениеМодалкой } from './Модалка';
 import Иконка from './Иконка';
 import { closeOutline, chevronBack } from 'ionicons/icons';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { закрыватьЛи, сдвиг, тянемШторку, начинатьЛи, ПОРОГ_СТАРТА, ОКНО_СКОРОСТИ } from './sheetGesture';
 import КрайПрокрутки from './КрайПрокрутки';
 
@@ -48,8 +48,19 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
   children: ReactNode;
 }) {
   const модалка = useRef<УправлениеМодалкой>(null);
-  const оболочка = useRef<HTMLDivElement>(null);
-  const тело = useRef<HTMLDivElement>(null);
+  /* УЗЕЛ ЧЕРЕЗ СОСТОЯНИЕ, А НЕ ЧЕРЕЗ ref — И ЭТО НЕ ПРИДИРКА К СТИЛЮ (#541).
+
+     Смахивание не работало НИ РАЗУ с тех пор, как модалка стала своей. Причина в порядке: React
+     запускает эффекты снизу вверх, поэтому эффект шторки успевал раньше, чем модалка показывала
+     себя, — а до этого момента её содержимого в дереве нет вовсе. Жест вешался на `null`, код
+     молча выходил по проверке, и второй попытки не было: `isOpen` больше не менялся.
+
+     Ловушка тихая: ошибок нет, шторка открывается и закрывается крестиком, всё выглядит рабочим.
+     Живёт она ровно до того, как кто-нибудь потянет шторку пальцем.
+
+     Состояние вместо ссылки убирает саму возможность: узел появился — React перерисовал, эффект
+     подключил жест. Момента «ещё нет» больше не существует. */
+  const [оболочка, setОболочка] = useState<HTMLDivElement | null>(null);
   const снять = useRef<(() => void) | null>(null);
 
   /* Закрываем ВСЕГДА через саму модалку, а не сменой состояния снаружи.
@@ -85,8 +96,8 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
      Привязываться к onDidPresent тоже нельзя: если событие не придёт (а в скрытой
      вкладке оно не приходит), шторка останется без жеста и никто не поймёт почему. */
   const включитьЖест = () => {
-    const кор = оболочка.current;
-    const низ = тело.current;
+    const кор = оболочка;
+    const низ = кор?.querySelector('.sheet-body') as HTMLElement | null;
     const шапка = кор?.querySelector('.sheet-head') as HTMLElement | null;
     if (!кор || !низ || снять.current) return;
 
@@ -164,19 +175,20 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
   const выключитьЖест = () => {
     снять.current?.();
     снять.current = null;
-    const кор = оболочка.current;
+    const кор = оболочка;
     if (кор) { кор.style.transition = ''; кор.style.transform = ''; }
   };
 
+  /* Зависим и от узла: он появляется на кадр позже, чем `isOpen` становится истиной. */
   useEffect(() => {
-    if (isOpen) включитьЖест(); else выключитьЖест();
+    if (isOpen && оболочка) включитьЖест(); else выключитьЖест();
     return выключитьЖест;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, оболочка]);
 
   return (
     <Модалка ref={модалка} isOpen={isOpen} onClose={onClose} className="sheet-modal">
-      <div className="sheet-shell" ref={оболочка}>
+      <div className="sheet-shell" ref={setОболочка}>
         <div className="sheet-head">
           {/* Полоска-ручка: она же подсказка, что шторку можно смахнуть. Без неё жест
               знают только те, кто и так пробует его на всём подряд. */}
@@ -196,7 +208,7 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
         </div>
         {/* У шторки этого не было вовсе (#285): длинный список в шторке обрывался у
             нижнего края без всякого признака, что ниже есть ещё. */}
-        <div className="sheet-body" ref={тело}>{children}<КрайПрокрутки /></div>
+        <div className="sheet-body">{children}<КрайПрокрутки /></div>
         {footer}
       </div>
     </Модалка>
