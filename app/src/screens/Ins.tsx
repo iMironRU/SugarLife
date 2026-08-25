@@ -8,6 +8,7 @@ import { useStorePart } from '@/sources/store';
 import { useTreatments } from '@/sources/db';
 import { detectTherapy } from '@/domain/therapy';
 import { activeInsulin } from '@/domain/loopValue';
+import { useЧужаяПетля } from '@/показ/чужаяПетля';
 import { fmt } from '@/domain/units';
 import { useSnapshot } from '@/sources/bridge';
 import { фонИнсулина, подписьФона } from '@/domain/longInsulin';
@@ -41,7 +42,9 @@ export default function Ins() {
   const boluses = treatments.filter((t) => t.type !== 'Temp Basal' && (t.insulin ?? 0) > 0);
   const baseBasal = dev?.baseBasal ?? profile?.basal ?? null;
   const pumpStatus = dev?.status || (therapy === 'loop' ? 'Замкнутый цикл' : 'Помпа');
-  const ai = activeInsulin(dev);
+  /* То же число, что в круге на «Сегодня», и из того же места (#528). */
+  const петля = useЧужаяПетля();
+  const ai = activeInsulin({ iob: петля.iob, loopAt: петля.loopAt } as typeof dev);
   /* Длинный инсулин — фоном и ОТДЕЛЬНО от активного (#287). Не сложением: 24 ед Туджео
      рядом с 4 ед короткого — это не 28 «активных», и по такому числу решать нельзя.
 

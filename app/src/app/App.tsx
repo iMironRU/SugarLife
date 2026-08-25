@@ -20,6 +20,7 @@ import InstallPrompt from '@/ui/InstallPrompt';
 import HeroPanel from '@/app/HeroPanel';
 import { useStore } from '@/sources/store';
 import { activeInsulin } from '@/domain/loopValue';
+import { useЧужаяПетля } from '@/показ/чужаяПетля';
 import { сообщитьИнсулин } from '@/platform/живойБаннер';
 import { useSnapshot } from '@/sources/bridge';
 import { useAnalysis, непрочитанныеВажные } from '@/domain/useAnalysis';
@@ -159,10 +160,13 @@ export default function App() {
      оно хранится со сроком годности, так что устаревшее в шторку не попадёт.
 
      Здесь, а не в панели: панель — про показ, а это передача данных наружу приложения. */
-  const активныйИнсулин = activeInsulin(data?.device ?? null);
+  /* ЧИСЛО БЕРЁМ ТАМ ЖЕ, ГДЕ ЭКРАН (#528). Иначе в шторке и на «Сегодня» оказывались бы разные
+     инсулины: одно от движка, другое от нашей загрузки Nightscout. */
+  const петляДляНатива = useЧужаяПетля();
+  const активныйИнсулин = activeInsulin({ iob: петляДляНатива.iob, loopAt: петляДляНатива.loopAt } as never);
   useEffect(() => {
-    void сообщитьИнсулин(активныйИнсулин.known ? (data?.device?.iob ?? null) : null);
-  }, [активныйИнсулин.known, data?.device?.iob]);
+    void сообщитьИнсулин(активныйИнсулин.known ? петляДляНатива.iob : null);
+  }, [активныйИнсулин.known, петляДляНатива.iob]);
 
   // Спрашиваем разрешение на уведомления сразу при старте (не ждём первого
   // реального события) — так пользователь явно видит и решает.

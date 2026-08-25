@@ -1,7 +1,7 @@
 import { useЖивыеТревоги, понял, type ЖиваяТревога } from '@/показ/живыеТревоги';
 import HoldButton from '@/ui/HoldButton';
-import { useStore } from '@/sources/store';
 import { activeInsulin } from '@/domain/loopValue';
+import { useЧужаяПетля } from '@/показ/чужаяПетля';
 import { сколькоНазад } from '@/слова/время';
 import { fmt } from '@/domain/units';
 
@@ -39,8 +39,8 @@ function зона(т: ЖиваяТревога): 'низкий' | 'высоки�
 
 export default function ЖивыеТревоги() {
   const тревоги = useЖивыеТревоги();
-  const { data } = useStore();
-  const инсулин = activeInsulin(data?.device ?? null);
+  const петля = useЧужаяПетля();
+  const инсулин = activeInsulin({ iob: петля.iob, loopAt: петля.loopAt } as never);
 
   if (!тревоги.length) return null;
 
@@ -65,8 +65,8 @@ export default function ЖивыеТревоги() {
                 : <span className="тревога-текст">{т.текст}</span>}
               <span className="тревога-мелочи">
                 {т.когда > 0 && <span>{сколькоНазад(т.когда)}</span>}
-                {инсулин.known && data?.device?.iob != null && (
-                  <span className="тревога-инсулин">инс. {fmt(data.device.iob)} ед</span>
+                {инсулин.known && петля.iob != null && (
+                  <span className="тревога-инсулин">инс. {fmt(петля.iob)} ед</span>
                 )}
               </span>
             </div>
@@ -84,7 +84,7 @@ export default function ЖивыеТревоги() {
 
                  Полоса уходит сразу, не дожидаясь снимка: движок держит тревогу активной, пока
                  держится причина, и ждать его значило бы оставить нажатую кнопку висеть. */
-              <HoldButton label="Понял — держите" className="тревога-понял" holdMs={700}
+              <HoldButton label="Понял" className="тревога-понял" holdMs={700}
                 onComplete={() => понял(т.id)} />
             )}
           </div>
