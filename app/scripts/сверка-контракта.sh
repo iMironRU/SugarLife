@@ -26,9 +26,37 @@ fi
 BRIDGE="$CORE/bridge/src/commonMain/kotlin/ru/imiron/sugarlife/bridge"
 [ -d "$BRIDGE" ] || { echo "В $CORE не найден мост ($BRIDGE)" >&2; exit 1; }
 
+# СВЕРЯЕМСЯ С origin/main, А НЕ С РАБОЧЕЙ КОПИЕЙ (#574).
+#
+# Клон ядра лежит на диске неделями и устаревает молча. Сверка на нём отвечала «синхронны», когда мы
+# отставали на три ревизии, — то есть успокаивала ровно там, где обязана была предупредить. Проверка,
+# которой можно верить только после ручного git pull, не проверка.
+#
+# Тянем сами и читаем файлы из origin/main, не трогая рабочую копию: она может быть занята.
+if git -C "$CORE" rev-parse --git-dir >/dev/null 2>&1; then
+  git -C "$CORE" fetch -q origin 2>/dev/null || echo "Внимание: не смог обновить клон ядра — сверяю по тому, что есть." >&2
+  FROM_REF="origin/main"
+else
+  FROM_REF=""
+  echo "Внимание: $CORE не репозиторий — сверяю по файлам на диске, они могут быть старыми." >&2
+fi
+
+# Файл моста из origin/main, если можем; иначе с диска.
+# Имена переменных латиницей — вынужденно: bash 3.2 в macOS не умеет имён вне ASCII (та же грабля,
+# что уже описана в шапке; я наступил на неё второй раз и оставляю след прямо здесь).
+bridge_files() {
+  if [ -n "$FROM_REF" ]; then
+    git -C "$CORE" ls-tree -r --name-only "$FROM_REF" -- bridge | grep '\.kt$' | while read -r f; do
+      git -C "$CORE" show "$FROM_REF:$f" 2>/dev/null
+    done
+  else
+    cat "$BRIDGE"/*.kt 2>/dev/null
+  fi
+}
+
 # Ревизия объявлена рядом со снимком, но искать её по одному файлу — способ однажды промолчать:
 # у ядра она уже переезжала. Ищем по всему мосту.
-CORE_REV=$(grep -rh 'BRIDGE_REVISION *=' "$BRIDGE" | grep -oE '[0-9]+\.[0-9]+' | head -1)
+CORE_REV=$(bridge_files | grep 'BRIDGE_REVISION *=' | grep -oE '[0-9]+\.[0-9]+' | head -1)
 OUR_REV=$(grep -oE 'rev ≥ [0-9]+\.[0-9]+' "$HERE/src/sources/bridge.ts" | grep -oE '[0-9]+\.[0-9]+' | sort -V | tail -1)
 
 echo "мост ядра:     $CORE_REV"
@@ -57,9 +85,14 @@ echo "Интенты ядра, которых мы не шлём:"
 NOSEND=0
 for it in $INTENTS; do
   [ ${#it} -ge 5 ] || continue
-  if ! grep -rqF "$it" "$HERE/src" 2>/dev/null; then
+  # Ищем и в вебе, и в нативе: часть интентов шлёт натив (журнал, сеть, тревоги), и поиск только по
+  # src объявлял их «не шлём» — ещё один способ соврать в сторону спокойствия.
+  if ! grep -rqF "$it" "$HERE/src" "$HERE/ios/App/App" "$HERE/android/app/src/main/java" 2>/dev/null; then
     echo "  · $it"
     NOSEND=$((NOSEND + 1))
   fi
 done
 [ "$NOSEND" -eq 0 ] && echo "  (все упоминаются)"
+echo
+echo "Поля подачи (bolusing, progressPercent, suspendDelivery и родня) — издание Pro."
+echo "В Lite их читать негде, и в этом списке они нормальны."
