@@ -107,6 +107,12 @@ class SugarLifeService : Service() {
                     }
                     доложитьСоседей()
                 }
+                /* Маршрут звука — тот же факт, что мы докладываем движку для тревог. Опора обязана
+                   знать его: в машине она перехватила бы магнитолу (SugarLifeCore#123). */
+                runCatching {
+                    val вМашине = Доставка.маршрут(applicationContext) == "car"
+                    ЗвуковаяОпора.маршрутЗвука(applicationContext, вМашине)
+                }
                 SugarWidget.приСнимке(applicationContext, json)   // и на рабочий стол (#449)
                 Значок.приСнимке(applicationContext, json)         // и на сам значок (#500)
             }

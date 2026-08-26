@@ -777,7 +777,7 @@ class SugarLifeBridgePlugin : Plugin() {
         val prefs = context.getSharedPreferences("sugarlife-alarms", android.content.Context.MODE_PRIVATE)
         call.getBoolean("enabled")?.let { хотим ->
             prefs.edit().putBoolean("audioKeepalive", хотим).apply()
-            if (хотим) ЗвуковаяОпора.начать(context.applicationContext) else ЗвуковаяОпора.прекратить()
+            if (хотим) ЗвуковаяОпора.начать(context.applicationContext) else ЗвуковаяОпора.выключить()
         }
         call.resolve(
             JSObject()
