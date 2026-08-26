@@ -425,6 +425,10 @@ export async function вернутьсяНаВстроенныйЕслиСвеж
     if (где?.bundle?.version === 'builtin') return false;
     const п = await NativeВстроенный.builtinBundle();
     if (!п?.['есть'] || !п.builtAt) return false;
+    /* Тот же самый бандл — не повод откатываться. Сравнение строгое, но и его мало: если паспорт и
+       код разойдутся хоть на миллисекунду, «новее» станет вечно истинным, и мы получим перезагрузку
+       по кругу — ровно это и случилось (#572). Поэтому сначала отсекаем совпадение по сборке. */
+    if (п.build && п.build === APP_BUILD) return false;
     if (!новееЛи(п.builtAt, APP_BUILT_AT)) return false;
     await CapacitorUpdater.reset();
     await CapacitorUpdater.reload();

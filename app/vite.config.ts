@@ -18,6 +18,16 @@ const издание = process.env.SUGARLIFE_EDITION === 'pro' ? 'pro' : 'lite'
 
 // версия из package.json + номер сборки (короткий git SHA)
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
+/* ОДНА МЕТКА ВРЕМЕНИ НА ОБЕ СТОРОНЫ (#572).
+
+   Отсюда пришла поломка: `build.json` штамповался своим `new Date()` внутри сборки, а
+   `__APP_BUILT_AT__` — своим, на несколько сотен миллисекунд раньше. Значит встроенный бандл всегда
+   оказывался «строго новее самого себя», проверка на старте откатывалась на него и перезагружала
+   webview — и так по кругу, до заставки, из которой приложение не выходило.
+
+   Один и тот же бандл обязан называть одно и то же время. Считаем один раз. */
+const собраноВ = new Date().toISOString();
+
 const build = (() => {
   try { return execSync('git rev-parse --short HEAD').toString().trim() } catch { return 'dev' }
 })()
@@ -36,7 +46,7 @@ export default defineConfig(({ command }) => ({
     /* Когда собран этот бандл. Нужен, чтобы отличить «релиз новее меня» от «релиз просто
        другой»: SHA умеет отвечать только «совпадает или нет», и по нему одинаково
        выглядят свежая сборка и позавчерашняя (SugarLife#238). */
-    __APP_BUILT_AT__: JSON.stringify(new Date().toISOString()),
+    __APP_BUILT_AT__: JSON.stringify(собраноВ),
     __ИЗДАНИЕ__: JSON.stringify(издание),
   },
   plugins: [
@@ -56,7 +66,7 @@ export default defineConfig(({ command }) => ({
         (this as unknown as { emitFile: (f: unknown) => void }).emitFile({
           type: 'asset',
           fileName: 'build.json',
-          source: JSON.stringify({ build, builtAt: new Date().toISOString() }),
+          source: JSON.stringify({ build, builtAt: собраноВ }),
         });
       },
     },
