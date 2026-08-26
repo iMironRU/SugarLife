@@ -1,0 +1,44 @@
+# ТЕСТЫ НА КАЖДОМ PR И НА main.
+#
+# Заведено после того, как main простоял со сломанной сборкой тестов: в `npm test` первым идёт `tsc`,
+# он падал на одном пропущенном импорте типа — и `vitest` после него не запускался вовсе. То есть
+# 974 теста не выполнялись, а выглядело это как «тесты есть».
+#
+# Прогонять их локально мы, конечно, можем и прогоняем. Но полагаться на то, что человек не забудет,
+# — это и есть отсутствие проверки: забыли ровно один раз, и никто не узнал.
+name: Тесты
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: npm ci
+        working-directory: app
+        run: npm ci
+
+      # tsc + vitest одной командой — ровно то, что запускается на машине разработчика.
+      - name: Тесты
+        working-directory: app
+        run: npm test
+
+      # Граница издания: веб и OTA — это Lite, команд прибору в собранном быть не должно (#296).
+      # Тот же прогон стоит и в деплое, но там он ПОСЛЕ мержа: узнать о нарушении на PR дешевле.
+      - name: Сборка и граница издания
+        working-directory: app
+        run: |
+          npm run build
+          npm run edition:check

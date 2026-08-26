@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { охрана, изОбещания } from './охрана';
 import type { ГотовностьТревог } from '@/platform/тревоги';
+import type { NightPromiseView, NightReasonView } from '@/sources/bridge';
 
 const г = (п: Partial<ГотовностьТревог> = {}): ГотовностьТревог => ({
   проблема: false, чегоНет: [], поломки: [], ...п,
