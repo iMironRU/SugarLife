@@ -843,6 +843,17 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
                 json += "\"fields\":{\(f)},\"hasIdentifiers\":\(frame)}"
                 self?.engineQueue.async { _ = self?.engine?.sendIntent(json: json) }
             }
+            /* РУКА К «ЗДОРОВЬЮ» — СРАЗУ, А ПРАВА — ПОТОМ (#583).
+
+               Привязка не значит запись: приёмник встаёт в строй только по настройке `health.write`,
+               выключенной по умолчанию, а право система спросит в момент первой отправки. Поэтому
+               цеплять можно здесь же, вместе со всем остальным, — системного окна человек не увидит.
+
+               На платформе без HealthKit рука честно отвечает «хранилища нет», и движок приёмник не
+               ставит: отдельной ветки для Android тут не нужно. */
+            self.engineQueue.async { [weak self] in
+                self?.engine?.attachHealthStore(store: ЗдоровьеЗапись())
+            }
             self.unsubscribe = e.subscribe(onSnapshot: { [weak self] json in
                 /* История — с движковой очереди: это запрос в базу, и на главном потоке ему не
                    место (тот же урок, что с сериализацией снимка, #517). */
