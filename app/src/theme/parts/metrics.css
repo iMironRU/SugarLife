@@ -123,6 +123,20 @@
 .metric-card-val span { font-size: 0.8125rem; color: var(--color-neutral-300); }
 
 .metric-note { font-size: 0.6875rem; color: var(--color-neutral-500); margin: 16px 2px 0; line-height: 1.5; }
+/* СНОСКА, КОТОРАЯ ПРЕДУПРЕЖДАЕТ (#578).
+
+   У `.sheet-note` предупреждающий вид был давно, у `.metric-note` — нет, и написанное предупреждение
+   рисовалось обычной серой сноской. Такое хуже отсутствующего: мы считаем, что сказали, а человек
+   видит примечание мелким шрифтом и проходит мимо.
+
+   Приём тот же, что у шторок, — полоса сбоку и цвет: человек уже знает, что полоса значит «прочти
+   это». Заводить второй язык предупреждений ради второго класса неоткуда. */
+.metric-note.warn {
+  color: var(--c-danger-2);
+  border-left: 2px solid var(--c-danger-2);
+  padding-left: 10px;
+  font-size: 0.75rem;
+}
 /* индикатор фоновой докачки: честно, что данные ещё пополняются */
 .gather-note {
   display: flex; align-items: center; gap: 9px; margin: 14px 0 2px; padding: 10px 14px;
