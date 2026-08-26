@@ -10,6 +10,10 @@
 # осмысленное использование: field может упоминаться и лежать без дела. Обратное надёжно — если слова
 # нет вовсе, field не читается точно, и для нашей задачи этого достаточно.
 #
+# Слово — целиком (grep -w), и это не придирка. Поле 1.50 зовётся `decision`, а у нас в комментариях
+# полтора десятка ссылок на `docs/decisions/…`. Поиск подстрокой нашёл бы их и объявил поле
+# прочитанным — за сутки до того, как мы его вообще завели.
+#
 # ИМЕНА ПЕРЕМЕННЫХ ЛАТИНИЦЕЙ — вынужденно: bash в macOS версии 3.2 и не-ASCII имён не понимает,
 # читает их как команду и падает. Остальные слова здесь по-прежнему русские.
 #
@@ -54,24 +58,45 @@ bridge_files() {
   fi
 }
 
+# ОДИН файл моста — из того же origin/main, что и всё остальное.
+#
+# Было так: ревизию скрипт брал из origin/main, а списки полей — с диска. Клон на диске стоял на
+# 1.43, и сверка честно печатала «мост ядра 1.50», сравнивая при этом со старыми файлами: заголовок
+# новый, вывод старый, расхождений «нет». Ровно тот случай, ради которого сверка и заведена, —
+# инструмент, который врёт в сторону спокойствия.
+bridge_file() {
+  if [ -n "$FROM_REF" ]; then
+    git -C "$CORE" show "$FROM_REF:bridge/src/commonMain/kotlin/ru/imiron/sugarlife/bridge/$1" 2>/dev/null
+  else
+    cat "$BRIDGE/$1" 2>/dev/null
+  fi
+}
+
 # Ревизия объявлена рядом со снимком, но искать её по одному файлу — способ однажды промолчать:
 # у ядра она уже переезжала. Ищем по всему мосту.
 CORE_REV=$(bridge_files | grep 'BRIDGE_REVISION *=' | grep -oE '[0-9]+\.[0-9]+' | head -1)
-OUR_REV=$(grep -oE 'rev ≥ [0-9]+\.[0-9]+' "$HERE/src/sources/bridge.ts" | grep -oE '[0-9]+\.[0-9]+' | sort -V | tail -1)
+# Наша ревизия — по всему, что зеркалит контракт, а не по одному bridge.ts.
+#
+# Часть контракта живёт только в нативе: submitLog шлёт оболочка, и веб про него не знает вовсе.
+# Ревизия 1.50 добавила поле именно туда, и проверка «что упомянуто в bridge.ts» показала бы отставание
+# ещё долго после того, как мы её догнали.
+OUR_REV=$( { grep -rhoE 'rev ≥ [0-9]+\.[0-9]+|мост [0-9]+\.[0-9]+' \
+      "$HERE/src/sources/bridge.ts" "$HERE/ios/App/App" "$HERE/android/app/src/main/java" 2>/dev/null || true; } \
+  | grep -oE '[0-9]+\.[0-9]+' | sort -V | tail -1)
 
 echo "мост ядра:     $CORE_REV"
-echo "наше зеркало:  $OUR_REV (самая поздняя ревизия, упомянутая в bridge.ts)"
+echo "наше зеркало:  $OUR_REV (самая поздняя ревизия, названная в вебе или нативе)"
 [ "$CORE_REV" = "$OUR_REV" ] || echo "  ↑ расходятся — ниже видно, чего именно не хватает"
 echo
 
 # Поля снимка: `val имя:` в UiSnapshot.kt. Служебные и приватные не берём.
-FIELDS=$(grep -hoE '^\s+val [a-zA-Z][a-zA-Z0-9]*' "$BRIDGE"/UiSnapshot.kt | awk '{print $2}' | sort -u)
+FIELDS=$(bridge_file UiSnapshot.kt | grep -hoE '^\s+val [a-zA-Z][a-zA-Z0-9]*' | awk '{print $2}' | sort -u)
 MISSING=0
 echo "Поля снимка, которых нет в нашем коде:"
 for field in $FIELDS; do
   # Однобуквенные и слишком общие слова дают ложные совпадения — их сверять бессмысленно.
   [ ${#field} -ge 4 ] || continue
-  if ! grep -rqF "$field" "$HERE/src" 2>/dev/null; then
+  if ! grep -rqwF "$field" "$HERE/src" 2>/dev/null; then
     echo "  · $field"
     MISSING=$((MISSING + 1))
   fi
@@ -80,19 +105,37 @@ done
 echo
 
 # Интенты: значения type в Intent.kt (`@SerialName("…")` либо строковый литерал).
-INTENTS=$(grep -hoE '"[a-zA-Z][a-zA-Z0-9]+"' "$BRIDGE"/Intent.kt 2>/dev/null | tr -d '"' | sort -u || true)
+INTENTS=$(bridge_file Intent.kt | grep -hoE '"[a-zA-Z][a-zA-Z0-9]+"' | tr -d '"' | sort -u || true)
 echo "Интенты ядра, которых мы не шлём:"
 NOSEND=0
 for it in $INTENTS; do
   [ ${#it} -ge 5 ] || continue
   # Ищем и в вебе, и в нативе: часть интентов шлёт натив (журнал, сеть, тревоги), и поиск только по
   # src объявлял их «не шлём» — ещё один способ соврать в сторону спокойствия.
-  if ! grep -rqF "$it" "$HERE/src" "$HERE/ios/App/App" "$HERE/android/app/src/main/java" 2>/dev/null; then
+  if ! grep -rqwF "$it" "$HERE/src" "$HERE/ios/App/App" "$HERE/android/app/src/main/java" 2>/dev/null; then
     echo "  · $it"
     NOSEND=$((NOSEND + 1))
   fi
 done
 [ "$NOSEND" -eq 0 ] && echo "  (все упоминаются)"
+echo
+# ПОЛЯ ВНУТРИ ИНТЕНТОВ, а не только их имена.
+#
+# 1.50 не завела ни одного нового интента — она добавила поле `decision` в submitLog. Скрипт сверял
+# имена интентов и поля снимка, а поля интентов не сверял вовсе, и отставание показал одной строкой
+# «ревизии расходятся», без единого слова о том, чего не хватает. Догадаться, что смотреть надо в
+# Intent.kt, пришлось глазами — то есть проверка не сработала там, где была нужна.
+INTENT_FIELDS=$(bridge_file Intent.kt | grep -hoE '^\s+val [a-zA-Z][a-zA-Z0-9]*' | awk '{print $2}' | sort -u)
+echo "Поля интентов, которых нет в нашем коде:"
+NOFIELD=0
+for f in $INTENT_FIELDS; do
+  [ ${#f} -ge 5 ] || continue
+  if ! grep -rqwF "$f" "$HERE/src" "$HERE/ios/App/App" "$HERE/android/app/src/main/java" 2>/dev/null; then
+    echo "  · $f"
+    NOFIELD=$((NOFIELD + 1))
+  fi
+done
+[ "$NOFIELD" -eq 0 ] && echo "  (все упоминаются)"
 echo
 echo "Поля подачи (bolusing, progressPercent, suspendDelivery и родня) — издание Pro."
 echo "В Lite их читать негде, и в этом списке они нормальны."
