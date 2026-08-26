@@ -1,4 +1,5 @@
 import { IonPage, IonContent, IonRefresher, IonRefresherContent } from '@ionic/react';
+import { ждатьНеДольше, ПРЕДЕЛ_ОБНОВЛЕНИЯ } from '@/domain/ждатьНеДольше';
 import КрайПрокрутки from './КрайПрокрутки';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { reportContentScroll, серединаЛи, полшага, плавно, syncToActiveScreen } from '@/app/panel';
@@ -156,8 +157,21 @@ export default function Screen({ tab, panel = 'compact', обновить, child
         {обновить && (
           /* Порог побольше стандартного: панель здесь и так ездит за пальцем, и
              случайный потяг при обычной прокрутке запускал бы опрос по десять раз. */
+          /* ЖЕСТ ВОЗВРАЩАЕТСЯ ВСЕГДА, ЧЕМ БЫ НИ КОНЧИЛОСЬ ОБНОВЛЕНИЕ.
+
+             Здесь стояло `обновить().finally(complete)`. Пока обновление не ответит, содержимое
+             стоит отжатым вниз с уже отпущенным пальцем; не ответит никогда — таким и останется.
+             Владелец это и увидел: «оттягиваю вниз и оно замерзает не возвращаясь обратно».
+
+             Предел стоит ЗДЕСЬ, а не только у того, кто передал `обновить`: это обещание жеста, а
+             не свойство одного экрана. Экранов с потяжкой станет больше, и каждый новый принёс бы
+             свой способ зависнуть. Кто именно молчал, называет вызывающий — ему видно, из чего
+             складывается его обновление (screens/Today.tsx). */
           <IonRefresher slot="fixed" pullMin={90} pullMax={200}
-            onIonRefresh={(e) => { void обновить().finally(() => e.detail.complete()); }}>
+            onIonRefresh={(e) => {
+              void ждатьНеДольше([{ имя: 'обновление', дело: обновить() }], ПРЕДЕЛ_ОБНОВЛЕНИЯ)
+                .finally(() => e.detail.complete());
+            }}>
             <IonRefresherContent pullingText="Потяните, чтобы обновить"
               refreshingSpinner="crescent" refreshingText="Спрашиваю…" />
           </IonRefresher>
