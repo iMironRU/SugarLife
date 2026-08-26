@@ -4,8 +4,8 @@ import Иконка from '@/ui/Иконка';
 /* Импорт под другим именем: местное «часы» — это длительность в часах, а не время
    на циферблате. Одно слово на два смысла в одном файле — заготовка для ошибки. */
 import { сколькоНазад, часы as наЧасах } from '@/слова/время';
-import { MealsSection, HistorySection } from '@/sections/lazy';
-import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, chevronForward, timeOutline } from 'ionicons/icons';
+import { MealsSection } from '@/sections/lazy';
+import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, chevronForward } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore, refresh } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt } from '@/domain/units';
@@ -610,20 +610,22 @@ export default function Today() {
               когда нет. */}
           <СтрокаОхраны только="спокойно" />
 
-          {/* «История» — тихой строкой внизу и последней (#384).
+          {/* «ИСТОРИЯ» С «СЕГОДНЯ» ПОКА УБРАНА — решение владельца.
 
-              Экран «Сегодня» живёт настоящим: обращения гаснут, лента подключения
-              исчезает, приём уезжает вверх. Это правильно — экран действия не архив. Но
-              вопрос «во сколько я ел» и «когда сенсор отвалился» возникает потом, и
-              отвечать на него было нечем, хотя данные лежат.
+              Замысел (#384) был верный: экран действия живёт настоящим, а вопрос «во сколько
+              я ел» и «когда сенсор отвалился» возникает потом. Дверь назад во времени нужна.
 
-              Неброско намеренно: это не действие, а дверь назад во времени. Заметная
-              кнопка тянула бы внимание там, где человек решает, колоть ли. */}
-          <button className="сегодня-история" onClick={() => push(<HistorySection onClose={pop} />, { id: 'история' })}>
-            <Иконка icon={timeOutline} />
-            <span>История</span>
-            <Иконка icon={chevronForward} className="сегодня-история-шеврон" />
-          </button>
+              Но открыв её, владелец увидел не это. Лента оказалась забита одним и тем же:
+              «Внешний CGM … на связи», «Внешняя помпа … отключился», по паре записей в минуту,
+              и так на весь экран. Про облачный источник это к тому же бессмыслица — по радио
+              там ничто не подключается и не отваливается.
+
+              Дверь, за которой не то, что обещано, хуже отсутствующей: человек ходит туда
+              впустую, а потом перестаёт ходить вовсе. Поэтому кнопку сняли до того, как ленту
+              приведут в порядок, — что в ней должно быть, обсуждается в отдельной задаче.
+
+              Сам раздел жив и открывается по маршруту `история` (app/разделы.tsx): выкидывать
+              его ради временной уборки значило бы потерять и то, что в нём есть полезного. */}
 
           </DataGate>
         <FoodSheet isOpen={foodOpen} onClose={() => setFoodOpen(false)} />
