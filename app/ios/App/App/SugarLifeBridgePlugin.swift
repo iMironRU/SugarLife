@@ -880,6 +880,15 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             Тревоги.общие.отправить = { [weak self] json in
                 self?.engine?.sendIntent(json: json) ?? ""
             }
+            /* Молчаливо умирающий механизм неотличим от работающего (#593). И тревога, не
+               прозвучавшая звуком, и опора, у которой отобрали сессию, обязаны оставить след там,
+               откуда его можно прочитать наутро, — в журнале движка, а не в NSLog. */
+            Тревоги.общие.вЖурналДвижка = { [weak self] уровень, событие in
+                self?.вЖурнал(уровень, "alarm", событие)
+            }
+            ФоновоеБодрствование.shared.вЖурнал = { [weak self] уровень, событие in
+                self?.вЖурнал(уровень, "keepalive", событие)
+            }
             /* Сеть вернулась — будим облако движка немедленно, не досиживая его паузу (#544). */
             Сеть.общая.сообщить = { [weak self] json in
                 self?.engineQueue.async { _ = self?.engine?.sendIntent(json: json) }
@@ -1636,7 +1645,10 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     private func exportAndShare() {
         guard let ndjson = engine?.exportLog() else { return }
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("sugarlife-log.ndjson")
-        do { try ndjson.write(to: url, atomically: true, encoding: .utf8) } catch { return }
+        /* Выгрузка журнала не удалась — говорим об этом в сам журнал. Молчаливый отказ здесь дешевле
+           прочих, но он того же рода: человек нажал «выгрузить» и не узнал, что файла нет. */
+        do { try ndjson.write(to: url, atomically: true, encoding: .utf8) }
+        catch { вЖурнал("Warn", "log", "выгрузка журнала не удалась: \(error.localizedDescription)"); return }
         DispatchQueue.main.async { [weak self] in
             guard let vc = self?.bridge?.viewController else { return }
             let av = UIActivityViewController(activityItems: [url], applicationActivities: nil)

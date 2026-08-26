@@ -41,8 +41,22 @@ final class ФоновоеБодрствование {
     static let shared = ФоновоеБодрствование()
 
     private let ключ = "sugarlife.background-keep-alive"
+    /* СЛЕД В ЖУРНАЛЕ ДВИЖКА, А НЕ ТОЛЬКО В NSLog (#593).
+
+       Опора умирает не на глазах у разработчика, а ночью в кармане. NSLog виден только тому, кто в
+       эту минуту держит телефон подключённым к Xcode; журнал движка выгружается с устройства и
+       читается утром. Молчаливо умирающий механизм неотличим от работающего — это тот же урок, что с
+       баннером, который писал только удачные исходы. */
+    var вЖурнал: ((_ уровень: String, _ событие: String) -> Void)?
+
+    /* ФАКТ, А НЕ НАМЕРЕНИЕ. `режим` — это настройка, то есть чего человек хотел. Держим ли мы звук на
+       самом деле — отдельный вопрос, и отвечать на него надо отдельно: сессию могли отобрать. */
+    var держимЗвук: Bool { проигрыватель?.isPlaying == true }
+
     private var проигрыватель: AVAudioPlayer?
     private var таймер: DispatchSourceTimer?
+    /// Сколько тиков подряд звук не пошёл. Нужен, чтобы писать в журнал один раз, а не каждые пять секунд.
+    private var молчалиПодряд = 0
     private let очередь = DispatchQueue(label: "ru.imiron.sugarlife.keepalive")
 
     private(set) var режим: Режим {
@@ -60,6 +74,45 @@ final class ФоновоеБодрствование {
         NotificationCenter.default.addObserver(
             self, selector: #selector(вернулись),
             name: UIApplication.willEnterForegroundNotification, object: nil)
+        /* ПРЕРЫВАНИЕ — ГЛАВНАЯ ДЫРА, И ОНА БЫЛА ОТКРЫТА (#593).
+
+           Позвонили, другое приложение взяло звук монопольно, магнитола перехватила маршрут — сессию
+           у нас отбирают, проигрыватель останавливается. Таймер после этого продолжал тикать и звать
+           `play()` в деактивированную сессию: вернуть её можно только повторным `setActive(true)`,
+           которого мы не делали нигде, кроме входа в фон.
+
+           То есть после ЛЮБОГО прерывания опора молча умирала до следующего открытия приложения.
+           Выключатель в «Охране» показывал «включено», а тишина не играла — и никто об этом не знал. */
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(прерваны(_:)),
+            name: AVAudioSession.interruptionNotification, object: nil)
+        /* Сброс медиа-служб системой: проигрыватель и сессия становятся негодными целиком, их надо
+           создавать заново. Случается редко, но молча. */
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(медиаСброшены),
+            name: AVAudioSession.mediaServicesWereResetNotification, object: nil)
+    }
+
+    @objc private func прерваны(_ уведомление: Notification) {
+        guard let код = уведомление.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let вид = AVAudioSession.InterruptionType(rawValue: код) else { return }
+        switch вид {
+        case .began:
+            вЖурнал?("Warn", "опора прервана — звук у нас отобрали")
+        default:
+            /* Прерывание кончилось. Поднимаемся, только если мы в фоне и режим включён: на переднем
+               плане опора не нужна, а включать её там значило бы жечь заряд впустую. */
+            guard UIApplication.shared.applicationState == .background, режим != .выключено else { return }
+            вЖурнал?("Info", "опора поднимается после прерывания")
+            применить()
+        }
+    }
+
+    @objc private func медиаСброшены() {
+        проигрыватель = nil
+        guard UIApplication.shared.applicationState == .background, режим != .выключено else { return }
+        вЖурнал?("Warn", "медиа-службы сброшены — опору собираем заново")
+        применить()
     }
 
     func установить(_ новый: Режим) {
@@ -81,7 +134,10 @@ final class ФоновоеБодрствование {
             try AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
+            /* Не смогли занять сессию — опоры нет. Сказать об этом обязаны: выключатель в «Охране»
+               по-прежнему показывает «включено», и молчание здесь читается как «всё в порядке». */
             NSLog("SugarLife: не удалось занять аудио-сессию (\(error)) — фоновое бодрствование не работает")
+            вЖурнал?("Error", "опору не подняли: сессию не отдали")
             return
         }
         if проигрыватель == nil {
@@ -93,8 +149,20 @@ final class ФоновоеБодрствование {
         let t = DispatchSource.makeTimerSource(queue: очередь)
         t.schedule(deadline: .now(), repeating: интервал)
         t.setEventHandler { [weak self] in
-            guard let p = self?.проигрыватель, !p.isPlaying else { return }
-            p.play()
+            guard let self, let p = self.проигрыватель, !p.isPlaying else { return }
+            /* РЕЗУЛЬТАТ ПРОВЕРЯЕМ. `play()` возвращает, получилось ли, и мы его игнорировали: в
+               мёртвой сессии он молча отвечает «нет» каждые пять секунд, а наружу это выглядит
+               работающей опорой.
+
+               Пишем один раз на серию неудач, а не каждый тик: пять записей в секунду забьют журнал,
+               в котором мы же потом будем искать причину. */
+            if p.play() {
+                if self.молчалиПодряд > 0 { self.вЖурнал?("Info", "опора снова играет") }
+                self.молчалиПодряд = 0
+            } else {
+                self.молчалиПодряд += 1
+                if self.молчалиПодряд == 3 { self.вЖурнал?("Error", "опора не играет: сессия не принимает звук") }
+            }
         }
         t.resume()
         таймер = t
