@@ -19,8 +19,10 @@ const эфир = (p: Partial<Discovered>): Discovered => ({
   needsMoreParams: false, isTransport: false, transportFor: [], knownDeviceId: null, ...p,
 } as Discovered);
 
-const снимок = (hardware: HardwareView[], discovered: Discovered[] = []): UiSnapshot => ({
-  bridgeRevision: '1.21', devices: [], hardware, discovered,
+const снимок = (
+  hardware: HardwareView[], discovered: Discovered[] = [], devices: UiSnapshot['devices'] = [],
+): UiSnapshot => ({
+  bridgeRevision: '1.21', devices, hardware, discovered,
   insights: null, pendingWrites: [], alerts: [], monitor: {} as UiSnapshot['monitor'],
 });
 
@@ -29,6 +31,37 @@ describe('вид строки', () => {
     const [с] = лента(снимок([ж({ connection: 'Streaming', status: 'Live' })]), т);
     expect(с.вид).toBe('работает');
     expect(с.действие).toBe(null);
+  });
+
+  /* У заглушки прибора в `devices[]` обязаны быть connection и status: лента берёт состояние
+     оттуда, если запись с тем же id есть (`состояниеИзИсточника`), и запись без них означает
+     «связи нет», а вовсе не «про связь ничего не сказано».
+
+     ВЕДОМЫЙ ОТЛИЧАЕТСЯ ОТ «РАБОТАЕТ» (#482). Связь живая у обоих, и без признака из devices[]
+     прибор, который ведёт чужая программа, выглядел бы прибором, который ведём мы. Разница не
+     косметическая: у ведомого мы не догружаем историю за время сна телефона. */
+  it('ведёт другая программа — ведомый, а не работает', () => {
+    const [с] = лента(снимок(
+      [ж({ id: 'h1', connection: 'Streaming', status: 'Live' })], [],
+      [{ id: 'h1', companion: true, connection: 'Streaming', status: 'Live' }] as unknown as UiSnapshot['devices'],
+    ), т);
+    expect(с.вид).toBe('ведомый');
+  });
+
+  it('у ведомого кнопки в строке нет: предупреждение про закрытие чужой программы в неё не влезет', () => {
+    const [с] = лента(снимок(
+      [ж({ id: 'h1', connection: 'Streaming', status: 'Live' })], [],
+      [{ id: 'h1', companion: true, connection: 'Streaming', status: 'Live' }] as unknown as UiSnapshot['devices'],
+    ), т);
+    expect(с.действие).toBe(null);
+  });
+
+  it('companion у ДРУГОГО прибора на этот не переносится', () => {
+    const [с] = лента(снимок(
+      [ж({ id: 'h1', connection: 'Streaming', status: 'Live' })], [],
+      [{ id: 'h2', companion: true, connection: 'Streaming', status: 'Live' }] as unknown as UiSnapshot['devices'],
+    ), т);
+    expect(с.вид).toBe('работает');
   });
 
   /* Молчащий, но живой прибор чинят не переподключением, а разбором: кнопка здесь
