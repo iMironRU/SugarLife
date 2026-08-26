@@ -17,7 +17,7 @@ import { предупредитьОСыром, МЕТКА_СЫРОГО, ПОЯС
 import { useEntries } from '@/sources/db';
 import { выбратьПоказание, ОТСТАВАНИЕ_МС } from '@/domain/latestGlucose';
 import { activeInsulin } from '@/domain/loopValue';
-import { useЧужаяПетля } from '@/показ/чужаяПетля';
+import { useЧужаяПетля, активныйИнсулин } from '@/показ/чужаяПетля';
 import { useSnapshot } from '@/sources/bridge';
 import { расходка } from '@/domain/supplies';
 import CircleSparkline from '@/charts/CircleSparkline';
@@ -165,8 +165,12 @@ export default function HeroPanel() {
      собственной загрузки Nightscout: два источника об одном числе, и расходились они в самый
      неудобный момент — когда связь рвалась и движок объявлял молчание. */
   const петля = useЧужаяПетля();
-  const ai = activeInsulin({ iob: петля.iob, loopAt: петля.loopAt } as typeof dev);
-  const iobText = ai.known ? 'инс. ' + fmt(петля.iob as number) + ' ед' : 'инс. ' + DASH;
+  /* Одно правило выбора на все поверхности (мост 1.47): наш расчёт первым, чужой запасным. Живёт
+     в `показ/чужаяПетля`, потому что тем же правилом пользуется натив для баннера и сводки, — а
+     расхождение между кругом и шторкой владелец однажды уже поймал. */
+  const инс = активныйИнсулин(снимок, петля.iob);
+  const ai = activeInsulin({ iob: инс.значение, loopAt: петля.loopAt } as typeof dev);
+  const iobText = ai.known ? 'инс. ' + fmt(инс.значение as number) + ' ед' : 'инс. ' + DASH;
 
   // Полоса зарядов устройств над панелью — расширяемо: помпа, телефон-аплоадер, мост
   // (OrangeLink/RileyLink, pump.extended.OrangeLinkBattery от AAPS). Показываем только
