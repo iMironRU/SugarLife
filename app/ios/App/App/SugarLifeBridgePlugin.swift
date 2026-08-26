@@ -586,6 +586,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "liveBanner", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setLiveBanner", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "raiseLiveBanner", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "builtinBundle", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loopFeed", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setLoopFeed", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "testAlarm", returnType: CAPPluginReturnPromise),
@@ -655,6 +656,37 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             }
         }
         call.resolve()
+    }
+
+    /**
+     ПАСПОРТ ВСТРОЕННОГО ВЕБ-СЛОЯ (#569).
+
+     Зачем это натив, а не веб. Когда поверх приложения лёг бандл, приехавший по воздуху, работающий
+     код видит СВОЙ `APP_BUILD` — то есть отвечает за OTA-бандл, а не за то, что лежит внутри
+     установленного приложения. Спросить «а что там внутри» изнутри бандла невозможно: и `fetch`, и
+     ассеты разрешаются относительно активного бандла, а не встроенного.
+
+     Отсюда и симптом, который поймал владелец: приложение ставится по проводу, натив меняется, а
+     экраны прежние — потому что показывается OTA-снимок недельной давности, и никакой провод его не
+     трогает. Каждая кабельная установка выглядела как «ничего не приехало».
+
+     `build.json` кладёт сборщик рядом с ассетами; мы читаем его из СВОЕГО бандла (`Bundle.main`), а
+     дальше веб сравнит дату с той, на которой работает сам, и решит, откатываться ли на встроенный.
+     Решение оставляем вебу намеренно: там же лежит вся остальная политика обновлений, и разводить её
+     по двум языкам значило бы держать две правды о том, какая сборка новее.
+     */
+    @objc func builtinBundle(_ call: CAPPluginCall) {
+        guard let url = Bundle.main.url(forResource: "build", withExtension: "json", subdirectory: "public"),
+              let data = try? Data(contentsOf: url),
+              let о = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            /* Файла нет — это сборка старше паспорта. Не ошибка: веб просто не станет ничего решать. */
+            call.resolve(["есть": false]); return
+        }
+        call.resolve([
+            "есть": true,
+            "build": (о["build"] as? String) ?? "",
+            "builtAt": (о["builtAt"] as? String) ?? "",
+        ])
     }
 
     /**
