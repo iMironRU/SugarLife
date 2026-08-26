@@ -526,8 +526,6 @@
 .тревога.низкий .тревога-знак { background: #e58a95; }
 .тревога.высокий .тревога-знак { background: #e8b980; }
 .тревога-имя { font-size: 0.9375rem; font-weight: 600; }
-/* Голос — у правого края: «чем эта тревога себя проявит» читается заодно с именем. */
-.тревога-голос { margin-left: auto; font-size: 0.8125rem; color: var(--color-neutral-400); }
 
 .тревога-число-ряд { display: flex; align-items: center; gap: 14px; }
 .тревога-число {
