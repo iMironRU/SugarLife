@@ -150,7 +150,7 @@ export default function BasalSteps({
           ) : (
             <div className="bas-act-col">
               <HoldButton
-                label={done.length === changedList.length ? 'Удерживайте — записать в историю' : 'Отметьте все интервалы'}
+                label={done.length === changedList.length ? 'Записать в историю' : 'Отметьте все интервалы'}
                 disabled={done.length !== changedList.length}
                 onComplete={saveToHistory}
               />
