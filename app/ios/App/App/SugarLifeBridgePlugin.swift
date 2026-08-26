@@ -585,6 +585,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setBackgroundKeepAlive", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "liveBanner", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setLiveBanner", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "raiseLiveBanner", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loopFeed", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setLoopFeed", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "testAlarm", returnType: CAPPluginReturnPromise),
@@ -654,6 +655,39 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             }
         }
         call.resolve()
+    }
+
+    /**
+     ПОДНЯТЬ БАННЕР ПО ПРОСЬБЕ ЧЕЛОВЕКА (#568, замечание владельца «баннера не вижу»).
+
+     Почему кнопка вообще понадобилась. Live Activity создаётся ТОЛЬКО из активного приложения: из
+     фона система отвечает «Target is not foreground» и не делает ничего. Значит любой баннер,
+     умерший в кармане — смахнули, система погасила, приложение переустановили, — обратно сам не
+     встанет. Мы пробуем поднять его при выходе на передний план, но делаем это молча, и когда не
+     срабатывает, человек остаётся с включённым выключателем и пустым экраном блокировки. Именно
+     этот тупик владелец и описал.
+
+     Кнопка снимает две беды разом: делает попытку в тот единственный момент, когда она разрешена
+     (человек смотрит в приложение — значит оно активно), и ОТВЕЧАЕТ, чем кончилось. Молчаливый
+     отказ здесь хуже отсутствия кнопки: он читается как «нажал, и ничего», то есть как поломка.
+
+     Отметку показанного сбрасываем: иначе обновление решит, что показание то же самое, и вернёт
+     «без изменений», — а нам нужно именно создать активность заново.
+     */
+    @objc func raiseLiveBanner(_ call: CAPPluginCall) {
+        guard #available(iOS 18.0, *) else {
+            call.resolve(["итог": "не умеет", "идёт": false]); return
+        }
+        guard UserDefaults.standard.bool(forKey: "sl.live-banner") else {
+            call.resolve(["итог": "выключено", "идёт": false]); return
+        }
+        DispatchQueue.main.async {
+            self.показанноеПоказаниеМс = 0
+            let итог = self.обновитьЖивойБаннер(self.последнийСнимок, поПросьбе: true)
+            self.вЖурнал(итог == "обновлено" || итог == "запущено" ? "Info" : "Warn",
+                         "banner", "по кнопке: " + итог)
+            call.resolve(["итог": итог, "идёт": ЖивойБаннер.живой])
+        }
     }
 
     /**
@@ -1022,7 +1056,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
        формат здесь означал бы, что на экране блокировки и в приложении разные числа. */
     @available(iOS 16.2, *)
     @discardableResult
-    private func обновитьЖивойБаннер(_ json: String?) -> String {
+    private func обновитьЖивойБаннер(_ json: String?, поПросьбе: Bool = false) -> String {
         guard UserDefaults.standard.bool(forKey: "sl.live-banner") else { return "выключено" }
         guard let json, let data = json.data(using: .utf8),
               let корень = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -1067,7 +1101,14 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         let зонаСейчас = зонаСахара(mmol) + (разрыв ? "+разрыв" : "") + (старое ? "+старое" : "")
         let сейчасМс = Date().timeIntervalSince1970 * 1000
         let смыслСменился = зонаСейчас != показаннаяЗона
-        if !смыслСменился, сейчасМс - баннерПросиливМс < баннерНеЧащеМс {
+        /* ПЯТИМИНУТНЫЙ ТОРМОЗ НЕ КАСАЕТСЯ НАЖАТИЯ (#568).
+
+           Он бережёт бюджет обновлений от потока показаний — от расписания, а не от человека.
+           Нажатие «Показать сейчас» происходит раз в жизни и ровно тогда, когда баннера НЕТ: если
+           тормозить и его, кнопка отвечает «не чаще» и не делает ничего — то есть ведёт себя как
+           сломанная, ради экономии бюджета на активности, которой не существует. Ровно это я и
+           увидел первым же нажатием на симуляторе. */
+        if !поПросьбе, !смыслСменился, сейчасМс - баннерПросиливМс < баннерНеЧащеМс {
             /* Сводку и значок при этом обновляем: у них своя мера и свой бюджет. */
             Значок.общий.обновить(mmol: mmol, старое: старое)
             Сводка.общая.обновить(
