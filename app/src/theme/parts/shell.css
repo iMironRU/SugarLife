@@ -367,3 +367,8 @@ ion-content { --padding-top: 0; }
 .nearby-строка { display: flex; align-items: baseline; gap: 6px; font-size: 0.7812rem; line-height: 1.35; }
 .nearby-строка b { font-weight: 600; white-space: nowrap; }
 .nearby-строка > span { color: var(--color-neutral-500); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Звёздочка у неполного активного инсулина (мост 1.47). Не прочерк и не пропажа: число есть, просто
+   в нём не хватает слагаемого, и что именно — говорит движок в подсказке. Тише самого числа: это
+   оговорка, а не второе число. */
+.hp-iob.неполон { opacity: .85; }
