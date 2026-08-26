@@ -172,10 +172,22 @@
 .hold-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: rgba(255,255,255,.28); }
 .hold-label { position: relative; display: inline-flex; align-items: center; gap: 7px; justify-content: center; }
 .hold-label .иконка { font-size: 1rem; opacity: .85; }
-/* «держите» тише названия действия: это указание, как нажимать, а не что произойдёт. */
+/* ПОДПИСЬ ПОД КНОПКОЙ, А НЕ ПИЛЮЛЯ ВНУТРИ (#570).
+
+   Обёртка нужна, потому что подпись вышла наружу: сама кнопка осталась во всю ширину, а под ней
+   строка со сроком. Внутри она конкурировала с названием действия и вдобавок пряталась под полосой
+   заполнения — исчезала ровно тогда, когда объясняет.
+
+   Тише названия действия и по цвету, и по кеглю: это указание, КАК нажимать, а не ЧТО произойдёт.
+   Выравнивание по центру — под центром кнопки, куда и смотрят. */
+.hold-wrap { display: block; }
+/* Кнопка тянется на всю обёртку. Без этого она схлопнулась бы по содержимому: раньше она была
+   прямым потомком колонки-флекса и растягивалась им, а теперь между ними стоит обёртка. */
+.hold-wrap > .hold-btn { width: 100%; }
 .hold-hint {
-  font-size: 0.6875rem; font-weight: 500; letter-spacing: .02em; opacity: .8;
-  padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, #fff 16%, transparent);
+  display: block; margin-top: 6px; text-align: center;
+  font-size: 0.75rem; letter-spacing: .01em;
+  color: var(--color-neutral-500);
 }
 
 /* Карточка лимита: пределы, диапазон и выход «вернуть рекомендованное» (из прототипа) */

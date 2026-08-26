@@ -183,7 +183,7 @@ export default function ПравилаДвижка({ правила }: { пра�
                  видно заранее, что число само никуда не уйдёт и его надо записать. */
               <div className="page-foot">
                 <div className="bas-act-col">
-                  <HoldButton label={ждём ? 'Записываю…' : 'Удерживайте, чтобы записать'}
+                  <HoldButton label={ждём ? 'Записываю…' : 'Записать'}
                     disabled={!!ждём || !естьПравки} onComplete={() => void записать()} />
                   <button className="page-btn" disabled={!естьПравки} onClick={() => setЧерновик({})}>
                     <Иконка icon={refreshOutline} style={{ marginRight: 6, verticalAlign: -2 }} />

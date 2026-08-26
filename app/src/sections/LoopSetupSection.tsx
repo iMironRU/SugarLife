@@ -321,7 +321,7 @@ export default function LoopSetupSection({ onClose }: { onClose: () => void }) {
                 </div>
                 <div className="wz-apply">
                   <HoldButton
-                    label={needDoctor && !profile.doctorOk ? 'Требуется подтверждение' : 'Удерживайте, чтобы применить'}
+                    label={needDoctor && !profile.doctorOk ? 'Требуется подтверждение' : 'Применить'}
                     disabled={needDoctor && !profile.doctorOk}
                     onComplete={apply}
                   />
