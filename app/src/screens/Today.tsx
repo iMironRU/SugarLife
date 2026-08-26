@@ -21,7 +21,8 @@ import { useОтложения, показывать, прибрать } from '@
 import { useChanges, markChanged, askedRefill, markRefillAsked } from '@/settings/changes';
 import { useDeviceConfig } from '@/settings/deviceConfig';
 import { useDeviceExtras } from '@/sources/deviceExtras';
-import { useSnapshot, sendIntent } from '@/sources/bridge';
+import { useSnapshot, sendIntent, вЖурналДвижка } from '@/sources/bridge';
+import { ждатьНеДольше, ПРЕДЕЛ_ОБНОВЛЕНИЯ } from '@/domain/ждатьНеДольше';
 import { useHealth } from '@/settings/health';
 import { устройствоРоли } from '@/domain/deviceState';
 import { хватитЛи, пораГоворить } from '@/domain/reservoirForecast';
@@ -342,11 +343,27 @@ export default function Today() {
      Сообщение «не удалось» поверх экрана, где и так написано «нет связи», добавило бы
      шума, а не смысла. */
   const обновитьВсё = async () => {
-    await Promise.allSettled([
-      refresh(),
-      syncHistory(),
-      sendIntent({ type: 'readNow', deviceId: устройствоРоли(снимок, 'sensor')?.id ?? '' }),
-    ]);
+    /* ЖДЁМ НЕ ДОЛЬШЕ СРОКА, И НАЗЫВАЕМ, КТО НЕ ОТВЕТИЛ (замечание с телефона).
+
+       Было `Promise.allSettled` без предела. allSettled не отвергается никогда — но и не
+       выполняется, пока не наступит последнее из дел, а наступить может не всё: подробный
+       разбор трёх способов промолчать — в domain/ждатьНеДольше.ts. Экран при этом оставался
+       отжатым вниз навсегда.
+
+       Дела не отменяем: запрос ушёл, данные приедут и попадут в стор обычным путём. Отпускаем
+       экран, а не бросаем работу. */
+    const молчат = await ждатьНеДольше([
+      { имя: 'облако', дело: refresh() },
+      { имя: 'история', дело: syncHistory() },
+      { имя: 'движок', дело: sendIntent({ type: 'readNow', deviceId: устройствоРоли(снимок, 'sensor')?.id ?? '' }) },
+    ], ПРЕДЕЛ_ОБНОВЛЕНИЯ);
+    /* Имя виновника — в журнал, а не в console: молчание, в котором не видно, кто молчит,
+       заставляет гадать наутро вместо того, чтобы прочитать. Развилку не называем: человек
+       тянет экран считанные разы, и второй такой же случай он должен увидеть, а не потерять
+       в схлопывании. */
+    if (молчат.length) {
+      вЖурналДвижка('Warn', 'refresh', 'жест отпущен по сроку, не ответили: ' + молчат.join(', '));
+    }
   };
 
   return (

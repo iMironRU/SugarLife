@@ -1644,7 +1644,16 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         // Скан и провайдер — на своей очереди вместе с движком (core#82): `ensureProvider` тянет за собой
         // восстановление приборов из базы, а это уже разговор с движком.
         engineQueue.async { [weak self] in
-            guard let self else { return }
+            /* НЕ ОТВЕТИТЬ НА ВЫЗОВ — ХУЖЕ, ЧЕМ ОТВЕТИТЬ ОТКАЗОМ.
+
+               Здесь стояло `guard let self else { return }`. Плагина не стало — блок выходил молча,
+               и обещание на стороне веба не выполнялось и не отвергалось НИКОГДА. Тот, кто его ждал,
+               ждал вечно; «потяни, чтобы обновить» на этом и замерзало насмерть.
+
+               Отказ веб переживёт: он его прочитает и покажет. Тишину прочитать нельзя. */
+            guard let self else {
+                return call.resolve(["json": "{\"accepted\":false,\"error\":\"bridge gone\"}"])
+            }
             if json.contains("\"startScan\"") { self.ensureProvider(); self.scanner.start() }
             else if json.contains("\"stopScan\"") { self.scanner.stop() }
             else if json.contains("\"addDevice\"") || json.contains("\"addDiscovered\"") { self.ensureProvider() }
