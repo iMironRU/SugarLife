@@ -1,6 +1,7 @@
 /* Локальная БД глюкозы (IndexedDB) — накапливаем историю до 90 дней,
    чтобы графики за длинные периоды не были пустыми. */
 import { openDB, type IDBPDatabase } from 'idb';
+import { изСреза, type Срез } from './срезИстории';
 import { useEffect, useState } from 'react';
 import type { Entry, Treatment } from './nightscout';
 import { compressPlateaus, type Plateau } from '@/domain/plateau';
@@ -102,20 +103,31 @@ export async function pruneBefore(before: number) {
    Одна ячейка, а не карта по окнам: за 30 дней это уже под десять тысяч записей, и
    держать четыре периода разом только затем, чтобы переключение туда-обратно было
    мгновенным, — не та цена. Сменили период — старый срез уступает место. */
-let срез: { windowMs: number; entries: Entry[]; at: number } | null = null;
+let срез: Срез<Entry> | null = null;
 
 export function useHistory(
   windowMs: number,
   { paused = false, minRefreshMs = 0 }: ReadOpts = {},
 ): { entries: Entry[]; loading: boolean } {
-  const [state, setState] = useState<{ entries: Entry[]; loading: boolean }>(
-    () => (срез?.windowMs === windowMs ? { entries: срез.entries, loading: false } : { entries: [], loading: true }),
-  );
+  /* СРЕЗ ГОДИТСЯ, ЕСЛИ ОН НЕ УЖЕ ЗАПРОШЕННОГО (замечание владельца про «Метрики»).
+
+     Раньше ключом служил РАЗМЕР ОКНА, и любое переключение периода объявляло прочитанное чужим:
+     экран подменялся заглушкой, база читалась заново. При девяноста днях это 127 тысяч записей и
+     треть секунды — те самые «моргает и задумывается».
+
+     А семь дней уже лежат внутри четырнадцати. Правило вынесено в sources/срезИстории.ts и покрыто
+     тестом: внутри хука это было бы условие в две строки, которое проверяется только глазами. */
+  const [state, setState] = useState<{ entries: Entry[]; loading: boolean }>(() => {
+    const готовое = изСреза(срез, windowMs, Date.now());
+    return готовое ? { entries: готовое, loading: false } : { entries: [], loading: true };
+  });
   useEffect(() => {
     let cancel = false;
-    const свой = срез?.windowMs === windowMs ? срез : null;
-    let последний = свой?.at ?? 0;
-    setState(свой ? { entries: свой.entries, loading: false } : { entries: [], loading: true });
+    const готовое = изСреза(срез, windowMs, Date.now());
+    /* Отметку свежести берём у среза, из которого взяли: она про то, когда читали базу, а не про
+       то, когда мы отфильтровали уже прочитанное. */
+    let последний = готовое ? (срез?.at ?? 0) : 0;
+    setState(готовое ? { entries: готовое, loading: false } : { entries: [], loading: true });
     const load = (принудительно = false) => {
       /* Перечитывать две недели на каждую новую точку — дорого и незачем. Сенсор
          пишет раз в минуту, а чтение 19 740 записей стоит около 70 мс: на открытом
@@ -131,7 +143,7 @@ export function useHistory(
         .catch(() => { if (!cancel) setState((s) => ({ ...s, loading: false })); });
     };
     // принудительно — только когда показывать нечего; иначе решает minRefreshMs
-    if (!paused) load(!свой);
+    if (!paused) load(!готовое);
     const off = onDbChange(() => { if (!paused) load(); });
     return () => { cancel = true; off(); };
   }, [windowMs, minRefreshMs, paused]);
@@ -207,18 +219,29 @@ export async function pruneTreatmentsBefore(before: number) {
 }
 
 // Хук: лечение из БД за окно windowMs, с перезапросом при докачке.
+/* Тот же срез, что у истории, и по той же причине. Здесь кэша не было ВОВСЕ: смена периода
+   обнуляла список и читала заново, а разбор успевал посчитаться на пустом лечении — и на кадр
+   показать выводы, построенные без единой дозы. Пустой список тут не «нет данных», а «ещё не
+   прочитали», и разница видна человеку как мигнувший неверный ответ. */
+let срезЛечения: Срез<Treatment> | null = null;
+
 export function useTreatments(windowMs: number, { paused = false, minRefreshMs = 0 }: ReadOpts = {}): Treatment[] {
-  const [ts, setTs] = useState<Treatment[]>([]);
+  const [ts, setTs] = useState<Treatment[]>(() => изСреза(срезЛечения, windowMs, Date.now()) ?? []);
   useEffect(() => {
     let cancel = false;
-    let последний = 0;
+    const готовое = изСреза(срезЛечения, windowMs, Date.now());
+    let последний = готовое ? (срезЛечения?.at ?? 0) : 0;
+    if (готовое) setTs(готовое);
     // тот же ограничитель, что у истории: на экране разбора перечитывать нечему помогать
     const load = (принудительно = false) => {
       if (!принудительно && minRefreshMs && Date.now() - последний < minRefreshMs) return;
       последний = Date.now();
-      getTreatmentsSince(Date.now() - windowMs).then((t) => { if (!cancel) setTs(t); }).catch(() => {});
+      getTreatmentsSince(Date.now() - windowMs).then((t) => {
+        срезЛечения = { windowMs, entries: t, at: Date.now() };
+        if (!cancel) setTs(t);
+      }).catch(() => {});
     };
-    if (!paused) load(true);
+    if (!paused) load(!готовое);
     const off = onDbChange(() => { if (!paused) load(); });
     return () => { cancel = true; off(); };
   }, [windowMs, paused, minRefreshMs]);
