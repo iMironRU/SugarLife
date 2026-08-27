@@ -16,7 +16,7 @@ import { СТРЕЛКА, направление } from '@/domain/trend';
 import { предупредитьОСыром, МЕТКА_СЫРОГО, ПОЯСНЕНИЕ_СЫРОГО } from '@/domain/сырое';
 import { useEntries } from '@/sources/db';
 import { выбратьПоказание, ОТСТАВАНИЕ_МС } from '@/domain/latestGlucose';
-import { useСейчас } from '@/показ/сейчас';
+import { useСейчас, наСколькоХватитДней } from '@/показ/сейчас';
 import { useSnapshot } from '@/sources/bridge';
 import { расходка } from '@/domain/supplies';
 import CircleSparkline from '@/charts/CircleSparkline';
@@ -281,11 +281,31 @@ export default function HeroPanel() {
   const sensorDay = status !== 'off' && ages.sensor ? ages.sensor.days + 1 : null;
   const nmgSub = sensorDay != null ? 'датчик' : 'обновлено';
   const nmgVal = sensorDay != null ? 'день ' + sensorDay : fresh;
-  const daysLeft = остаток != null && extras.tdd ? остаток / extras.tdd : null;
+  /* НА СКОЛЬКО ХВАТИТ — ОТВЕТ ДВИЖКА, А НЕ НАШЕ ДЕЛЕНИЕ (#596).
+
+     Здесь стояло `остаток / extras.tdd` — деление на суточную дозу, собранную нашим веб-слоем из
+     Nightscout. Владелец увидел «262 ед ≈ 7 д 3 ч»: это 37 единиц в сутки при его 70–80. Карточка
+     обещала вдвое больше времени, чем есть, — четыре лишних дня.
+
+     Ошибка несимметрична: «хватит до четверга» вместо «до понедельника» — это набор, который не
+     поменяли вовремя, и остановка подачи там, где её никто не ждал.
+
+     Движок считает иначе и правильнее: по ПАДЕНИЮ ОСТАТКА, а не по сумме доз. Складывать базал с
+     болюсами значит повторять расчёт помпы и ошибаться на временных базалах, отменах и заправке
+     катетера; остаток же помпа сообщает сама, и его падение включает всё, что мы бы забыли. На
+     данных владельца у них выходит 3,3 ед/час — те самые 80 в сутки.
+
+     Остаток мы у движка уже брали (строка выше), а прогноз считали сами — половина переезда,
+     и худшая: число из одного источника, вывод из другого.
+
+     ЗАПАСНОГО РАСЧЁТА НЕТ НАМЕРЕННО. Движок молчит — не говорим ничего: оценка, врущая вдвое в
+     опасную сторону, хуже отсутствующей. */
+  const daysLeft = наСколькоХватитДней(снимок?.insulinLeft, остаток, Date.now());
   const resSub2 = daysLeft != null ? '≈ ' + дниЧасы(daysLeft) : 'резервуар';
   // часики на значениях из кеша, пока идёт свежая загрузка (текст не подменяем)
   const staleSensor = extras.stale && sensorDay != null;
-  const staleDays = extras.stale && daysLeft != null;
+  /* Часики на прогнозе больше не нужны: число приходит из снимка движка, а он свеж всегда, пока
+     жив. Прежний признак относился к нашему кэшу Nightscout, которого в этом расчёте не осталось. */
 
   /* Высоту панели больше не меряют.
 
@@ -347,7 +367,7 @@ export default function HeroPanel() {
                 разных факта, поэтому две разные метки, а не одна на двоих. */}
             <span className="hp-sub">{pumpStatus}</span>
             <span className="hp-val">{reservoir}</span>
-            <span className="hp-sub">{resSub2}{staleDays && <Иконка className="hp-stale" icon={timeOutline} />}</span>
+            <span className="hp-sub">{resSub2}</span>
           </button>
         </div>
 
