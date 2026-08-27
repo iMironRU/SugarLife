@@ -1,5 +1,5 @@
 import { IonPage, IonContent, IonRefresher, IonRefresherContent } from '@ionic/react';
-import { ждатьНеДольше, ПРЕДЕЛ_ОБНОВЛЕНИЯ } from '@/domain/ждатьНеДольше';
+import { ждатьНеДольше, пауза, ПРЕДЕЛ_ОБНОВЛЕНИЯ, МИНИМУМ_СПИНЕРА, ПОКАЗ_МОЛЧАНИЯ } from '@/domain/ждатьНеДольше';
 import КрайПрокрутки from './КрайПрокрутки';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { reportContentScroll, серединаЛи, полшага, плавно, syncToActiveScreen } from '@/app/panel';
@@ -144,6 +144,8 @@ export default function Screen({ tab, panel = 'compact', обновить, child
      событиями прокрутки без собственной анимации (app/panel.ts), поэтому мгновенный
      прыжок наверх раскрыл бы её рывком. Плавная прокрутка даёт панели разворачиваться
      вместе с содержимым — одно движение вместо двух. */
+  /* Ответил ли источник на последнюю потяжку — только ради подписи под спинером. */
+  const [молчат, setМолчат] = useState(false);
   const домой = useGoHome(tab);
   useEffect(() => {
     if (!домой || active !== tab) return;
@@ -169,11 +171,25 @@ export default function Screen({ tab, panel = 'compact', обновить, child
              складывается его обновление (screens/Today.tsx). */
           <IonRefresher slot="fixed" pullMin={90} pullMax={200}
             onIonRefresh={(e) => {
-              void ждатьНеДольше([{ имя: 'обновление', дело: обновить() }], ПРЕДЕЛ_ОБНОВЛЕНИЯ)
-                .finally(() => e.detail.complete());
+              setМолчат(false);
+              void (async () => {
+                /* Спинер обязан быть ВИДЕН, а не только запущен. Из кэша ответ приходит за сотню
+                   миллисекунд, и вспышка колеса не отвечает на вопрос «спросили вообще?». Держим
+                   минимум, даже когда ответ уже готов. */
+                const [имена] = await Promise.all([
+                  ждатьНеДольше([{ имя: 'обновление', дело: обновить() }], ПРЕДЕЛ_ОБНОВЛЕНИЯ),
+                  пауза(МИНИМУМ_СПИНЕРА),
+                ]);
+                /* Не дождались — говорим об этом, прежде чем отпустить. Молчаливый возврат по сроку
+                   выглядит ровно как удача: колесо пропало, числа прежние, — и человек уносит
+                   вывод «обновилось, ничего нового», хотя источник не ответил вовсе. */
+                if (имена.length) { setМолчат(true); await пауза(ПОКАЗ_МОЛЧАНИЯ); }
+                e.detail.complete();
+              })();
             }}>
             <IonRefresherContent pullingText="Потяните, чтобы обновить"
-              refreshingSpinner="crescent" refreshingText="Спрашиваю…" />
+              refreshingSpinner="crescent"
+              refreshingText={молчат ? 'Источник не ответил' : 'Спрашиваю…'} />
           </IonRefresher>
         )}
         <div ref={тело} className={'screen' + (panel === 'compact' ? ' is-compact' : '') + (середина ? ' is-mid' : '')}>
