@@ -11,7 +11,8 @@ import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
 import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
 import { связь, предложениеСлияния, своиЖелезки, каналРоли } from '@/domain/deviceState';
-import { чтоЗаПрибор, ageText, ключиВыбора, имяМоделиПоId, драйверМодели } from './прибор/поКатегории';
+import { чтоЗаПрибор, ageText, ключиВыбора, имяМоделиПоId, драйверМодели, модельКатегории, своёЖелезо, слотМоста, расходники,
+  лентаОблака, имяВыбораМодели } from './прибор/поКатегории';
 import { useМодели } from '@/показ/модели';
 import { догадкаМодели } from '@/domain/догадкаМодели';
 import ДогадкаМодели from './прибор/ДогадкаМодели';
@@ -32,9 +33,9 @@ import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
 import { sourceStatusLabel, sourceStatusWarn } from '@/domain/sourceStatus';
 import { toUnits, unitLabel } from '@/domain/units';
 import { useStore } from '@/sources/store';
-import { useChanges, type Consumable } from '@/settings/changes';
+import { useChanges } from '@/settings/changes';
 import { useDeviceExtras } from '@/sources/deviceExtras';
-import { deviceAges, type Age } from '@/domain/treatmentStats';
+import { deviceAges } from '@/domain/treatmentStats';
 import { fmt } from '@/domain/units';
 import { Capacitor } from '@capacitor/core';
 import { pumpById, insulinById } from '@/domain/catalog';
@@ -82,10 +83,10 @@ export default function DeviceSection({ onClose, cat, title }: {
      конфиг остаётся ответом только там, где движка нет вовсе. */
   const snap = useSnapshot();
   const модели = useМодели();
-  const модельПрибора = cat === 'pump' ? модели.pumpId : cat === 'sensor' ? модели.sensorId : null;
+  const модельПрибора = модельКатегории(cat, модели);
   const это = чтоЗаПрибор(cat, cfg, модельПрибора);
   /* Что предложить вместо списка из 69 (#485). Пусто — движок молчит или модель уже выбрана. */
-  const догадки = (cat === 'pump' || cat === 'sensor')
+  const догадки = своёЖелезо(cat)
     ? догадкаМодели(cat, snap, isModelKnown(модельПрибора) ? модельПрибора : null)
     : [];
   const hasModel = это.естьМодель;
@@ -108,9 +109,9 @@ export default function DeviceSection({ onClose, cat, title }: {
      Движок знает, за каким мостом стоит железка, — он это видит, а не помнит с наших
      слов. Наш `bridgePumpId` был нужен, пока спросить было некого; теперь он отвечает
      только там, где движка нет вовсе (браузер) или он ещё не опознал прибор. */
-  const мостИзСнимка = (cat === 'pump' || cat === 'sensor') ? мостСлота(snap, cat) : null;
+  const мостИзСнимка = своёЖелезо(cat) ? мостСлота(snap, cat) : null;
   const имяМоста = мостИзСнимка?.name || это.имяМостаИзНастроек || null;
-  const bridgeHint = подсказкаПроМост(cat === 'pump' ? 'pump' : 'sensor', это.мостОбязателен);
+  const bridgeHint = подсказкаПроМост(слотМоста(cat) ?? 'sensor', это.мостОбязателен);
 
   /* --- Состояние: то, что реально известно прямо сейчас (было в SensorSheet/PumpSheet) ---
      Считаем ТОЛЬКО когда шторка открыта и только при смене данных. Инстансов
@@ -143,14 +144,7 @@ export default function DeviceSection({ onClose, cat, title }: {
     /* Расходники со сроками (§9). Ключ рядом с названием — чтобы отметить замену
        прямо здесь: событие в Nightscout может не появиться вовсе (проверено на живых
        данных), и тогда возраст врёт молча. */
-    const sup = cat === 'pump'
-      ? ([['Канюля', ages.site, 'site'], ['Резервуар', ages.reservoir, 'reservoir'], ['Батарея', ages.battery, 'battery']] as [string, Age | null, Consumable][])
-        .filter((x): x is [string, Age, Consumable] => !!x[1])
-      : cat === 'sensor'
-      ? ([['Датчик', ages.sensor, 'sensor']] as [string, Age | null, Consumable][])
-        .filter((x): x is [string, Age, Consumable] => !!x[1])
-      : [];
-    return { stateRows: rows, supplies: sup };
+    return { stateRows: rows, supplies: расходники(cat, ages) };
   }, [cat, extras.events, dev, changes]);
 
   /* Параметры драйвера (§7a): у радио-Medtronic это серийник и частота 868/916.
@@ -185,7 +179,7 @@ export default function DeviceSection({ onClose, cat, title }: {
 
      Поиск по ролям оставлен запасным для старых сборок: без него на прежней сборке блок
      «Мост» исчез бы целиком. */
-  const bleМост = (cat === 'pump' || cat === 'sensor' ? мостСлота(snap, cat) : null)
+  const bleМост = (своёЖелезо(cat) ? мостСлота(snap, cat) : null)
     ?? (snap?.devices ?? []).find((d) => d.roles?.includes('Transport') || d.roles?.includes('Bridge'))
     ?? null;
 
@@ -265,11 +259,7 @@ export default function DeviceSection({ onClose, cat, title }: {
   // реестр (docs/CONNECT-UX.md §2a): статус записи — только для категорий с моделью
 
   // «Забираем через Nightscout» (§2b) — честная строка того, что реально приходит
-  const nsFeed = cat === 'pump'
-    ? ([dev?.reservoir != null ? Math.round(dev.reservoir) + ' ед' : null,
-        dev?.pumpBattery != null ? dev.pumpBattery + '%' : null].filter(Boolean).join(' · ') || null)
-    : cat === 'sensor' ? (data?.latest ? 'сахар и тренд' : null)
-    : null;
+  const nsFeed = лентаОблака(cat, dev, !!data?.latest);
 
   /* --- Способы получения данных (§2b) ---
      Устройство одно, путей к нему несколько. Мост при этом НЕ отдельный путь: нужен
@@ -654,7 +644,7 @@ export default function DeviceSection({ onClose, cat, title }: {
         {hasModel && (
           <CatalogPicker
             isOpen={pick === 'model'} onClose={() => setPick(null)}
-            title={cat === 'pump' ? 'Выбор помпы' : 'Выбор сенсора'} subtitle="Справочник моделей"
+            title={имяВыбораМодели(cat)} subtitle="Справочник моделей"
             items={pickerItems} selectedId={модельПрибора}
             onSelect={setModel} currentLabel="только актуальные"
           />
