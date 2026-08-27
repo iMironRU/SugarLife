@@ -530,6 +530,8 @@
 .тревога-имя { font-size: 0.9375rem; font-weight: 600; }
 
 .тревога-число-ряд { display: flex; align-items: center; gap: 14px; }
+/* Фраза движка — под числом, обычным кеглем: она читается, а не выкрикивается. */
+.тревога-слова { margin-top: 10px; font-size: 0.9375rem; line-height: 1.35; color: var(--color-neutral-200); }
 .тревога-число {
   font-size: 2.875rem; font-weight: 300; line-height: 1;
   font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
