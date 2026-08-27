@@ -219,3 +219,12 @@
 .nocfg-t { display: block; font-size: 1rem; font-weight: 600; }
 .nocfg-d { display: block; font-size: 0.7812rem; color: var(--color-neutral-400); line-height: 1.4; margin-top: 3px; }
 .nocfg-chev { font-size: 1.125rem; color: var(--color-neutral-500); flex-shrink: 0; }
+
+/* «Пока вас не было» — дыры в охране (мост 1.46). Ответ обычным кеглем, подробности мельче и
+   тусклее: «когда именно» спрашивает не каждый, а ответ нужен всем. */
+.охрана-дыры { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.охрана-дыры-ответ { font-size: 0.9375rem; line-height: 1.4; }
+.охрана-дыры-список {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 0.8125rem; color: var(--color-neutral-400); font-variant-numeric: tabular-nums;
+}
