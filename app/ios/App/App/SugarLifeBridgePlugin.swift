@@ -896,6 +896,13 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             ФоновоеБодрствование.shared.вЖурнал = { [weak self] уровень, событие in
                 self?.вЖурнал(уровень, "keepalive", событие)
             }
+            /* Исход обновления карточки — тем же путём. Развилку не называем: это не повторяющийся
+               выбор, а результат чужого решения, и схлопывать его нельзя. */
+            if #available(iOS 16.2, *) {
+                ЖивойБаннер.вЖурнал = { [weak self] уровень, событие in
+                    self?.вЖурнал(уровень, "banner", событие)
+                }
+            }
             /* Сеть вернулась — будим облако движка немедленно, не досиживая его паузу (#544). */
             Сеть.общая.сообщить = { [weak self] json in
                 self?.engineQueue.async { _ = self?.engine?.sendIntent(json: json) }
