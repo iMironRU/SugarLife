@@ -1,7 +1,8 @@
 import { useЖивыеТревоги, понял, type ЖиваяТревога } from '@/показ/живыеТревоги';
 import HoldButton from '@/ui/HoldButton';
 import { activeInsulin } from '@/domain/loopValue';
-import { useЧужаяПетля } from '@/показ/чужаяПетля';
+import { useЧужаяПетля, активныйИнсулин } from '@/показ/чужаяПетля';
+import { useSnapshot } from '@/sources/bridge';
 import { сколькоНазад } from '@/слова/время';
 import { fmt } from '@/domain/units';
 
@@ -42,7 +43,16 @@ function зона(т: ЖиваяТревога): 'низкий' | 'высоки�
 export default function ЖивыеТревоги() {
   const тревоги = useЖивыеТревоги();
   const петля = useЧужаяПетля();
+  const снимок = useSnapshot();
   const инсулин = activeInsulin({ iob: петля.iob, loopAt: петля.loopAt } as never);
+  /* ОДНО ЧИСЛО ИНСУЛИНА НА ЭКРАН.
+
+     Полоса брала чужой `iob` напрямую, а кружок над ней — `активныйИнсулин`: свой, если он есть,
+     чужой запасным. На живом экране это дало 10,6 в кружке и 11,5 на полосе, в одну минуту, в
+     сантиметре друг от друга. Человеку не из чего выбрать, какому верить, и оба числа обесценились.
+
+     Правило одно, и живёт оно в показ/чужаяПетля.ts — сюда только вызов. */
+  const инс = активныйИнсулин(снимок, петля.iob);
 
   if (!тревоги.length) return null;
 
@@ -66,8 +76,8 @@ export default function ЖивыеТревоги() {
                 : <span className="тревога-текст">{т.текст}</span>}
               <span className="тревога-мелочи">
                 {т.когда > 0 && <span>{сколькоНазад(т.когда)}</span>}
-                {инсулин.known && петля.iob != null && (
-                  <span className="тревога-инсулин">инс. {fmt(петля.iob)} ед</span>
+                {инсулин.known && инс.значение != null && (
+                  <span className="тревога-инсулин">инс. {fmt(инс.значение)} ед</span>
                 )}
               </span>
             </div>
