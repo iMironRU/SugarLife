@@ -7,8 +7,7 @@ import { useState } from 'react';
 import { useStorePart } from '@/sources/store';
 import { useTreatments } from '@/sources/db';
 import { detectTherapy } from '@/domain/therapy';
-import { activeInsulin } from '@/domain/loopValue';
-import { useЧужаяПетля } from '@/показ/чужаяПетля';
+import { useСейчас } from '@/показ/сейчас';
 import { fmt } from '@/domain/units';
 import { useSnapshot } from '@/sources/bridge';
 import { фонИнсулина, подписьФона } from '@/domain/longInsulin';
@@ -42,9 +41,12 @@ export default function Ins() {
   const boluses = treatments.filter((t) => t.type !== 'Temp Basal' && (t.insulin ?? 0) > 0);
   const baseBasal = dev?.baseBasal ?? profile?.basal ?? null;
   const pumpStatus = dev?.status || (therapy === 'loop' ? 'Замкнутый цикл' : 'Помпа');
-  /* То же число, что в круге на «Сегодня», и из того же места (#528). */
-  const петля = useЧужаяПетля();
-  const ai = activeInsulin({ iob: петля.iob, loopAt: петля.loopAt } as typeof dev);
+  /* ТО ЖЕ ЧИСЛО, ЧТО В КРУГЕ НА «СЕГОДНЯ» — И ТЕПЕРЬ ЭТО ПРАВДА (#528, показ/сейчас.ts).
+
+     Строка выше стояла здесь и раньше, а число всё равно бралось своё: чужой `iob` напрямую,
+     мимо выбора «свой или чужой». Утверждение в комментарии — не проверка; проверку завели
+     отдельно (показ/сейчас.test.ts), и она этот файл и нашла. */
+  const { инсулин: ai } = useСейчас();
   /* Длинный инсулин — фоном и ОТДЕЛЬНО от активного (#287). Не сложением: 24 ед Туджео
      рядом с 4 ед короткого — это не 28 «активных», и по такому числу решать нельзя.
 
@@ -101,9 +103,12 @@ export default function Ins() {
                     неизвестное показываем прочерком и объясняем почему, а не молчим. */}
                 <div className="basal-row">
                   <span>Активный инсулин</span>
-                  <b className={ai.known ? undefined : 'val-unknown'}>{ai.known ? fmt(dev!.iob as number) + ' ед' : '—'}</b>
+                  {/* Число — из модели экрана, а не из dev.iob. Здесь была пятая копия ответа на
+                      один вопрос: свежесть брали через расчёт, а само число — сырым из хранилища,
+                      мимо выбора «свой или чужой». */}
+                  <b className={ai.известен ? undefined : 'val-unknown'}>{ai.известен ? fmt(ai.значение as number) + ' ед' : '—'}</b>
                 </div>
-                {ai.reason && <div className="basal-note">{ai.reason}</div>}
+                {ai.почему && <div className="basal-note">{ai.почему}</div>}
               </div>
             </div>
           ) : (
