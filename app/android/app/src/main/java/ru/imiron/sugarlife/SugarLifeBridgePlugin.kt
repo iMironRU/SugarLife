@@ -19,6 +19,7 @@ import android.net.Uri
 import android.provider.Settings
 import android.util.Log
 import org.json.JSONArray
+import org.json.JSONObject
 import androidx.core.app.ActivityCompat
 import androidx.core.location.LocationManagerCompat
 import androidx.core.content.ContextCompat
@@ -419,6 +420,44 @@ class SugarLifeBridgePlugin : Plugin() {
      * Держим отдельным выключателем, а не «включено, раз есть AAPS»: по этим числам петля считает дозу
      * инсулина, и решение должно быть человеческим.
      */
+    /**
+     * ПАСПОРТ ВСТРОЕННОГО БАНДЛА (#568, вторая половина #567).
+     *
+     * Кабельная установка APK проигрывала обновлению, приехавшему по воздуху: натив менялся, а
+     * экраны оставались прежними. Выглядит это как «правка не приехала», а не как «показывается
+     * старое» — и разбирать такое дорого, потому что ищут не там.
+     *
+     * На iOS половина уже сделана; здесь та же, слово в слово. Веб-часть
+     * (`вернутьсяНаВстроенныйЕслиСвежее`) платформы не различает и ждёт от нас ровно три поля.
+     *
+     * ЧИТАЕМ ИЗ АССЕТОВ APK, а не из активного бандла: ассеты — это то, что принесла установка по
+     * проводу, и именно их дату надо сравнивать с датой того, что играет сейчас. Активный бандл
+     * веб-часть спросит у Capgo сама.
+     *
+     * ФАЙЛА НЕТ — НЕ ОШИБКА. Это сборка старше паспорта: `build.json` кладёт сборщик, и на APK,
+     * собранном до его появления, файла не будет. Тогда веб просто не станет ничего решать, и это
+     * верное поведение — сравнивать не с чем.
+     */
+    @PluginMethod
+    fun builtinBundle(call: PluginCall) {
+        val ответ = JSObject()
+        try {
+            val текст = context.assets.open("public/build.json")
+                .bufferedReader().use { it.readText() }
+            val о = JSONObject(текст)
+            ответ.put("есть", true)
+            ответ.put("build", о.optString("build", ""))
+            ответ.put("builtAt", о.optString("builtAt", ""))
+        } catch (t: Throwable) {
+            /* Молча наружу, но не молча внутрь: строка в logcat отличает «файла нет» (сборка старше
+               паспорта, штатно) от «файл есть и битый» (наша ошибка сборки). Без неё оба случая
+               выглядят одинаково — как молчание. */
+            Log.d(TAG, "встроенный паспорт не прочитан: ${t.javaClass.simpleName} ${t.message}")
+            ответ.put("есть", false)
+        }
+        call.resolve(ответ)
+    }
+
     @PluginMethod
     fun aapsBroadcast(call: PluginCall) {
         call.resolve(JSObject().put("enabled", AapsBroadcast.включено(context.applicationContext)))
@@ -452,6 +491,15 @@ class SugarLifeBridgePlugin : Plugin() {
        сработало, — и оба вывода наши.
 
        Теперь ответ ловим там, где он приходит, и сразу отдаём свежий список наверх. */
+    /* ГАСИМ ПРЕДУПРЕЖДЕНИЕ С ПРИЧИНОЙ, А НЕ МОЛЧА (правило владельца: warning не пропускаем).
+
+       Capacitor пометил `handleRequestPermissionsResult` устаревшим в пользу своего механизма
+       `@PermissionCallback`. Перейти на него — отдельная работа: у нас разрешения спрашиваются не
+       только из плагина, и порядок ответов завязан на этот перехват.
+
+       Пока не перешли, подавляем ИМЕННО ЗДЕСЬ и с объяснением. Разница между этим и пропуском
+       предупреждения в том, что здесь принято решение, и его видно тому, кто откроет файл. */
+    @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     override fun handleRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
