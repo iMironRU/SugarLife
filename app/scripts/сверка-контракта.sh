@@ -89,35 +89,88 @@ echo "наше зеркало:  $OUR_REV (самая поздняя ревизи
 [ "$CORE_REV" = "$OUR_REV" ] || echo "  ↑ расходятся — ниже видно, чего именно не хватает"
 echo
 
+# ЗНАКОМЫЕ НЕПРОЧИТАННЫЕ — С ПРИЧИНОЙ У КАЖДОГО.
+#
+# Список без причин перестают читать. Ровно это с нами и случилось: `roleWhy` лежал среди «обычных
+# семи» и оказался именно тем, чего не хватало, — ядро написало про него отдельно, потому что мы
+# сами не заметили. Тот же класс, что предупреждения сборки: перечень, который пролистывают, не
+# защищает, а создаёт уверенность.
+#
+# Поэтому здесь у каждого поля стоит РЕШЕНИЕ, а не факт. Всё, чего в списке нет, требует ответа:
+# прочитать или объяснить, почему не читаем. Появилось новое — скрипт назовёт его отдельно.
+#
+# Имена латиницей: bash 3.2 в macOS не понимает не-ASCII имён (граблю ловим пятый раз за сутки).
+known_unread() {
+  cat <<'СПИСОК'
+bolusing|идёт ли болюс прямо сейчас — издание Pro, в Lite подачи нет
+progressPercent|доля подбора частоты; ход показываем словами (domain/freshness.ts), полосу не рисуем
+createdAtMs|когда человек нажал команду прибору — Pro: команд в Lite нет
+context|наблюдения из Apple Health (вес, пульс, активность) — экрана для них ещё нет, ядро #142
+linkChangedAtMs|когда менялась связь; лента подключений снята с «Сегодня» до разбора (#597)
+nativeBridge|признак «коннектор нативный» — на показ не влияет, выбираем не мы
+profileName|имя активного профиля настроек; профиль пока один, показывать нечего
+СПИСОК
+}
+
 # Поля снимка: `val имя:` в UiSnapshot.kt. Служебные и приватные не берём.
 FIELDS=$(bridge_file UiSnapshot.kt | grep -hoE '^\s+val [a-zA-Z][a-zA-Z0-9]*' | awk '{print $2}' | sort -u)
-MISSING=0
-echo "Поля снимка, которых нет в нашем коде:"
+NEW=0
+echo "НОВЫЕ поля снимка, которых нет в нашем коде и в списке решений:"
 for field in $FIELDS; do
   # Однобуквенные и слишком общие слова дают ложные совпадения — их сверять бессмысленно.
   [ ${#field} -ge 4 ] || continue
-  if ! grep -rqwF "$field" "$HERE/src" 2>/dev/null; then
-    echo "  · $field"
-    MISSING=$((MISSING + 1))
-  fi
+  grep -rqwF "$field" "$HERE/src" 2>/dev/null && continue
+  if known_unread | grep -q "^$field|"; then continue; fi
+  echo "  · $field"
+  NEW=$((NEW + 1))
 done
-[ "$MISSING" -eq 0 ] && echo "  (все упоминаются)"
+if [ "$NEW" -eq 0 ]; then
+  echo "  (нет — всё непрочитанное объяснено)"
+else
+  echo
+  echo "  Каждое из них — либо прочитать, либо вписать в known_unread с причиной." >&2
+fi
+echo
+echo "Знакомые непрочитанные и почему:"
+known_unread | while IFS='|' read -r name why; do echo "  · $name — $why"; done
 echo
 
 # Интенты: значения type в Intent.kt (`@SerialName("…")` либо строковый литерал).
 INTENTS=$(bridge_file Intent.kt | grep -hoE '"[a-zA-Z][a-zA-Z0-9]+"' | tr -d '"' | sort -u || true)
-echo "Интенты ядра, которых мы не шлём:"
+# Интенты, которых мы намеренно не шлём. Та же причина, что у полей: список без объяснений
+# перестают читать, и однажды в нём окажется нужное.
+known_unsent() {
+  cat <<'СПИСОК'
+suspendDelivery|остановить подачу — издание Pro, команд прибору в Lite нет
+resumeDelivery|возобновить подачу — Pro
+acknowledgeWrite|подтвердить исход команды — Pro, команд нет
+writeBasalProfile|записать базальный профиль в помпу — Pro
+setPumpTime|выставить часы помпы — Pro
+setAutoConnectAll|подключать все приборы разом — экрана нет, приборов у владельца два
+unlinkAccount|отвязать вендорский аккаунт — раздела учёток ещё нет
+importLegacyConfig|разовый импорт старой настройки — прошёл однажды, живёт в истории
+СПИСОК
+}
+
+echo "НОВЫЕ интенты ядра, которых мы не шлём и не объяснили:"
 NOSEND=0
 for it in $INTENTS; do
   [ ${#it} -ge 5 ] || continue
   # Ищем и в вебе, и в нативе: часть интентов шлёт натив (журнал, сеть, тревоги), и поиск только по
   # src объявлял их «не шлём» — ещё один способ соврать в сторону спокойствия.
-  if ! grep -rqwF "$it" "$HERE/src" "$HERE/ios/App/App" "$HERE/android/app/src/main/java" 2>/dev/null; then
-    echo "  · $it"
-    NOSEND=$((NOSEND + 1))
-  fi
+  grep -rqwF "$it" "$HERE/src" "$HERE/ios/App/App" "$HERE/android/app/src/main/java" 2>/dev/null && continue
+  if known_unsent | grep -q "^$it|"; then continue; fi
+  echo "  · $it"
+  NOSEND=$((NOSEND + 1))
 done
-[ "$NOSEND" -eq 0 ] && echo "  (все упоминаются)"
+if [ "$NOSEND" -eq 0 ]; then
+  echo "  (нет — всё неотправляемое объяснено)"
+else
+  echo "  Каждый — либо слать, либо вписать в known_unsent с причиной." >&2
+fi
+echo
+echo "Знакомые неотправляемые и почему:"
+known_unsent | while IFS='|' read -r name why; do echo "  · $name — $why"; done
 echo
 # ПОЛЯ ВНУТРИ ИНТЕНТОВ, а не только их имена.
 #
@@ -137,5 +190,10 @@ for f in $INTENT_FIELDS; do
 done
 [ "$NOFIELD" -eq 0 ] && echo "  (все упоминаются)"
 echo
-echo "Поля подачи (bolusing, progressPercent, suspendDelivery и родня) — издание Pro."
-echo "В Lite их читать негде, и в этом списке они нормальны."
+# КОД ВОЗВРАТА ГОВОРИТ ПРО НОВОЕ, А НЕ ПРО ОБЪЯСНЁННОЕ.
+#
+# Скрипт пока не стоит в CI — это решение владельца, потому что падение сверки остановит сборку.
+# Но код возврата честный уже сейчас: кто захочет поставить, получит проверку, а не отчёт.
+if [ "$NEW" -gt 0 ] || [ "$NOSEND" -gt 0 ] || [ "$CORE_REV" != "$OUR_REV" ]; then
+  exit 1
+fi
