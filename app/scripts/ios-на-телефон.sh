@@ -15,6 +15,23 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$HERE"
 
+# ВЕРСИЯ ВИДЖЕТА ОБЯЗАНА СОВПАДАТЬ С ВЕРСИЕЙ ПРИЛОЖЕНИЯ.
+#
+# Apple требует этого, Xcode предупреждает — и предупреждение прожило у нас весь день среди сотен
+# строк сборки. Живой баннер рисует именно расширение виджета: при расхождении версий система
+# может держать активность живой и не применять к ней ничего, что мы шлём. Ровно это мы и видели —
+# «карточка обновлена: живая» в журнале и замерший баннер на экране.
+#
+# Предупреждение читают, только когда сборка падает. Поэтому падаем.
+# Имена переменных латиницей — bash 3.2 в macOS не понимает не-ASCII имён.
+app_ver=$(grep -c 'CURRENT_PROJECT_VERSION = 2;' ios/App/App.xcodeproj/project.pbxproj || true)
+if [ "$app_ver" -lt 4 ]; then
+  echo "Версии приложения и виджета разошлись в project.pbxproj." >&2
+  echo "У обоих должно быть одно CURRENT_PROJECT_VERSION и одно MARKETING_VERSION." >&2
+  grep -n 'CURRENT_PROJECT_VERSION\|MARKETING_VERSION' ios/App/App.xcodeproj/project.pbxproj >&2
+  exit 1
+fi
+
 echo "1/3 · веб (CAP=1, относительные пути)"
 CAP=1 npm run build
 
