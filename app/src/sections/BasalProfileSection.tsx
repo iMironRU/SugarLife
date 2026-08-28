@@ -5,8 +5,8 @@ import { useStore } from '@/sources/store';
 import { прочитатьJson, записатьJson } from '@/settings/storage';
 import { useSnapshot } from '@/sources/bridge';
 import {
-  type Seg, PARTS, STEP, fmtH, roundRate, toSegs, rateAt, daily,
-  partDose, partAvg, segsIn, sameProfile, tzShiftMinutes, tzShiftText,
+  type Seg, PARTS, STEP, fmtH, toSegs, rateAt, daily,
+  partDose, partAvg, segsIn, scalePart, sameProfile, tzShiftMinutes, tzShiftText,
 } from '@/domain/basal';
 import BasalSteps, { type Inner } from './BasalSteps';
 import Section from '@/ui/Section';
@@ -261,10 +261,9 @@ export default function BasalProfileSection({ onClose }: { onClose: () => void }
                       <div className="bas-ivs">
                         <div className="bas-mini">
                           {[-5, 5, 10].map((d) => (
-                            <button key={d} className="bas-mb" onClick={() => {
-                              const idx = new Set(segsIn(work, p).map((x) => x.i));
-                              apply(work.map((s, i) => (idx.has(i) ? { ...s, v: roundRate(s.v * (1 + d / 100)) } : s)));
-                            }}>{d > 0 ? '+' : '−'}{Math.abs(d)} %</button>
+                            <button key={d} className="bas-mb"
+                              onClick={() => apply(scalePart(work, p, d))}
+                            >{d > 0 ? '+' : '−'}{Math.abs(d)} %</button>
                           ))}
                         </div>
                         {segsIn(work, p).map((x) => (
