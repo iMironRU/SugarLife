@@ -366,7 +366,7 @@ export default function HeroPanel() {
                 разных факта, поэтому две разные метки, а не одна на двоих. */}
             <span className="hp-sub">{pumpStatus}</span>
             <span className="hp-val">{reservoir}</span>
-            <span className={'hp-sub' + (остатокПодпись.тревожно ? ' hp-sub-тревога' : '')}>
+            <span className={'hp-sub hp-sub-остаток' + (остатокПодпись.тревожно ? ' hp-sub-тревога' : '')}>
               {остатокПодпись.текст}
             </span>
           </button>
