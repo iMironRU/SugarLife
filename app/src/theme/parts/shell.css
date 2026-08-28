@@ -237,6 +237,9 @@ ion-content { --background: var(--color-bg); }
   max-width: calc(100% * (1 - var(--k-sub)));
   opacity: calc(1 - var(--k-sub));
 }
+/* «до утра не хватит» — вердикт движка, а не наша догадка: подпись должна ловить глаз,
+   но не кричать громче самого числа остатка над ней. */
+.hp-sub.hp-sub-тревога { color: var(--color-warning, #e0b050); }
 /* часики: значение из кеша, идёт обновление */
 .hp-stale { font-size: 0.625rem; vertical-align: -1px; margin-left: 3px; opacity: 0.55; color: currentColor; }
 
