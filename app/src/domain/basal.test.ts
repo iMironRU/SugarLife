@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  toSegs, daily, partDose, partAvg, PARTS, segsIn, splitSeg, mergeSeg,
-  scaleAll, flatten, roundRate, sameProfile, rateAt, fmtH, MIN_RATE, MAX_RATE,
+  type Seg, toSegs, daily, partDose, partAvg, PARTS, segsIn, splitSeg, mergeSeg,
+  scaleAll, scalePart, flatten, roundRate, sameProfile, rateAt, fmtH, MIN_RATE, MAX_RATE,
   tzOffsetMinutes, tzShiftMinutes, tzShiftText,
 } from './basal';
 
@@ -157,5 +157,50 @@ describe('часовой пояс профиля', () => {
     expect(tzShiftText(120)).toBe('на 2 ч вперёд');
     expect(tzShiftText(-90)).toBe('на 1 ч 30 мин назад');
     expect(tzShiftText(-30)).toBe('на 30 мин назад');
+  });
+});
+
+/* ЧАСТЬ СУТОК НА ПРОЦЕНТ (#665).
+
+   Расчёт жил внутри обработчика кнопки, внутри `.map()`, внутри условия, внутри разметки. Проверить
+   его было нечем, а считает он дозу инсулина. Вынесен — и вот что оказалось закреплено. */
+describe('scalePart — часть суток на процент', () => {
+  const утро = { a: 6, b: 12 };
+
+  it('меняет только те интервалы, что попали в часть суток', () => {
+    const было: Seg[] = [{ a: 0, b: 6, v: 1 }, { a: 6, b: 12, v: 1 }, { a: 12, b: 24, v: 1 }];
+    const стало = scalePart(было, утро, 10);
+    expect(стало[0].v).toBe(1);
+    expect(стало[1].v).toBeCloseTo(1.1, 2);
+    expect(стало[2].v).toBe(1);
+  });
+
+  it('ЗАХВАТЫВАЕТ интервал, задевающий часть суток краем', () => {
+    /* 05:00–09:00 попадает и в ночь, и в утро. Нажав «утро +10 %», человек меняет и кусок ночи.
+       Поведение было таким с самого начала; тест его называет, а не одобряет. Решим менять —
+       увидим здесь, что именно ломается. */
+    const было: Seg[] = [{ a: 0, b: 5, v: 1 }, { a: 5, b: 9, v: 1 }, { a: 9, b: 24, v: 1 }];
+    const стало = scalePart(было, утро, 10);
+    expect(стало[0].v).toBe(1);
+    expect(стало[1].v).toBeCloseTo(1.1, 2);
+  });
+
+  it('минус работает так же, как плюс', () => {
+    const было: Seg[] = [{ a: 6, b: 12, v: 2 }];
+    expect(scalePart(было, утро, -10)[0].v).toBeCloseTo(1.8, 2);
+  });
+
+  it('не выпускает ставку за границы, разрешённые помпе', () => {
+    /* roundRate зажимает в MIN_RATE…MAX_RATE. Без этого «+10 %» на верхней ставке дал бы число,
+       которое помпа не примет, — а узнал бы об этом человек уже при переносе. */
+    const высоко: Seg[] = [{ a: 6, b: 12, v: MAX_RATE }];
+    expect(scalePart(высоко, утро, 10)[0].v).toBeLessThanOrEqual(MAX_RATE);
+    const низко: Seg[] = [{ a: 6, b: 12, v: MIN_RATE }];
+    expect(scalePart(низко, утро, -50)[0].v).toBeGreaterThanOrEqual(MIN_RATE);
+  });
+
+  it('ноль процентов ничего не меняет', () => {
+    const было: Seg[] = [{ a: 6, b: 12, v: 1.25 }];
+    expect(scalePart(было, утро, 0)[0].v).toBe(1.25);
   });
 });
