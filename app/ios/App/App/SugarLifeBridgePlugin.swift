@@ -1821,10 +1821,35 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     /// (Telegram/почта/Файлы). Зеркало Android exportAndShare — механизм сбора телеметрии от волонтёров.
     private func exportAndShare() {
         guard let ndjson = engine?.exportLog() else { return }
+        /* НОМЕР НАШЕЙ СБОРКИ — ТОЛЬКО У НАС (#656).
+
+           Движок в свою шапку кладёт установку, коммит ядра и ревизию моста. Своей сборки он не
+           знает и знать не может: её собираем мы.
+
+           28 августа я трижды выяснял, какая сборка стоит на телефоне, — и каждый раз лазил в
+           `build.json` внутри установленного пакета. Человек, приславший журнал издалека, такого
+           не сможет, а без номера половина вопросов к журналу остаётся без ответа: «это до правки
+           или после».
+
+           Телефон и версию системы кладём туда же и по той же причине. Личного в них нет. */
+        let версия = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "?"
+        /* Номер сборки — из того же `build.json`, что показывает экран «О программе»: одна дорога к
+           одному числу, иначе журнал и экран однажды назовут разные сборки. */
+        var номерСборки = "?"
+        if let url = Bundle.main.url(forResource: "build", withExtension: "json", subdirectory: "public"),
+           let data = try? Data(contentsOf: url),
+           let о = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let b = о["build"] as? String { номерСборки = b }
+        let шапкаНатива = "{\"native\":{"
+            + "\"app\":\(jsonStr(версия)),"
+            + "\"appBuild\":\(jsonStr(номерСборки)),"
+            + "\"device\":\(jsonStr(UIDevice.current.model)),"
+            + "\"os\":\(jsonStr(UIDevice.current.systemVersion))"
+            + "}}\n"
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("sugarlife-log.ndjson")
         /* Выгрузка журнала не удалась — говорим об этом в сам журнал. Молчаливый отказ здесь дешевле
            прочих, но он того же рода: человек нажал «выгрузить» и не узнал, что файла нет. */
-        do { try ndjson.write(to: url, atomically: true, encoding: .utf8) }
+        do { try (шапкаНатива + ndjson).write(to: url, atomically: true, encoding: .utf8) }
         catch { вЖурнал("Warn", "log", "выгрузка журнала не удалась: \(error.localizedDescription)"); return }
         DispatchQueue.main.async { [weak self] in
             guard let vc = self?.bridge?.viewController else { return }
