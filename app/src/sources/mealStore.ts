@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getMeals, putMeal, removeMeal, onDbChange } from './db';
 import { makeMeal, type Meal, type NewMeal } from '@/domain/meals';
+import { sendIntent } from './bridge';
 
 /* Доступ к журналу приёмов из интерфейса.
 
@@ -9,10 +10,59 @@ import { makeMeal, type Meal, type NewMeal } from '@/domain/meals';
    запись; всё, что можно решить без базы, решается в domain/meals.ts и покрыто
    тестами там. */
 
+/* ОТПРАВИТЕЛЬ, КОТОРОГО ЖДАЛИ (#657).
+
+   В `domain/meals.ts` про него написано прямым текстом: «Появится адресат — её заберёт отправитель,
+   ничего не меняя ни в интерфейсе, ни в хранении». Адресат появился — это движок, у него путь до
+   Nightscout готов и проверен живьём. Отправителя не было: `logMeal` жил в типе моста и не
+   вызывался ни разу, а еда ложилась в базу с `sync: 'local'` и оставалась там навсегда.
+
+   Владелец сказал прямо: «мне нужно, чтобы введённые углеводы улетали в Nightscout».
+
+   `id` — наш локальный, тот самый, что заводился «ключом идемпотентности, когда доставка появится».
+   Он им и стал: движок кладёт его внешним ключом, и повтор после обрыва не задваивает запись.
+   Задвоенные углеводы — задвоенная доза, и это не фигура речи.
+
+   `atMs` — время ЕДЫ, а не внесения: человек вносит съеденное час назад, и час этот важен.
+
+   `accepted` означает «приняли в очередь», а не «уже в облаке». Поэтому помечаем `sent` — это
+   правда про нашу половину пути; про вторую половину знает движок и рассказывает своими полями. */
+async function отправить(запись: Meal): Promise<Meal> {
+  try {
+    const ответ = await sendIntent({
+      type: 'logMeal', id: запись.id, atMs: запись.t, carbs: запись.carbs,
+      insulin: запись.insulin ?? null, kind: запись.kind ?? null, note: запись.note ?? null,
+    });
+    if (!ответ?.accepted) return запись;
+  } catch {
+    /* Движка нет (браузер) или он не поднялся — запись остаётся местной и уедет досылом.
+       Молчим намеренно: это не отказ человеку, а «ещё не сейчас». */
+    return запись;
+  }
+  const отправленная: Meal = { ...запись, sync: 'sent' };
+  await putMeal(отправленная);
+  return отправленная;
+}
+
 export async function addMeal(m: NewMeal): Promise<Meal> {
   const запись = makeMeal(m);
   await putMeal(запись);
-  return запись;
+  return отправить(запись);
+}
+
+/* ДОСЫЛ. Первая попытка бывает в самолёте, в лифте и до подъёма движка. Без досыла такая запись
+   осталась бы местной навсегда, а человек считал бы, что углеводы ушли: он их внёс и увидел.
+
+   Зовём при старте приложения — там же, где просыпается всё остальное. */
+export async function досылНеотправленных(): Promise<number> {
+  const все = await getMeals();
+  const местные = все.filter((m) => m.sync !== 'sent');
+  let ушло = 0;
+  for (const m of местные) {
+    const после = await отправить(m);
+    if (после.sync === 'sent') ушло++;
+  }
+  return ушло;
 }
 
 export const deleteMeal = removeMeal;
@@ -29,7 +79,9 @@ export const deleteMeal = removeMeal;
 export async function updateMeal(m: Meal, правки: Partial<Pick<Meal, 't' | 'carbs' | 'kind' | 'note'>>): Promise<Meal> {
   const новая: Meal = { ...m, ...правки, sync: m.sync === 'sent' ? 'local' : m.sync };
   await putMeal(новая);
-  return новая;
+  /* Исправленное отправляем сразу и тем же id: движок увидит правку одной записи, а не вторую еду
+     рядом с первой. Ради этого id и сохраняется при правке. */
+  return отправить(новая);
 }
 
 export function useMeals(): Meal[] {
