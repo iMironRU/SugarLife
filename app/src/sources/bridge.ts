@@ -20,6 +20,11 @@ import { nightscoutBridge } from './bridgeNightscout';
 export interface StaleReasonView {
   code: string;
   words: string;
+  /* ТА ЖЕ МЫСЛЬ ОДНОЙ СТРОКОЙ (rev ≥ 1.57, ядро #165). `words` — три предложения и до 212 знаков,
+     это для места с простором; на «Сегодня» они занимали пять строк ровно там, где вклинивать
+     блок нельзя. Показываем ОДНО из двух. Резать `words` по точке нельзя: у трёх бед три разных
+     первых предложения, и самодостаточно не всякое. */
+  shortWords?: string;
 }
 
 export interface Monitor {
