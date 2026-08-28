@@ -632,6 +632,14 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
            объявляет маленькое семейство ради CarPlay, а оно с 18-й. Обещать баннер на 16–17 значило
            бы включить переключатель, за которым ничего не появится. */
         if #available(iOS 18.0, *) {
+            /* Отключена владельцем — говорим это отдельным полем, а не притворяемся, что телефон
+               не умеет: «не умеет» и «мы решили не показывать» человек чинит по-разному. */
+            if РешениеОКарточке.отключена {
+                call.resolve([
+                    "supported": true, "on": false, "running": false,
+                    "выключенаПочему": РешениеОКарточке.почему,
+                ]); return
+            }
             call.resolve([
                 "supported": true,
                 "on": UserDefaults.standard.bool(forKey: "sl.live-banner"),
@@ -644,6 +652,13 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func setLiveBanner(_ call: CAPPluginCall) {
+        /* Пока карточка отключена решением владельца, включить её нельзя даже нажатием: экран об
+           этом честно пишет, а тихо согласиться и ничего не сделать — худший из вариантов. */
+        if РешениеОКарточке.отключена {
+            UserDefaults.standard.set(false, forKey: "sl.live-banner")
+            if #available(iOS 16.2, *) { ЖивойБаннер.погасить() }
+            call.resolve(); return
+        }
         let включено = call.getBool("on") ?? false
         UserDefaults.standard.set(включено, forKey: "sl.live-banner")
         if #available(iOS 16.2, *) {
@@ -942,6 +957,13 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             Тревоги.общие.настроить()
             Тревоги.общие.доложитьОДоставке()
             e.startAsync()
+            /* Гасим оставшуюся карточку при первом же запуске: без этого на экране блокировки
+               висел бы замерший труп с числом получасовой давности — то самое, из-за чего
+               владелец и попросил её убрать (см. РешениеОКарточке). */
+            if РешениеОКарточке.отключена, #available(iOS 16.2, *) {
+                UserDefaults.standard.set(false, forKey: "sl.live-banner")
+                ЖивойБаннер.погасить()
+            }
             // Boot-реконнект BLE: если доступ к Bluetooth уже выдан — цепляем провайдер сразу, движок
             // переподнимет сохранённые сенсор/помпу из БД (без ожидания скана). notDetermined — отложим
             // до первого скана (не показываем системный запрос на старте; restore сработает при первом attach).
@@ -1260,6 +1282,8 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
     @available(iOS 16.2, *)
     private func решитьПоБаннеру(_ json: String?, поПросьбе: Bool) -> String {
+        /* Решение владельца, а не сбой: карточка выключена целиком, см. РешениеОКарточке. */
+        if РешениеОКарточке.отключена { return "выключено владельцем" }
         guard UserDefaults.standard.bool(forKey: "sl.live-banner") else { return "выключено" }
         guard let json, let data = json.data(using: .utf8),
               let корень = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

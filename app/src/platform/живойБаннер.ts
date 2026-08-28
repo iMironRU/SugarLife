@@ -16,7 +16,7 @@ import { registerPlugin, Capacitor } from '@capacitor/core';
    восемь часов система гасит баннер сама, через двенадцать — снимает; приложение обязано
    его продлевать. И всё это только на iOS 16.2 и новее. */
 interface Плагин {
-  liveBanner(): Promise<{ supported: boolean; on: boolean; running: boolean }>;
+  liveBanner(): Promise<{ supported: boolean; on: boolean; running: boolean; выключенаПочему?: string }>;
   setLiveBanner(o: { on: boolean }): Promise<void>;
   raiseLiveBanner(): Promise<{ 'итог': string; 'идёт': boolean }>;
 }
@@ -26,6 +26,9 @@ export interface СостояниеБаннера {
   /** Умеет ли эта система живые уведомления вообще. */
   умеет: boolean;
   включён: boolean;
+  /* Отключена решением владельца — с причиной словами (#654). Это НЕ то же, что «не умеет»:
+     телефон умеет, а мы решили не показывать, и человек чинит эти два случая по-разному. */
+  выключенаПочему?: string;
   /** Висит ли прямо сейчас. Может быть false при включённом — человек смахнул его. */
   идёт: boolean;
 }
@@ -37,7 +40,7 @@ export async function состояниеБаннера(): Promise<Состоян
   if (!баннерВозможен()) return null;
   try {
     const r = await Native.liveBanner();
-    return { умеет: !!r.supported, включён: !!r.on, идёт: !!r.running };
+    return { умеет: !!r.supported, включён: !!r.on, идёт: !!r.running, выключенаПочему: r.выключенаПочему };
   } catch {
     /* Метода нет — сборка старше баннера. Это не «выключено»: молчать нельзя, иначе
        человек решит, что включил, и будет ждать баннера, которого не будет. */
