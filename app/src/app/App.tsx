@@ -19,6 +19,7 @@ import { isNative } from '@/platform/appUpdate';
 import InstallPrompt from '@/ui/InstallPrompt';
 import HeroPanel from '@/app/HeroPanel';
 import { useStore } from '@/sources/store';
+import { досылНеотправленных } from '@/sources/mealStore';
 import { useСейчас } from '@/показ/сейчас';
 import { сообщитьИнсулин } from '@/platform/живойБаннер';
 import { useSnapshot } from '@/sources/bridge';
@@ -185,6 +186,11 @@ export default function App() {
   // Спрашиваем разрешение на уведомления сразу при старте (не ждём первого
   // реального события) — так пользователь явно видит и решает.
   useEffect(() => { requestNotifyPermissionOnStart(); }, []);
+
+  /* ДОСЫЛ ЕДЫ (#657). Первая попытка отправки бывает в лифте, в самолёте и до того, как поднялся
+     движок. Без досыла такая запись осталась бы местной навсегда, а человек считал бы, что
+     углеводы ушли: он их внёс и увидел на экране. */
+  useEffect(() => { void досылНеотправленных(); }, []);
 
   /* Прогрев кусков разделов и графика — в простое, после первого экрана.
 
