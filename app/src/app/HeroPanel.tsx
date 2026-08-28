@@ -16,7 +16,7 @@ import { СТРЕЛКА, направление } from '@/domain/trend';
 import { предупредитьОСыром, МЕТКА_СЫРОГО, ПОЯСНЕНИЕ_СЫРОГО } from '@/domain/сырое';
 import { useEntries } from '@/sources/db';
 import { выбратьПоказание, ОТСТАВАНИЕ_МС } from '@/domain/latestGlucose';
-import { useСейчас, наСколькоХватитДней } from '@/показ/сейчас';
+import { useСейчас, подписьОстатка } from '@/показ/сейчас';
 import { useSnapshot } from '@/sources/bridge';
 import { расходка } from '@/domain/supplies';
 import CircleSparkline from '@/charts/CircleSparkline';
@@ -300,8 +300,7 @@ export default function HeroPanel() {
 
      ЗАПАСНОГО РАСЧЁТА НЕТ НАМЕРЕННО. Движок молчит — не говорим ничего: оценка, врущая вдвое в
      опасную сторону, хуже отсутствующей. */
-  const daysLeft = наСколькоХватитДней(снимок?.insulinLeft, остаток, Date.now());
-  const resSub2 = daysLeft != null ? '≈ ' + дниЧасы(daysLeft) : 'резервуар';
+  const остатокПодпись = подписьОстатка(снимок?.insulinLeft, остаток, Date.now(), дниЧасы);
   // часики на значениях из кеша, пока идёт свежая загрузка (текст не подменяем)
   const staleSensor = extras.stale && sensorDay != null;
   /* Часики на прогнозе больше не нужны: число приходит из снимка движка, а он свеж всегда, пока
@@ -367,7 +366,9 @@ export default function HeroPanel() {
                 разных факта, поэтому две разные метки, а не одна на двоих. */}
             <span className="hp-sub">{pumpStatus}</span>
             <span className="hp-val">{reservoir}</span>
-            <span className="hp-sub">{resSub2}</span>
+            <span className={'hp-sub' + (остатокПодпись.тревожно ? ' hp-sub-тревога' : '')}>
+              {остатокПодпись.текст}
+            </span>
           </button>
         </div>
 
