@@ -15,8 +15,8 @@ const subs = new Set<() => void>();
 function emit() { for (const f of subs) f(); }
 function setRunning(v: boolean) { if (v !== running) { running = v; emit(); } }
 function setRunningT(v: boolean) { if (v !== runningT) { runningT = v; emit(); } }
-export function isBackfilling(): boolean { return running || runningT; }
-export function subscribeBackfill(cb: () => void) { subs.add(cb); return () => { subs.delete(cb); }; }
+function isBackfilling(): boolean { return running || runningT; }
+function subscribeBackfill(cb: () => void) { subs.add(cb); return () => { subs.delete(cb); }; }
 export function useBackfilling(): boolean { return useSyncExternalStore(subscribeBackfill, isBackfilling, isBackfilling); }
 
 export async function backfill(targetDays = 90) {

@@ -42,7 +42,7 @@ function load(): DeviceConfig {
 let state = load();
 const subs = new Set<() => void>();
 
-export function getDeviceConfig(): DeviceConfig { return state; }
+function getDeviceConfig(): DeviceConfig { return state; }
 export function setDeviceConfig(patch: Partial<DeviceConfig>): void {
   state = { ...state, ...patch };
   записатьJson(KEY, state);
@@ -102,10 +102,6 @@ export function forgetDevice(cat: 'sensor' | 'pump'): void {
   else setDeviceConfig({ sensorId: null, bridgeSensorId: null, deviceParams: params });
 }
 
-/** Параметры драйвера категории (пустой объект, если ничего не задано). */
-export function getParams(cat: string): Record<string, string> {
-  return state.deviceParams[cat] ?? {};
-}
 export function setParam(cat: string, key: string, value: string): void {
   const cur = state.deviceParams[cat] ?? {};
   setDeviceConfig({ deviceParams: { ...state.deviceParams, [cat]: { ...cur, [key]: value } } });

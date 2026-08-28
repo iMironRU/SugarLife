@@ -119,7 +119,7 @@ export async function спроситьСервер(): Promise<ОтаБандл |
    может сказать, что произошло, вместо того чтобы промолчать. */
 const КЛЮЧ_ПРИМЕНЕНО = 'sl.ota.applied.v1';
 
-export function отметитьПрименение(build: string): void {
+function отметитьПрименение(build: string): void {
   записать(КЛЮЧ_ПРИМЕНЕНО, build);
 }
 
@@ -156,7 +156,7 @@ function ход(п: number | null): void {
   ходПодписки.forEach((f) => f());
 }
 
-export function ходOta(): number | null { return ходЗагрузки; }
+function ходOta(): number | null { return ходЗагрузки; }
 
 export function useХодOta(): number | null {
   return useSyncExternalStore(
@@ -204,23 +204,6 @@ export async function применитьOta(б: ОтаБандл): Promise<boole
    Спросить и применить теперь разведены везде: и в автопроверке (#312), и здесь.
    Применение — отдельное решение человека, и оно предупреждает о перезапуске. */
 
-// Проверить веб-слой: если есть свежая версия — применить и перезагрузиться.
-export async function checkWebUpdate(): Promise<UpdateResult> {
-  try {
-    const reg = await navigator.serviceWorker?.getRegistration();
-    if (!reg) { location.reload(); return 'updated'; }
-    await reg.update();
-    if (reg.installing || reg.waiting) {
-      reg.waiting?.postMessage({ type: 'SKIP_WAITING' });
-      // дать SW активироваться, затем перезагрузка
-      window.setTimeout(() => location.reload(), 400);
-      return 'updated';
-    }
-    return 'current';
-  } catch {
-    return 'error';
-  }
-}
 
 export interface NativeUpdateInfo {
   hasUpdate: boolean;

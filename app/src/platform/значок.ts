@@ -27,7 +27,7 @@ export interface ЗначокСостояние {
   виды: ВидЗначка[];
 }
 
-export const значокВозможен = (): boolean => isNative;
+const значокВозможен = (): boolean => isNative;
 
 /** null — платформа не та или сборка старше значка: тогда настройки не показываем вовсе. */
 export async function состояниеЗначка(): Promise<ЗначокСостояние | null> {

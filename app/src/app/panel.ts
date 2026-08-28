@@ -20,7 +20,7 @@ const ШАГ = 0.004; // мельче — глазу не видно, а зап�
 
 /* Полшага сворачивания — на столько панель ниже покоя в СРЕДНЕМ положении.
    Держится в паре с --sl-panel-mid (theme/parts/shell.css): 92 * 0.5 = 46. */
-export const СЕРЕДИНА = 0.5;
+const СЕРЕДИНА = 0.5;
 const ПОЛШАГА = 46;
 /* Запас, чтобы решение не переворачивалось от округления в пару пикселей: содержимое
    меняется (пришло показание, подгрузился график), и «ровно впритык» означало бы
@@ -44,19 +44,16 @@ export function полшага(): number { return ПОЛШАГА; }
 
 let progress = -1; // -1 = ещё не писали, чтобы первый вызов прошёл всегда
 
-export function setProgress(v: number): void {
+function setProgress(v: number): void {
   const p = Math.min(1, Math.max(0, v));
   if (Math.abs(p - progress) < ШАГ) return;
   progress = p;
   document.documentElement.style.setProperty('--p', String(Math.round(p * 1000) / 1000));
 }
 
-export function getProgress(): number {
-  return Math.max(0, progress);
-}
 
 /** Прокрутка активного экрана → степень сворачивания. */
-export function setCollapse(px: number): void {
+function setCollapse(px: number): void {
   setProgress(Math.max(0, px) / ДИАПАЗОН);
 }
 
@@ -115,7 +112,7 @@ export function плавно(изменить: () => void): void {
    браузер растягивает таймеры до секунд, и класс мог бы застать начало прокрутки —
    панель поехала бы с отставанием ровно там, где отставать не должна. Прокрутка
    поэтому не ждёт таймера, а снимает плавность сама. */
-export function поПрокрутке(px: number): void {
+function поПрокрутке(px: number): void {
   if (снять) {
     window.clearTimeout(снять);
     снять = 0;

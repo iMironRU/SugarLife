@@ -65,7 +65,6 @@ export function setCarbUnit(u: CarbUnit) {
   csubs.forEach((f) => f());
 }
 function csubscribe(cb: () => void) { csubs.add(cb); return () => { csubs.delete(cb); }; }
-export const subscribeCarbUnit = csubscribe; // не-React подписка (для моста)
 export function useCarbUnit(): CarbUnit { return useSyncExternalStore(csubscribe, getCarbUnit, getCarbUnit); }
 
 export function carbUnitLabel(u: CarbUnit = carbUnit): string { return u === 'xe' ? 'Х.Е.' : 'г'; }

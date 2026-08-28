@@ -21,7 +21,7 @@ interface Плагин {
 }
 const Native = registerPlugin<Плагин>('SugarLifeBridge');
 
-export const праваВозможны = (): boolean => Capacitor.isNativePlatform();
+const праваВозможны = (): boolean => Capacitor.isNativePlatform();
 
 /** null — платформа не та или сборка старше раздела: молчим, а не показываем пустой список. */
 export async function прочитатьПрава(): Promise<ПунктНатива[] | null> {

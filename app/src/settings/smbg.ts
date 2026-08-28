@@ -44,17 +44,13 @@ function save() {
   subs.forEach((f) => f());
 }
 
-export function getSmbg(): Smbg[] { return state; }
+function getSmbg(): Smbg[] { return state; }
 
 export function addSmbg(mmol: number, reason?: Smbg['reason'], at = Date.now()): void {
   state = [...state, { t: at, mmol, reason }].sort((a, b) => a.t - b.t).slice(-ПРЕДЕЛ);
   save();
 }
 
-export function removeSmbg(t: number): void {
-  state = state.filter((x) => x.t !== t);
-  save();
-}
 
 export function useSmbg(): Smbg[] {
   return useSyncExternalStore(

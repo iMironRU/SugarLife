@@ -43,7 +43,7 @@ function set(patch: Partial<UpdateState>) {
   subs.forEach((f) => f());
 }
 
-export function getUpdateState(): UpdateState { return state; }
+function getUpdateState(): UpdateState { return state; }
 export function useUpdateState(): UpdateState {
   return useSyncExternalStore(
     (cb) => { subs.add(cb); start(); return () => { subs.delete(cb); }; },

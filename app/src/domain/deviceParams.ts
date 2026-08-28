@@ -58,7 +58,7 @@ export function значенияПараметров(
    Поле со значением по умолчанию обязательным не считаем: ответ на него уже есть, и
    спрашивать «подтвердите авто» значит задерживать человека ради нашей строгости. */
 
-export function драйверПоId(
+function драйверПоId(
   snap: UiSnapshot | null | undefined, id: string | null | undefined,
 ): DriverDescriptor | null {
   if (!id) return null;

@@ -11,7 +11,7 @@ import { часыСек } from '@/слова/время';
    читается только нами. */
 
 /** Насколько запись важна — по ней решают и цвет, и что показать в свёрнутом виде. */
-export const ВЕС_УРОВНЯ: Record<LogLevel, number> = {
+const ВЕС_УРОВНЯ: Record<LogLevel, number> = {
   Trace: 0, Debug: 1, Info: 2, Warn: 3, Error: 4,
 };
 

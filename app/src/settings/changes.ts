@@ -39,7 +39,7 @@ function save() {
   subs.forEach((f) => f());
 }
 
-export function getChanges(): Changes { return state; }
+function getChanges(): Changes { return state; }
 
 /** Отметить замену. Без аргумента — сейчас. */
 export function markChanged(what: Consumable, at = Date.now()): void {
@@ -76,6 +76,3 @@ export function useChanges(): Changes {
   );
 }
 
-export const CONSUMABLE_LABEL: Record<Consumable, string> = {
-  sensor: 'Датчик', site: 'Канюля', reservoir: 'Резервуар', battery: 'Батарейка',
-};
