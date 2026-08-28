@@ -10,7 +10,10 @@ import { useSnapshot } from '@/sources/bridge';
    экран будет нечем ошибиться. */
 export default function ЗастойВОблаке() {
   const снимок = useSnapshot();
-  const слова = снимок?.monitor?.staleReason?.words;
+  /* Короткая форма (мост ≥ 1.57) — она и задумана для этого места. `words` остаётся запасным
+     путём для старого моста: там три предложения, но три предложения лучше пустоты. */
+  const причина = снимок?.monitor?.staleReason;
+  const слова = причина?.shortWords || причина?.words;
   if (!слова) return null;
   return <div className="застой-в-облаке">{слова}</div>;
 }
