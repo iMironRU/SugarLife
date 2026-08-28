@@ -167,11 +167,6 @@ export async function checkWrite(base: string, token?: string): Promise<boolean>
   } catch { return false; }
 }
 
-// Загрузка entries за период (дней). count ограничен, для длинных периодов — выборка.
-export async function loadEntriesRange(base: string, token: string | undefined, days: number): Promise<Entry[]> {
-  const count = Math.min(days * 300, 8000);
-  return loadEntries(base, token, count);
-}
 
 // Загрузка entries по диапазону времени [from, to) (мс) — для наполнения локальной БД.
 export async function loadEntriesWindow(base: string, token: string | undefined, from: number, to: number): Promise<Entry[]> {
@@ -220,7 +215,7 @@ function slotValue(schedule: any[]): number | null {
 }
 
 // Нормализация одного документа devicestatus (переиспользуется REST + сокетом)
-export function normDeviceDoc(d: any): Device | null {
+function normDeviceDoc(d: any): Device | null {
   if (!d) return null;
   const oa = d.openaps || {}, loop = d.loop || {}, pump = d.pump || {}, ext = pump.extended || {};
   const iob = num(oa.iob?.iob, loop.iob?.iob);

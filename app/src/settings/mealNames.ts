@@ -40,8 +40,6 @@ function save() {
   subs.forEach((f) => f());
 }
 
-export function getMealNames(): Record<string, string> { return state.names; }
-export function isSkipped(groupId: string): boolean { return state.skipped.includes(groupId); }
 
 export function nameGroup(groupId: string, name: string): void {
   const имя = name.trim();

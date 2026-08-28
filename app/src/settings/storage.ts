@@ -145,12 +145,3 @@ export function записатьJson(key: string, value: unknown): void {
    по полям контракта, а он ещё обсуждается. Пустые ключи не отдаём — иначе импорт,
    который «доливает только пустые места», получит пустую строку вместо отсутствия
    и решит, что место занято. */
-export function кПереносу(куда: Перенос): Record<string, string> {
-  const итог: Record<string, string> = {};
-  for (const k of КЛЮЧИ) {
-    if (k.перенос !== куда) continue;
-    const v = прочитать(k.key);
-    if (v != null && v !== '') итог[k.key] = v;
-  }
-  return итог;
-}

@@ -14,7 +14,7 @@ function read(): boolean {
   return прочитать(KEY) === '1';
 }
 
-export function isOnboarded(): boolean { return state; }
+function isOnboarded(): boolean { return state; }
 
 export function setOnboarded(v: boolean): void {
   state = v;

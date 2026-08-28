@@ -100,7 +100,7 @@ function load(): LoopProfile {
 let state = load();
 const subs = new Set<() => void>();
 
-export function getLoopProfile(): LoopProfile { return state; }
+function getLoopProfile(): LoopProfile { return state; }
 export function saveLoopProfile(p: Partial<LoopProfile>): void {
   state = { ...state, ...p };
   записатьJson(KEY, state);

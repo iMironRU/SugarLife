@@ -219,7 +219,3 @@ export function useStorePart<T>(select: (s: StoreState) => T): T {
 export const subscribeStore = subscribe;
 export const getStoreState = getSnapshot;
 
-// Право записи в Nightscout. Гейтить им весь ввод (еда/болюсы/запись).
-export function useWritable(): boolean {
-  return useSyncExternalStore(subscribe, () => state.writable);
-}

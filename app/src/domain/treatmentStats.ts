@@ -20,17 +20,6 @@ export function reservoirStats(points: DevPoint[]): ReservoirStats {
 }
 
 
-// Проинтегрированный базал (ед) из temp basal: rate × длительность сегмента.
-export function basalDelivered(ts: Treatment[]): number {
-  const tb = ts.filter((t) => t.type === 'Temp Basal' && t.rate != null).sort((a, b) => a.t - b.t);
-  let total = 0;
-  for (let i = 0; i < tb.length; i++) {
-    let segMs = i < tb.length - 1 ? tb[i + 1].t - tb[i].t : (tb[i].duration ? tb[i].duration! * 60000 : 0);
-    if (tb[i].duration != null) segMs = Math.min(segMs || tb[i].duration! * 60000, tb[i].duration! * 60000);
-    total += (tb[i].rate as number) * (Math.max(0, segMs) / 3600000);
-  }
-  return total;
-}
 
 /*
  * Суточная доза инсулина честно: на помпе Medtronic через AAPS весь инсулин
@@ -77,13 +66,6 @@ export function insulinDaily(tempBasals: Treatment[], boluses: Treatment[]): Ins
   };
 }
 
-// Болюсы из событий (insulin > 0)
-export function bolusStats(events: Treatment[], days: number) {
-  const b = events.filter((t) => t.insulin && t.insulin > 0);
-  const total = b.reduce((a, x) => a + (x.insulin || 0), 0);
-  const d = Math.max(1, days);
-  return { perDay: total / d, count: Math.round(b.length / d), avg: b.length ? total / b.length : 0, total };
-}
 
 export interface CarbStats { perDay: number; mealsPerDay: number; avgPerMeal: number; breakfast: number; dinner: number; hasData: boolean; }
 export function carbStats(events: Treatment[], days: number): CarbStats {

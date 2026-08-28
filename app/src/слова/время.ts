@@ -26,7 +26,7 @@ export const деньМесяц = (t: number): string =>
   new Date(t).toLocaleDateString(ЛОКАЛЬ, { day: 'numeric', month: 'long' });
 
 /** 19 авг — там, где строка тесная. */
-export const деньМесяцКоротко = (t: number): string =>
+const деньМесяцКоротко = (t: number): string =>
   new Date(t).toLocaleDateString(ЛОКАЛЬ, { day: 'numeric', month: 'short' });
 
 /** 19 августа 2026 г. — год нужен там, где смотрят на прошлые годы (анализы, осмотры). */

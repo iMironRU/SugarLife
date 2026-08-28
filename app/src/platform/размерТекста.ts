@@ -35,7 +35,7 @@ export function корневойРазмер(системныйPx: number | null
 }
 
 /** Спросить систему. null — спрашивать некого (не Apple, нет DOM). */
-export function спроситьСистему(): number | null {
+function спроситьСистему(): number | null {
   if (typeof document === 'undefined' || typeof CSS === 'undefined') return null;
   if (!CSS.supports?.('font', '-apple-system-body')) return null;
   const проба = document.createElement('div');

@@ -15,7 +15,7 @@ export const СЛОВО_КАНАЛА: Record<ChannelView['kind'], string> = {
 
 /* То же самое одним словом — для панели, где на строку приходится треть экрана.
    Полная фраза там не помещается, а обрезанная хуже короткой. */
-export const КОРОТКО_КАНАЛ: Record<ChannelView['kind'], string> = {
+const КОРОТКО_КАНАЛ: Record<ChannelView['kind'], string> = {
   direct: 'радио', bridged: 'мост', cloud: 'облако',
 };
 

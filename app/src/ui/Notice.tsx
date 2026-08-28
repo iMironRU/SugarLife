@@ -85,7 +85,7 @@ export default function Notice({ вид, значок, заголовок, child
 
    Лишнее не прячется молча: под стопкой строка «ещё N». Иначе человек не узнает, что
    чего-то не видел, — ровно то, за что мы снимали фильтры в #149. */
-export const ПРЕДЕЛ_ОБРАЩЕНИЙ = 3;
+const ПРЕДЕЛ_ОБРАЩЕНИЙ = 3;
 
 export function NoticeStack({ children, предел = ПРЕДЕЛ_ОБРАЩЕНИЙ }: {
   children: ReactNode; предел?: number;
