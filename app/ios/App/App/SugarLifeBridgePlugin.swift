@@ -912,7 +912,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
                     /* Виджет на рабочем столе — ОТДЕЛЬНОЙ дорогой, а не внутри баннера (#542).
                        Баннер человек может выключить, виджет при этом остаётся на экране: одна
                        общая ветка означала бы, что выключенный баннер молча гасит и виджет. */
-                    if #available(iOS 16.0, *) { self?.обновитьВиджет(json) }
+                    if #available(iOS 16.0, *) { ПоверхностьВиджета.общая.обновить(json, историяДвижка: self?.историяДвижка ?? []) }
                     /* Значок и тихая сводка — ТОЖЕ отдельной дорогой (#655).
 
                        Они жили внутри решения о живой карточке, в одной из его веток. 28 августа я
@@ -1150,9 +1150,6 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
        нельзя — протухнет; чаще незачем — на экране то же самое. */
     private let баннерНеЧащеМс: Double = 10 * 60 * 1000
 
-    /* ЧТО ПОКАЗАНО НА ВИДЖЕТЕ. Своя отметка, отдельно от баннерной: поверхности живут независимо,
-       и общая память означала бы, что выключенный баннер лишает виджет обновлений. */
-    private var показанноеВВиджете: Double = 0
 
     /**
      Строка в журнал движка: его выгрузка — единственный способ прочитать это с телефона потом.
@@ -1199,36 +1196,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
      их несколько в минуту, а бюджет обновлений виджета система считает и урезает.
      */
     @available(iOS 16.0, *)
-    private func обновитьВиджет(_ json: String?) {
-        guard let json, let data = json.data(using: .utf8),
-              let корень = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let monitor = корень["monitor"] as? [String: Any] else { return }
-        let значение = (monitor["glucose"] as? String) ?? ""
-        guard !значение.isEmpty, значение != "—" else { return }
-        let когдаМс = (monitor["latestAtMs"] as? Double) ?? Date().timeIntervalSince1970 * 1000
-        if когдаМс == показанноеВВиджете { return }
-        показанноеВВиджете = когдаМс
-
-        let mmol = monitor["glucoseMmol"] as? Double
-        /* Ряд тот же, что у баннера, и собирается там же (#562): иначе график на рабочем столе и
-           на экране блокировки рисуют разные три часа. */
-        let ряд = Снимок.рядДляПоказа(monitor, когдаМс: когдаМс, историяДвижка: историяДвижка)
-        let число = String(значение.split(separator: " ").first ?? "")
-            .replacingOccurrences(of: ".", with: ",")
-
-        ОбщаяЗапись.записать(ОбщаяЗапись.Снимок(
-            значение: число.isEmpty ? значение : число,
-            стрелка: Снимок.стрелкаТренда(monitor["trend"] as? String),
-            разница: Снимок.дельта(ряд),
-            mmol: mmol,
-            зона: Снимок.зонаСахара(mmol),
-            инсулин: инсулинСтрокой(monitor),
-            когдаМс: когдаМс,
-            ряд: ИсторияСахара.дляПоказа(ряд).map { .init(т: $0.т.timeIntervalSince1970, в: $0.в) }
-        ))
-        WidgetCenter.shared.reloadTimelines(ofKind: "ru.imiron.sugarlife.виджет")
-    }
-
+    
     /* Из снимка — в состояние баннера.
 
        Разбираем ровно то, что показываем: значение, тренд, время. Единицы не трогаем —
@@ -1367,7 +1335,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             ряд: ИсторияСахара.дляПоказа(ряд),
             mmol: mmol,
             зона: Снимок.зонаСахара(mmol),
-            инсулин: инсулинСтрокой(monitor),
+            инсулин: Снимок.инсулинСтрокой(monitor),
             прогноз: nil,
             разрыв: разрыв,
             /* ПОСЛЕДНЕЕ ИЗВЕСТНОЕ ОТДАЁМ ВСЕГДА (#530), а не только в разрыве: в разрыв баннер
@@ -1411,12 +1379,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
 
 
-    private func инсулинСтрокой(_ monitor: [String: Any]? = nil) -> String {
-        let значение = (monitor.flatMap { Снимок.инсулинИзСнимка($0) }) ?? Сводка.общая.инсулинДляПоказа()
-        guard let и = значение, и > 0.05 else { return "" }
-        return String(format: "%.1f", и).replacingOccurrences(of: ".", with: ",") + " ед"
-    }
-
+    
     /* ЧТО БЫЛО ИЗВЕСТНО ДО РАЗРЫВА — ТОЛЬКО ЧИСЛО (замечание владельца).
 
        Здесь стояло «8,3 в 17:26», и рядом на той же карточке крупно шёл счётчик разрыва — «54:54».
@@ -1641,7 +1604,11 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func sendIntent(_ call: CAPPluginCall) {
         let json = call.getString("json") ?? ""
         // Экспорт лога перехватываем ДО движка (как Android): редактированный NDJSON → share sheet ОС.
-        if json.contains("\"exportLog\"") { exportAndShare(); return call.resolve(["json": "{\"accepted\":true}"]) }
+        if json.contains("\"exportLog\"") {
+            ВыгрузкаЖурнала.отдать(ndjson: engine?.exportLog(), контроллер: bridge?.viewController,
+                                   вЖурнал: { self.вЖурнал($0, "log", $1) })
+            return call.resolve(["json": "{\"accepted\":true}"])
+        }
         /* «Открыть настройки» — наше дело, а не движка (SugarLife#333, контракт: «куда вести, знает
            движок, КАК открыть — натив»). Раньше интент уходил в движок, тот честно писал в журнал
            `intent-not-handled` и всё равно отвечал `accepted: true`: кнопка выглядела рабочей и не
@@ -1680,50 +1647,6 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         DispatchQueue.main.async { UIApplication.shared.open(url) }
     }
 
-    /// Экспорт диагностического лога (редактированный NDJSON из движка) → UIActivityViewController
-    /// (Telegram/почта/Файлы). Зеркало Android exportAndShare — механизм сбора телеметрии от волонтёров.
-    private func exportAndShare() {
-        guard let ndjson = engine?.exportLog() else { return }
-        /* НОМЕР НАШЕЙ СБОРКИ — ТОЛЬКО У НАС (#656).
-
-           Движок в свою шапку кладёт установку, коммит ядра и ревизию моста. Своей сборки он не
-           знает и знать не может: её собираем мы.
-
-           28 августа я трижды выяснял, какая сборка стоит на телефоне, — и каждый раз лазил в
-           `build.json` внутри установленного пакета. Человек, приславший журнал издалека, такого
-           не сможет, а без номера половина вопросов к журналу остаётся без ответа: «это до правки
-           или после».
-
-           Телефон и версию системы кладём туда же и по той же причине. Личного в них нет. */
-        let версия = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "?"
-        /* Номер сборки — из того же `build.json`, что показывает экран «О программе»: одна дорога к
-           одному числу, иначе журнал и экран однажды назовут разные сборки. */
-        var номерСборки = "?"
-        if let url = Bundle.main.url(forResource: "build", withExtension: "json", subdirectory: "public"),
-           let data = try? Data(contentsOf: url),
-           let о = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let b = о["build"] as? String { номерСборки = b }
-        let шапкаНатива = "{\"native\":{"
-            + "\"app\":\(jsonStr(версия)),"
-            + "\"appBuild\":\(jsonStr(номерСборки)),"
-            + "\"device\":\(jsonStr(UIDevice.current.model)),"
-            + "\"os\":\(jsonStr(UIDevice.current.systemVersion))"
-            + "}}\n"
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("sugarlife-log.ndjson")
-        /* Выгрузка журнала не удалась — говорим об этом в сам журнал. Молчаливый отказ здесь дешевле
-           прочих, но он того же рода: человек нажал «выгрузить» и не узнал, что файла нет. */
-        do { try (шапкаНатива + ndjson).write(to: url, atomically: true, encoding: .utf8) }
-        catch { вЖурнал("Warn", "log", "выгрузка журнала не удалась: \(error.localizedDescription)"); return }
-        DispatchQueue.main.async { [weak self] in
-            guard let vc = self?.bridge?.viewController else { return }
-            let av = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-            // iPad: share sheet — popover, нужен якорь (иначе краш).
-            av.popoverPresentationController?.sourceView = vc.view
-            av.popoverPresentationController?.sourceRect = CGRect(x: vc.view.bounds.midX, y: vc.view.bounds.midY, width: 0, height: 0)
-            av.popoverPresentationController?.permittedArrowDirections = []
-            vc.present(av, animated: true)
-        }
-    }
 
     @objc func query(_ call: CAPPluginCall) { call.resolve(["json": engine?.query(json: call.getString("json") ?? "") ?? "{\"glucose\":[],\"treatments\":[]}"]) }
 
