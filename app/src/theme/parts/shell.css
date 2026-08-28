@@ -240,6 +240,12 @@ ion-content { --background: var(--color-bg); }
 /* «до утра не хватит» — вердикт движка, а не наша догадка: подпись должна ловить глаз,
    но не кричать громче самого числа остатка над ней. */
 .hp-sub.hp-sub-тревога { color: var(--color-warning, #e0b050); }
+/* «в облаке нет свежих» — не наша поломка и не поломка связи, поэтому не красный:
+   это пояснение к возрасту числа, стоящее прямо под ним. */
+.hp-застой {
+  display: block; font-size: 0.625rem; line-height: 1.3; margin-top: 2px;
+  color: var(--color-warning, #e0b050); max-width: 15ch; text-wrap: balance;
+}
 /* часики: значение из кеша, идёт обновление */
 .hp-stale { font-size: 0.625rem; vertical-align: -1px; margin-left: 3px; opacity: 0.55; color: currentColor; }
 
