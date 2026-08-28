@@ -16,6 +16,12 @@ import { useEffect, useState } from 'react';
 import { nightscoutBridge } from './bridgeNightscout';
 
 // ---- UiSnapshot ----
+/** Почему число старое, когда всё остальное исправно (rev ≥ 1.56, ядро #157). */
+export interface StaleReasonView {
+  code: string;
+  words: string;
+}
+
 export interface Monitor {
   glucose: string; glucoseMmol: number | null; trend: Trend; link: Link;
   reservoir: string; battery: string;
@@ -91,6 +97,15 @@ export interface Monitor {
   cadenceMs?: number | null;
   cadenceKnown?: 'declared' | 'measured' | 'unknown' | string | null;
   nextExpectedAtMs?: number | null;
+  /* ОБЛАКО ОТВЕЧАЕТ, А ЧИСЛА СТАРЫЕ (rev ≥ 1.56, ядро #157).
+
+     Третье состояние, которого не было ни в связи, ни в причинах отказа: связь цела, токен
+     принят, ошибок нет — просто в облаке нечего взять, потому что встал тот, кто туда пишет.
+     Обычно это ЧУЖОЙ телефон, а человек в это время чинит наше приложение.
+
+     Ядро просит показывать рядом с числом, а не в разделе связи: связь-то в порядке.
+     null — всё свежо, показывать нечего. */
+  staleReason?: StaleReasonView | null;
   beatsLate?: number;
   /* ЧУЖОЙ РАСЧЁТ ПЕТЛИ (rev ≥ 1.42, SugarLifeCore#128, SugarLife#528).
 
@@ -714,6 +729,11 @@ export interface InsulinLeftView {
   /** null — сказать нечего: не хватило истории расхода. Не «да» и не «нет». */
   enoughUntilMorning?: boolean | null;
   words: string;
+  /* ТА ЖЕ МЫСЛЬ В ПЯТНАДЦАТЬ ЗНАКОВ (rev ≥ 1.55, ядро #158) — для строки под числом на плитке,
+     куда `words` не влезает: «≈ 2 д 3 ч», «считаем расход». Пусто не бывает никогда.
+
+     Показываем ОДНО из двух на поверхность: плитка — это, карточка прибора — `words`. */
+  shortWords?: string;
 }
 
 /* ПРОФИЛЬ ТЕРАПИИ ИЗ ОБЛАКА (rev ≥ 1.43, SugarLife#528).

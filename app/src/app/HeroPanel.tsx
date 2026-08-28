@@ -1,5 +1,5 @@
 import Иконка from '@/ui/Иконка';
-import { сколькоНазад, дниЧасы } from '@/слова/время';
+import { сколькоНазад } from '@/слова/время';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline, warningOutline } from 'ionicons/icons';
 import { useTab, setTab } from '@/app/nav';
@@ -300,7 +300,7 @@ export default function HeroPanel() {
 
      ЗАПАСНОГО РАСЧЁТА НЕТ НАМЕРЕННО. Движок молчит — не говорим ничего: оценка, врущая вдвое в
      опасную сторону, хуже отсутствующей. */
-  const остатокПодпись = подписьОстатка(снимок?.insulinLeft, остаток, Date.now(), дниЧасы);
+  const остатокПодпись = подписьОстатка(снимок?.insulinLeft);
   // часики на значениях из кеша, пока идёт свежая загрузка (текст не подменяем)
   const staleSensor = extras.stale && sensorDay != null;
   /* Часики на прогнозе больше не нужны: число приходит из снимка движка, а он свеж всегда, пока
@@ -405,6 +405,17 @@ export default function HeroPanel() {
                 </>
               ) : ago}
             </span>
+            {/* ОБЛАКО ОТВЕЧАЕТ, А ЧИСЛА СТАРЫЕ (ядро #157, rev ≥ 1.56).
+
+                Связь цела, токен принят, ошибок нет — просто писать в облако перестал ТОТ, КТО
+                ТУДА ПИШЕТ, а это обычно чужой телефон. Для человека это выглядит полной
+                исправностью с устаревшими числами, и чинить он идёт наше приложение.
+
+                Стоит У ЧИСЛА, а не в разделе связи, — ядро просило прямо: связь в порядке, и
+                на её карточке эта строка ищется последней. */}
+            {m?.staleReason?.words && (
+              <span className="hp-застой">{m.staleReason.words}</span>
+            )}
           </span>
         </button>
       </div>
