@@ -35,6 +35,8 @@
 		D1A0000000000000000090 /* Разрешения.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000091 /* Разрешения.swift */; };
 		D1A0000000000000000034 /* Громкость.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000033 /* Громкость.swift */; };
 		D1A0000000000000000036 /* Сводка.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000035 /* Сводка.swift */; };
+		D1A00000000000000000101 /* ЧтениеСнимка.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00000000000000000100 /* ЧтениеСнимка.swift */; };
+		D1A00000000000000000103 /* ПоверхностьЗначка.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00000000000000000102 /* ПоверхностьЗначка.swift */; };
 		D1A0000000000000000038 /* Значок.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000037 /* Значок.swift */; };
 		D1A0000000000000000015 /* СахарАтрибуты.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000013 /* СахарАтрибуты.swift */; };
 /* End PBXBuildFile section */
@@ -70,6 +72,8 @@
 		D1A0000000000000000091 /* Разрешения.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Разрешения.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000033 /* Громкость.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Громкость.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000035 /* Сводка.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Сводка.swift"; sourceTree = "<group>"; };
+		D1A00000000000000000100 /* ЧтениеСнимка.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ЧтениеСнимка.swift"; sourceTree = "<group>"; };
+		D1A00000000000000000102 /* ПоверхностьЗначка.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ПоверхностьЗначка.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000037 /* Значок.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Значок.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -139,6 +143,8 @@
 				D1A000000000000000009A /* Здоровье.swift */,
 				D1A00000000000000000B1 /* ЗдоровьеЗапись.swift */,
 				D1A0000000000000000035 /* Сводка.swift */,
+				D1A00000000000000000100 /* ЧтениеСнимка.swift */,
+				D1A00000000000000000102 /* ПоверхностьЗначка.swift */,
 				D1A0000000000000000037 /* Значок.swift */,
 			);
 			path = App;
@@ -354,6 +360,8 @@
 				D1A0000000000000000034 /* Громкость.swift in Sources */,
 				D1A0000000000000000090 /* Разрешения.swift in Sources */,
 				D1A0000000000000000036 /* Сводка.swift in Sources */,
+				D1A00000000000000000101 /* ЧтениеСнимка.swift in Sources */,
+				D1A00000000000000000103 /* ПоверхностьЗначка.swift in Sources */,
 				D1A0000000000000000038 /* Значок.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
