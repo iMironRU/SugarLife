@@ -1,6 +1,6 @@
 import Иконка from '@/ui/Иконка';
 import { часы, имяДня } from '@/слова/время';
-import { restaurantOutline, bluetoothOutline, warningOutline, timeOutline, trendingUpOutline, refreshOutline, swapHorizontalOutline } from 'ionicons/icons';
+import { restaurantOutline, bluetoothOutline, warningOutline, timeOutline, trendingUpOutline, refreshOutline, swapHorizontalOutline, waterOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import { useMeals } from '@/sources/mealStore';
 import { useMealNames } from '@/settings/mealNames';
@@ -10,7 +10,7 @@ import { useEntries, useTreatments } from '@/sources/db';
 import { onlyLocal } from '@/domain/meals';
 import { необъяснённыеПодъёмы } from '@/domain/mealMoment';
 import НочьПозади from '@/ui/НочьПозади';
-import { изДневника, изЗамен, изПодъёмов, изПриёмов, лентаИстории, поДням, свернутьПовторы, type ВидСобытия } from '@/domain/история';
+import { изДневника, изЗамен, изЛечения, изПодъёмов, изПриёмов, лентаИстории, поДням, свернутьПовторы, type ВидСобытия } from '@/domain/история';
 
 /* «История» — что ушло с экрана, но осталось в данных (SugarLife#384).
 
@@ -29,6 +29,7 @@ import { изДневника, изЗамен, изПодъёмов, изПри�
 const ЗНАЧОК: Record<ВидСобытия, string> = {
   еда: restaurantOutline, прибор: bluetoothOutline, подъём: trendingUpOutline,
   сборка: refreshOutline, тревога: warningOutline, замена: swapHorizontalOutline,
+  болюс: waterOutline,
 };
 
 const ОКНО_МС = 48 * 3600e3;
@@ -56,6 +57,9 @@ export default function HistorySection({ onClose }: { onClose: () => void }) {
     изПодъёмов(необъяснённыеПодъёмы(entries, всяЕда)),
     /* «Когда я менял набор и сенсор» — один из четырёх вопросов, с которыми сюда приходят. */
     изЗамен(замены, от),
+    /* «Я колол или нет» — самый частый вопрос, с которым сюда приходят, и до сегодня лента на
+       него не отвечала. Работу петли (TempBasal/Basal) не показываем: ядро сказало прямо. */
+    изЛечения(лечение, от),
   ]));
   const дни = поДням(события);
   const пусто = дни.length === 0;
