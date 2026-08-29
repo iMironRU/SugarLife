@@ -549,3 +549,23 @@ label.list-row { cursor: pointer; }
   display: block; margin-top: 4px;
   font-size: 0.625rem; opacity: 0.5; font-variant-numeric: tabular-nums;
 }
+
+/* НОЧЬ В ИСТОРИИ (#597). Отдельным блоком и первым: остальное человек помнит сам, а про ночь
+   не помнит ничего. Тон спокойный — это не тревога, а рассказ о том, что уже прошло. */
+.ночь { margin: 0 4px 14px; }
+.ночь-глава {
+  font-size: 0.6875rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--color-neutral-400); margin-bottom: 6px;
+}
+.ночь-тихо { font-size: 0.875rem; color: var(--color-neutral-300); }
+.ночь-строка {
+  display: flex; align-items: baseline; gap: 8px; padding: 6px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-neutral-400) 18%, transparent);
+  font-size: 0.875rem;
+}
+.ночь-строка:last-child { border-bottom: none; }
+.ночь-строка b { font-variant-numeric: tabular-nums; min-width: 3.2em; }
+.ночь-строка span { flex: 1; }
+.ночь-строка i { font-style: normal; font-size: 0.75rem; color: var(--color-neutral-400); }
+/* Без ответа — единственное, что человек узнаёт отсюда впервые: его звали, он не услышал. */
+.ночь-строка.без-ответа i { color: var(--color-warning, #e0b050); }
