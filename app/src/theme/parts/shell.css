@@ -393,3 +393,18 @@ ion-content { --padding-top: 0; }
    в нём не хватает слагаемого, и что именно — говорит движок в подсказке. Тише самого числа: это
    оговорка, а не второе число. */
 .hp-iob.неполон { opacity: .85; }
+
+/* «Лёг спать» / «Проснулся» (#597). Не действие с последствиями для дозы — тон спокойный.
+   «Проснулся» заметнее: пока на неё не нажали, тревоги идут по-ночному весь день. */
+.сон-кнопка {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  width: calc(100% - 8px); margin: 0 4px 10px; padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-neutral-400) 25%, transparent);
+  border-radius: 12px; background: transparent; text-align: left;
+}
+.сон-кнопка .сон-главное { font-size: 0.9375rem; font-weight: 600; }
+.сон-кнопка .сон-подпись { font-size: 0.75rem; color: var(--color-neutral-400); }
+.сон-кнопка.проснулся {
+  border-color: color-mix(in srgb, var(--color-warning, #e0b050) 45%, transparent);
+}
+.сон-кнопка.проснулся .сон-главное { color: var(--color-warning, #e0b050); }
