@@ -1,4 +1,5 @@
 import { registerPlugin, Capacitor } from '@capacitor/core';
+import { уНатива } from './уНатива';
 
 /* Отдавать показания в петлю — выключатель (#419, core#100, #413).
 
@@ -41,32 +42,28 @@ const ЭТО_IOS = () => Capacitor.getPlatform() === 'ios';
 
 export async function отдача(): Promise<ОтдачаВПетлю | null> {
   if (!отдачаВозможна()) return null;
-  try {
+  /* Запасное — null, а НЕ «выключено»: сказать «выключено» значит обещать выключатель, которого
+     в этой сборке нет. */
+  return уНатива('loopFeed', async () => {
     if (ЭТО_IOS()) {
       const r = await Native.loopFeed();
       return { включено: !!r.enabled, кому: 'iAPS — через общий контейнер', мешает: r.problem ?? null };
     }
     const r = await Native.aapsBroadcast();
     return { включено: !!r.enabled, кому: 'AAPS — адресным вещанием', мешает: null };
-  } catch {
-    /* Метода нет — сборка старше отдачи. Это НЕ «выключено»: сказать «выключено» значит
-       обещать выключатель, которого в этой сборке нет. */
-    return null;
-  }
+  }, null);
 }
 
 export async function задатьОтдачу(включить: boolean): Promise<{ ок: boolean; мешает: string | null }> {
   if (!отдачаВозможна()) return { ок: false, мешает: null };
-  try {
+  return уНатива<{ ок: boolean; мешает: string | null }>('setLoopFeed', async () => {
     if (ЭТО_IOS()) {
       const r = await Native.setLoopFeed({ enabled: включить });
       return { ок: true, мешает: r.problem ?? null };
     }
     await Native.setAapsBroadcast({ enabled: включить });
     return { ок: true, мешает: null };
-  } catch {
-    return { ок: false, мешает: null };
-  }
+  }, { ок: false, мешает: null });
 }
 
 /* ЧТО ИМЕННО УХОДИТ — списком, а не «показания».

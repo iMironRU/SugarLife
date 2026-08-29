@@ -1,4 +1,5 @@
 import { registerPlugin, Capacitor } from '@capacitor/core';
+import { уНатива } from './уНатива';
 
 /* Кто занял прибор (#422).
 
@@ -23,12 +24,10 @@ export interface КтоДержит {
 
 export async function ктоДержит(адрес: string | null | undefined): Promise<КтоДержит | null> {
   if (!Capacitor.isNativePlatform()) return null;
-  try {
+  /* Молчим при отказе: выдумывать объяснение молчанию прибора хуже, чем не объяснять его вовсе.
+     Но след оставляем — иначе «сборка старше» неотличимо от «никто не держит». */
+  return уНатива('whoHolds', async () => {
     const r = await Native.whoHolds({ address: адрес ?? null });
     return { занятЗдесь: !!r.busyHere, кандидаты: Array.isArray(r.candidates) ? r.candidates : [] };
-  } catch {
-    /* Метода нет — сборка старше. Молчим: выдумывать объяснение молчанию прибора хуже,
-       чем не объяснять его вовсе. */
-    return null;
-  }
+  }, null);
 }

@@ -1,4 +1,5 @@
 import { registerPlugin, Capacitor } from '@capacitor/core';
+import { уНатива } from './уНатива';
 
 /* Живой баннер на экране блокировки, в «Динамическом острове» и в CarPlay (#428).
 
@@ -38,14 +39,12 @@ export const баннерВозможен = (): boolean =>
 
 export async function состояниеБаннера(): Promise<СостояниеБаннера | null> {
   if (!баннерВозможен()) return null;
-  try {
+  /* Запасное — null, а не «выключено»: молчать нельзя, иначе человек решит, что включил, и будет
+     ждать баннера, которого не будет. */
+  return уНатива('liveBanner', async () => {
     const r = await Native.liveBanner();
     return { умеет: !!r.supported, включён: !!r.on, идёт: !!r.running, выключенаПочему: r.выключенаПочему };
-  } catch {
-    /* Метода нет — сборка старше баннера. Это не «выключено»: молчать нельзя, иначе
-       человек решит, что включил, и будет ждать баннера, которого не будет. */
-    return null;
-  }
+  }, null);
 }
 
 /* СВОДКА В ШТОРКЕ — СОСЕД БАННЕРА, А НЕ ЕГО ЗАМЕНА (#500).
@@ -66,12 +65,12 @@ const NativeСводка = registerPlugin<ПлагинСводки>('SugarLifeBr
 /** null — платформа не та или сборка старше сводки. */
 export async function сводкаВключена(): Promise<boolean | null> {
   if (!баннерВозможен()) return null;
-  try { return !!(await NativeСводка.statusNote()).on; } catch { return null; }
+  return уНатива('statusNote', async () => !!(await NativeСводка.statusNote()).on, null);
 }
 
 export async function включитьСводку(on: boolean): Promise<boolean> {
   if (!баннерВозможен()) return false;
-  try { await NativeСводка.setStatusNote({ on }); return true; } catch { return false; }
+  return уНатива('setStatusNote:on', async () => { await NativeСводка.setStatusNote({ on }); return true; }, false);
 }
 
 /* ВСПЛЫВАТЬ ИЛИ ЛЕЖАТЬ ТИХО (#539). Одна и та же строка, две повадки: показаться поверх экрана,
@@ -82,12 +81,12 @@ export async function включитьСводку(on: boolean): Promise<boolean
    и переключателю на экране достаточно знать, что всплытия сейчас нет. */
 export async function сводкаВсплывает(): Promise<boolean> {
   if (!баннерВозможен()) return false;
-  try { return !!(await NativeСводка.statusNote()).pop; } catch { return false; }
+  return уНатива('statusNote:pop', async () => !!(await NativeСводка.statusNote()).pop, false);
 }
 
 export async function включитьВсплытие(pop: boolean): Promise<boolean> {
   if (!баннерВозможен()) return false;
-  try { await NativeСводка.setStatusNote({ pop }); return true; } catch { return false; }
+  return уНатива('setStatusNote:pop', async () => { await NativeСводка.setStatusNote({ pop }); return true; }, false);
 }
 
 /* АКТИВНЫЙ ИНСУЛИН — НАТИВУ, ДЛЯ СВОДКИ (#500).
@@ -99,12 +98,12 @@ export async function включитьВсплытие(pop: boolean): Promise<bo
    Неизвестное шлём пустым: «0 ед» и «мы не знаем» — разные ответы, и путать их в шторке нельзя. */
 export async function сообщитьИнсулин(iob: number | null): Promise<void> {
   if (!баннерВозможен()) return;
-  try { await NativeСводка.reportActiveInsulin(iob == null ? {} : { iob }); } catch { /* сборка старше */ }
+  await уНатива('reportActiveInsulin', () => NativeСводка.reportActiveInsulin(iob == null ? {} : { iob }), undefined);
 }
 
 export async function включитьБаннер(on: boolean): Promise<boolean> {
   if (!баннерВозможен()) return false;
-  try { await Native.setLiveBanner({ on }); return true; } catch { return false; }
+  return уНатива('setLiveBanner', async () => { await Native.setLiveBanner({ on }); return true; }, false);
 }
 
 /* ПОДНЯТЬ БАННЕР СЕЙЧАС (#568, просьба владельца «как сделать кнопку показать»).
@@ -132,7 +131,10 @@ const СЛОВА: Record<string, ИтогПодъёма> = {
 
 export async function поднятьБаннер(): Promise<ИтогПодъёма> {
   if (!баннерВозможен()) return { получилось: false, словами: 'Живой баннер бывает только на айфоне.' };
-  try {
+  /* Отказ здесь особенный: человек НАЖАЛ и ждёт ответа. Молчать нельзя — решит, что сработало.
+     Поэтому запасное не пустое, а словами, и след всё равно остаётся: «кнопка не работает» и
+     «нативная сборка старше кнопки» лечатся по-разному. */
+  return уНатива('raiseLiveBanner', async () => {
     const r = await Native.raiseLiveBanner();
     const итог = String(r['итог'] ?? '');
     if (СЛОВА[итог]) return СЛОВА[итог];
@@ -140,9 +142,5 @@ export async function поднятьБаннер(): Promise<ИтогПодъём
        foreground», исчерпан лимит обновлений). Показываем как есть: своими словами мы бы его
        только затуманили, а по этой строке можно искать причину. */
     return { получилось: !!r['идёт'], словами: итог || 'Система не объяснила, что пошло не так.' };
-  } catch {
-    /* Метода нет — нативная сборка старше кнопки. Молчать нельзя: человек решит, что нажал и
-       сработало. */
-    return { получилось: false, словами: 'Эта сборка приложения кнопки ещё не знает — нужна свежая нативная.' };
-  }
+  }, { получилось: false, словами: 'Эта сборка приложения кнопки ещё не знает — нужна свежая нативная.' });
 }

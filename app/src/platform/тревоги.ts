@@ -1,4 +1,5 @@
 import { registerPlugin, Capacitor } from '@capacitor/core';
+import { уНатива } from './уНатива';
 
 /* Тревоги: разрешения и проверка — здесь, правила — в движке (#418, #482).
 
@@ -32,7 +33,7 @@ export function тревогиДоступны(): boolean {
 /** Проверочная тревога — тем же путём, что настоящая: канал, звук, обход «не беспокоить». */
 export async function проверитьТревогу(): Promise<boolean> {
   if (!тревогиДоступны()) return false;
-  try { await Native.testAlarm(); return true; } catch { return false; }
+  return уНатива('testAlarm', async () => { await Native.testAlarm(); return true; }, false);
 }
 
 /* ГОТОВНОСТЬ РАЗБУДИТЬ (#468).
@@ -93,7 +94,9 @@ const NativeГотовность = registerPlugin<ПлагинГотовност
 
 export async function готовностьТревог(): Promise<ГотовностьТревог | null> {
   if (!тревогиДоступны()) return null;
-  try {
+  /* Запасное — null, а НЕ «всё в порядке»: молчание здесь читается как обещание, что разбудим,
+     а мы этого не знаем. Тем нужнее след: без него отказ этой проверки неотличим от исправности. */
+  return уНатива('alarmReadiness', async () => {
     const r = await NativeГотовность.alarmReadiness();
     return {
       проблема: !!r.problem,
@@ -104,11 +107,7 @@ export async function готовностьТревог(): Promise<Готовно
            поломку не в том пункте, чем не показать вовсе. */
         : (Array.isArray(r.missing) ? r.missing : []).map((т) => ({ код: 'dnd-access', текст: т })),
     };
-  } catch {
-    /* Метода нет — сборка старше проверки. Это НЕ «всё в порядке»: молчание здесь
-       читается как обещание, что разбудим, а мы этого не знаем. */
-    return null;
-  }
+  }, null);
 }
 
 /* ГРОМКОСТЬ ТРЕВОГИ — ТОЛЬКО НА АЙФОНЕ (#482).
@@ -132,21 +131,21 @@ const NativeГромкость = registerPlugin<ПлагинГромкости>(
 /** null — вопрос не про эту платформу (Android, браузер) или сборка старше. */
 export async function громкостьТревоги(): Promise<ГромкостьТревоги | null> {
   if (!тревогиДоступны() || Capacitor.getPlatform() !== 'ios') return null;
-  try {
+  return уНатива('alarmVolume', async () => {
     const r = await NativeГромкость.alarmVolume();
     return { поднимаем: !!r.boost, уровень: Number(r.level) || 0 };
-  } catch { return null; }
+  }, null);
 }
 
 export async function поднимитеГромкость(поднимаем: boolean): Promise<boolean> {
   if (!тревогиДоступны() || Capacitor.getPlatform() !== 'ios') return false;
-  try { await NativeГромкость.setAlarmVolume({ boost: поднимаем }); return true; } catch { return false; }
+  return уНатива('setAlarmVolume', async () => { await NativeГромкость.setAlarmVolume({ boost: поднимаем }); return true; }, false);
 }
 
 /** Открыть системный экран доступа к «Не беспокоить» (Android). */
 export async function открытьДоступКТихомуРежиму(): Promise<boolean> {
   if (!тревогиДоступны()) return false;
-  try { await NativeГотовность.openDndAccess(); return true; } catch { return false; }
+  return уНатива('openDndAccess', async () => { await NativeГотовность.openDndAccess(); return true; }, false);
 }
 
 /** Есть ли среди поломок та, что чинится системными настройками. */
@@ -160,7 +159,7 @@ export function чинитсяНастройками(поломки: Полом�
 export async function открытьНастройкиТревог(): Promise<boolean> {
   if (!тревогиДоступны()) return false;
   if (Capacitor.getPlatform() === 'ios') {
-    try { await NativeГотовность.openAlarmSettings(); return true; } catch { return false; }
+    return уНатива('openAlarmSettings', async () => { await NativeГотовность.openAlarmSettings(); return true; }, false);
   }
   return открытьДоступКТихомуРежиму();
 }
@@ -171,5 +170,5 @@ export async function открытьНастройкиТревог(): Promise<bo
    нужно, и натив отвечает отказом — поэтому кнопку показываем только при своём коде. */
 export async function открытьПолноэкранные(): Promise<boolean> {
   if (!тревогиДоступны()) return false;
-  try { await NativeГотовность.openFullScreenAccess(); return true; } catch { return false; }
+  return уНатива('openFullScreenAccess', async () => { await NativeГотовность.openFullScreenAccess(); return true; }, false);
 }

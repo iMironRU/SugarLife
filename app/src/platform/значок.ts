@@ -1,4 +1,5 @@
 import { registerPlugin, Capacitor } from '@capacitor/core';
+import { уНатива } from './уНатива';
 import { isNative } from './appUpdate';
 
 /* САХАР ЦИФРАМИ НА ЗНАЧКЕ ПРИЛОЖЕНИЯ (SugarLife#500).
@@ -32,16 +33,16 @@ const значокВозможен = (): boolean => isNative;
 /** null — платформа не та или сборка старше значка: тогда настройки не показываем вовсе. */
 export async function состояниеЗначка(): Promise<ЗначокСостояние | null> {
   if (!значокВозможен()) return null;
-  try {
+  return уНатива('glucoseBadge', async () => {
     const r = await Native.glucoseBadge();
     const виды = (Array.isArray(r.modes) ? r.modes : []) as ВидЗначка[];
     return { вид: (r.mode as ВидЗначка) || 'выключен', виды: виды.length ? виды : ['выключен'] };
-  } catch { return null; }
+  }, null);
 }
 
 export async function задатьЗначок(вид: ВидЗначка): Promise<boolean> {
   if (!значокВозможен()) return false;
-  try { await Native.setGlucoseBadge({ mode: вид }); return true; } catch { return false; }
+  return уНатива('setGlucoseBadge', async () => { await Native.setGlucoseBadge({ mode: вид }); return true; }, false);
 }
 
 /** Как называется вид по-человечески и что он значит. Пример показывает цену выбора лучше слов. */

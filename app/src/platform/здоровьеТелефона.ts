@@ -1,4 +1,5 @@
 import { registerPlugin, Capacitor } from '@capacitor/core';
+import { уНатива } from './уНатива';
 
 /* ВЕС И ДАВЛЕНИЕ ИЗ «ЗДОРОВЬЯ» ТЕЛЕФОНА (SugarLife#557).
 
@@ -34,7 +35,7 @@ export const здоровьеТелефонаВозможно = (): boolean => C
 /** null — платформа не та или сборка старше метода: тогда кнопки нет вовсе. */
 export async function взятьИзЗдоровья(): Promise<ИзЗдоровья | null> {
   if (!здоровьеТелефонаВозможно()) return null;
-  try {
+  return уНатива('healthRead', async () => {
     const о = await Native.healthRead();
     if (!о?.доступно) return null;
     return {
@@ -43,7 +44,5 @@ export async function взятьИзЗдоровья(): Promise<ИзЗдоров
       давление: о.верх != null && о.низ != null && о.давлениеКогда != null
         ? { верх: Math.round(о.верх), низ: Math.round(о.низ), когда: о.давлениеКогда } : null,
     };
-  } catch {
-    return null;
-  }
+  }, null);
 }
