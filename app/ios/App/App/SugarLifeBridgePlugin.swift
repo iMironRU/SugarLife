@@ -587,6 +587,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setLiveBanner", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "raiseLiveBanner", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "builtinBundle", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "sleepSessions", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loopFeed", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setLoopFeed", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "testAlarm", returnType: CAPPluginReturnPromise),
@@ -709,6 +710,15 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             вЖурнал("Warn", "life", "веб-слой перезагружен системой (\(подъёмовВеба)-й подъём за жизнь процесса)")
         }
         call.resolve(["подъём": подъёмовВеба])
+    }
+
+    /* СЕССИИ СНА ИЗ APPLE HEALTH (#597, ядро #177).
+
+       Отдаём как есть, в форме интента `reportSleep`: решение «спит или нет» принимает движок, наше
+       дело — факт. Своего вывода здесь нет ни строчки, и это намеренно: окно он считает медианой за
+       две недели, а два таких расчёта разошлись бы в первую же неделю. */
+    @objc func sleepSessions(_ call: CAPPluginCall) {
+        СонИзЗдоровья.прочитать { ответ in call.resolve(ответ) }
     }
 
     @objc func builtinBundle(_ call: CAPPluginCall) {

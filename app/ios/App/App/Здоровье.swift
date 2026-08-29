@@ -35,6 +35,10 @@ enum ЗдоровьеТелефона {
         if let вес = HKObjectType.quantityType(forIdentifier: .bodyMass) { набор.insert(вес) }
         if let верх = HKObjectType.quantityType(forIdentifier: .bloodPressureSystolic) { набор.insert(верх) }
         if let низ = HKObjectType.quantityType(forIdentifier: .bloodPressureDiastolic) { набор.insert(низ) }
+        /* Сон — в том же запросе разрешений, а не отдельным (SugarLife#597). Система показывает
+           лист один раз: спросив про вес сегодня и про сон завтра, мы получили бы второй лист,
+           который человек уже читает как «опять что-то хотят». */
+        if let сон = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) { набор.insert(сон) }
         return набор
     }
 

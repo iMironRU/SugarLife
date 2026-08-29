@@ -1,14 +1,18 @@
 import Иконка from '@/ui/Иконка';
 import { часы, имяДня } from '@/слова/время';
-import { restaurantOutline, bluetoothOutline, warningOutline, timeOutline, trendingUpOutline, refreshOutline } from 'ionicons/icons';
+import { restaurantOutline, bluetoothOutline, warningOutline, timeOutline, trendingUpOutline, refreshOutline, swapHorizontalOutline, waterOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import { useMeals } from '@/sources/mealStore';
 import { useMealNames } from '@/settings/mealNames';
+import { useChanges } from '@/settings/changes';
 import { useДневник } from '@/sources/дневникStore';
 import { useEntries, useTreatments } from '@/sources/db';
 import { onlyLocal } from '@/domain/meals';
 import { необъяснённыеПодъёмы } from '@/domain/mealMoment';
-import { изДневника, изПодъёмов, изПриёмов, лентаИстории, поДням, свернутьПовторы, type ВидСобытия } from '@/domain/история';
+import НочьПозади from '@/ui/НочьПозади';
+import { useEffect, useState } from 'react';
+import { лентаЧеловека } from '@/показ/лентаЧеловека';
+import { изДневника, изЗамен, изЛечения, изПодъёмов, изПриёмов, лентаИстории, поДням, свернутьПовторы, type ВидСобытия } from '@/domain/история';
 
 /* «История» — что ушло с экрана, но осталось в данных (SugarLife#384).
 
@@ -26,7 +30,8 @@ import { изДневника, изПодъёмов, изПриёмов, лен�
 
 const ЗНАЧОК: Record<ВидСобытия, string> = {
   еда: restaurantOutline, прибор: bluetoothOutline, подъём: trendingUpOutline,
-  сборка: refreshOutline, тревога: warningOutline,
+  сборка: refreshOutline, тревога: warningOutline, замена: swapHorizontalOutline,
+  болюс: waterOutline,
 };
 
 const ОКНО_МС = 48 * 3600e3;
@@ -37,6 +42,16 @@ export default function HistorySection({ onClose }: { onClose: () => void }) {
   const записи = useДневник();
   const entries = useEntries(ОКНО_МС);
   const лечение = useTreatments(ОКНО_МС);
+  const замены = useChanges();
+  /* Лечение — у движка и уже отфильтрованное его флагом `humanOnly`: что считать жизнью человека,
+     решают там, где заводят имена записей (#597). */
+  const [человечье, setЧеловечье] = useState<{ atMs: number; kind: string; amount: number }[]>([]);
+  useEffect(() => {
+    let жив = true;
+    void лентаЧеловека(Date.now() - ОКНО_МС, Date.now())
+      .then((т) => { if (жив && т) setЧеловечье(т); });
+    return () => { жив = false; };
+  }, []);
 
   const от = Date.now() - ОКНО_МС;
   const свои = meals.filter((m) => m.t >= от);
@@ -51,13 +66,21 @@ export default function HistorySection({ onClose }: { onClose: () => void }) {
     изДневника(записи.filter((з) => з.когдаМс >= от)),
     изПриёмов(свои, имена.names),
     изПодъёмов(необъяснённыеПодъёмы(entries, всяЕда)),
+    /* «Когда я менял набор и сенсор» — один из четырёх вопросов, с которыми сюда приходят. */
+    изЗамен(замены, от),
+    /* «Я колол или нет» — самый частый вопрос, с которым сюда приходят, и до сегодня лента на
+       него не отвечала. Работу петли (TempBasal/Basal) не показываем: ядро сказало прямо. */
+    изЛечения(человечье),
   ]));
   const дни = поДням(события);
   const пусто = дни.length === 0;
 
   return (
     <Section title="История" onBack={onClose}
-      описание="Что уже произошло: еда, подключения и обрывы связи, подъёмы без записи. Экран «Сегодня» показывает настоящее и стирает прошедшее — здесь оно остаётся.">
+      описание="Что с вами было: еда, тревоги, подъёмы без записи. Экран «Сегодня» показывает настоящее и стирает прошедшее — здесь оно остаётся. Жизнь приборов — в диагностике: связь мигает дважды в минуту и вытеснила бы отсюда всё остальное.">
+
+      {/* Ночь первой: остальное человек помнит сам, а про неё не помнит ничего (#597). */}
+      <НочьПозади />
 
       {дни.length === 0 ? (
         <div className="loop-empty">
