@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { запросЖурнала } from '@/sources/bridge';
+import { запросЖурнала, useSnapshot } from '@/sources/bridge';
 import { ночьПозади, границыНочи, type НочьПозади as Ночь } from '@/показ/ночьПозади';
 import { часы } from '@/слова/время';
 
@@ -16,16 +16,19 @@ import { часы } from '@/слова/время';
    Ничего не показываем, пока не знаем: пустое место честнее догадки. */
 export default function НочьПозади() {
   const [ночь, setНочь] = useState<Ночь | null>(null);
+  /* Окно сна — от движка. Первое место, где мы вообще читаем `sleep`: до сих пор поле было описано
+     в зеркале и не использовалось ни разу. */
+  const окно = useSnapshot()?.sleep ?? null;
 
   useEffect(() => {
     let жив = true;
     void (async () => {
-      const { от } = границыНочи(Date.now());
+      const { от } = границыНочи(Date.now(), окно);
       const ответ = await запросЖурнала({ sinceMs: от, limit: 4000 });
-      if (жив && ответ) setНочь(ночьПозади(ответ.records, Date.now()));
+      if (жив && ответ) setНочь(ночьПозади(ответ.records, Date.now(), окно));
     })();
     return () => { жив = false; };
-  }, []);
+  }, [окно?.from, окно?.to]);
 
   if (!ночь) return null;
   if (ночь.спокойно) {
