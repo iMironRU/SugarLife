@@ -39,6 +39,7 @@
 		D1A00000000000000000103 /* ПоверхностьЗначка.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00000000000000000102 /* ПоверхностьЗначка.swift */; };
 		D1A00000000000000000105 /* ПоверхностьВиджета.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00000000000000000104 /* ПоверхностьВиджета.swift */; };
 		D1A00000000000000000107 /* ВыгрузкаЖурнала.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00000000000000000106 /* ВыгрузкаЖурнала.swift */; };
+		D1A00000000000000000109 /* СонИзЗдоровья.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A00000000000000000108 /* СонИзЗдоровья.swift */; };
 		D1A0000000000000000038 /* Значок.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000037 /* Значок.swift */; };
 		D1A0000000000000000015 /* СахарАтрибуты.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A0000000000000000013 /* СахарАтрибуты.swift */; };
 /* End PBXBuildFile section */
@@ -78,6 +79,7 @@
 		D1A00000000000000000102 /* ПоверхностьЗначка.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ПоверхностьЗначка.swift"; sourceTree = "<group>"; };
 		D1A00000000000000000104 /* ПоверхностьВиджета.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ПоверхностьВиджета.swift"; sourceTree = "<group>"; };
 		D1A00000000000000000106 /* ВыгрузкаЖурнала.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ВыгрузкаЖурнала.swift"; sourceTree = "<group>"; };
+		D1A00000000000000000108 /* СонИзЗдоровья.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "СонИзЗдоровья.swift"; sourceTree = "<group>"; };
 		D1A0000000000000000037 /* Значок.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Значок.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -151,6 +153,7 @@
 				D1A00000000000000000102 /* ПоверхностьЗначка.swift */,
 				D1A00000000000000000104 /* ПоверхностьВиджета.swift */,
 				D1A00000000000000000106 /* ВыгрузкаЖурнала.swift */,
+				D1A00000000000000000108 /* СонИзЗдоровья.swift */,
 				D1A0000000000000000037 /* Значок.swift */,
 			);
 			path = App;
@@ -370,6 +373,7 @@
 				D1A00000000000000000103 /* ПоверхностьЗначка.swift in Sources */,
 				D1A00000000000000000105 /* ПоверхностьВиджета.swift in Sources */,
 				D1A00000000000000000107 /* ВыгрузкаЖурнала.swift in Sources */,
+				D1A00000000000000000109 /* СонИзЗдоровья.swift in Sources */,
 				D1A0000000000000000038 /* Значок.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
