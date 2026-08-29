@@ -10,6 +10,7 @@
    ответа. Отсюда уходит только запрос, обратно приходит готовое: проблема ли это, что
    происходит, что делать и можем ли мы открыть нужный экран сами. */
 import { registerPlugin, Capacitor } from '@capacitor/core';
+import { уНатива } from './уНатива';
 
 export interface ФонОтвет {
   /** Выдано ли системное исключение из оптимизации батареи. */
@@ -36,21 +37,12 @@ const Native = registerPlugin<Плагин>('SugarLifeBridge');
    фоне всё работает, а мы этого не знаем. */
 export async function фонГотовность(): Promise<ФонОтвет | null> {
   if (!Capacitor.isNativePlatform()) return null;
-  try {
-    return await Native.batteryOptimization();
-  } catch {
-    return null;
-  }
+  return уНатива('batteryOptimization', () => Native.batteryOptimization(), null);
 }
 
 /** Показать системную просьбу. Зовётся только когда weCanOpenSettings. */
 export async function попроситьИсключение(): Promise<boolean> {
-  try {
-    await Native.requestBatteryExemption();
-    return true;
-  } catch {
-    return false;
-  }
+  return уНатива('requestBatteryExemption', async () => { await Native.requestBatteryExemption(); return true; }, false);
 }
 
 /* ФОНОВОЕ БОДРСТВОВАНИЕ НА iOS (#388).
@@ -87,22 +79,20 @@ export const бодрствованиеВозможно = (): boolean =>
 
 export async function бодрствование(): Promise<Бодрствование | null> {
   if (!бодрствованиеВозможно()) return null;
-  try {
+  /* Отказ — это не «выключено»: сказать «выключено» значило бы обещать выключатель, которого в
+     этой сборке нет. Поэтому запасное здесь null, а не пустой режим. */
+  return уНатива('backgroundKeepAlive', async () => {
     const r = await NativeФон.backgroundKeepAlive();
     return {
       режим: (r.mode as РежимБодрствования) ?? 'выключено',
       режимы: (r.modes as РежимБодрствования[]) ?? ['выключено', 'обычное', 'настойчивое'],
     };
-  } catch {
-    /* Метода нет — сборка старше. Это не «выключено»: сказать «выключено» значило бы
-       обещать выключатель, которого в этой сборке нет. */
-    return null;
-  }
+  }, null);
 }
 
 export async function задатьБодрствование(режим: РежимБодрствования): Promise<boolean> {
   if (!бодрствованиеВозможно()) return false;
-  try { await NativeФон.setBackgroundKeepAlive({ mode: режим }); return true; } catch { return false; }
+  return уНатива('setBackgroundKeepAlive', async () => { await NativeФон.setBackgroundKeepAlive({ mode: режим }); return true; }, false);
 }
 
 /* Слова про режимы живут здесь, а не в натив-коде: это подписи, а не поведение. Цена
