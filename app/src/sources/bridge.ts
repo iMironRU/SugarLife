@@ -408,6 +408,36 @@ export interface Insights { mode: 'Observe' | 'Advisory' | 'ClosedLoop'; message
 export interface PendingWrite { id: string; description: string; state: string; needsAttention: boolean; }
 
 // rev ≥ 1.4: структурная ошибка (RFC 9457) — окно, не баннер
+/* ЧТО БЫЛО НОЧЬЮ — ЭПИЗОДАМИ, А НЕ СОБЫТИЯМИ (rev ≥ 1.59, ядро #176).
+
+   Человеку «позвало в 02:49, ответил через минуту» — это ОДИН случай, а не пять записей «началась /
+   повторилась / эскалация / разворот / отбой». Ядро склеивает их у себя, нам достаётся готовое.
+
+   Мы собирали это из журнала движка сами, сшивая `Началась` с `ack` по идентификатору. Времянка
+   снята: у ядра есть то, чего у нас не было и быть не могло. */
+export interface AlarmEpisodeView {
+  id: string;
+  startedAtMs: number;
+  baseLevel: string;
+  /** Уровень отличается от базового после эскалации: непрочитанная тревога растёт, а не затухает. */
+  peakLevel: string;
+  /* Слова, которые человек увидел ПЕРВЫМИ. Ядро их не пересчитывает: через минуту они были уже
+     другими (сменилось число, появился разворот), а в журнале должно остаться прочитанное. */
+  words: string;
+  mmol?: number | null;
+  ackedAtMs?: number | null;
+  /** Уже посчитанная разница — чтобы мы не считали её второй раз и по-своему. */
+  ackAfterMs?: number | null;
+  clearedAtMs?: number | null;
+  repeats?: number;
+  /* Спал ли человек В ТУ МИНУТУ. Ядро просило НЕ выводить это заново из окна сна: окно меняется
+     задним числом, когда часы досчитали и синхронизировались, а запись должна остаться как было. */
+  asleep?: boolean | null;
+  /* Дошло до «Разбудить», человек спал и не ответил НИ РАЗУ. Не то же, что «не ответил»: днём он
+     вправе смахнуть и заняться делом. Это тот случай, который показываем первым. */
+  unwoken?: boolean;
+}
+
 export interface Problem {
   code: string; title: string; remediation: string;
   severity: 'Info' | 'Warn' | 'Error' | 'Critical'; category: 'Ble' | 'Parser' | 'Device' | 'Network' | 'Domain' | 'Internal';
@@ -902,6 +932,8 @@ export interface UiSnapshot {
   /* Спит ли человек (rev ≥ 1.29, SugarLifeCore#115). Не «ночь по часам»: пришёл с ночной
      смены и вздремнул днём — защита та же. */
   sleep?: SleepView | null;
+  /* Эпизоды тревог, свежие сверху, две недели (rev ≥ 1.59). */
+  alarmEpisodes?: AlarmEpisodeView[];
   /* Чем сейчас считаем: общими значениями, накопленными или своими (rev ≥ 1.29,
      SugarLifeCore#118). Строка нужна, потому что «всё хорошо» и «мы ничего не считали»
      без неё выглядят одинаково. */
@@ -1065,6 +1097,19 @@ export interface SleepView {
   to?: string | null;
   minutesToSleep?: number | null;
   checkDue?: boolean;
+  /* КАК ПОЛУЧЕН ОТВЕТ «спит или нет» (rev ≥ 1.60): said | observed | ownWindow | commonWindow.
+
+     Отличается от `source` тем, что `source` говорит, откуда ОКНО, а это — по какой ступени лесенки
+     мы вообще ответили. `commonWindow` означает «своего окна нет, судим по общему 23:00–7:00».
+
+     ВНИМАНИЕ: блок `sleep` теперь есть ВСЕГДА. Раньше при ненастроенном расписании он отсутствовал,
+     и «мы ничего не знаем» выражалось пустотой, которую читали как «всё в порядке». Проверять надо
+     `answerFrom === 'commonWindow'`, а не отсутствие блока. */
+  answerFrom?: 'said' | 'observed' | 'ownWindow' | 'commonWindow' | string | null;
+  /* Что сказать человеку про общее окно; null — окно его собственное и объяснять нечего.
+     «Мы решили, что вы спите» человек может только принять; «по общему расписанию сейчас ночь» —
+     поправить. Разница не косметическая. */
+  windowWords?: string | null;
 }
 
 /* ГДЕ МЫ НА ПУТИ К СВОИМ ЧИСЛАМ (rev ≥ 1.29, SugarLifeCore#118).
@@ -1157,7 +1202,17 @@ export interface AccountView {
 }
 
 // ---- История (rev ≥ 1.1): query(HistoryQuery) → HistoryResult ----
-export interface HistoryQuery { kind: 'Glucose' | 'Treatments' | 'Both'; fromMs: number; toMs: number; maxPoints?: number | null; }
+export interface HistoryQuery {
+  /* ТОЛЬКО ЖИЗНЬ ЧЕЛОВЕКА (rev ≥ 1.59). true — останутся болюсы, еда, длинный инсулин, смены
+     расходников, остановка и возобновление подачи; уйдут временный базал и базал.
+
+     Для «Истории» человека — true. Для графиков и расчётов — false: там вклад петли и есть большая
+     часть инсулина.
+
+     Флагом, а не полем записи: полю пришлось бы лежать в базе, и тогда «что считать жизнью
+     человека» стало бы зависеть от даты внесения. */
+  humanOnly?: boolean;
+  kind: 'Glucose' | 'Treatments' | 'Both'; fromMs: number; toMs: number; maxPoints?: number | null; }
 export interface GlucosePoint { atMs: number; mmol: number | null; source: string; trend?: string | null; }
 export interface TreatmentPoint { atMs: number; kind: string; amount: number; evidence: string; source: string; }
 export interface HistoryResult { glucose: GlucosePoint[]; treatments: TreatmentPoint[]; }
@@ -1242,6 +1297,20 @@ export type Intent =
 
      atMs — время ЕДЫ, не внесения. insulin как есть: есть — записываем факт, нет —
      значит не вводили, а не «посчитайте сами». */
+  /* НАБЛЮДЕНИЯ СНА (rev ≥ 1.60, ядро #177). Мы шлём факты, окно выводит движок — медианой за две
+     недели, от пяти ночей. Форма наша по разбору в ядре #174, с их поправкой: `available` из
+     ЧЕТЫРЁХ значений, потому что «данных ещё не приходило» — это не «сна не было».
+
+     Шлём ПРИ ИЗМЕНЕНИЯХ, а не по таймеру: сессии приезжают задним числом, раз в несколько часов. */
+  | {
+      type: 'reportSleep';
+      sessions: { fromMs: number; toMs: number; source: 'watch' | 'phone' | 'human' | 'unknown' }[];
+      /** Лёг и ещё не встал. Отдельным полем: закрытая сессия и открытая — разные утверждения. */
+      openSinceMs?: number | null;
+      /** Когда источник обновлялся. Открытой сессии движок верит тридцать минут после этого. */
+      observedAtMs?: number | null;
+      available: 'yes' | 'no' | 'denied' | 'unknown';
+    }
   | { type: 'logMeal'; id: string; atMs: number; carbs: number;
       insulin?: number | null; kind?: string | null; note?: string | null }  // rev ≥ 1.8
   | { type: 'releaseBle' }                                              // rev ≥ 1.7

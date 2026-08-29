@@ -10,6 +10,8 @@ import { useEntries, useTreatments } from '@/sources/db';
 import { onlyLocal } from '@/domain/meals';
 import { необъяснённыеПодъёмы } from '@/domain/mealMoment';
 import НочьПозади from '@/ui/НочьПозади';
+import { useEffect, useState } from 'react';
+import { лентаЧеловека } from '@/показ/лентаЧеловека';
 import { изДневника, изЗамен, изЛечения, изПодъёмов, изПриёмов, лентаИстории, поДням, свернутьПовторы, type ВидСобытия } from '@/domain/история';
 
 /* «История» — что ушло с экрана, но осталось в данных (SugarLife#384).
@@ -41,6 +43,15 @@ export default function HistorySection({ onClose }: { onClose: () => void }) {
   const entries = useEntries(ОКНО_МС);
   const лечение = useTreatments(ОКНО_МС);
   const замены = useChanges();
+  /* Лечение — у движка и уже отфильтрованное его флагом `humanOnly`: что считать жизнью человека,
+     решают там, где заводят имена записей (#597). */
+  const [человечье, setЧеловечье] = useState<{ atMs: number; kind: string; amount: number }[]>([]);
+  useEffect(() => {
+    let жив = true;
+    void лентаЧеловека(Date.now() - ОКНО_МС, Date.now())
+      .then((т) => { if (жив && т) setЧеловечье(т); });
+    return () => { жив = false; };
+  }, []);
 
   const от = Date.now() - ОКНО_МС;
   const свои = meals.filter((m) => m.t >= от);
@@ -59,7 +70,7 @@ export default function HistorySection({ onClose }: { onClose: () => void }) {
     изЗамен(замены, от),
     /* «Я колол или нет» — самый частый вопрос, с которым сюда приходят, и до сегодня лента на
        него не отвечала. Работу петли (TempBasal/Basal) не показываем: ядро сказало прямо. */
-    изЛечения(лечение, от),
+    изЛечения(человечье),
   ]));
   const дни = поДням(события);
   const пусто = дни.length === 0;
