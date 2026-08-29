@@ -291,8 +291,20 @@ class BleLink(
         c.writeType = if (c.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0)
             BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         else BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-        c.value = bytes
-        g.writeCharacteristic(c)
+        /* ЗАПИСЬ ВЕЗЁТ СВОИ БАЙТЫ, А НЕ КЛАДЁТ ИХ В ОБЩЕЕ ПОЛЕ (Android 13, API 33).
+
+           Старый путь — присвоить `c.value` и попросить записать характеристику — держит
+           байты на объекте, общем для всех, кто эту характеристику трогает. Две записи,
+           уехавшие близко друг к другу, могут отправить вторые байты дважды: первая ещё не
+           дошла до эфира, а поле уже переписано. На пути к помпе это не абстракция.
+
+           Ниже API 33 другого пути нет, и там остаётся прежний — с явным «знаю, что старый». */
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            g.writeCharacteristic(c, bytes, c.writeType)
+        } else {
+            @Suppress("DEPRECATION")
+            run { c.value = bytes; g.writeCharacteristic(c) }
+        }
     } }
 
     // Телеметрия периферала (issue #38): частичная эмиссия — null-поле движок не затирает.
@@ -370,8 +382,16 @@ class BleLink(
                 if (notifyChars.contains(c.uuid)) {
                     g.setCharacteristicNotification(c, true)
                     c.getDescriptor(CCCD)?.let { d ->
-                        d.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                        enqueue { g.writeDescriptor(d) }
+                        /* То же самое и для дескриптора — см. пояснение у записи характеристики. */
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            enqueue { g.writeDescriptor(d, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE) }
+                        } else {
+                            @Suppress("DEPRECATION")
+                            run {
+                                d.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                                enqueue { g.writeDescriptor(d) }
+                            }
+                        }
                     }
                 }
             }
@@ -389,16 +409,43 @@ class BleLink(
         override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) { opDone() }
         override fun onCharacteristicWrite(g: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) { opDone() }
 
+        /* ПРИШЕДШИЕ БАЙТЫ — ИЗ ПАРАМЕТРА, А НЕ ИЗ ПОЛЯ (Android 13, API 33).
+
+           Обратная сторона той же истории: `c.value` читалось с общего объекта уже ПОСЛЕ
+           того, как система нас позвала, и к этому мигу поле мог переписать следующий
+           пакет. С API 33 байты приезжают параметром — ровно те, о которых речь.
+
+           Оба варианта нужны: система зовёт новый с Android 13, старый — до него. Ни один
+           не зовёт оба, поэтому пакет не обработается дважды. Разбор в обоих один и тот
+           же, поэтому он вынесен, а не переписан рядом. */
+        override fun onCharacteristicRead(g: BluetoothGatt, c: BluetoothGattCharacteristic,
+                                          value: ByteArray, status: Int) {
+            прочитано(c, if (status == BluetoothGatt.GATT_SUCCESS) value else null)
+        }
+
+        @Suppress("DEPRECATION")
+        @Deprecated("До Android 13 система зовёт только этот вариант")
         override fun onCharacteristicRead(g: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) {
-            val v = if (status == BluetoothGatt.GATT_SUCCESS) c.value else null
+            прочитано(c, if (status == BluetoothGatt.GATT_SUCCESS) c.value else null)
+        }
+
+        override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic,
+                                             value: ByteArray) = пришло(c, value)
+
+        @Suppress("DEPRECATION")
+        @Deprecated("До Android 13 система зовёт только этот вариант")
+        override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic) =
+            пришло(c, c.value ?: ByteArray(0))
+
+        private fun прочитано(c: BluetoothGattCharacteristic, v: ByteArray?) {
             readHandlers.remove(c.uuid)?.invoke(v)
             opDone()
         }
 
-        override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic) {
-            bleLog("Trace", "получено от прибора", address, "байт" to (c.value?.size ?: 0).toString(),
-                "hex" to (c.value?.joinToString(" ") { b -> "%02X".format(b) } ?: ""), frame = true)
-            notifyHandlers[c.uuid]?.invoke(c.value ?: ByteArray(0))
+        private fun пришло(c: BluetoothGattCharacteristic, байты: ByteArray) {
+            bleLog("Trace", "получено от прибора", address, "байт" to байты.size.toString(),
+                "hex" to байты.joinToString(" ") { b -> "%02X".format(b) }, frame = true)
+            notifyHandlers[c.uuid]?.invoke(байты)
         }
     }
 }
