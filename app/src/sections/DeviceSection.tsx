@@ -19,6 +19,7 @@ import ДогадкаМодели from './прибор/ДогадкаМодел�
 import { СейчасНаУстройстве, Расходники } from './прибор/Состояние';
 import Каналы from './прибор/Каналы';
 import ПоказанияГлюкометра from './прибор/ПоказанияГлюкометра';
+import ЧтоДелать from './прибор/ЧтоДелать';
 import ОсновнойИсточник from './прибор/ОсновнойИсточник';
 import ПокаНеУмеем from './прибор/ПокаНеУмеем';
 import РядыПомпы from './прибор/РядыПомпы';
@@ -555,7 +556,7 @@ export default function DeviceSection({ onClose, cat, title }: {
 
             <Каналы прибор={ble} />
 
-            {ble && (bleStatus || bleAge || ble.note || ble.autoConnect != null) && (
+            {ble && (bleStatus || bleAge || ble.note || ble.problem || ble.autoConnect != null) && (
               <>
                 <div className="section-label sec">Связь</div>
                 {(bleStatus || bleAge) && (
@@ -574,6 +575,9 @@ export default function DeviceSection({ onClose, cat, title }: {
                 {/* Подсказка от ядра — например, что железку держит другой телефон.
                     Текст пишет движок: он один знает, что именно пошло не так. */}
                 {ble.note && <div className="sheet-note warn">{ble.note}</div>}
+                {/* Случившийся отказ со словами «что делать» — отдельно от подсказки: подсказка
+                    это догадка по поведению, а здесь адрес беды. Ядро просило показывать оба. */}
+                <ЧтоДелать беда={ble.problem} />
                 {ble.autoConnect != null && (
                   <div className="list">
                     <div className="list-row">
