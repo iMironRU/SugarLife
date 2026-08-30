@@ -1,4 +1,5 @@
 import { IonSpinner } from '@ionic/react';
+import { ПЕРИОДЫ_РАЗБОРА, дней } from '@/domain/периоды';
 import Иконка from '@/ui/Иконка';
 import { useTab } from '@/app/nav';
 import { water, nutrition, medkit } from 'ionicons/icons';
@@ -23,10 +24,6 @@ type MetricKey = 'glucose' | 'carbs' | 'insulin';
 type Cell = [string, string, string];
 interface MetricDef { title: string; color: string; icon: string; hero: Cell; cards: [Cell, Cell]; stats: [Cell, Cell]; note?: string; }
 
-const PERIODS: { days: number; label: string }[] = [
-  { days: 3, label: '3 дня' }, { days: 7, label: '7 дней' },
-  { days: 30, label: '30 дней' }, { days: 90, label: '90 дней' },
-];
 
 /* Три раздела на одном экране (SugarLife#255).
 
@@ -148,9 +145,15 @@ export default function Metrics() {
               прокрутить обратно. Панель контент не накрывает — она обычный флекс-элемент
               над скроллером, — поэтому липнет ровно под ней, без подгонки под её высоту. */}
           <div className="metrics-sticky">
+          {/* Строка над переключателем — та же, что во вкладке «Анализ» (SugarLife#690).
+
+              Нужна дважды. Во-первых, слово: кнопки теперь числа, и «дней» должно стоять
+              где-то одно. Во-вторых, место: без этой строки переключатель во вкладках стоял
+              на разной высоте и прыгал при переходе — владелец это и заметил. */}
+          <div className="metric-note" style={{ marginTop: 2 }}>Метрики за {days} {дней(days)}</div>
           <div className="period">
-            {PERIODS.map((p) => (
-              <button key={p.days} className={'period-seg' + (days === p.days ? ' on' : '')} onClick={() => setDays(p.days)}>{p.label}</button>
+            {ПЕРИОДЫ_РАЗБОРА.map((д) => (
+              <button key={д} className={'period-seg' + (days === д ? ' on' : '')} onClick={() => setDays(д)}>{д}</button>
             ))}
           </div>
 

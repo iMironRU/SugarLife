@@ -1,4 +1,5 @@
 import { причинаНеготовности } from '@/показ/находки';
+import { ПЕРИОДЫ_РАЗБОРА, дней } from '@/domain/периоды';
 import { useEffect, useState } from 'react';
 import Иконка from '@/ui/Иконка';
 import { warning, alertCircle } from 'ionicons/icons';
@@ -20,7 +21,6 @@ import { отметитьПрочитанными } from '@/settings/seenInsight
    14 дней» и «3 за 3 дня» — это разные новости, и человек должен видеть, за что
    считалось. */
 
-const ПЕРИОДЫ = [3, 7, 14, 30];
 
 /* Раздел умеет жить и внутри экрана «Метрики» (SugarLife#255): там он одна из трёх
    вкладок, и своя шапка ему не нужна — она была бы второй шапкой под настоящей. */
@@ -78,7 +78,7 @@ export default function AnalyticsSection({ onClose, встроенный }: {
 
   const подзаголовок = (
         <>
-          Разбор за {days} дн.
+          Разбор за {days} {дней(days)}
           {вид && (
             <>
               {' · '}
@@ -95,9 +95,9 @@ export default function AnalyticsSection({ onClose, встроенный }: {
     <>
       {встроенный && <div className="metric-note" style={{ marginTop: 2 }}>{подзаголовок}</div>}
       <div className="period">
-        {ПЕРИОДЫ.map((d) => (
+        {ПЕРИОДЫ_РАЗБОРА.map((d) => (
           <button key={d} className={'period-seg' + (days === d ? ' on' : '')} onClick={() => setDays(d)}>
-            {d} дн.
+            {d}
           </button>
         ))}
       </div>
