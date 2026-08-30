@@ -87,12 +87,25 @@ Q "with e as (select atMs, lag(atMs) over (order by atMs) prev from logEntry),
    union all select 'самый длинный, мин', round(max(длина)/60000.0,0) from o
    union all select 'провалов', (select count(*) from e where atMs-prev > $SILENCE_MS)
    union all select 'самый долгий провал, мин', round((select max(atMs-prev)/60000.0 from e where atMs-prev > $SILENCE_MS),0)
-   union all select 'мёртвым, % охвата', round(100.0*(select sum(atMs-prev) from e where atMs-prev > $SILENCE_MS)/(select max(atMs)-min(atMs) from logEntry),1);"
+   union all select 'мёртвым, % охвата', round(100.0*(select sum(atMs-prev) from e where atMs-prev > $SILENCE_MS)/(select max(atMs)-min(atMs) from logEntry),1)
+   union all select 'из них замираний (без перезапуска)', (select count(*) from e where atMs-prev > $SILENCE_MS
+        and not exists(select 1 from logEntry b where b.event='boot-step' and b.atMs between e.atMs-2000 and e.atMs+120000));"
 echo
-echo "   провалы и что им предшествовало:"
+# МОЛЧАНИЕ — ЭТО НЕ ВСЕГДА СМЕРТЬ (ядро #182).
+#
+# Журнал пишется интентами ЧЕРЕЗ движок. Значит замерший движок молчит ровно так же, как убитое
+# приложение, — и до 30 августа мы считали одно другим. Ядро поймало причину на живом приборе:
+# драйвер и движок делили поток, и любой драйвер, залипший на железе, останавливал всё.
+#
+# Отличить можно по тому, чем молчание КОНЧИЛОСЬ: перезагрузка движка после — приложение убили;
+# продолжение с полуслова — оно было живо и просто молчало. На тех же сутках это дало семь смертей
+# и одно замирание на тридцать три минуты.
+echo "   провалы: чем кончились и что им предшествовало:"
 Q "with e as (select atMs, lag(atMs) over (order by atMs) prev from logEntry)
    select '   '||datetime(prev/1000,'unixepoch','localtime'),
           round((atMs-prev)/60000.0)||' мин',
+          case when exists(select 1 from logEntry b where b.event='boot-step' and b.atMs between e.atMs-2000 and e.atMs+120000)
+               then 'перезапуск' else 'ЗАМИРАНИЕ — ожило без перезапуска' end,
           coalesce((select k.event from logEntry k where k.tag='keepalive' and k.atMs <= e.prev order by k.atMs desc limit 1),'—')
    from e where atMs-prev > $SILENCE_MS order by prev desc limit 8;"
 echo
