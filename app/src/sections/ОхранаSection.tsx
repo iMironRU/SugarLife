@@ -1,13 +1,14 @@
 import { useState } from 'react';
+import { IonToggle } from '@ionic/react';
 import Иконка from '@/ui/Иконка';
-import { playOutline, chevronForward } from 'ionicons/icons';
+import { playOutline, chevronForward, musicalNotesOutline } from 'ionicons/icons';
 import Section from '@/ui/Section';
 import Sheet from '@/ui/Sheet';
 import Row from '@/ui/Row';
 import { useStack } from '@/app/stackCtx';
 import { AlarmsSection } from '@/sections/lazy';
 import { useОхрана, подтвердитьФокус, фокусПодтверждён } from '@/показ/охранаХук';
-import { useSnapshot } from '@/sources/bridge';
+import { useSnapshot, sendIntent } from '@/sources/bridge';
 import { сводка, минуты, почему } from '@/показ/былаЛиОхрана';
 import { часы } from '@/слова/время';
 import type { Строка } from '@/показ/охрана';
@@ -218,6 +219,26 @@ export default function ОхранаSection({ onClose }: { onClose: () => void }
 
       <div className="section-label sec">Настройки</div>
       <div className="list">
+        {/* ПЕРЕХВАТ ЗВУКА В МАШИНЕ (мост 1.63, ядро #180).
+
+            Опора — это воспроизведение: пока она держится, головное устройство переключено на
+            телефон, и радио с тюнера магнитолы человек не слышит. До 1.63 ядро выбирало за него
+            радио, и мы измерили цену: пять раз из пяти система убивала приложение в ту же минуту
+            после запрета опоры — ровно за рулём. Теперь умолчание обратное.
+
+            Но выбор остаётся за человеком, и потому выключатель здесь. Цену называем обеими
+            сторонами: включено — можно остаться без радио, выключено — можно остаться без
+            тревоги. Второе тише и потому опаснее, поэтому оно и написано в подписи. */}
+        <Row icon={musicalNotesOutline} title="Перехватывать звук в машине"
+          sub={снимок?.audio?.holdAudioAnchor === false
+            ? 'выключено: система может выгрузить приложение за рулём, и тогда тревога не прозвучит'
+            : 'держим звук, иначе за рулём приложение выгружается; если играло радио — нажмите на магнитоле выбор источника'}
+          right={<IonToggle checked={снимок?.audio?.holdAudioAnchor !== false}
+            onIonChange={(e) => {
+              /* Пишем ключ, а не решение: держать или нет — считает движок, мы лишь передаём
+                 волю человека. `on` не шлём пустым — движок ждёт `off` или отсутствие ключа. */
+              void sendIntent({ type: 'setConfig', patch: { 'audio.carAnchor': e.detail.checked ? null : 'off' } });
+            }} />} />
         <Row icon={playOutline} title="Правила тревог"
           sub="по каким числам движок решает будить — и что из этого можно поправить"
           onClick={() => push(<AlarmsSection onClose={pop} />, { id: 'тревоги' })} />
