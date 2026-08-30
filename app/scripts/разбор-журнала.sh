@@ -45,16 +45,39 @@ Q() { sqlite3 -separator ' | ' "$DB" "$1"; }
 echo "═══ ОХВАТ"
 Q "select datetime(min(atMs)/1000,'unixepoch','localtime')||'  →  '||datetime(max(atMs)/1000,'unixepoch','localtime')||'   записей: '||count(*) from logEntry;"
 echo
+# ЖИВУЧЕСТЬ МЕРЯЕТСЯ МОЛЧАНИЕМ, А НЕ ЗАПУСКАМИ (SugarLife#682).
+#
+# Здесь стояло расстояние между событиями `engine/start`, и называлось оно «медианой жизни».
+# Это расстояние между ЗАПУСКАМИ: сколько из него приложение работало, а сколько лежало мёртвым,
+# оно не различает вовсе. 30 августа я по этой цифре доложил владельцу «медиана жизни 309 минут,
+# приложение перестало умирать» — а оно в ту же ночь пролежало мёртвым два часа подряд. Владелец
+# это видел своими глазами и поправил меня.
+#
+# Живое приложение пишет в журнал каждые несколько секунд. Значит тишина дольше десяти минут —
+# это и есть смерть, и мерить надо её. Отрезки работы считаем между провалами.
+#
+# И сразу называем ПРИЧИНУ: последнее решение об опоре перед каждым провалом. Именно оно
+# 30 августа показало, что приложение никто не закрывал — три раза его добила система после
+# «ушли в фон без опоры: движок не велел при маршруте car», и дважды оно умерло с опорой.
+SILENCE_MS=600000   # 10 минут молчания = приложение не работало
 echo "═══ ЖИВУЧЕСТЬ — главное число"
-Q "with s as (select atMs, lag(atMs) over (order by atMs) prev from logEntry where tag='engine' and event='start')
-   select 'запусков за охват', count(*)+1 from s
-   union all select 'медиана жизни, мин', round((select (atMs-prev)/60000.0 from s where prev is not null order by (atMs-prev) limit 1 offset (select count(*)/2 from s where prev is not null)),0)
-   union all select 'самый длинный отрезок, мин', round(max(atMs-prev)/60000.0,0) from s
-   union all select 'отрезков короче 30 мин', count(*) from s where atMs-prev < 1800000;"
+Q "with e as (select atMs, lag(atMs) over (order by atMs) prev from logEntry),
+        m as (select atMs, case when prev is null or atMs-prev > $SILENCE_MS then 1 else 0 end as новый from e),
+        g as (select atMs, sum(новый) over (order by atMs) as отрезок from m),
+        o as (select отрезок, max(atMs)-min(atMs) as длина from g group by отрезок)
+   select 'отрезков работы', count(*) from o
+   union all select 'медиана работы, мин', round((select длина/60000.0 from o order by длина limit 1 offset (select count(*)/2 from o)),0)
+   union all select 'самый длинный, мин', round(max(длина)/60000.0,0) from o
+   union all select 'провалов', (select count(*) from e where atMs-prev > $SILENCE_MS)
+   union all select 'самый долгий провал, мин', round((select max(atMs-prev)/60000.0 from e where atMs-prev > $SILENCE_MS),0)
+   union all select 'мёртвым, % охвата', round(100.0*(select sum(atMs-prev) from e where atMs-prev > $SILENCE_MS)/(select max(atMs)-min(atMs) from logEntry),1);"
 echo
-echo "   последние отрезки:"
-Q "with s as (select atMs, lag(atMs) over (order by atMs) prev from logEntry where tag='engine' and event='start')
-   select '   '||time(atMs/1000,'unixepoch','localtime'), round((atMs-prev)/60000.0)||' мин' from s where prev is not null order by atMs desc limit 8;"
+echo "   провалы и что им предшествовало:"
+Q "with e as (select atMs, lag(atMs) over (order by atMs) prev from logEntry)
+   select '   '||datetime(prev/1000,'unixepoch','localtime'),
+          round((atMs-prev)/60000.0)||' мин',
+          coalesce((select k.event from logEntry k where k.tag='keepalive' and k.atMs <= e.prev order by k.atMs desc limit 1),'—')
+   from e where atMs-prev > $SILENCE_MS order by prev desc limit 8;"
 echo
 echo "═══ ЖИВАЯ КАРТОЧКА — просили против дали"
 Q "select 'отправили', count(*) from logEntry where tag='banner' and event like 'карточка обновлена%'
