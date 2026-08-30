@@ -583,6 +583,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "logQuery", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "backgroundKeepAlive", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setBackgroundKeepAlive", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setFocusAllowed", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "liveBanner", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setLiveBanner", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "raiseLiveBanner", returnType: CAPPluginReturnPromise),
@@ -805,6 +806,23 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
            считает, что мы можем то, чего уже не можем (или наоборот). */
         Тревоги.общие.доложитьОДоставке()
         call.resolve(["mode": режим.rawValue])
+    }
+
+    /* ОТВЕТ ЧЕЛОВЕКА ПРО СПИСОК ФОКУСА (SugarLife#685).
+
+       Прочитать «Разрешённые уведомления» режима Фокусирования нельзя никаким API — ни на iOS, ни
+       где-либо ещё. Спросить можно только человека, и его ответ надо где-то держать. Веб держит
+       свою копию в localStorage, но доклад о доставке собирает натив, и localStorage ему не виден:
+       поэтому копия и здесь. Двух источников правды это не заводит — пишет всегда веб, натив
+       только читает.
+
+       Сразу же переспрашиваем движка: иначе он до перезапуска считает, что мы не докричимся, и
+       просьба, которую человек только что закрыл, висела бы до вечера. */
+    @objc func setFocusAllowed(_ call: CAPPluginCall) {
+        let разрешено = call.getBool("allowed") ?? false
+        UserDefaults.standard.set(разрешено, forKey: "sl.focus-allowed")
+        Тревоги.общие.доложитьОДоставке()
+        call.resolve(["allowed": разрешено])
     }
 
     // Движок создаём ОТЛОЖЕННО — на следующем тике main-цикла (в load() через async), а не в property-init

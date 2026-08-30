@@ -128,6 +128,11 @@ interface ПлагинГромкости {
 }
 const NativeГромкость = registerPlugin<ПлагинГромкости>('SugarLifeBridge');
 
+interface ПлагинФокуса {
+  setFocusAllowed(o: { allowed: boolean }): Promise<{ allowed: boolean }>;
+}
+const NativeФокус = registerPlugin<ПлагинФокуса>('SugarLifeBridge');
+
 /** null — вопрос не про эту платформу (Android, браузер) или сборка старше. */
 export async function громкостьТревоги(): Promise<ГромкостьТревоги | null> {
   if (!тревогиДоступны() || Capacitor.getPlatform() !== 'ios') return null;
@@ -140,6 +145,19 @@ export async function громкостьТревоги(): Promise<Громкос
 export async function поднимитеГромкость(поднимаем: boolean): Promise<boolean> {
   if (!тревогиДоступны() || Capacitor.getPlatform() !== 'ios') return false;
   return уНатива('setAlarmVolume', async () => { await NativeГромкость.setAlarmVolume({ boost: поднимаем }); return true; }, false);
+}
+
+/* ОТВЕТ ЧЕЛОВЕКА ПРО СПИСОК ФОКУСА — НЕ ТОЛЬКО К НАМ, НО И К ДВИЖКУ (#685).
+
+   Прочитать «Разрешённые уведомления» режима Фокусирования нельзя никаким API, поэтому ответ у нас
+   один — его собственный. Мы его помнили, но держали при себе: доклад о доставке собирает натив, а
+   решение «разбудим ли» принимает движок, и ни тот, ни другой про localStorage не знают.
+
+   Отсюда и бралась просьба, которую нельзя погасить: человек отвечал «добавил», мы кивали и
+   продолжали слать движку `false`. Теперь ответ доезжает. */
+export async function фокусРазрешён(разрешено: boolean): Promise<boolean> {
+  if (!тревогиДоступны() || Capacitor.getPlatform() !== 'ios') return false;
+  return уНатива('setFocusAllowed', async () => { await NativeФокус.setFocusAllowed({ allowed: разрешено }); return true; }, false);
 }
 
 /** Открыть системный экран доступа к «Не беспокоить» (Android). */
