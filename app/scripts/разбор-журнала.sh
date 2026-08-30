@@ -29,15 +29,32 @@ if [ -z "$DB" ]; then
   fi
   [ -n "$DEVICE" ] || { echo "Телефон не виден. Подключите или укажите файл базы." >&2; exit 1; }
   mkdir -p "$OUTDIR"
-  DB="$OUTDIR/снимок.db"
-  rm -f "$DB" "$DB-wal"
+  # СНИМКИ НЕ ЗАТИРАЮТ ДРУГ ДРУГА (SugarLife#683).
+  #
+  # Имя было одно на все заборы, и каждый следующий стирал предыдущий. А смысл журнала — в
+  # СРАВНЕНИИ: правку выкатили, сутки прожили, смотрим, что изменилось. Без вчерашней точки
+  # отсчёта сегодняшние 20,9% мёртвого времени не значат ни хорошо, ни плохо.
+  DB="$OUTDIR/снимок-$(date +%Y-%m-%d-%H%M).db"
+  # ПРИЧИНУ ОТКАЗА НАЗЫВАЕМ. Вывод глотался целиком, и на «не удалось снять» уходил ручной
+  # разбор — а причина почти всегда одна и лечится за секунду: телефон заблокирован.
+  COPY_ERR=""
   for f in sugarlife.db sugarlife.db-wal; do
-    xcrun devicectl device copy from --device "$DEVICE" \
+    COPY_ERR=$(xcrun devicectl device copy from --device "$DEVICE" \
       --domain-type appDataContainer --domain-identifier ru.imiron.sugarlife --user mobile \
       --source "Library/Application Support/databases/$f" \
-      --destination "$DB${f#sugarlife.db}" >/dev/null 2>&1 || true
+      --destination "$DB${f#sugarlife.db}" 2>&1 >/dev/null) || true
   done
-  [ -s "$DB" ] || { echo "Не удалось снять журнал." >&2; exit 1; }
+  if [ ! -s "$DB" ]; then
+    case "$COPY_ERR" in
+      *DeviceLocked*|*"device is locked"*)
+        echo "Телефон заблокирован — разблокируйте экран и повторите." >&2 ;;
+      *)
+        echo "Не удалось снять журнал:" >&2
+        echo "$COPY_ERR" | tail -3 >&2 ;;
+    esac
+    exit 1
+  fi
+  echo "Снимок: $DB"
 fi
 
 Q() { sqlite3 -separator ' | ' "$DB" "$1"; }
