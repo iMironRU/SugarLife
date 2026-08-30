@@ -7,7 +7,7 @@ import Иконка from '@/ui/Иконка';
    на циферблате. Одно слово на два смысла в одном файле — заготовка для ошибки. */
 import { сколькоНазад, часы as наЧасах } from '@/слова/время';
 import { MealsSection, HistorySection } from '@/sections/lazy';
-import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, chevronForward, timeOutline } from 'ionicons/icons';
+import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, chevronForward, timeOutline, musicalNotesOutline } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useStore, refresh } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt } from '@/domain/units';
@@ -476,6 +476,27 @@ export default function Today() {
               свой повод, и втягивать их в стопку значило бы либо дублировать их
               условия здесь, либо считать занятым место, где нарисуется null. */}
           <NoticeStack>
+          {/* ЗВУКОВАЯ ОБСТАНОВКА — СЛОВАМИ ДВИЖКА (мост 1.63, ядро #180).
+
+              Поле `audio` приезжало к нам с 1.51 и не читалось никем: человек не знал ни
+              что мы делаем с магнитолой, ни чем за это платит. Ядро попросило показать все
+              три фразы как есть — и формулировки там их, потому что решение тоже их.
+
+              ВИД БЕРЁМ ИЗ ПОЛЯ, А НЕ ИЗ ДОГАДКИ. С 1.63 `holdAudioAnchor: false` означает
+              ровно одно: человек сам выключил перехват и предупреждён, что система может
+              выгрузить приложение и тревога не прозвучит. Это предупреждение. Остальные два
+              случая — «источник и так наш» и «радио могло смолкнуть, нажмите выбор
+              источника» — сообщения, и красить их тревожным цветом значило бы пугать там,
+              где всё в порядке. Тяжесть читаем у движка; выдумывать её по тексту нельзя. */}
+          {снимок?.audio?.words && (
+            <Notice id="audio"
+              вид={снимок.audio.holdAudioAnchor === false ? 'предупреждение' : 'сообщение'}
+              значок={снимок.audio.holdAudioAnchor === false ? warningOutline : musicalNotesOutline}
+              заголовок="Звук в машине">
+              {снимок.audio.words}
+            </Notice>
+          )}
+
           {/* помпа на паузе — важный статус, не прячем (авторитетно из AAPS) */}
           {dev?.suspended === true && (
             <Notice id="suspended" вид="сообщение" значок={pauseCircleOutline} заголовок="Помпа на паузе">
