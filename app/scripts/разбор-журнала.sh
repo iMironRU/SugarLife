@@ -77,6 +77,41 @@ echo
 # 30 августа показало, что приложение никто не закрывал — три раза его добила система после
 # «ушли в фон без опоры: движок не велел при маршруте car», и дважды оно умерло с опорой.
 SILENCE_MS=600000   # 10 минут молчания = приложение не работало
+# СМЕРТЬ СЧИТАЕМ ПО ПРИЗНАКУ, А НЕ ПО ДЛИТЕЛЬНОСТИ (SugarLife#696).
+#
+# Порог в десять минут пропустил самую важную смерть за неделю. 30 августа обновление интерфейса
+# по воздуху убило приложение на шесть минут пятнадцать секунд, и подняли его руками. В отчёте
+# этого не было видно вовсе: «провалов 3», и все три старые.
+#
+# Порог заводился против ложных срабатываний в спокойном фоне — и для ЗАМИРАНИЙ он по-прежнему
+# нужен: у них нет никакой приметы, кроме тишины. А у смерти примета есть, и точная: движок,
+# просыпаясь, сам пишет, почему его не было. `Убили` — не остановились сами, телефон не
+# перезагружали, человек не смахивал.
+#
+# Поэтому здесь два разных счёта из двух разных источников, и смешивать их нельзя:
+# смерти — по журналу жизни движка, замирания — по тишине.
+#
+# ТРИДЦАТЬ СЕКУНД ОТСТУПА перед пробуждением — не порог, а вычет собственной загрузки. Движок при
+# старте пишет пачку записей, и часть её ложится ДО отметки «проснулись»: считая от неё, мы получали
+# ноль минут на каждую смерть. Отступ отбрасывает эту пачку. Плата: смерть короче полуминуты будет
+# названа чуть длиннее, чем была, — а такую и считать незачем.
+echo "═══ СМЕРТИ — по слову самого движка"
+Q "with w as (select atMs, json_extract(fieldsJson,'\$.why') as почему from logEntry where tag='life' and event='проснулись'),
+        d as (select atMs, почему, (select max(atMs) from logEntry l where l.atMs < w.atMs - 30000) as молчали from w)
+   select 'всего пробуждений', count(*) from d
+   union all select '  из них «Убили»', (select count(*) from d where почему='Убили')
+   union all select '  чистых остановок', (select count(*) from d where почему='ЧистаяОстановка')
+   union all select 'самая долгая смерть, мин', round(coalesce((select max(atMs-молчали)/60000.0 from d where молчали is not null),0),1);"
+echo
+echo "   каждая смерть — сколько лежали и что было последним:"
+Q "with w as (select atMs, json_extract(fieldsJson,'\$.why') as почему from logEntry where tag='life' and event='проснулись'),
+        d as (select atMs, почему, (select max(atMs) from logEntry l where l.atMs < w.atMs - 30000) as молчали from w)
+   select '   '||datetime(atMs/1000,'unixepoch','localtime'),
+          case when молчали is null then 'начало журнала' else round((atMs-молчали)/60000.0,1)||' мин' end,
+          почему,
+          coalesce((select l.tag||' · '||substr(l.event,1,44) from logEntry l where l.atMs=молчали limit 1),'—')
+   from d order by atMs desc limit 8;"
+echo
 echo "═══ ЖИВУЧЕСТЬ — главное число"
 Q "with e as (select atMs, lag(atMs) over (order by atMs) prev from logEntry),
         m as (select atMs, case when prev is null or atMs-prev > $SILENCE_MS then 1 else 0 end as новый from e),
