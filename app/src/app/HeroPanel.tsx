@@ -18,6 +18,7 @@ import { useEntries } from '@/sources/db';
 import { выбратьПоказание, ОТСТАВАНИЕ_МС } from '@/domain/latestGlucose';
 import { useСейчас, подписьОстатка } from '@/показ/сейчас';
 import { useSnapshot } from '@/sources/bridge';
+import { ярлыкЗастоя, знакЗастоя } from '@/слова/застой';
 import { расходка } from '@/domain/supplies';
 import CircleSparkline from '@/charts/CircleSparkline';
 
@@ -61,6 +62,21 @@ const battColor = (p: number) => (p <= ЗАРЯД_НА_ИСХОДЕ ? 'var(--c-d
    Ожидание — часики, те же, что в круге вместо стрелки: там они уже означают
    «источник ещё не отдаёт свежее», и вводить для того же смысла второй знак значит
    заставлять запоминать два. */
+/* ЗНАЧОК СТРОКИ СОСТОЯНИЯ.
+
+   Перечёркнутое облако говорит «до облака не достучались». При застое это неправда: облако
+   отвечает, встал тот, кто в него пишет. Значок обязан меняться вместе со словами, иначе он
+   продолжает указывать не на того — молча, а потому убедительнее слов (SugarLife#721). */
+function значокСтроки(застой: string | null, состояние: string): string {
+  if (застой) {
+    const знак = знакЗастоя(застой);
+    /* Чужой телефон — телефоном; прибор — пульсом, тем же знаком, каким помечено крыло НМГ.
+       Всё прочее, включая незнакомые коды, — часами: «числа старые, а чьё это — не знаем». */
+    return знак === 'чужойТелефон' ? phonePortraitOutline : знак === 'прибор' ? pulse : timeOutline;
+  }
+  return состояние === 'poll' ? syncOutline : cloudOfflineOutline;
+}
+
 function ТочкаСвязи({ что }: { что: Связь }) {
   if (что === 'unknown') return null;
   const title = меткаСвязи[что] ?? undefined;
@@ -269,7 +285,21 @@ export default function HeroPanel() {
     : (m?.status === 'Delayed' || status === 'stale' || status === 'error') ? 'stale'
     : liveNow ? 'live'
     : 'poll';
+  /* ЗАСТОЙ ВЫТЕСНЯЕТ «НЕТ СВЯЗИ» (SugarLife#721).
+
+     Движок ставит `staleReason`, только когда связь ЦЕЛА, токен принят, ошибок нет — и всё
+     равно свежих чисел нет, потому что встал тот, кто их пишет. Наше «нет связи» в этот момент
+     не просто бесполезно, оно указывает не на того: два случая из четырёх вообще не про этот
+     телефон, а человек идёт смахивать наше приложение.
+
+     Первым остаётся «нет сети»: если сети нет у НАС, это ближе, проверяется быстрее и чинится
+     самим человеком, а рассуждать о чужом загрузчике, сидя без интернета, незачем.
+
+     Полная фраза движка при этом никуда не девается — она на «Сегодня», рядом с числом
+     (ui/ЗастойВОблаке.tsx). Здесь ярлык в два слова, потому что строка обрезается многоточием. */
+  const застой = online ? снимок?.monitor?.staleReason ?? null : null;
   const syncMain = syncState === 'offline' ? 'нет сети'
+    : застой ? ярлыкЗастоя(застой.code)
     : syncState === 'stale' ? 'нет связи'
     /* Живой поток — называем ИСТОЧНИК, если мост его знает: с нативным ядром их
        становится несколько (сенсор напрямую, Nightscout, облако производителя), и
@@ -278,7 +308,9 @@ export default function HeroPanel() {
     : syncState === 'live' ? (безАдреса(m?.source) || 'реальное время')
     : data ? 'обновлено ' + сколькоНазад(data.updatedAt)
     : 'нет данных';
-  const syncWarn = syncState === 'offline' || syncState === 'stale';
+  /* Цвет предупреждения застою тоже положен: свежих чисел нет, а значит нет и наблюдения —
+     чья бы вина ни была. Меняется адресат, а не серьёзность. */
+  const syncWarn = syncState === 'offline' || syncState === 'stale' || !!застой;
 
   /* Состояние связи обоих крыльев — из снимка движка, и только из него
      (SugarLifeCore#19). Раньше зелёная точка у «НМГ» горела от сокета стора, а у
@@ -345,9 +377,9 @@ export default function HeroPanel() {
           сходятся в одну (см. .hp-status). */}
       <div className="hp-status">
         <span className={'hp-synctext' + (syncWarn ? ' warn' : '')}>
-          {syncState === 'live'
+          {syncState === 'live' && !застой
             ? <span className="heart">♥</span>
-            : <Иконка className="sync-ico" icon={syncState === 'poll' ? syncOutline : cloudOfflineOutline} />}
+            : <Иконка className="sync-ico" icon={значокСтроки(застой?.code ?? null, syncState)} />}
           <span>{syncMain}</span>
           {readingAge && <span className="sync-reading">· {readingAge}</span>}
         </span>
