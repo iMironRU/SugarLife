@@ -1246,7 +1246,26 @@ export interface HistoryResult { glucose: GlucosePoint[]; treatments: TreatmentP
 
 // ---- Intent (веб → натив) ----
 export type Intent =
-  | { type: 'addDevice'; driverType: string; params: Record<string, string>; mode?: 'attach' | 'activate' }
+  /* АДРЕС, ЕСЛИ ОН УЖЕ ИЗВЕСТЕН (rev ≥ 1.65, ядро #189, просьба попутчика #717).
+
+     До сих пор адрес приходил единственным путём — из объявления в эфире. Для ЗАНЯТОГО прибора
+     этот путь закрыт: он не рекламируется, потому что соединение уже есть. Круг замыкался сам на
+     себя — режим гостя заведён ради занятого прибора, а войти можно было только к свободному.
+     Проверено на живом телефоне: тринадцать минут скана, две с половиной тысячи объявлений, ни
+     одного от сенсора, с которого сосед в этот момент получал данные.
+
+     Адрес берётся из системного списка подключённых — он приезжает движку в `reportNeighbours`,
+     и шлёт его натив (только Android: на iOS система чужих подключений не отдаёт вовсе). */
+  | { type: 'addDevice'; driverType: string; params: Record<string, string>; mode?: 'attach' | 'activate'; bleId?: string }
+  /* КТО ЕЩЁ ПРЕТЕНДУЕТ НА ПРИБОР. Шлёт НАТИВ, а не этот слой: системный список подключений и
+     список установленных приложений видит только оболочка.
+
+     `connected` (rev ≥ 1.65) — адреса и имена ВСЕХ приборов, подключённых на этом телефоне, включая
+     наши. Кто именно держит прибор, Android не говорит, и мы не гадаем: отдаём факт «прибор рядом и
+     занят», а разбирается движок — своего реестра ему для этого хватает. Имя бывает пустым: система
+     отдаёт его не всегда, и подставлять нечего. */
+  | { type: 'reportNeighbours'; busyHere: boolean; competitors?: string[];
+      connected?: { bleId: string; name?: string | null }[] }
   | { type: 'connect'; deviceId: string }
   | { type: 'disconnect'; deviceId: string }
   | { type: 'setAutoConnect'; deviceId: string; autoConnect: boolean }   // rev ≥ 1.7
