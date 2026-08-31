@@ -146,7 +146,7 @@ a.list-row { text-decoration: none; color: inherit; }
 .about-update:disabled { opacity: .6; cursor: default; }
 .about-update.accent { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
 .about-update.accent:active { background: color-mix(in srgb, var(--color-accent) 85%, #000); }
-.about-update .spin { animation: sl-spin 0.9s linear infinite; }
+.about-update .spin { animation: sl-spin 0.9s linear 34; }
 @keyframes sl-spin { to { transform: rotate(360deg); } }
 /* Строка о том, что появится позже: приглушена, но видна — обещание, а не заглушка. */
 .list-row.is-soon { opacity: .55; }

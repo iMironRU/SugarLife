@@ -333,8 +333,29 @@ ion-content { --background: var(--color-bg); }
 .hp-arrow.hp-wait { color: var(--color-neutral-500); }
 /* Часики вместо числа: занимают его место, поэтому и размер числа. */
 .hp-arrow.hp-wait-big { font-size: min(calc(2.375rem - 1.375rem * var(--p)), calc(47.5px - 27.5px * var(--p))); }
+/* ЖДУЩАЯ АНИМАЦИЯ КОНЧАЕТСЯ. СЕМНАДЦАТЬ РАЗ — ЭТО ТРИДЦАТЬ СЕКУНД (SugarLife#725).
+
+   Здесь стояло `infinite`. Часики пульсировали ровно столько, сколько нет данных, — то есть
+   могли пульсировать сутки. Ядро замерило на песочнице 73 % процессора при открытом приложении
+   и ничегонеделании; мы повторили замер на том же телефоне через отладчик:
+
+     как есть ............................. 47 с процессора за 60 с (78 % ядра)
+     пульсации погашены ....................  5 с процессора за 60 с (8 %)
+     пульсации + will-change: opacity ..... 47 с (78 %) — слой не помогает
+     вместо них точка 4×4 пикселя в углу .. 47 с (78 %)
+
+   Последняя строка и есть вывод. Дело не в наших иконках и не в их площади: на этом телефоне
+   ЛЮБАЯ идущая анимация гонит всю поверхность WebView через конвейер шестьдесят раз в секунду,
+   и стоит это сорок две секунды процессора на каждую минуту. Телефон греется, батарея садится,
+   и в суточном прогоне система убила приложение — то есть человек остался без наблюдения.
+
+   Поэтому бесконечных анимаций у нас больше нет ни одной (сторож — theme/анимации.test.ts).
+   Тридцать секунд выбраны не на глаз: столько же ждёт экран первого снимка, прежде чем
+   перестать крутить колесо и сказать словами (ui/ПервыйСнимок.tsx). Довод там был не про
+   расход, а про честность — вечное вращение обещает движение, которого нет, — и он же
+   действует здесь. Совпадение доводов и есть причина взять один порог, а не два. */
 @media (prefers-reduced-motion: no-preference) {
-  .hp-arrow.hp-wait { animation: hp-wait-pulse 1.8s ease-in-out infinite; }
+  .hp-arrow.hp-wait { animation: hp-wait-pulse 1.8s ease-in-out 17; }
 }
 @keyframes hp-wait-pulse { 0%, 100% { opacity: .45 } 50% { opacity: 1 } }
 .sync { font-size: 0.75rem; color: var(--color-neutral-400); }
@@ -359,7 +380,7 @@ ion-content { --background: var(--color-bg); }
   color: var(--color-neutral-500); opacity: calc(1 - var(--k-late));
 }
 @media (prefers-reduced-motion: no-preference) {
-  .hp-link-wait { animation: hp-wait-pulse 1.8s ease-in-out infinite; }
+  .hp-link-wait { animation: hp-wait-pulse 1.8s ease-in-out 17; }
 }
 .circle-spark { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 
@@ -371,7 +392,7 @@ ion-content { --background: var(--color-bg); }
 @keyframes pl-pulse { 0%, 100% { opacity: .5 } 50% { opacity: .85 } }
 .pl-bar, .pl-card, .pl-back {
   background: var(--color-neutral-900); border-radius: 10px;
-  animation: pl-pulse 1.4s ease-in-out infinite;
+  animation: pl-pulse 1.4s ease-in-out 21;
 }
 .pl-back { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; }
 .pl-bar-title { width: 62%; height: 19px; }
