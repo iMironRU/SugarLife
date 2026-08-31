@@ -7,15 +7,21 @@ apply from: 'capacitor.settings.gradle'
 // KMP-движок из core-репо как composite build: зависимость ru.imiron.sugarlife:engine подменяется
 // собранным проектом :engine (android release variant). Без публикации, всегда свежий.
 // Путь к core-репо резолвится (SugarLifeCore#24 — собирается у любого, не только на одной машине):
-//   gradle-property sugarlifeCoreDir  →  env SUGARLIFE_CORE_DIR  →  соседний каталог ../../../Sibionic.
+//   gradle-property sugarlifeCoreDir  →  env SUGARLIFE_CORE_DIR  →  соседний каталог ../../../SugarLifeCore.
+//
+// ИМЯ КАТАЛОГА — ИМЯ РЕПОЗИТОРИЯ, А НЕ ЧЕЙ-ТО СЛУЧАЙНЫЙ КЛОН (SugarLife#716). Здесь стояло
+// `../../../Sibionic` — имя одной из копий на машине владельца. Из-за него iOS и Android месяц
+// собирались из РАЗНЫХ клонов ядра: айфон брал движок из `Sibionic`, Android — из того, что
+// назвали в свойстве. Клоны разъезжались на коммит-другой, и «проверено на телефоне» могло
+// означать проверку не той сборки.
 // Нет каталога — понятная ошибка вместо «зависимость engine не найдена».
 def coreDir = providers.gradleProperty('sugarlifeCoreDir')
     .orElse(providers.environmentVariable('SUGARLIFE_CORE_DIR'))
-    .getOrElse(new File(settingsDir, '../../../Sibionic').canonicalPath)
+    .getOrElse(new File(settingsDir, '../../../SugarLifeCore').canonicalPath)
 if (new File(coreDir).isDirectory()) {
     includeBuild(coreDir)
 } else {
     throw new GradleException("SugarLifeCore не найден ('${coreDir}'). Укажи путь: " +
-        "gradle -PsugarlifeCoreDir=/путь, либо env SUGARLIFE_CORE_DIR, либо положи core-репо рядом как ../Sibionic. " +
+        "gradle -PsugarlifeCoreDir=/путь, либо env SUGARLIFE_CORE_DIR, либо положи core-репо рядом как ../SugarLifeCore. " +
         "Долгосрочно — публикация AAR (SugarLifeCore#24).")
 }
