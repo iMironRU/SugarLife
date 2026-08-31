@@ -7,8 +7,8 @@ import Иконка from '@/ui/Иконка';
    на циферблате. Одно слово на два смысла в одном файле — заготовка для ошибки. */
 import { сколькоНазад, часы as наЧасах } from '@/слова/время';
 import { MealsSection, HistorySection } from '@/sections/lazy';
-import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, chevronForward, timeOutline, musicalNotesOutline } from 'ionicons/icons';
-import { useEffect, useRef, useState } from 'react';
+import { restaurantOutline, warningOutline, waterOutline, moonOutline, pauseCircleOutline, batteryDeadOutline, chevronForward, timeOutline, musicalNotesOutline, cloudOfflineOutline } from 'ionicons/icons';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useStore, refresh } from '@/sources/store';
 import { useUnit, useCarbUnit, toCarbs, carbUnitLabel, toUnits, unitLabel, fmt } from '@/domain/units';
 import { activeCarbs } from '@/domain/loopValue';
@@ -181,6 +181,16 @@ export default function Today() {
      молчать час, и за этот час она подавала. Числа нет — падаем на прежнюю оценку по
      средней: она хуже, но лучше молчания. */
   const помпаСнимка = устройствоРоли(снимок, 'pump');
+  /* Беды приборов для обращения выше: только те, что движок назвал тяжёлыми, и по одной на код —
+     два прибора с одной бедой это одна новость, а не две. */
+  const бедыПриборов = useMemo(() => {
+    const виденные = new Set<string>();
+    return (снимок?.devices ?? [])
+      .map((п) => п.problem)
+      .filter((б): б is NonNullable<typeof б> => !!б
+        && (б.severity === 'Error' || б.severity === 'Critical'))
+      .filter((б) => (виденные.has(б.code) ? false : (виденные.add(б.code), true)));
+  }, [снимок?.devices]);
   const сегментыБазала = снимок?.pumpBasal?.segments
     ?? toSegs(data?.profile?.basalSchedule ?? [])
       .map((с) => ({ startMinutes: Math.round(с.a * 60), rateUPerHour: с.v }));
@@ -516,6 +526,32 @@ export default function Today() {
               {снимок.audio.words}
             </Notice>
           )}
+
+          {/* БЕДА ПРИБОРА — ТАМ, ГДЕ СМОТРЯТ (SugarLife#695, ядро SugarLifeCore#183).
+
+              Владелец оказался в районе без связи, увидел задержку в показаниях и без единого
+              объяснения — и первым желанием было смахнуть приложение. Молчание подтолкнуло его к
+              худшему из возможных действий: смахивание убивает ровно то, что мы месяц удерживаем
+              живым. И пришёл он к этому сам, логично, от бессилия.
+
+              А слова были. Движок присылает беду прибора справочником по RFC 9457 — заголовок, что
+              делать, серьёзность, — и для пропавшей связи там сказано прямо: данные пойдут сами,
+              закрывать приложение не нужно. Показывали мы её ТОЛЬКО внутри карточки прибора, куда
+              надо зайти. Ядро назвало это точнее нас: «мы сказали не туда, где смотрят».
+
+              Тот же промах, что со звёздочкой активного инсулина (#702): слова движка есть, а
+              человек их не видит. Место, где сказано, — часть того, сказано ли вообще.
+
+              ЧТО ПОКАЗЫВАЕМ, РЕШАЕТ СЕРЬЁЗНОСТЬ ДВИЖКА, а не наш список кодов. Заведи мы свой
+              перечень «важных бед» — он разошёлся бы с их справочником в первый же месяц, как
+              разошлись две таблицы стрелок и два набора периодов. */}
+          {бедыПриборов.map((б) => (
+            <Notice key={б.code} id="device-problem" вид="предупреждение" значок={cloudOfflineOutline}
+              заголовок={б.title}>
+              {б.remediation}
+              <span className="что-делать-код">{б.code}</span>
+            </Notice>
+          ))}
 
           {/* помпа на паузе — важный статус, не прячем (авторитетно из AAPS) */}
           {dev?.suspended === true && (
