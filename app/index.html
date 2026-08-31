@@ -36,7 +36,8 @@
       #boot .b-drop {
         width: 96px; height: 96px;
         filter: drop-shadow(0 0 16px rgba(145, 132, 217, .5));
-        animation: bpulse 1.8s ease-in-out infinite;
+        /* Число повторов, а не вечность: SugarLife#729 и сторож src/анимации.test.ts. */
+        animation: bpulse 1.8s ease-in-out 17;
       }
       @keyframes bpulse {
         0%, 100% { filter: drop-shadow(0 0 12px rgba(145, 132, 217, .35)); transform: scale(1); }
@@ -45,7 +46,7 @@
       #boot .b-spin {
         width: 26px; height: 26px; border-radius: 50%;
         border: 3px solid #3f424d; border-top-color: #9184d9;
-        animation: bspin .8s linear infinite;
+        animation: bspin .8s linear 38;
       }
       @keyframes bspin { to { transform: rotate(360deg); } }
       #boot .b-title { font-size: 15px; color: #9397ab; }
