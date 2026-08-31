@@ -12,7 +12,10 @@
 set -uo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"                # .../app
-CORE_DIR="$HOME/Documents/github_dev/Sibionic"          # SugarLifeCore (composite includeBuild)
+# ИМЯ КАТАЛОГА — ИМЯ РЕПОЗИТОРИЯ (SugarLife#716). Здесь стояло `Sibionic` — имя одной из копий
+# ядра на машине владельца. Из-за него iOS и Android собирались из разных клонов, и те разъезжались
+# на коммит-другой: «проверено на телефоне» могло означать проверку не той сборки.
+CORE_DIR="${SUGARLIFE_CORE_DIR:-$HOME/Documents/github_dev/SugarLifeCore}"   # composite includeBuild
 # Android требует JDK 21 (Capacitor/AGP). Это brew-версия: /usr/libexec/java_home её НЕ видит.
 JDK21="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
 JDK17="/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home"   # ядро/iOS проверены на 17
