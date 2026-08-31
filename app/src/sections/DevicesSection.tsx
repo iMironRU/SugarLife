@@ -218,10 +218,27 @@ export default function DevicesSection({ onClose, встроенный, толь
     const id = window.setTimeout(() => setДолгоЖдём(true), ТЕРПЕНИЕ_МС);
     return () => window.clearTimeout(id);
   }, [сканирует, пустоВЭфире]);
+  /* СКАН ГАСНЕТ И ПРИ УХОДЕ В ФОН, А НЕ ТОЛЬКО ПРИ УХОДЕ С ЭКРАНА (SugarLife#717).
+
+     Гасили мы его только при размонтировании: ушёл с экрана — остановили. Но экран приборов
+     живёт в стопке и под другими разделами не размонтируется, а уход приложения в фон не
+     размонтирует вообще ничего. Попутчик поймал это на живом телефоне: скан проработал
+     двадцать пять минут в `LOW_LATENCY` и пережил и уход, и возврат.
+
+     Режим дорогой намеренно — иначе не видно рекламу BLE-5, — и потому тем более не должен
+     работать, когда на экран никто не смотрит. Ищут прибор глазами: человек стоит на экране
+     поиска и ждёт. Ушёл — искать не для кого.
+
+     `visibilitychange` вместо события Capacitor: он одинаково работает и в вебе, и в нативе,
+     и уже используется у нас в трёх местах для того же вопроса «человек здесь». */
   useEffect(() => {
     if (мешаетСкан || !встроенный) return;
-    void sendIntent({ type: 'startScan' });
-    return () => { void sendIntent({ type: 'stopScan' }); };
+    const пуск = () => { void sendIntent({ type: 'startScan' }); };
+    const стоп = () => { void sendIntent({ type: 'stopScan' }); };
+    пуск();
+    const наЭкране = () => (document.visibilityState === 'visible' ? пуск() : стоп());
+    document.addEventListener('visibilitychange', наЭкране);
+    return () => { document.removeEventListener('visibilitychange', наЭкране); стоп(); };
   }, [мешаетСкан, встроенный]);
 
   const тело = (
