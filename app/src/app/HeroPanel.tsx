@@ -33,7 +33,9 @@ function shortStatus(s?: string | null): string {
   if (l.includes('открыт') || l.includes('open')) return 'Цикл выкл';
   return s;
 }
-const battColor = (p: number) => (p <= 20 ? 'var(--c-danger)' : p <= 50 ? 'var(--c-carb)' : 'var(--c-glu)');
+/** Ниже этого заряд не «низкий», а «на исходе»: цвет и вес меняются вместе, число одно. */
+const ЗАРЯД_НА_ИСХОДЕ = 20;
+const battColor = (p: number) => (p <= ЗАРЯД_НА_ИСХОДЕ ? 'var(--c-danger)' : p <= 50 ? 'var(--c-carb)' : 'var(--c-glu)');
 
 /* Метка связи у названия крыла.
 
@@ -337,7 +339,9 @@ export default function HeroPanel() {
         {batteries.length > 0 && (
           <span className="hp-batteries">
             {batteries.map((b) => (
-              <span key={b.id} className="hp-batt-item" style={{ color: battColor(b.value as number) }}>
+              <span key={b.id}
+                className={'hp-batt-item' + ((b.value as number) <= ЗАРЯД_НА_ИСХОДЕ ? ' на-исходе' : '')}
+                style={{ color: battColor(b.value as number) }}>
                 <Иконка icon={b.icon} />{b.value}%
               </span>
             ))}

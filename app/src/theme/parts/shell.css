@@ -165,7 +165,25 @@ ion-content { --background: var(--color-bg); }
 .hp-status .hp-batteries { flex-shrink: 0; }
 .hp-synctext { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--color-neutral-400); min-width: 0; }
 .hp-synctext .sync-ico { font-size: 0.8125rem; flex-shrink: 0; }
-.hp-synctext .sync-reading { color: var(--color-neutral-500); white-space: nowrap; }
+/* ВОЗРАСТ ПОКАЗАНИЯ НЕ СЖИМАЕТСЯ (SugarLife#700).
+
+   Правило обрезания стоит на всех частях строки разом, и возраст обрезался наравне с именем
+   источника: владелец увидел «· тольк…» вместо «только что». Между «когда это число» и
+   «с какого хоста оно приехало» выбор очевиден — хост не меняется никогда и действия по нему
+   нет, а возраст решает, верить ли числу.
+
+   Поэтому сжимается только имя источника: оно одно и остаётся с многоточием. */
+.hp-synctext .sync-reading { color: var(--color-neutral-500); white-space: nowrap; flex-shrink: 0; }
+
+/* ЗАРЯД НА ИСХОДЕ ВИДЕН, А НЕ ТОЛЬКО ОКРАШЕН (SugarLife#700).
+
+   Цвет у него был и раньше, а вес — нет: три процента на помпе выглядели ровно как сто на
+   телефоне рядом, и владелец прочитал их как украшение. Три процента на помпе — это часы до
+   остановки подачи, и в нашей же таблице важности заряд помпы стоит ПЕРВЫМ во всём приложении.
+
+   Порог не заводим новый: он уже есть в battColor, и второе число рядом с первым разошлось бы
+   с ним в первый же месяц. */
+.hp-batt-item.на-исходе { font-weight: 800; font-size: 0.6875rem; }
 .hp-synctext.warn { color: var(--c-danger-2); }
 .hp-synctext.warn .sync-ico { color: var(--c-danger-2); }
 .hp-synctext.warn .sync-reading { color: color-mix(in srgb, var(--c-danger-2) 60%, var(--color-neutral-500)); }
