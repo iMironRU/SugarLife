@@ -16,6 +16,7 @@ import InsulinTimeChart from '@/charts/InsulinTimeChart';
 import { DataGate } from '@/ui/NotConfigured';
 import { useStack } from '@/app/stackCtx';
 import Screen from '@/ui/Screen';
+import ЛентаИнсулина from '@/ui/ЛентаИнсулина';
 
 const WINDOWS = [1, 3, 6, 12, 24];
 
@@ -143,6 +144,11 @@ export default function Ins() {
             </>
           )}
           {(isPen || фон) && длиннаяСтрока}
+
+          {/* Лента вводов — последней: сверху то, чем управляют (помпа, петля, длинный), ниже
+              то, что уже случилось. Переехала из «Истории» решением владельца (#697): за
+              ответом «колол или нет» приходилось уходить с экрана про инсулин. */}
+          <ЛентаИнсулина включена={активна} сГрафиком={!isPen} />
           {пишуДлинный && <LongInsulinSheet onClose={() => setПишуДлинный(false)} />}
           </DataGate>
 
