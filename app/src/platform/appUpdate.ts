@@ -11,6 +11,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import { прочитать, записать, убрать, прочитатьJson, записатьJson } from '@/settings/storage';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { этоНашПерезапуск } from '@/app/местоStore';
+import { вЖурналДвижка } from '@/sources/bridge';
 
 /* Как называется то, что стоит у человека (SugarLife#235).
 
@@ -182,6 +183,16 @@ export async function применитьOta(б: ОтаБандл): Promise<boole
     const bundle = await CapacitorUpdater.download({ url: б.url, version: б.version });
     ход(100);
     await CapacitorUpdater.set(bundle); // сделать активным
+    /* МЕТКА ПЕРЕД ПЕРЕЗАГРУЗКОЙ (SugarLife#696).
+
+       30 августа обновление интерфейса убило приложение на шесть минут, и поднял его человек
+       руками. Восстанавливать это пришлось по косвенным признакам: последняя запись, тишина,
+       пробуждение со словом «Убили». В журнале не было ни одной строки о том, что мы вообще
+       что-то делали, — и на вопрос «умерло само или мы убили» отвечала догадка.
+
+       Теперь момент назван. Строка уходит В БАЗУ через движок, то есть переживает смерть,
+       которая наступит через мгновение, и следующий разбор начнётся с неё. */
+    вЖурналДвижка('Info', 'update', `перезагружаем веб-слой на бандл ${б.build ?? б.version}`);
     await CapacitorUpdater.reload();    // перезагрузить webview на новый бандл
     return true;
   } catch {
