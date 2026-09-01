@@ -14,6 +14,8 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
 import androidx.core.content.ContextCompat
 
 /**
@@ -68,9 +70,44 @@ class SugarLifeService : Service() {
             startForeground(NOTIF_ID, notif)
         }
         слушатьРадиТревог()
+        слушатьЧасовойПояс()
         /* Приборы у нас — значит молчание больше ничем не объяснено, и сторож имеет право говорить.
            Счёт начинается заново: что было, пока сервиса не существовало, мы не знаем (#243). */
         Тревоги.приборыОтданы(applicationContext, false)
+    }
+
+    /**
+     * ЧАСОВОЙ ПОЯС СМЕНИЛСЯ — СКАЗАТЬ ДВИЖКУ (мост 1.66, ядро #188, из нашей находки).
+     *
+     * Движок читает зону один раз за жизнь: в Kotlin/Native `TimeZone.of()` не кэшируется и на
+     * каждый вызов лезет в базу поясов на диске. Кэш там и остался — он стоил нам трёх убийств по
+     * процессору, — но сбрасывать его надо по факту, а факт знает только платформа.
+     *
+     * Цена молчания не косметическая: после перелёта окно сна означало НЕ ТУ НОЧЬ, то есть «ночью
+     * разбудим» обещалось не на те часы.
+     *
+     * ЖИВЁТ В СЛУЖБЕ, А НЕ В ПЛАГИНЕ. Пояс меняется в перелёте, когда приложение свёрнуто и
+     * webview спит: подписка, живущая вместе с интерфейсом, пропустила бы ровно тот случай, ради
+     * которого заведена. Отписки нет намеренно — служба живёт столько же, сколько процесс.
+     *
+     * Полезной нагрузки нет: мы сообщаем факт, зону движок перечитывает сам.
+     */
+    private fun слушатьЧасовойПояс() {
+        val приёмник = object : BroadcastReceiver() {
+            override fun onReceive(c: Context?, i: Intent?) {
+                Log.i(TAG, "система сменила часовой пояс — говорим движку перечитать")
+                runCatching {
+                    EngineHolder.engine(applicationContext)
+                        .sendIntent("""{"type":"reportTimeZoneChanged"}""")
+                }.onFailure { Log.w(TAG, "не сказали движку о смене пояса: $it") }
+            }
+        }
+        runCatching {
+            ContextCompat.registerReceiver(
+                this, приёмник, IntentFilter(Intent.ACTION_TIMEZONE_CHANGED),
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+        }.onFailure { Log.w(TAG, "не подписались на смену часового пояса: $it") }
     }
 
     /**

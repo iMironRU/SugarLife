@@ -876,6 +876,32 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
        нужно измерить. */
     private static var подъёмов = 0
 
+    /* ЧАСОВОЙ ПОЯС СМЕНИЛСЯ — СКАЗАТЬ ДВИЖКУ (мост 1.66, ядро #188, из нашей находки).
+
+       Движок читает зону один раз за жизнь: `TimeZone.of()` в Kotlin/Native не кэшируется и на
+       каждый вызов лезет в базу поясов на диске. Кэш там и остался — он стоил нам трёх убийств
+       по процессору, — но сбрасывать его надо по факту, а факт знает только платформа.
+
+       Цена молчания не косметическая: после перелёта окно сна означало НЕ ТУ НОЧЬ, то есть
+       «ночью разбудим» обещалось не на те часы.
+
+       Полезной нагрузки нет намеренно: мы сообщаем факт, зону движок перечитывает сам. Прислать
+       её строкой значило бы завести второй источник правды и однажды разойтись с системным.
+
+       Подписка живёт столько же, сколько плагин, и снимается вместе с ним — отписки нет по той
+       же причине, по какой её нет у подписки на снимки. */
+    private func слушатьЧасовойПояс() {
+        NotificationCenter.default.addObserver(
+            forName: .NSSystemTimeZoneDidChange, object: nil, queue: .main,
+        ) { [weak self] _ in
+            NSLog("SugarLife: система сменила часовой пояс — говорим движку перечитать")
+            self?.вЖурнал("Info", "engine", "часовой пояс сменился — просим движок перечитать")
+            self?.engineQueue.async { [weak self] in
+                _ = self?.engine?.sendIntent(json: "{\"type\":\"reportTimeZoneChanged\"}")
+            }
+        }
+    }
+
     override public func load() {
         SugarLifeBridgePlugin.подъёмов += 1
         let подъём = SugarLifeBridgePlugin.подъёмов
@@ -883,6 +909,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         SugarLifeBridgePlugin.общий = self
         // Уход в фон и возвращение — на них подписываемся сразу: без этого настройка была бы мёртвой (#388).
         ФоновоеБодрствование.shared.начать()
+        слушатьЧасовойПояс()
         engineQueue.async { [weak self] in
             guard let self else { return }
             // Персист-БД (нативный SQLite) → история переживает перезапуск. Фабрику собирает Swift (экспорт :persistence).
