@@ -1,7 +1,11 @@
 package ru.imiron.sugarlife
 
 import android.app.NotificationManager
+import android.app.UiModeManager
 import android.content.Context
+import android.content.res.Configuration
+import android.media.AudioManager
+import android.os.BatteryManager
 import android.os.Build
 import android.util.Log
 import java.util.concurrent.Executors
@@ -25,6 +29,70 @@ object Доставка {
 
     private val поток = Executors.newSingleThreadExecutor()
     @Volatile private var последнееСказанное: String? = null
+
+    /** Заряд телефона в процентах; −1 — система не сказала (тогда поле не шлём вовсе). */
+    private fun зарядПроцентов(ctx: Context): Int = runCatching {
+        val bm = ctx.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+        bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+    }.getOrDefault(-1)
+
+    /**
+     * КУДА ИДЁТ ЗВУК: `"car"` или `"phone"` (контракт 1.31).
+     *
+     * Это маршрут, а не перемещение: мы не знаем, едете ли вы и водитель ли вы, и знать не должны.
+     * Движок по нему решает три вещи — не форсировать динамик телефона, не показывать полный экран
+     * и (на iOS) отпустить звуковой поток.
+     *
+     * СУДИМ ТОЛЬКО ПО ТОМУ, ЧТО СИСТЕМА СКАЗАЛА ПРЯМО. Автомобильный режим и Android Auto телефон
+     * объявляет сам. Гадать по классу Bluetooth-устройства не стали: колонка в комнате и магнитола
+     * различаются не всегда, а цена ошибки несимметрична — приняв комнату за машину, мы промолчим
+     * полным экраном там, где он был нужен.
+     *
+     * Не знаем — говорим `"phone"`, как и прежде: это умолчание контракта, и оно не хуже молчания.
+     */
+    private fun маршрутЗвука(ctx: Context): String = runCatching {
+        val um = ctx.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
+        if (um.currentModeType == Configuration.UI_MODE_TYPE_CAR) "car" else "phone"
+    }.getOrDefault("phone")
+
+    /** Идёт ли сейчас чужой звук. Мгновенный признак — устойчивость считает [чужойЗвукСМс]. */
+    private fun чужойЗвукИдёт(ctx: Context): Boolean = runCatching {
+        (ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager).isMusicActive
+    }.getOrDefault(false)
+
+    @Volatile private var чужойКандидат: Boolean? = null
+    @Volatile private var кандидатСМс: Long = 0
+    @Volatile private var чужойУстоялсяС: Long? = null
+
+    /**
+     * С КАКОГО МОМЕНТА ИДЁТ ЧУЖОЙ ЗВУК (SugarLife#670, контракт 1.62).
+     *
+     * Без этого поля сроки складывались: наш гистерезис ждёт устойчивости, движок держит опору
+     * после минуты музыки — и его минута шла от НАШЕГО доклада, то есть человек получал полторы.
+     * Момент чинит это без переговоров о числах.
+     *
+     * Мгновенному признаку не верим: `isMusicActive` мерцает на коротких звуках уведомлений.
+     * Признаём смену, когда она продержалась тридцать секунд, — тем же порогом, что и на iOS
+     * (`BackgroundKeepAlive.кандидатС`). Один порог на две оболочки: разные означали бы, что
+     * движок получает от них несравнимое.
+     *
+     * `null` — звука нет либо смена ещё не устоялась; тогда движок считает началом первый отчёт
+     * со звуком, как было до 1.62.
+     */
+    private const val УСТОЙЧИВОСТЬ_МС = 30_000L
+
+    private fun чужойЗвукСМс(сейчасИдёт: Boolean): Long? {
+        val теперь = System.currentTimeMillis()
+        if (чужойКандидат != сейчасИдёт) {
+            чужойКандидат = сейчасИдёт
+            кандидатСМс = теперь
+            return чужойУстоялсяС
+        }
+        if (теперь - кандидатСМс >= УСТОЙЧИВОСТЬ_МС) {
+            чужойУстоялсяС = if (сейчасИдёт) кандидатСМс else null
+        }
+        return чужойУстоялсяС
+    }
 
     /**
      * Чистое правило: из кодов поломок и текущего режима «Не беспокоить» — один ответ.
@@ -63,11 +131,52 @@ object Доставка {
            разрешения это по-прежнему девять минут, и доложить ноль значило бы дать движку пообещать
            человеку время, которого система не даст. */
         val точность = Точность.точностьМин(app)
-        val сказать = "$ответ/$точность"
+        /* ПОДРОБНОСТИ, А НЕ ТОЛЬКО СВОДКА (SugarLife#588, #670).
+
+           Коды поломок мы уже считали — и выбрасывали, оставляя одно слово. То есть движок знал,
+           что «доставить нечем», и не мог сказать человеку, ЧТО именно отобрано; а чинить это
+           надо вечером, потому что разрешения, которого нет в три часа ночи, чинить некому.
+
+           Факты берутся из тех же кодов, что и сводка: два ответа об одном не разойдутся, потому
+           что считаются из одного места.
+
+           `audioHeld` НЕ ШЛЁМ намеренно: по контракту это iOS-поле, «null — платформе не нужно».
+           На Android процесс держит служба переднего плана, а не звуковой поток, и написать сюда
+           `true` значило бы соврать про способ. */
+        val коды = runCatching { Тревоги.поломки(app).map { it.first } }.getOrDefault(emptyList())
+        val уведомленияВключены = !коды.contains("notifications-off")
+        val доступКТишине = !коды.contains("dnd-access")
+        val полныйЭкран = !коды.contains("fullscreen")
+        val каналЦел = !коды.contains("channel-lowered")
+        val заряд = зарядПроцентов(app)
+        val маршрут = маршрутЗвука(app)
+        val чужойЗвук = чужойЗвукИдёт(app)
+        val чужойС = чужойЗвукСМс(чужойЗвук)
+
+        /* В ключ повтора идут ВСЕ поля, а не только сводка. Раньше ключом были ответ и точность —
+           значит смена любого из подробностей молчала бы: разрешение вернули, а движок об этом не
+           узнал. Момент начала звука в ключ не берём: он меняется вместе с признаком. */
+        val сказать = "$ответ/$точность/$уведомленияВключены/$доступКТишине/$полныйЭкран/$каналЦел/$маршрут/$чужойЗвук/$заряд"
         if (сказать == последнееСказанное) return
         последнееСказанное = сказать
         поток.execute {
-            val json = """{"type":"reportDelivery","canWake":"$ответ","tickPrecisionMin":$точность}"""
+            val json = buildString {
+                append("""{"type":"reportDelivery","canWake":"$ответ","tickPrecisionMin":$точность""")
+                /* Обычная строка, а не «сырая»: значение здесь кончается кавычкой, и три
+                   кавычки подряд разобрать нечем. */
+                append(",\"route\":\"$маршрут\"")
+                append(""","notificationsEnabled":$уведомленияВключены""")
+                append(""","dndAccess":$доступКТишине""")
+                append(""","fullScreenAllowed":$полныйЭкран""")
+                append(""","alarmChannelIntact":$каналЦел""")
+                append(""","otherAudioPlaying":$чужойЗвук""")
+                /* Момент — только когда он есть: при `null` движок считает началом первый отчёт
+                   со звуком, и это ровно прежнее поведение. */
+                if (чужойС != null) append(""","otherAudioSinceMs":$чужойС""")
+                /* Отрицательный заряд означает «система не сказала» — тогда молчим, а не шлём минус. */
+                if (заряд >= 0) append(""","batteryPercent":$заряд""")
+                append("}")
+            }
             runCatching { EngineHolder.engine(app).sendIntent(json) }
                 .onSuccess { Log.i(TAG, "доложили: $ответ") }
                 .onFailure {
