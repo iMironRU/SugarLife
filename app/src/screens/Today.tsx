@@ -111,7 +111,6 @@ export default function Today() {
   const cfg = useDeviceConfig();
   const changes = useChanges();
   const meals = useMeals();
-  const rstat = reservoirStats(extras.devHist);
   const снимок = useSnapshot();
   const здоровье = useHealth();
   /* История заряда копится в своей базе: в облаке за один запрос доступны последние
@@ -128,6 +127,12 @@ export default function Today() {
     const off = onDbChange(читать);
     return () => { жив = false; off(); };
   }, []);
+
+  /* ЗАЛИПАНИЕ ОСТАТКА — ПО НАКОПЛЕННОМУ РЯДУ (#748). Считалось по `extras.devHist`, то есть по
+     нашей загрузке Nightscout, а она на телефоне мертва: ряд пуст, «стоит N часов» всегда ноль, и
+     подсказка не появлялась ни разу. Тот же ряд, что рисует заправку ниже, — и его наполняет
+     снимок движка. */
+  const rstat = reservoirStats(rhist);
 
   /* Заправка картриджа: переход «почти пусто → почти полный». Признак чистый (см.
      domain/refill.ts), но отмечаем не молча, а спрашиваем — молчаливая отметка по
