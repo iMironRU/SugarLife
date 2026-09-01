@@ -98,8 +98,13 @@ export const CloudAccountsSection = ленивый<{ onClose: () => void }>(
 
 export const HistorySection = ленивый<{ onClose: () => void }>(
   () => import('./HistorySection'), 'История');
-export const AnalyticsSection = ленивый<{ onClose?: () => void; встроенный?: boolean }>(
-  () => import('./AnalyticsSection'), 'Аналитика');
+/* Тип пропсов здесь ОТДЕЛЬНЫЙ от самого компонента, и это ловушка: добавив пропс в
+   AnalyticsSection, легко забыть про обёртку — компилятор промолчит, потому что через
+   обёртку зовут именно этот тип. Так и вышло с `дни`/`выбрать` (#734, #735): проверка
+   `tsc -p tsconfig.test.json` этот файл не читает, а сборка читает. */
+export const AnalyticsSection = ленивый<{
+  onClose?: () => void; встроенный?: boolean; дни?: number; выбрать?: (д: number) => void;
+}>(() => import('./AnalyticsSection'), 'Аналитика');
 
 
 export const MealsSection = ленивый<{ onClose: () => void }>(
