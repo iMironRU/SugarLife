@@ -1,4 +1,5 @@
 import { IonInput, IonToggle, IonButton } from '@ionic/react';
+import { ПодробнееПоТеме } from '@/ui/Подробнее';
 import Иконка from '@/ui/Иконка';
 import { DeviceSection } from '@/sections/lazy';
 import Section from '@/ui/Section';
@@ -135,7 +136,13 @@ export default function CloudSection({ cloudId, onClose }: { cloudId: string; on
 
   return (
     <Section title={cloud.name} onBack={askClose}
-      описание="Читаем сахар и тренд напрямую из Nightscout. Адрес хранится локально на устройстве.">
+      описание={<>
+        Читаем сахар и тренд напрямую из Nightscout. Адрес хранится локально на устройстве.
+        {/* «Какой из двух секретов вписать» — вопрос, на который строка под полем не отвечает,
+            а статья отвечает (тема `nightscout`, #740). Ядро присылает её адрес в каждом
+            снимке; до сегодня мы эту карту не читали ни разу. */}
+        {' '}<ПодробнееПоТеме тема="nightscout" />
+      </>}>
 
         <div className="field-label">Адрес сайта</div>
         <div className="field">

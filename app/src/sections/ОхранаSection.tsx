@@ -5,6 +5,7 @@ import { playOutline, chevronForward, musicalNotesOutline } from 'ionicons/icons
 import Section from '@/ui/Section';
 import Sheet from '@/ui/Sheet';
 import Row from '@/ui/Row';
+import { ПодробнееПоТеме } from '@/ui/Подробнее';
 import { useStack } from '@/app/stackCtx';
 import { AlarmsSection } from '@/sections/lazy';
 import { useОхрана, подтвердитьФокус, фокусПодтверждён } from '@/показ/охранаХук';
@@ -230,9 +231,14 @@ export default function ОхранаSection({ onClose }: { onClose: () => void }
             сторонами: включено — можно остаться без радио, выключено — можно остаться без
             тревоги. Второе тише и потому опаснее, поэтому оно и написано в подписи. */}
         <Row icon={musicalNotesOutline} title="Перехватывать звук в машине"
-          sub={снимок?.audio?.holdAudioAnchor === false
-            ? 'выключено: система может выгрузить приложение за рулём, и тогда тревога не прозвучит'
-            : 'держим звук, иначе за рулём приложение выгружается; если играло радио — нажмите на магнитоле выбор источника'}
+          sub={<>
+            {снимок?.audio?.holdAudioAnchor === false
+              ? 'выключено: система может выгрузить приложение за рулём, и тогда тревога не прозвучит'
+              : 'держим звук, иначе за рулём приложение выгружается; если играло радио — нажмите на магнитоле выбор источника'}
+            {/* Почему приложение вообще приходится «держать» — страница текста, а не подпись
+                под выключателем (тема `stayingAlive`, #740). */}
+            {' '}<ПодробнееПоТеме тема="stayingAlive" />
+          </>}
           right={<IonToggle checked={снимок?.audio?.holdAudioAnchor !== false}
             onIonChange={(e) => {
               /* Пишем ключ, а не решение: держать или нет — считает движок, мы лишь передаём
