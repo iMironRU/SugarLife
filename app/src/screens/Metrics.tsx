@@ -6,7 +6,7 @@ import { water, nutrition, medkit } from 'ionicons/icons';
 import ЧипыПотоков, { type Поток } from '@/ui/Потоки';
 
 import { useState } from 'react';
-import { useEntries, useTreatments } from '@/sources/db';
+import { useHistory, useTreatments } from '@/sources/db';
 import { useBackfilling } from '@/sources/backfill';
 import { stats } from '@/domain/agp';
 import { carbStats, insulinDaily, carbsByDay, insulinByDay } from '@/domain/treatmentStats';
@@ -90,7 +90,14 @@ export default function Metrics() {
   // всё из локальной БД (накапливается фоновым бэкфиллом на 90 дней): глюкоза —
   // entries; лечение — treatments (temp basal + болюсы/углеводы). Больше не грузим
   // при каждом открытии и не режем окно инсулина — считаем за выбранный период.
-  const entries = useEntries(days * 86400e3, { paused: !активна, minRefreshMs: 60e3 });
+  /* ЧИТАЕМ УМНЫМ ХУКОМ, А НЕ НАИВНЫМ (SugarLife#734, наш #699).
+     
+     `useHistory` умеет отдать узкое окно из уже прочитанного широкого — и написан он был
+     ровно по жалобе владельца на эти самые «Метрики»: «при каждом переключении по дням
+     пересчитывается, и поэтому моргает и задумывается». Лекарство досталось соседним
+     вкладкам, а больной остался на `useEntries`, который перечитывает базу на каждое
+     переключение. Замерено до правки: 14 чтений базы на 8 переключений периода. */
+  const { entries } = useHistory(days * 86400e3, { paused: !активна, minRefreshMs: 60e3 });
   const treatments = useTreatments(days * 86400e3, { paused: !активна, minRefreshMs: 60e3 });
   const events = treatments.filter((t) => t.type !== 'Temp Basal'); // болюсы/углеводы/замены
   const tempBasals = treatments; // insulinDaily/insulinByDay сами выберут Temp Basal
