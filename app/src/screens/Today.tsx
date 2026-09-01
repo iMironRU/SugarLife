@@ -34,6 +34,7 @@ import { reservoirStats } from '@/domain/treatmentStats';
 import { batteryRuntime, BATTERY_KINDS } from '@/domain/battery';
 import { detectRefill } from '@/domain/refill';
 import { углеводыСуток } from '@/показ/углеводыСуток';
+import { часовДоПустого } from '@/показ/часовДоПустого';
 import { лентаЧеловека } from '@/показ/лентаЧеловека';
 import { часыБодрствования, НОЧЬ_С } from '@/domain/awake';
 import { useMeals } from '@/sources/mealStore';
@@ -196,7 +197,18 @@ export default function Today() {
   // «ночное окончание»: если резервуара < 14 ч и он закончится в ночь (23:00–08:00) —
   // рекомендуем заменить заранее, чтобы подача не прервалась во сне. Оценка (≈).
   const reservoir = dev?.reservoir ?? rstat.current ?? null;
-  const hoursLeft = reservoir != null && extras.tdd ? reservoir / (extras.tdd / 24) : null;
+  /* ЧАСЫ ДО ПУСТОГО — ОТ ДВИЖКА, А НЕ ИЗ НАШЕЙ ЗАГРУЗКИ (#748).
+
+     Здесь стояло `reservoir / (extras.tdd / 24)` — деление на среднюю суточную дозу из нашей
+     собственной загрузки Nightscout. На нативной сборке она молчит, `tdd` пуст, и оба
+     обращения ниже — «кончится ночью» и «кончится сегодня» — не появлялись НИКОГДА.
+
+     Тихо: ничего не падало, обращение просто не приходило. А «замените заранее» принимают
+     один раз и вечером; не сработав, оно не оставляет следа — человек узнаёт утром по
+     прерванной подаче. Средняя осталась запасным путём для браузера. */
+  const hoursLeft = часовДоПустого(
+    снимок?.insulinLeft?.runsOutAtMs, reservoir, extras.tdd, Date.now(),
+  );
 
   /* Прогноз «хватит ли до утра» (#280) — вместо счёта по средней скорости.
 
@@ -283,14 +295,15 @@ export default function Today() {
      • нужен и рост, и текущий сахар выше цели — иначе поймаем обычные колебания. */
   const nowH = new Date().getHours();
   const daytime = nowH >= 8 && nowH < 23;
-  const carbEvents = extras.events.filter((e) => (e.carbs ?? 0) > 0);
-  /* «Еды не вносили N ч» и «похоже, поел без записи» должны замолкать от НАШЕЙ записи
-     тоже — иначе человек внесёт приём в приложении, а мы продолжим ему выговаривать,
-     что он ничего не внёс. */
-  const lastCarbT = Math.max(
-    carbEvents.length ? carbEvents[carbEvents.length - 1].t : 0,
-    meals.length ? meals[meals.length - 1].t : 0,
-  ) || null;
+  /* «Еды не вносили N ч» и «похоже, поел без записи» должны замолкать от НАШЕЙ записи тоже —
+     иначе человек внесёт приём в приложении, а мы продолжим ему выговаривать, что он ничего не
+     внёс. И от чужой тоже: еда, внесённая в AAPS, — такая же его еда (#748).
+
+     Тем же правилом, что и плитка углеводов: три места про «когда я ел» обязаны отвечать
+     одинаково, а окно здесь шире — двое суток, потому что вопрос «сколько часов назад» имеет
+     смысл и на цифре в тридцать часов. */
+  const заДвое = углеводыСуток(человечье, extras.events, meals, Date.now() - 48 * 3600e3);
+  const lastCarbT = заДвое.length ? заДвое[заДвое.length - 1].t : null;
   const hoursSinceCarb = lastCarbT != null ? (Date.now() - lastCarbT) / 3600e3 : null;
 
   const es = data?.entries ?? [];
