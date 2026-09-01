@@ -21,7 +21,6 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 CORE="${SUGARLIFE_CORE_DIR:-}"
-
 if [ -z "$CORE" ] || [ ! -d "$CORE" ]; then
   echo "Не задан SUGARLIFE_CORE_DIR — не с чем сверять." >&2
   exit 1
@@ -103,7 +102,7 @@ echo
 known_unread() {
   cat <<'СПИСОК'
 bolusing|идёт ли болюс прямо сейчас — издание Pro, в Lite подачи нет
-progressPercent|доля подбора частоты; ход показываем словами (domain/freshness.ts), полосу не рисуем
+
 createdAtMs|когда человек нажал команду прибору — Pro: команд в Lite нет
 context|наблюдения из Apple Health (вес, пульс, активность) — экрана для них ещё нет, ядро #142
 linkChangedAtMs|когда менялась связь; лента подключений снята с «Сегодня» до разбора (#597)

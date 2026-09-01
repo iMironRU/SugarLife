@@ -62,14 +62,27 @@ export type Занятие =
      он один знает, чего именно не хватает и что сейчас делает. Пустая заметка — наш
      случай, и подпись к нему живёт в слое слов. */
   | { вид: 'неНастроен'; заметка: string | null }
-  | { вид: 'занят'; чем: string }
+  /* `доля` — 0..100, если движок её знает. `null` — не знает, и тогда полосы НЕТ.
+
+     Подбор частоты помпы идёт по списку, где заранее не сказать, на какой попытке отзовётся
+     прибор: полоса, ползущая в никуда, врёт хуже, чем честные слова. А вот добор истории
+     сенсора длится минуты и долю знает — там она и нужна (ядро #86, доехало в мосте 1.66). */
+  | { вид: 'занят'; чем: string; доля: number | null }
   | null;
 
 export function чтоСПрибором(
-  d: { registryState?: string | null; note?: string | null; progress?: string | null } | null | undefined,
+  d: {
+    registryState?: string | null; note?: string | null;
+    progress?: string | null; progressPercent?: number | null;
+  } | null | undefined,
 ): Занятие {
   if (!d) return null;
   if (d.registryState === 'NotConfigured') return { вид: 'неНастроен', заметка: d.note?.trim() || null };
   const ход = d.progress?.trim();
-  return ход ? { вид: 'занят', чем: ход } : null;
+  if (!ход) return null;
+  /* Границы обрезаем сами: полоса на 103 % или на −1 читается как поломка, а движок числа не
+     обещал выверенными — он обещал долю. */
+  const п = d.progressPercent;
+  const доля = typeof п === 'number' && Number.isFinite(п) ? Math.max(0, Math.min(100, Math.round(п))) : null;
+  return { вид: 'занят', чем: ход, доля };
 }
