@@ -9,14 +9,18 @@ import { useState, useMemo } from 'react';
 import { useDeviceConfig, setDeviceConfig, setParam, forgetDevice, isModelKnown } from '@/settings/deviceConfig';
 import ParamsForm from '@/ui/ParamsForm';
 import { pumpSpec, missingParams } from '@/domain/driverParams';
-import { BATTERY_KINDS, batteryKindName, type BatteryKind } from '@/domain/battery';
+import { batteryKindName } from '@/domain/battery';
 import { связь, предложениеСлияния, своиЖелезки, каналРоли } from '@/domain/deviceState';
-import { чтоЗаПрибор, ageText, ключиВыбора, имяМоделиПоId, драйверМодели, модельКатегории, своёЖелезо, слотМоста, расходники,
-  лентаОблака, имяВыбораМодели } from './прибор/поКатегории';
+import { чтоЗаПрибор, ключиВыбора, имяМоделиПоId, драйверМодели, модельКатегории, своёЖелезо, слотМоста, расходники,
+  лентаОблака } from './прибор/поКатегории';
 import { useМодели } from '@/показ/модели';
 import { догадкаМодели } from '@/domain/догадкаМодели';
 import ДогадкаМодели from './прибор/ДогадкаМодели';
 import { СейчасНаУстройстве, Расходники } from './прибор/Состояние';
+import { строкиСостояния } from './прибор/строкиСостояния';
+import { телеметрияМоста } from './прибор/телеметрияМоста';
+import { прямоеЧтение } from './прибор/прямоеЧтение';
+import Выборы from './прибор/Выборы';
 import Каналы from './прибор/Каналы';
 import ПоказанияГлюкометра from './прибор/ПоказанияГлюкометра';
 import ЧтоДелать from './прибор/ЧтоДелать';
@@ -37,16 +41,11 @@ import { useStore } from '@/sources/store';
 import { useChanges } from '@/settings/changes';
 import { useDeviceExtras } from '@/sources/deviceExtras';
 import { deviceAges } from '@/domain/treatmentStats';
-import { fmt } from '@/domain/units';
 import { Capacitor } from '@capacitor/core';
 import { pumpById, insulinById } from '@/domain/catalog';
 
 // В браузере прямого BLE нет и не будет — это свойство платформы, а не «пока не сделали»
 const isNative = Capacitor.isNativePlatform();
-import CatalogPicker from '@/sheets/CatalogPicker';
-import { modelItems, bridgeItems, insulinItems } from '@/sheets/modelItems';
-import DeviceScanSheet from '@/sheets/DeviceScanSheet';
-import SmbgSheet from '@/sheets/SmbgSheet';
 import { useSmbg } from '@/settings/smbg';
 import { useStack } from '@/app/stackCtx';
 import { toSegs, daily } from '@/domain/basal';
@@ -125,41 +124,20 @@ export default function DeviceSection({ onClose, cat, title }: {
   const basalTotal = basalSegs.length ? daily(basalSegs) : null;
 
   const { stateRows, supplies } = useMemo(() => {
-    type Row = { k: string; v: string };
-    const rows: Row[] = [];
-
     const ages = deviceAges(extras.events, changes);
-    if (cat === 'sensor' && ages.sensor) {
-      rows.push({ k: 'День', v: String(ages.sensor.days + 1) });
-      rows.push({ k: 'Носится', v: ageText(ages.sensor) });
-    }
-    if (cat === 'pump') {
-      if (dev?.status) rows.push({ k: 'Статус', v: dev.status });
-      /* ОСТАТОК — ОТ ДВИЖКА, КОГДА ОН ЕГО СЧИТАЕТ (#596). Кружок на «Сегодня» уже берёт его оттуда;
-         здесь стоял наш из веб-слоя, и два разных остатка на двух экранах — повод усомниться в обоих. */
-      const остатокДвижка = snap?.insulinLeft?.units;
-      const остаток = остатокДвижка ?? dev?.reservoir;
-      if (остаток != null) rows.push({ k: 'Резервуар', v: Math.round(остаток) + ' ед' });
-      /* НА СКОЛЬКО ХВАТИТ — СЛОВАМИ ДВИЖКА, А НЕ НАШИМИ (#596).
-
-         Поле `words` мы не читали вовсе, хотя ядро прислало его ещё в 1.32. Здесь для фразы есть
-         место, в отличие от плитки на «Сегодня», где помещается только «≈ 6 д 1 ч».
-
-         Своей формулировки не пишем: движок считает по падению остатка и знает про заправку
-         катетера и временные базалы; наша фраза про то же самое была бы вторым ответом на один
-         вопрос — сегодня мы такие ловили шесть раз, и один из них обещал владельцу четыре лишних
-         дня инсулина. */
-      if (snap?.insulinLeft?.words) rows.push({ k: 'Хватит', v: snap.insulinLeft.words });
-      if (dev?.pumpBattery != null) rows.push({ k: 'Батарея', v: dev.pumpBattery + '%' });
-      if (dev?.baseBasal != null) rows.push({ k: 'Базальная скорость', v: fmt(dev.baseBasal) + ' ед/ч' });
-      if (dev?.tempRate != null) rows.push({ k: 'Временный базал', v: fmt(dev.tempRate) + ' ед/ч' });
-      if (dev?.lastBolus != null) rows.push({ k: 'Последний болюс', v: fmt(dev.lastBolus) + ' ед' });
-    }
-    // расходники со сроками (§9) — пока только у помпы, из событий замен в Nightscout
-    /* Расходники со сроками (§9). Ключ рядом с названием — чтобы отметить замену
-       прямо здесь: событие в Nightscout может не появиться вовсе (проверено на живых
-       данных), и тогда возраст врёт молча. */
-    return { stateRows: rows, supplies: расходники(cat, ages) };
+    return {
+      /* Какие строки показывать — правило в `прибор/строкиСостояния.ts` и под тестами (#406).
+         Здесь остаётся только память: инстансов DeviceSection смонтировано несколько сразу
+         (список устройств + «НМГ» + «Инсулин»), а `deviceAges` проходит по всем событиям замен —
+         без памятки закрытые шторки молотили бы тысячи проходов на каждое обновление данных. */
+      stateRows: строкиСостояния(cat, {
+        прибор: dev, остаток: snap?.insulinLeft ?? null, возрастСенсора: ages.sensor,
+      }),
+      /* Расходники со сроками (§9). Ключ рядом с названием — чтобы отметить замену прямо здесь:
+         событие в Nightscout может не появиться вовсе (проверено на живых данных), и тогда
+         возраст врёт молча. */
+      supplies: расходники(cat, ages),
+    };
     /* Снимок в зависимостях: остаток и фраза про него приходят оттуда, и без него строки замирали
        бы на значениях того снимка, при котором шторку открыли. */
   }, [cat, extras.events, dev, changes, snap?.insulinLeft]);
@@ -205,20 +183,13 @@ export default function DeviceSection({ onClose, cat, title }: {
      от того, считал ли цикл; заряд из AAPS приходит только вместе с расчётом и при
      молчащем цикле пропадает вместе с ним. Чего не знаем — не рисуем: пустая строка
      «Прошивка —» выглядит как поломка, а не как отсутствие данных. */
-  const bridgeTelemetry: { k: string; v: string }[] = [];
-  const зарядМоста = bleМост?.batteryPct ?? (это.имяМостаИзНастроек ? dev?.mountBattery ?? null : null);
-  if (зарядМоста != null) bridgeTelemetry.push({ k: 'Заряд моста', v: зарядМоста + '%' });
-  if (bleМост?.firmware) bridgeTelemetry.push({ k: 'Прошивка', v: bleМост.firmware });
-  /* RSSI в дБм — отрицательное число, и меньше значит хуже. Человеку это ни о чём не
-     говорит, поэтому рядом со значением пишем словом. Пороги грубые и намеренно
-     такие: точность тут не нужна, нужен ответ «стоит ли переложить телефон ближе». */
-  if (bleМост?.rssi != null) {
-    const r = bleМост.rssi;
-    bridgeTelemetry.push({ k: 'Сигнал', v: `${r} дБм · ${r >= -70 ? 'хороший' : r >= -85 ? 'средний' : 'слабый'}` });
-  }
-  /* Что стоит за мостом — по ссылке от устройства, а не по нашим догадкам. Связь
-     направлена от железки к мосту: мост может обслуживать несколько устройств, и
-     «мост знает свою помпу» было бы неправдой. */
+  /* Что мост рассказывает о себе сам — правило в `прибор/телеметрияМоста.ts` (#406).
+     Заряд из AAPS берём запасным: он приходит только вместе с расчётом цикла и при молчащем
+     цикле пропадает вместе с ним, а прямое чтение живёт своей жизнью. */
+  const bridgeTelemetry = телеметрияМоста(bleМост, это.имяМостаИзНастроек ? dev?.mountBattery : null);
+  /* Что стоит за мостом — по ссылке от устройства, а не по нашим догадкам. Связь направлена от
+     железки к мосту: мост может обслуживать несколько устройств, и «мост знает свою помпу» было
+     бы неправдой. */
   const заМостом = bleМост
     ? (snap?.devices ?? []).filter((d) => d.behindBridgeId === bleМост.id).map((d) => d.name).join(', ')
     : '';
@@ -271,7 +242,6 @@ export default function DeviceSection({ onClose, cat, title }: {
     const ключ = ключиВыбора(cat).мост;
     if (ключ) setDeviceConfig({ [ключ]: id });
   };
-  const pickerItems = hasModel ? modelItems(cat as 'pump' | 'sensor') : [];
 
   // реестр (docs/CONNECT-UX.md §2a): статус записи — только для категорий с моделью
 
@@ -329,24 +299,27 @@ export default function DeviceSection({ onClose, cat, title }: {
      Та же ловушка, что была у плитки диспетчера, только с другой стороны. */
   const известный = железоДиспетчера(snap).find((h) => h.kind === cat) ?? null;
 
-  const directSub =
-    recordedNoModel ? 'сначала укажите модель — иначе неизвестно, как читать'
-    : !isNative ? 'только в приложении для телефона — браузер не умеет BLE'
-    : needsBridge && !имяМоста ? 'нужен мост — выбрать'
-    : !hasBleDriver ? 'драйвер этого устройства ещё в разработке'
-    : bleLive ? 'подключено'
-    : известный ? 'подключить — прибор уже заведён'
-    : 'найти прибор в эфире';
+  /* Лестница препятствий — правило в `прибор/прямоеЧтение.ts` и под тестами (#406). Здесь
+     остаётся только то, что нельзя вынести: как именно мы поступаем с ответом. */
+  const прямое = прямоеЧтение({
+    записанБезМодели: recordedNoModel,
+    нативная: isNative,
+    нуженМост: needsBridge,
+    естьМост: !!имяМоста,
+    естьДрайвер: hasBleDriver,
+    наСвязи: bleLive,
+    ужеЗаведён: !!известный,
+  });
+  const directSub = прямое.подпись;
   const directTap =
-    recordedNoModel ? () => setPick('model')
-    : !isNative ? undefined
-    : needsBridge && !имяМоста ? () => setPick('bridge')
-    : !hasBleDriver ? undefined
-    : bleLive ? undefined
-    /* Заведённому — connect по его id; незнакомому — скан. Это ровно то, что ядро и
-       просило: «для включения прямого чтения нужен connect с id из hardware[]». */
-    : известный ? () => { void sendIntent({ type: 'connect', deviceId: известный.id }); }
-    : () => setScanOpen(true);
+    прямое.делать === 'выбрать-модель' ? () => setPick('model')
+    : прямое.делать === 'выбрать-мост' ? () => setPick('bridge')
+    /* Заведённому — connect по его id; незнакомому — скан. Это ровно то, что ядро и просило:
+       «для включения прямого чтения нужен connect с id из hardware[]». */
+    : прямое.делать === 'подключить-известный' && известный
+      ? () => { void sendIntent({ type: 'connect', deviceId: известный.id }); }
+    : прямое.делать === 'искать' ? () => setScanOpen(true)
+    : undefined;
 
   /* «Забыть» должно доходить до движка, а не только до нашего конфига.
 
@@ -661,44 +634,15 @@ export default function DeviceSection({ onClose, cat, title }: {
             )}
           </>
 
-        {hasModel && (
-          <CatalogPicker
-            isOpen={pick === 'model'} onClose={() => setPick(null)}
-            title={имяВыбораМодели(cat)} subtitle="Справочник моделей"
-            items={pickerItems} selectedId={модельПрибора}
-            onSelect={setModel} currentLabel="только актуальные"
-          />
-        )}
-        {cat === 'pump' && (
-          <CatalogPicker
-            isOpen={pick === 'insulin'} onClose={() => setPick(null)}
-            title="Выбор инсулина" subtitle="Быстрый инсулин для помпы"
-            items={insulinItems} selectedId={cfg.fastInsulinId}
-            onSelect={(id) => setDeviceConfig({ fastInsulinId: id })}
-            currentLabel="только актуальные быстрые"
-          />
-        )}
-        {cat === 'pump' && (
-          <CatalogPicker
-            isOpen={pick === 'battery'} onClose={() => setPick(null)}
-            title="Батарейка помпы" subtitle="От химии зависит, что значит процент заряда"
-            items={BATTERY_KINDS.map((b) => ({ id: b.id, title: b.name, subtitle: b.note, current: true }))}
-            selectedId={cfg.pumpBatteryKind}
-            onSelect={(id) => setDeviceConfig({ pumpBatteryKind: id as BatteryKind })}
-          />
-        )}
-        {hasBridge && (
-          <CatalogPicker
-            isOpen={pick === 'bridge'} onClose={() => setPick(null)}
-            title="Выбор моста" subtitle="Трансмиттер / радио-мост"
-            items={bridgeItems} selectedId={bridgeId}
-            onSelect={setBridge} currentLabel="только актуальные"
-          />
-        )}
-        <SmbgSheet isOpen={smbgOpen} onClose={() => setSmbgOpen(false)} />
-        {hasModel && hasBleDriver && (cat === 'sensor' || cat === 'pump') && (
-          <DeviceScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} kind={cat} title={title} />
-        )}
+        <Выборы
+          cat={cat} title={title}
+          что={pick} закрыть={() => setPick(null)}
+          модельПрибора={модельПрибора} выбратьМодель={setModel} естьМодель={hasModel}
+          мосты={hasBridge} мостId={bridgeId} выбратьМост={setBridge}
+          инсулинId={cfg.fastInsulinId} батарейка={cfg.pumpBatteryKind}
+          глюкометрОткрыт={smbgOpen} закрытьГлюкометр={() => setSmbgOpen(false)}
+          поискОткрыт={scanOpen && hasModel && hasBleDriver} закрытьПоиск={() => setScanOpen(false)}
+        />
     </Section>
   );
 }
