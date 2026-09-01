@@ -1,22 +1,33 @@
 /* Живые метрики из treatments: болюсы, углеводы, базал, возрасты устройств. */
-import type { Treatment, DevPoint } from '@/domain/types';
+import type { Treatment } from '@/domain/types';
+import type { Plateau } from '@/domain/plateau';
 
-// Статистика резервуара из истории devicestatus.
-// ВАЖНО: значение резервуара у Medtronic через AAPS ненадёжно (AAPS плохо считывает
-// остаток) — скачки вверх это чаще глюк/дозаправка, а не замена. Поэтому замену
-// резервуара берём из события Insulin Change (deviceAges), а не из скачка значения.
-// Здесь считаем только текущий остаток и «залипание» (для флага «не расходуется»).
+/* СТАТИСТИКА РЕЗЕРВУАРА — ПО НАКОПЛЕННОМУ РЯДУ, А НЕ ПО ОДНОЙ ЗАГРУЗКЕ (#748).
+
+   ВАЖНО: значение резервуара у Medtronic через AAPS ненадёжно (AAPS плохо считывает остаток) —
+   скачки вверх это чаще глюк или дозаправка, а не замена. Поэтому замену резервуара берём из
+   события Insulin Change (deviceAges), а не из скачка значения. Здесь считаем только текущий
+   остаток и «залипание» — для флага «не расходуется».
+
+   Ряд приходит из копилки (`sources/db.ts`, склад `reservoir`), которую наполняет снимок движка.
+   Раньше считалось по `extras.devHist` — по нашей собственной загрузке Nightscout, а она на
+   нативной сборке мертва: на телефоне ряд был пуст, `flatHours` всегда ноль, и подсказка «остаток
+   не меняется N часов» не появлялась ни разу. Пустой ряд честно даёт ноль и здесь — но теперь
+   пустым он бывает только пока копилка не набралась, а не всегда.
+
+   Плато хранится краями (`domain/plateau.ts`), поэтому «сколько стоит» считается от последней
+   СМЕНЫ значения до последнего наблюдения — середины плато для этого не нужны. */
 export interface ReservoirStats {
   current: number | null;
   flatHours: number; // сколько часов резервуар держит значение
 }
-export function reservoirStats(points: DevPoint[]): ReservoirStats {
-  const s = points.filter((p) => p.reservoir != null).sort((a, b) => a.t - b.t) as (DevPoint & { reservoir: number })[];
-  if (s.length < 2) return { current: s[0]?.reservoir ?? null, flatHours: 0 };
+export function reservoirStats(points: Plateau[]): ReservoirStats {
+  const s = points.filter((p) => Number.isFinite(p.v) && Number.isFinite(p.t)).sort((a, b) => a.t - b.t);
+  if (s.length < 2) return { current: s[0]?.v ?? null, flatHours: 0 };
   const last = s[s.length - 1];
   let lastChangeT = s[0].t;
-  for (let i = 1; i < s.length; i++) if (s[i].reservoir !== s[i - 1].reservoir) lastChangeT = s[i].t;
-  return { current: last.reservoir, flatHours: (last.t - lastChangeT) / 3600e3 };
+  for (let i = 1; i < s.length; i++) if (s[i].v !== s[i - 1].v) lastChangeT = s[i].t;
+  return { current: last.v, flatHours: (last.t - lastChangeT) / 3600e3 };
 }
 
 

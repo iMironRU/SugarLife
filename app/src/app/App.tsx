@@ -38,6 +38,7 @@ import { useOnboarded } from '@/settings/onboarding';
 import { StackHost } from '@/app/stack';
 import { requestNotifyPermissionOnStart } from '@/platform/notify';
 import { startHistorySync } from '@/sources/historySync';
+import { копитьРядыПриборов } from '@/sources/рядыПриборов';
 import { прогретьРазделы } from '@/sections/lazy';
 import { прогретьГрафик } from '@/charts/warm';
 
@@ -247,6 +248,12 @@ export default function App() {
      иначе показания сенсора, прочитанного напрямую, в историю не попадут вовсе
      (sources/historySync.ts, SugarLifeCore#6). */
   useEffect(() => startHistorySync(), []);
+
+  /* Заряд помпы и остаток в резервуаре копим из того же снимка (#748). Вопросы к этой копилке
+     недельные — «сколько проработает на 1%», «остаток стоит сколько часов», — а в облаке за один
+     запрос лежат последние часы. Наполняла её наша загрузка Nightscout, и на телефоне она молчит:
+     копилка пустовала, а вместе с ней молча не появлялась подсказка про залипший резервуар. */
+  useEffect(() => копитьРядыПриборов(), []);
 
   /* Ощущение подключения (SugarLifeCore#18). Диффим снимки здесь, а не в компоненте
      ленты: вибро должно случиться, даже когда «Сегодня» не открыт — телефон в кармане,
