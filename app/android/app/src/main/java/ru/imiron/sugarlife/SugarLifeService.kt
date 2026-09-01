@@ -63,6 +63,7 @@ class SugarLifeService : Service() {
             else ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
             Log.i(TAG, "старт: тип ${if (тип == ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) "connectedDevice" else "dataSync (нет разрешения на Bluetooth — предел 6ч/сут на Android 15)"}")
             startForeground(NOTIF_ID, notif, тип)
+            текущийТип = тип
         } else {
             startForeground(NOTIF_ID, notif)
         }
@@ -139,13 +140,58 @@ class SugarLifeService : Service() {
         )
     }
 
+    /**
+     * РАЗРЕШЕНИЯ ПЕРЕЧИТЫВАЕМ, А НЕ ПОМНИМ С РОЖДЕНИЯ СЛУЖБЫ (#685, находка ядра).
+     *
+     * Служба спрашивала разрешения один раз, в [onCreate], и больше к ним не возвращалась. На чистой
+     * установке порядок ровно такой: служба стартует → человек ВИДИТ системный запрос → разрешает. То
+     * есть доклад «разбудить не сможем» уходит за секунду ДО того, как нажали «Разрешить», и стоит там
+     * до перезапуска процесса. Человек разрешил уведомления и продолжает читать «ночью можем не
+     * разбудить», не понимая, чего от него ещё хотят.
+     *
+     * Обещание, которое пугает без причины, учит не верить и настоящему предупреждению.
+     *
+     * Доклад дешёвый: [Доставка.доложить] сам гасит повтор, если ответ не изменился, — так что звать
+     * его на каждый запуск службы ничего не стоит.
+     */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Доставка.доложить(applicationContext)
+        поправитьТип()
         // Нажали кнопку прямо в уведомлении (#395) — не открывая приложение.
         when (intent?.action) {
             ОТДАТЬ -> отдатьПриборы("нажали в уведомлении")
             ВЗЯТЬ -> взятьПриборы()
         }
         return START_STICKY
+    }
+
+    /** Тип, с которым служба сейчас работает. Ноль — до Android 10, там типов нет вовсе. */
+    private var текущийТип: Int = 0
+
+    /**
+     * ПОДНЯТЬ ТИП СЛУЖБЫ, ЕСЛИ BLUETOOTH РАЗРЕШИЛИ ПОЗЖЕ (#685).
+     *
+     * Цена ошибки здесь часовая, а не косметическая: у `dataSync` на Android 15 предел шесть часов в
+     * сутки на всё приложение. Человек выдал Bluetooth после старта — тип остался прежним, и под утро
+     * наблюдение выключается системой. Связать это с тем, в каком порядке нажимались кнопки неделю
+     * назад, не сможет никто.
+     *
+     * Повторный `startForeground` с другим типом — документированный способ его сменить; пересоздавать
+     * службу ради этого не нужно. Но если платформа откажет, мы не падаем: тип остаётся прежним, и
+     * человек теряет часы, а не приложение. Отказ пишем в журнал — молчание здесь читалось бы как успех.
+     *
+     * Вниз не понижаем никогда. Разрешение можно и отобрать, но `connectedDevice` без него всё равно
+     * работает до перезапуска, а понижение сделало бы шесть часов из ничего.
+     */
+    private fun поправитьТип() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        if (текущийТип == ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) return
+        if (!bluetoothРазрешён(this)) return
+        runCatching {
+            startForeground(NOTIF_ID, уведомление(держим = держимПриборы), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+            текущийТип = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+            Log.i(TAG, "Bluetooth разрешили позже — тип службы поднят до connectedDevice, предела 6ч/сут больше нет")
+        }.onFailure { Log.w(TAG, "тип службы поднять не удалось, остаёмся на dataSync (предел 6ч/сут): $it") }
     }
 
     /**
@@ -437,6 +483,8 @@ class SugarLifeService : Service() {
         /** Действия уведомления: отпустить приборы и взять их обратно (#395). */
         private const val ОТДАТЬ = "ru.imiron.sugarlife.RELEASE_DEVICES"
         private const val ВЗЯТЬ = "ru.imiron.sugarlife.TAKE_DEVICES"
+        /** Перечитать разрешения: доклад движку и тип службы (#685). */
+        private const val ПЕРЕСМОТРЕТЬ = "ru.imiron.sugarlife.RECHECK"
         private const val NOTIF_ID = 4711
         private const val PREFS = "sugarlife-service"
         private const val KEY_ВКЛЮЧЁН = "monitoring-on"
@@ -462,6 +510,24 @@ class SugarLifeService : Service() {
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ВКЛЮЧЁН, false).apply()
             хранилищеУстройства(ctx).edit().putBoolean(KEY_ВКЛЮЧЁН, false).apply()
             ctx.stopService(Intent(ctx, SugarLifeService::class.java))
+        }
+
+        /**
+         * ПЕРЕЧИТАТЬ РАЗРЕШЕНИЯ (#685). Звать оттуда, где они могли измениться, — прежде всего с
+         * возврата приложения на экран: системный запрос разрешений закрывается ровно так.
+         *
+         * Доклад движку идёт ВСЕГДА, даже если службы нет: он про телефон, а не про службу, и
+         * `Доставка` сама промолчит, если ответ не изменился. А вот службу трогаем только когда
+         * человек её включал: `startForegroundService` поднял бы выключенную, то есть завёл бы
+         * наблюдение, от которого отказались.
+         */
+        fun пересмотреть(ctx: Context) {
+            Доставка.доложить(ctx)
+            if (!былВключён(ctx)) return
+            val i = Intent(ctx, SugarLifeService::class.java).setAction(ПЕРЕСМОТРЕТЬ)
+            runCatching {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(i) else ctx.startService(i)
+            }.onFailure { Log.w(TAG, "пересмотр разрешений не дошёл до службы: $it") }
         }
 
         /** Был ли мониторинг включён до перезагрузки. Поднимать его после загрузки самовольно нельзя:
