@@ -1,4 +1,5 @@
 import { IonModal } from '@ionic/react';
+import { шторкаОткрылась, шторкаЗакрылась } from '@/app/возврат';
 import Иконка from './Иконка';
 import { closeOutline, chevronBack } from 'ionicons/icons';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -56,6 +57,20 @@ export default function Sheet({ isOpen, onClose, onBack, title, subtitle, footer
   footer?: ReactNode;
   children: ReactNode;
 }) {
+  /* ОТКРЫТАЯ ШТОРКА — НЕЗАКОНЧЕННОЕ ДЕЙСТВИЕ (#703).
+
+     Правило «вернулся из фона — открывать „Сегодня"» не должно её трогать: там могут быть
+     набранные, но не сохранённые данные, и увести человека значит стереть его работу.
+
+     Считаем шторки здесь, а не спрашиваем DOM: «есть ли ion-modal без класса overlay-hidden»
+     было бы гаданием по вёрстке чужого компонента — класс переименуют в следующей версии
+     Ionic, и правило замолчит молча. */
+  useEffect(() => {
+    if (!isOpen) return;
+    шторкаОткрылась();
+    return () => шторкаЗакрылась();
+  }, [isOpen]);
+
   const модалка = useRef<HTMLIonModalElement>(null);
   /* УЗЕЛ ЧЕРЕЗ СОСТОЯНИЕ, А НЕ ЧЕРЕЗ ref — И ЭТО НЕ ПРИДИРКА К СТИЛЮ (#541).
 

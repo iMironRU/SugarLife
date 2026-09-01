@@ -1,4 +1,5 @@
 import { IonApp, createGesture } from '@ionic/react';
+import { следитьЗаВозвратом } from '@/app/возврат';
 import Иконка from '@/ui/Иконка';
 import { Suspense, lazy, useEffect, useRef } from 'react';
 import { barChart, pulse, home, water, settingsOutline, medkit } from 'ionicons/icons';
@@ -45,6 +46,13 @@ function Pager() {
   const idx = useTab();
   const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+
+  /* ВЕРНУЛСЯ ИЗ ФОНА ЧЕРЕЗ ЧЕТВЕРТЬ ЧАСА — ОТКРЫВАЕМ «СЕГОДНЯ» (#703, app/возврат.ts).
+
+     Правило «где человек был» работало только при перезапуске приложения, а сворачивают его
+     намного чаще, чем оно перезапускается: правило было написано для редкого случая и не
+     работало в частом. */
+  useEffect(() => следитьЗаВозвратом(), []);
 
   // применить позицию при смене вкладки (кнопки таб-бара / крылья панели) — плавно
   useEffect(() => {
