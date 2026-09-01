@@ -1,4 +1,5 @@
 import Иконка from '@/ui/Иконка';
+import { показЗаряда, type Знание } from '@/показ/пропажаЗаряда';
 import { сколькоНазад } from '@/слова/время';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline, warningOutline } from 'ionicons/icons';
@@ -52,6 +53,13 @@ const безАдреса = (имя?: string | null) => имя?.replace(/\s*\([^)
 
 /** Ниже этого заряд не «низкий», а «на исходе»: цвет и вес меняются вместе, число одно. */
 const ЗАРЯД_НА_ИСХОДЕ = 20;
+
+/* ЧТО МЫ ЗНАЛИ О ЗАРЯДАХ В ЭТОМ СЕАНСЕ (#715).
+
+   Модулем, а не состоянием компонента: панель перерисовывается сотни раз, и знание должно
+   пережить перерисовку, но НЕ пережить перезапуск приложения. После перезапуска мы про заряд
+   честно ничего не знаем, и вопрос там был бы выдуманным знанием. */
+const знали = new Map<string, Знание>();
 const battColor = (p: number) => (p <= ЗАРЯД_НА_ИСХОДЕ ? 'var(--c-danger)' : p <= 50 ? 'var(--c-carb)' : 'var(--c-glu)');
 
 /* Метка связи у названия крыла.
@@ -220,11 +228,29 @@ export default function HeroPanel() {
   // Полоса зарядов устройств над панелью — расширяемо: помпа, телефон-аплоадер, мост
   // (OrangeLink/RileyLink, pump.extended.OrangeLinkBattery от AAPS). Показываем только
   // то, что реально известно, без пустых иконок.
-  const batteries: { id: string; icon: string; value: number | null }[] = [
+  /* ПРОПАЖА ЗАРЯДА — СОБЫТИЕ, А НЕ ОТСУТСТВИЕ (#715).
+
+     Правило «без пустых иконок» верное, а итог его здесь был неверен: последним, что владелец
+     видел у помпы, было 3 %, потом значок исчез — и «мы не знаем» стало выглядеть как «в
+     порядке». Между ними разница в часы до остановки подачи.
+
+     Отличаем «никогда не знали» от «знали и перестали». Первое — законная пустота: ни помпы,
+     ни моста может просто не быть. Второе — новость, и место под неё занимаем вопросом.
+
+     Помним в памяти сеанса, а не в хранилище: после перезапуска мы про этот заряд ничего не
+     знаем честно, и рисовать вопрос там значило бы выдумать знание, которого не было. */
+  const сейчасМс = Date.now();
+  const заряды: { id: string; icon: string; value: number | null }[] = [
     { id: 'pump', icon: flash, value: расх.заряд },
     { id: 'phone', icon: phonePortraitOutline, value: dev?.uploaderBattery ?? null },
     { id: 'mount', icon: gitNetworkOutline, value: dev?.mountBattery ?? null },
-  ].filter((b) => b.value != null);
+  ];
+  for (const з of заряды) {
+    if (з.value != null && Number.isFinite(з.value)) знали.set(з.id, { значение: з.value, когдаМс: сейчасМс });
+  }
+  const batteries = заряды
+    .map((з) => ({ ...з, показ: показЗаряда(з.value, знали.get(з.id), сейчасМс, ЗАРЯД_НА_ИСХОДЕ) }))
+    .filter((з): з is typeof з & { показ: NonNullable<typeof з.показ> } => з.показ != null);
 
   // строка синхронизации: слева — как мы получаем (нами), справа — возраст
   // последнего значения в Nightscout, чтобы видеть задержку. + офлайн.
@@ -401,13 +427,24 @@ export default function HeroPanel() {
         </span>
         {batteries.length > 0 && (
           <span className="hp-batteries">
-            {batteries.map((b) => (
-              <span key={b.id}
-                className={'hp-batt-item' + ((b.value as number) <= ЗАРЯД_НА_ИСХОДЕ ? ' на-исходе' : '')}
-                style={{ color: battColor(b.value as number) }}>
-                <Иконка icon={b.icon} />{b.value}%
-              </span>
-            ))}
+            {batteries.map((b) => {
+              const число = b.показ.вид === 'число' ? b.показ.значение : null;
+              /* Тревожность у вопроса сохраняем: «то, что почти кончилось, пропало из виду» —
+                 это хуже, чем просто «не знаем», и выглядеть одинаково они не должны. */
+              const наИсходе = b.показ.вид === 'число'
+                ? b.показ.значение <= ЗАРЯД_НА_ИСХОДЕ
+                : b.показ.тревожно;
+              return (
+                <span key={b.id} className={'hp-batt-item' + (наИсходе ? ' на-исходе' : '')}
+                  /* Вопрос без числа красим приглушённым: он про незнание, а не про уровень.
+                     Тревожный — тем же красным, что и низкий заряд. */
+                  style={{ color: число != null ? battColor(число)
+                    : наИсходе ? 'var(--c-danger)' : 'var(--color-neutral-500)' }}
+                  title={число != null ? undefined : 'Заряд был известен, а сейчас не приходит'}>
+                  <Иконка icon={b.icon} />{число != null ? `${число}%` : '?'}
+                </span>
+              );
+            })}
           </span>
         )}
       </div>
