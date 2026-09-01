@@ -63,11 +63,13 @@ object Доставка {
            разрешения это по-прежнему девять минут, и доложить ноль значило бы дать движку пообещать
            человеку время, которого система не даст. */
         val точность = Точность.точностьМин(app)
-        val сказать = "$ответ/$точность"
+        val путь = маршрут(app)
+        val сказать = "$ответ/$точность/$путь"
         if (сказать == последнееСказанное) return
         последнееСказанное = сказать
         поток.execute {
-            val json = """{"type":"reportDelivery","canWake":"$ответ","tickPrecisionMin":$точность}"""
+            val json =
+                """{"type":"reportDelivery","canWake":"$ответ","tickPrecisionMin":$точность,"route":"$путь"}"""
             runCatching { EngineHolder.engine(app).sendIntent(json) }
                 .onSuccess { Log.i(TAG, "доложили: $ответ") }
                 .onFailure {
@@ -81,6 +83,72 @@ object Доставка {
 
     /* Включён ли тихий режим ПРЯМО СЕЙЧАС. Без этого «нет доступа к „Не беспокоить“» пришлось бы читать
        как вечное «разбудим тихо» — а человек включает тихий режим не всегда. */
+    /**
+     * КУДА СЕЙЧАС ИДЁТ ЗВУК (эпик SugarLifeCore#123).
+     *
+     * Поле `route` живёт в контракте с моста 1.31, движок его читает, светофор и звуковая опора на
+     * него опираются — а посылать его не начала НИ ОДНА платформа. То есть все правила про машину не
+     * срабатывали ни разу: ни «не поднимать громкость», ни «не разворачивать на весь экран», ни, с
+     * сегодняшнего дня, «не держать опору».
+     *
+     * ОПРЕДЕЛЯЕМ ПО МАРШРУТУ, А НЕ ПО ПЕРЕМЕЩЕНИЮ. Мы не узнаём, едет ли человек и водитель ли он, —
+     * и не должны. Смотрим на две вещи: режим автомобиля (Android Auto объявляет его системе) и класс
+     * подключённого звукового устройства — автомобильная аудиосистема и громкая связь объявляют себя
+     * сами.
+     *
+     * Наушники и колонку различаем тоже: «прозвучало» не значит «услышал», и человеку об этом
+     * говорится (ЗвуковаяОбстановка в ядре).
+     */
+    fun маршрут(ctx: Context): String {
+        val ui = ctx.getSystemService(Context.UI_MODE_SERVICE) as? android.app.UiModeManager
+        if (ui?.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_CAR) return "car"
+        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager ?: return "phone"
+        val выходы = runCatching {
+            am.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS).toList()
+        }.getOrDefault(emptyList())
+        var наушники = false
+        var колонка = false
+        for (у in выходы) {
+            when (у.type) {
+                android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+                -> return "car"   // громкая связь — почти всегда машина
+                android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET,
+                android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+                android.media.AudioDeviceInfo.TYPE_USB_HEADSET,
+                -> наушники = true
+                android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+                -> if (машинаПоКлассу(ctx)) return "car" else наушники = true
+                android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER,
+                android.media.AudioDeviceInfo.TYPE_HDMI,
+                -> колонка = true
+            }
+        }
+        return when {
+            наушники -> "headphones"
+            колонка -> "speaker"
+            else -> "phone"
+        }
+    }
+
+    /**
+     * Объявляет ли подключённое устройство себя автомобильным.
+     *
+     * Bluetooth-устройства сообщают свой класс, и автомобильные аудиосистемы честно ставят
+     * «автомобильное аудио» или «громкая связь». Наушники ставят «наушники» — их мы за машину не
+     * считаем, иначе человек с наушниками лишится подъёма громкости, который ему как раз нужен.
+     */
+    private fun машинаПоКлассу(ctx: Context): Boolean = runCatching {
+        val bm = ctx.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager
+            ?: return false
+        val подключены = bm.getConnectedDevices(android.bluetooth.BluetoothProfile.GATT) +
+            bm.adapter?.bondedDevices.orEmpty()
+        подключены.any { у ->
+            val к = у.bluetoothClass?.deviceClass ?: 0
+            к == android.bluetooth.BluetoothClass.Device.AUDIO_VIDEO_CAR_AUDIO ||
+                к == android.bluetooth.BluetoothClass.Device.AUDIO_VIDEO_HANDSFREE
+        }
+    }.getOrDefault(false)
+
     private fun тихийРежим(ctx: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

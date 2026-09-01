@@ -817,6 +817,30 @@ class SugarLifeBridgePlugin : Plugin() {
         call.resolve(JSObject().put("supported", true).put("asked", ок))
     }
 
+    /**
+     * ЗВУКОВАЯ ОПОРА (SugarLifeCore#123): держаться воспроизведением на прошивках, которые выгружают
+     * приложения.
+     *
+     * Без аргумента — сообщает текущее состояние. С `enabled` — включает или выключает и запоминает.
+     *
+     * Выключено по умолчанию намеренно: на стоковом Android служба переднего плана справляется сама, а
+     * цена есть — телефон начинает считать нас источником звука, и магнитола в машине переключится на
+     * нас. Включать имеет смысл там, где журнал жизни показал, что приложение выгружали.
+     */
+    @PluginMethod
+    fun audioKeepalive(call: PluginCall) {
+        val prefs = context.getSharedPreferences("sugarlife-alarms", android.content.Context.MODE_PRIVATE)
+        call.getBoolean("enabled")?.let { хотим ->
+            prefs.edit().putBoolean("audioKeepalive", хотим).apply()
+            if (хотим) ЗвуковаяОпора.начать(context.applicationContext) else ЗвуковаяОпора.выключить()
+        }
+        call.resolve(
+            JSObject()
+                .put("enabled", prefs.getBoolean("audioKeepalive", false))
+                .put("running", ЗвуковаяОпора.работает),
+        )
+    }
+
     @PluginMethod
     fun testAlarm(call: PluginCall) {
         Тревоги.проверочная(context.applicationContext)

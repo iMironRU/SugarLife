@@ -166,6 +166,9 @@
     <!-- Тип connectedDevice — основной для нас (#380): обмен с прибором по Bluetooth, без предела
          в 6 часов, который есть у dataSync на Android 15. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- Звуковая опора (SugarLifeCore#123): держимся воспроизведением на прошивках, которые выгружают
+         приложения по своему усмотрению. Выключено по умолчанию; на стоковом Android не нужно. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Обмен с прибором нельзя прерывать посреди (#380): побудка помпы длится 12 секунд, за ней
          шестнадцать кадров страницы истории. Foreground-сервис держит ПРОЦЕСС, но не мешает
