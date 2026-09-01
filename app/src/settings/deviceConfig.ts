@@ -42,7 +42,14 @@ function load(): DeviceConfig {
 let state = load();
 const subs = new Set<() => void>();
 
-function getDeviceConfig(): DeviceConfig { return state; }
+export function getDeviceConfig(): DeviceConfig { return state; }
+
+/* Подписка ВНЕ React: настройки нужны не только экранам. Отправитель выбранного инсулина движку —
+   не компонент, и ждать перерисовки, чтобы сказать движку «человек колет Fiasp», незачем. */
+export function подписатьсяНаНастройки(cb: () => void): () => void {
+  subs.add(cb);
+  return () => { subs.delete(cb); };
+}
 export function setDeviceConfig(patch: Partial<DeviceConfig>): void {
   state = { ...state, ...patch };
   записатьJson(KEY, state);
