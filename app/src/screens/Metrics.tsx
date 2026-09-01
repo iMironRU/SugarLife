@@ -1,5 +1,3 @@
-import { IonSpinner } from '@ionic/react';
-import { ПЕРИОДЫ_РАЗБОРА, дней } from '@/domain/периоды';
 import Иконка from '@/ui/Иконка';
 import { useTab } from '@/app/nav';
 import { water, nutrition, medkit } from 'ionicons/icons';
@@ -7,7 +5,6 @@ import ЧипыПотоков, { type Поток } from '@/ui/Потоки';
 
 import { useState } from 'react';
 import { useHistory, useTreatments } from '@/sources/db';
-import { useBackfilling } from '@/sources/backfill';
 import { stats } from '@/domain/agp';
 import { carbStats, insulinDaily, carbsByDay, insulinByDay } from '@/domain/treatmentStats';
 import { fmt, toUnits, unitLabel, useUnit, useCarbUnit, toCarbs, carbUnitLabel } from '@/domain/units';
@@ -104,9 +101,6 @@ export default function Metrics() {
 
   // Честно предупреждаем, пока бэкфилл ещё не набрал полный период (данные неполные).
   // Как только докачка закончилась — прячем, даже если данных меньше (значит столько и есть).
-  const backfilling = useBackfilling();
-  const oldestHave = metric === 'glucose' ? entries[0]?.t : treatments[0]?.t;
-  const gathering = backfilling && (oldestHave == null || oldestHave > Date.now() - days * 86400e3 + 2 * 86400e3);
 
   const s = entries.length ? stats(entries) : null;
   const id = insulinDaily(tempBasals, events);
@@ -173,12 +167,9 @@ export default function Metrics() {
               выбрать={(п) => setMetric(МЕТРИКА_ПОТОКА[п])} />
           </ПериодРазбора>
 
-          {gathering && (
-            <div className="gather-note">
-              <IonSpinner name="crescent" />
-              <span>Собираем историю за {days} дн — данные ещё пополняются, показано не за весь период.</span>
-            </div>
-          )}
+          {/* Плашка догрузки теперь общая на весь раздел (ui/ПолнотаДанных.tsx, #737) и
+              приезжает вместе с шапкой периода: пока она была только здесь, «Анализ» в ту
+              же минуту молча показывал находки по той же недочитанной истории. */}
 
           {metric === 'glucose' ? (
             s ? (
