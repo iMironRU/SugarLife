@@ -135,10 +135,26 @@ export function useHistory(
          не зовёт с minRefreshMs. */
       if (!принудительно && minRefreshMs && Date.now() - последний < minRefreshMs) return;
       последний = Date.now();
-      getSince(Date.now() - windowMs)
-        .then((e) => {
-          срез = { windowMs, entries: e, at: Date.now() };
-          if (!cancel) setState({ entries: e, loading: false });
+      /* ЧИТАЕМ НЕ УЖЕ, ЧЕМ УЖЕ ЛЕЖИТ (SugarLife#734).
+
+         Срез один на всё приложение, а просителей у него несколько и окна у них разные:
+         вкладка «Анализ» просит вдвое шире выбранного периода, значок находок — ровно
+         период, «Отчёт» — сразу две недели и девяносто дней.
+
+         Пока чтение клало в срез РОВНО своё окно, каждый следующий проситель обнаруживал
+         срез уже своего и шёл читать базу заново — по кругу, отбирая друг у друга то, что
+         секунду назад лежало в памяти. Правило «узкое уже внутри широкого» при этом
+         работало ровно один раз: до первого чужого чтения.
+
+         Читаем по самому широкому из известных окон. Лишние записи стоят одного прохода
+         по массиву, а сужение стоит полного чтения базы: на девяноста днях это 127 тысяч
+         записей и треть секунды — те самые «моргает и задумывается». */
+      const широта = Math.max(windowMs, срез?.windowMs ?? 0);
+      getSince(Date.now() - широта)
+        .then((все) => {
+          срез = { windowMs: широта, entries: все, at: Date.now() };
+          const мои = изСреза(срез, windowMs, Date.now()) ?? все;
+          if (!cancel) setState({ entries: мои, loading: false });
         })
         .catch(() => { if (!cancel) setState((s) => ({ ...s, loading: false })); });
     };
@@ -236,9 +252,11 @@ export function useTreatments(windowMs: number, { paused = false, minRefreshMs =
     const load = (принудительно = false) => {
       if (!принудительно && minRefreshMs && Date.now() - последний < minRefreshMs) return;
       последний = Date.now();
-      getTreatmentsSince(Date.now() - windowMs).then((t) => {
-        срезЛечения = { windowMs, entries: t, at: Date.now() };
-        if (!cancel) setTs(t);
+      // То же правило, что у истории выше: сузив общий срез, мы заставим соседа перечитать.
+      const широта = Math.max(windowMs, срезЛечения?.windowMs ?? 0);
+      getTreatmentsSince(Date.now() - широта).then((все) => {
+        срезЛечения = { windowMs: широта, entries: все, at: Date.now() };
+        if (!cancel) setTs(изСреза(срезЛечения, windowMs, Date.now()) ?? все);
       }).catch(() => {});
     };
     if (!paused) load(!готовое);
