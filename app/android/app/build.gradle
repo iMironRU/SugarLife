@@ -113,6 +113,16 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    testOptions {
+        // ЗАГЛУШКИ ANDROID В ОБЫЧНЫХ ТЕСТАХ МОЛЧАТ, А НЕ ПАДАЮТ.
+        // По умолчанию любой вызов android.jar в JVM-тесте бросает «not mocked». Из-за этого
+        // калибратор было не проверить вовсе: он пишет в журнал (android.util.Log) на настройке.
+        // Плата за это честная и её надо знать: заглушки теперь возвращают пустые значения молча,
+        // поэтому тест, случайно опершийся на настоящее поведение Android, увидит не ошибку, а ноль.
+        // Такие проверки — на приборе, а здесь только наша собственная логика.
+        unitTests.returnDefaultValues = true
+    }
 }
 
 repositories {
