@@ -64,6 +64,20 @@ export function toUnits(mmol: number, u: Unit = unit): string {
   return u === 'mgdl' ? String(Math.round(mmol * MGDL_PER_MMOL)) : fmt(mmol);
 }
 
+/* РАЗНИЦА СО ЗНАКОМ (#698). Дельта отвечает на «куда идёт», и знак в ней — половина ответа:
+   «0,3» и «−0,3» это подъём и падение, а не одно число в разном оформлении.
+
+   Ноль пишем БЕЗ знака: «+0,0» обещает подъём, которого нет. Правило то же, что у `fmt`, — минуса
+   у нуля не бывает (#517), только здесь пропадает и плюс.
+
+   Минус — типографский (−), а не дефис: в столбце цифр дефис читается как перенос. */
+export function toUnitsDelta(mmol: number, u: Unit = unit): string {
+  const v = u === 'mgdl' ? Math.round(mmol * MGDL_PER_MMOL) : Math.round(mmol * 10) / 10;
+  if (v === 0) return u === 'mgdl' ? '0' : '0,0';
+  const тело = u === 'mgdl' ? String(Math.abs(v)) : Math.abs(v).toFixed(1).replace('.', ',');
+  return (v > 0 ? '+' : '−') + тело;
+}
+
 // --- единицы углеводов: граммы ⇄ Х.Е. (хлебные единицы) ---
 // Внутри всё храним и считаем в ГРАММАХ; Х.Е. — только способ показа/ввода.
 export type CarbUnit = 'g' | 'xe';

@@ -50,6 +50,59 @@
 .reading-time { font-size: 0.875rem; flex: 1; }
 .reading-val { font-size: 0.9375rem; margin-right: 14px; }
 .reading-arrow { font-size: 0.9375rem; color: var(--color-neutral-400); }
+/* ===== Лента НМГ: пятиминутки и три дельты (#698) ===== */
+/* Пять колонок одной сеткой: шапка и строки обязаны совпадать по столбцам, иначе подпись
+   «45 мин» окажется над числом за пять. Ширины у дельт равные и фиксированные — числа в
+   столбце должны стоять друг под другом, а не плясать от длины. */
+.лента-шапка, .лента-строка {
+  display: grid;
+  grid-template-columns: 1fr 4rem 2.9rem 2.9rem 2.9rem;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+}
+.лента-шапка {
+  padding: 6px 16px;
+  /* Единицы в шапке ломались на две строки («ммоль» / «л») и уводили столбец вниз: у заголовка
+     столбца перенос значит, что столбец узок, а не что слово длинное. */
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  color: var(--color-neutral-500);
+  text-transform: lowercase;
+}
+.лента-строка {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-neutral-800);
+  background: transparent;
+  border-left: 0; border-right: 0; border-top: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.лента-строка:last-child { border-bottom: 0; }
+.лента-строка.раскрыта { background: color-mix(in srgb, var(--color-neutral-700) 35%, transparent); }
+.лента-время { font-size: 0.875rem; display: flex; align-items: baseline; gap: 6px; }
+/* Сколько минутных внутри: подсказка, что строку есть смысл раскрывать. */
+.лента-сколько { font-size: 0.6875rem; color: var(--color-neutral-500); }
+.лента-значение { font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+/* ЦВЕТОМ НАПРАВЛЕНИЕ НЕ КРАСИМ. Правило 4 свода поверхностей: цвет означает зону и ничего
+   больше. Подъём сам по себе не беда и не благо — его смысл зависит от того, откуда и куда;
+   покрасив дельту, мы бы вынесли приговор вместо числа. Направление несёт знак. */
+.лента-дельта { font-size: 0.8125rem; font-variant-numeric: tabular-nums; text-align: right; color: var(--color-neutral-300); }
+/* Прочерк — ответ «не из чего считать», и выглядеть он должен тише числа, а не как число. */
+.лента-дельта.молчит { color: var(--color-neutral-600); }
+.лента-минуты { padding: 2px 16px 10px 16px; border-bottom: 1px solid var(--color-neutral-800); }
+.лента-минута {
+  display: grid;
+  grid-template-columns: 1fr 4rem 1.5rem;
+  gap: 4px;
+  padding: 5px 0;
+  font-size: 0.8125rem;
+  color: var(--color-neutral-400);
+  font-variant-numeric: tabular-nums;
+}
+
 .mon-empty { padding: 16px; font-size: 0.8125rem; color: var(--color-neutral-500); text-align: center; }
 
 /* ===== Инсулин ===== */
