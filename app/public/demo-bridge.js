@@ -12,6 +12,8 @@
    Живёт вне бандла и на чистом JS по той же причине, что и сторож запуска: он должен
    встать ДО того, как приложение спросит мост. */
 (function () {
+  var Б = 'https://wiki4app.crankypanky.ru/help/';
+  var З = 'https://github.com/iMironRU/sugarlife-wiki/blob/main/help/';
   var КЛЮЧ = 'sl-демо';
   var хочет = /[?&](демо|demo)=1/.test(location.search);
   if (хочет) { try { sessionStorage.setItem(КЛЮЧ, '1'); } catch (e) { /* приватный режим */ } }
@@ -74,6 +76,36 @@
 
   var снимок = {
     bridgeRevision: '1.10',
+    /* КАРТА ОБЪЯСНЕНИЙ — как у движка (ядро core/contract/Help.kt, наш #740).
+
+       Без неё демо не проходит путь целиком: ссылки «Подробнее» в коде есть, а показать их
+       нечем — показываем мы их только по теме из снимка. Ровно на этом я и остановился,
+       проверяя правку: блок застоя нарисовался, ссылка нет, и это было верное поведение, а
+       не поломка. Проверять нечем — значит демо неполон. */
+    help: {
+      calibration: { url: Б + 'calibration', mirror: З + 'calibration.md' },
+      smoothing: { url: Б + 'smoothing', mirror: З + 'smoothing.md' },
+      deviceBusy: { url: Б + 'device-busy', mirror: З + 'device-busy.md' },
+      sensorCode: { url: Б + 'sensor-code', mirror: З + 'sensor-code.md' },
+      pumpSerial: { url: Б + 'pump-serial', mirror: З + 'pump-serial.md' },
+      cloudVsDirect: { url: Б + 'cloud-vs-direct', mirror: З + 'cloud-vs-direct.md' },
+      nightscout: { url: Б + 'nightscout', mirror: З + 'nightscout.md' },
+      penInsulin: { url: Б + 'pen-insulin', mirror: З + 'pen-insulin.md' },
+      alarms: { url: Б + 'alarms', mirror: З + 'alarms.md' },
+      forecast: { url: Б + 'forecast', mirror: З + 'forecast.md' },
+      sleep: { url: Б + 'sleep', mirror: З + 'sleep.md' },
+      exactAlarms: { url: Б + 'exact-alarms', mirror: З + 'exact-alarms.md' },
+      scale: { url: Б + 'scale', mirror: З + 'scale.md' },
+      companion: { url: Б + 'companion', mirror: З + 'companion.md' },
+      cadence: { url: Б + 'cadence', mirror: З + 'cadence.md' },
+      readiness: { url: Б + 'readiness', mirror: З + 'readiness.md' },
+      twoSensors: { url: Б + 'two-sensors', mirror: З + 'two-sensors.md' },
+      stayingAlive: { url: Б + 'staying-alive', mirror: З + 'staying-alive.md' },
+      appleHealth: { url: Б + 'apple-health', mirror: З + 'apple-health.md' },
+      staleCloud: { url: Б + 'stale-cloud', mirror: З + 'stale-cloud.md' },
+      insulinActive: { url: Б + 'insulin-active', mirror: З + 'insulin-active.md' },
+      carbsToNightscout: { url: Б + 'carbs-to-nightscout', mirror: З + 'carbs-to-nightscout.md' }
+    },
     monitor: { glucose: '7,8', unit: 'ммоль/л', trend: '→', status: 'Live', link: 'Streaming', live: true,
       iob: '1,2', cob: '0', reservoir: '37 ед', battery: '62%', updatedAtMs: сейчас - 60000,
       /* Застой в облаке (мост 1.56, ядро #157). В демо он включён нарочно: строка стоит у самого
