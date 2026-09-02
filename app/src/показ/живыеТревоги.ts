@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSnapshot, sendIntent, type ActiveAlarmView } from '@/sources/bridge';
-import { заголовокТревоги, текстТревоги, весУровня } from '@/domain/тревогаСлова';
+import { заголовокТревоги, текстТревоги, весУровня } from '@/слова/тревогаСлова';
 
 /* ТРЕВОГА, НА КОТОРУЮ НЕЧЕМ ОТВЕТИТЬ (SugarLife#482).
 
