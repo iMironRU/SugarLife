@@ -7,9 +7,9 @@
      нужна лишь при смене нативного кода/зависимостей.
    iOS-нативка через APK обновляться не может (только App Store), но OTA работает и на iOS. */
 import { useSyncExternalStore } from 'react';
+import { ПО_ВОЗДУХУ, обновитель } from '@/издание';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { прочитать, записать, убрать, прочитатьJson, записатьJson } from '@/settings/storage';
-import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { этоНашПерезапуск } from '@/app/местоStore';
 import { вЖурналДвижка, sendIntent } from '@/sources/bridge';
 
@@ -61,7 +61,7 @@ export type UpdateResult = 'updated' | 'current' | 'error';
 // Подтвердить Capgo, что бандл ожил (иначе откат к предыдущему). No-op в вебе.
 export async function notifyAppReady(): Promise<void> {
   if (!isNative) return;
-  try { await CapacitorUpdater.notifyAppReady(); } catch { /* ignore */ }
+  try { await (await обновитель())?.notifyAppReady(); } catch { /* ignore */ }
 }
 
 export interface ОтаБандл { build: string; version: string; url: string }
@@ -79,6 +79,9 @@ export interface ОтаБандл { build: string; version: string; url: string 
    успокаивает, второе означает, что человек может сидеть на старой сборке и не знать
    об этом. Свести их в null значило бы соврать одним из двух способов. */
 export async function узнатьOta(): Promise<ОтаБандл | 'нет' | 'ошибка'> {
+  /* Pro по воздуху не обновляется (#294): версия прибита сборкой. Отвечаем «нет», а не ошибкой —
+     обновления действительно нет, и это нормальное состояние, а не поломка. */
+  if (!ПО_ВОЗДУХУ) return 'нет';
   if (!isNative) return 'ошибка';
   return спроситьСервер();
 }
@@ -93,6 +96,7 @@ export async function узнатьOta(): Promise<ОтаБандл | 'нет' | '
    Манифест — 115 байт и один запрос. Он ничего не чинит, но отвечает на вопрос
    «я отстал?» независимо от воркера, кэшей и того, что там браузер решил про sw.js. */
 export async function спроситьСервер(): Promise<ОтаБандл | 'нет' | 'ошибка'> {
+  if (!ПО_ВОЗДУХУ) return 'нет';
   try {
     /* В вебе спрашиваем СВОЙ адрес, а не канонический домен. Причин две, и обе про то,
        чтобы ответ вообще был: чужой домен — это CORS, и запрос упал бы молча, а мы
@@ -167,6 +171,9 @@ export function useХодOta(): number | null {
 }
 
 export async function применитьOta(б: ОтаБандл): Promise<boolean> {
+  /* Второй заслон рядом с первым намеренно: применение необратимо, и полагаться на то, что сюда не
+     позовут, нельзя. */
+  if (!ПО_ВОЗДУХУ) return false;
   /* Перезапуск наш — человек должен вернуться туда, где стоял (#400). Отметка ставится
      до загрузки: она переживает и перезапуск webview, и неудачу — во втором случае
      просто истечёт по времени. */
@@ -177,12 +184,14 @@ export async function применитьOta(б: ОтаБандл): Promise<boole
   ход(0);
   let слушатель: { remove: () => void } | null = null;
   try {
-    слушатель = await CapacitorUpdater.addListener('download', ({ percent }) => {
+    const плагин = await обновитель();
+    if (!плагин) return false;
+    слушатель = await плагин.addListener('download', ({ percent }: { percent?: number }) => {
       if (typeof percent === 'number') ход(Math.max(0, Math.min(100, Math.round(percent))));
     });
-    const bundle = await CapacitorUpdater.download({ url: б.url, version: б.version });
+    const bundle = await плагин.download({ url: б.url, version: б.version });
     ход(100);
-    await CapacitorUpdater.set(bundle); // сделать активным
+    await плагин.set(bundle); // сделать активным
     /* МЕТКА ПЕРЕД ПЕРЕЗАГРУЗКОЙ (SugarLife#696).
 
        30 августа обновление интерфейса убило приложение на шесть минут, и поднял его человек
@@ -204,7 +213,7 @@ export async function применитьOta(б: ОтаБандл): Promise<boole
        отправленный без ожидания, может не успеть доехать. Отказ глотаем — не доехало, значит
        увидим лишнее убийство в счёте, и это меньшая беда, чем несостоявшееся обновление. */
     await sendIntent({ type: 'reportStopping', reason: 'update' }).catch(() => {});
-    await CapacitorUpdater.reload();    // перезагрузить webview на новый бандл
+    await плагин.reload();    // перезагрузить webview на новый бандл
     return true;
   } catch {
     /* Не смогли — ход сбрасываем, иначе полоска замрёт на сорока процентах и будет
@@ -295,7 +304,7 @@ export function нативнаяСборка(): НативнаяСборка | n
 export async function откудаБандл(): Promise<'встроен' | 'по воздуху' | null> {
   if (!isNative) return null;
   try {
-    const с = await CapacitorUpdater.current();
+    const с = await (await обновитель())?.current();
     return с?.bundle?.version === 'builtin' ? 'встроен' : 'по воздуху';
   } catch { return null; }
 }
@@ -303,7 +312,7 @@ export async function откудаБандл(): Promise<'встроен' | 'по
 export async function запомнитьНативнуюСборку(): Promise<void> {
   if (!isNative) return;
   try {
-    const с = await CapacitorUpdater.current();
+    const с = await (await обновитель())?.current();
     /* 'builtin' — тот бандл, что приехал внутри APK. Любое другое имя означает, что
        поверх уже лёг OTA, и текущий JS про APK ничего не говорит. */
     if (с?.bundle?.version !== 'builtin') return;
@@ -424,9 +433,11 @@ interface ПлагинВстроенного {
 const NativeВстроенный = registerPlugin<ПлагинВстроенного>('SugarLifeBridge');
 
 export async function вернутьсяНаВстроенныйЕслиСвежее(): Promise<boolean> {
+  /* В Pro бандл всегда встроенный: возвращаться неоткуда и не на что. */
+  if (!ПО_ВОЗДУХУ) return false;
   if (!isNative) return false;
   try {
-    const где = await CapacitorUpdater.current();
+    const где = await (await обновитель())?.current();
     /* Работаем на встроенном — сравнивать не с чем. */
     if (где?.bundle?.version === 'builtin') return false;
     const п = await NativeВстроенный.builtinBundle();
@@ -436,8 +447,10 @@ export async function вернутьсяНаВстроенныйЕслиСвеж
        по кругу — ровно это и случилось (#572). Поэтому сначала отсекаем совпадение по сборке. */
     if (п.build && п.build === APP_BUILD) return false;
     if (!новееЛи(п.builtAt, APP_BUILT_AT)) return false;
-    await CapacitorUpdater.reset();
-    await CapacitorUpdater.reload();
+    const плагин = await обновитель();
+    if (!плагин) return false;
+    await плагин.reset();
+    await плагин.reload();
     return true;
   } catch {
     /* Метода нет — нативная сборка старше паспорта. Молчим: это не поломка, просто нечего сверять. */
