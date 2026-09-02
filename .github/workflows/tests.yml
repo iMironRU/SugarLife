@@ -35,10 +35,19 @@ jobs:
         working-directory: app
         run: npm test
 
-      # Граница издания: веб и OTA — это Lite, команд прибору в собранном быть не должно (#296).
-      # Тот же прогон стоит и в деплое, но там он ПОСЛЕ мержа: узнать о нарушении на PR дешевле.
+      # Граница издания в ОБЕ стороны. В Lite не должно быть команд прибору (#296); в Pro — обновления
+      # по воздуху (#294): удостоверение берётся на движок, Pro вырастает в петлю, и её версия обязана
+      # меняться только сборкой. Тот же прогон стоит и в деплое, но там он ПОСЛЕ мержа: узнать о
+      # нарушении на PR дешевле.
       - name: Сборка и граница издания
         working-directory: app
         run: |
           npm run build
-          npm run edition:check
+          npm run edition:check dist lite
+      - name: Граница издания Pro — без воздуха
+        working-directory: app
+        env:
+          SUGARLIFE_EDITION: pro
+        run: |
+          npm run build
+          npm run edition:check dist pro
