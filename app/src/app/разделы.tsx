@@ -5,7 +5,7 @@ import {
   BasalProfileSection, CloudAccountsSection,
   CloudSection, DataDevicesSection, DeviceSection, DevicesSection, DiagnosticsSection,
   HealthSection, HistorySection, LoopSection, LoopSetupSection, MealsSection, ServicesSection,
-  SourcesSection, VisitNoteSection,
+  SourcesSection, VisitNoteSection, ПравилоSection,
 } from '@/sections/lazy';
 
 /* Реестр разделов: по метке — экран (#400).
@@ -34,6 +34,10 @@ export type Метка =
   | { id: 'здоровье' }
   | { id: 'охрана' }
   | { id: 'тревоги' }
+  /* Правка одного правила тревоги (#590). Ключ правила, а не готовое правило: стек хранит метку,
+     и после перезапуска страница обязана собраться на СЕГОДНЯШНИХ числах, а не на тех, что были
+     в момент открытия. */
+  | { id: 'правило'; ruleId: string; title: string }
   | { id: 'диагностика' }
   /* Часть раздела — чтобы восстановление после перезапуска возвращало туда же, откуда ушли
      (два входа, #554). Без неё человек, закрывший телефон на «Экране блокировки и значке»,
@@ -64,6 +68,7 @@ export function собрать(м: Метка, pop: () => void): ReactNode | nul
     case 'здоровье': return <HealthSection onClose={pop} />;
     case 'охрана': return <ОхранаSection onClose={pop} />;
     case 'тревоги': return <AlarmsSection onClose={pop} />;
+    case 'правило': return <ПравилоSection ruleId={м.ruleId} title={м.title} onClose={pop} />;
     case 'диагностика': return <DiagnosticsSection onClose={pop} />;
     case 'оформление': return <AppearanceSection onClose={pop} часть={м.часть} />;
     case 'разрешения': return <PermissionsSection onClose={pop} />;
