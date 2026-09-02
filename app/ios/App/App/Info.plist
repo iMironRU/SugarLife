@@ -40,6 +40,34 @@
 	</array>
 	<key>CFBundleDisplayName</key>
         <string>$(APP_DISPLAY_NAME)</string>
+	<!-- ИМЕНА, КОТОРЫМИ НАС МОЖНО ПОЗВАТЬ ГОЛОСОМ (SugarLife#510).
+
+	     Apple требует, чтобы КАЖДАЯ объявленная фраза команды содержала имя приложения: иначе две
+	     программы объявили бы «какой у меня сахар», и Siri не знала бы, кого спрашивать.
+
+	     Беда в том, что имя у нас «SugarLife.Lite», а человек говорит «в SugarLife» — точного
+	     совпадения нет, и Siri отвечает «не могу помочь». Поймано на живом телефоне: один раз
+	     угадала, дальше перестала.
+
+	     Альтернативные имена решают это, не трогая название на экране. Произношение даём русскими
+	     буквами: Siri слушает по-русски, а «SugarLife» она читает как латиницу и распознаёт хуже. -->
+	<key>INAlternativeAppNames</key>
+	<array>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>SugarLife</string>
+			<key>INAlternativeAppNamePronunciationHint</key>
+			<string>шугарлайф</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Шугарлайф</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Сладкая жизнь</string>
+		</dict>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
