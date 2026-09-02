@@ -51,6 +51,10 @@ class SugarLifeService : Service() {
            первыми, мы оставляем JugglucoNG без данных совсем — он показывает «ищу сенсор». Пока движок
            не знает про соседей, правило уступки слепое и берёт прибор первым. */
         доложитьСоседей()
+        /* ЗВУКОВАЯ ОПОРА (SugarLifeCore#209): включается только в фоне и только если человек её выбрал.
+           Служба переднего плана от вендорских «убийц» не спасла — замерено 25 часов на песочнице,
+           будильники растягивались с минуты до десяти. Считаем запущенные экраны: ноль — мы в фоне. */
+        завестиОпору()
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             nm.createNotificationChannel(
@@ -609,4 +613,25 @@ class SugarLifeService : Service() {
             ctx.createDeviceProtectedStorageContext()
                 .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     }
+    /** Опора нужна только когда экрана перед человеком нет: на переднем плане она жгла бы заряд зря. */
+    private fun завестиОпору() {
+        val опора = ЗвуковаяОпора.общая(applicationContext)
+        val app = applicationContext as? android.app.Application ?: return
+        app.registerActivityLifecycleCallbacks(object : android.app.Application.ActivityLifecycleCallbacks {
+            private var видимых = 0
+            override fun onActivityStarted(a: android.app.Activity) { видимых++; опора.фон(false) }
+            override fun onActivityStopped(a: android.app.Activity) {
+                видимых--
+                if (видимых <= 0) { видимых = 0; опора.фон(true) }
+            }
+            override fun onActivityCreated(a: android.app.Activity, b: android.os.Bundle?) {}
+            override fun onActivityResumed(a: android.app.Activity) {}
+            override fun onActivityPaused(a: android.app.Activity) {}
+            override fun onActivitySaveInstanceState(a: android.app.Activity, b: android.os.Bundle) {}
+            override fun onActivityDestroyed(a: android.app.Activity) {}
+        })
+        /* Служба поднимается и без экрана — например по загрузке телефона. Тогда мы уже в фоне. */
+        опора.фон(true)
+    }
+
 }

@@ -287,6 +287,30 @@ class SugarLifeBridgePlugin : Plugin() {
         ЦельПерехода.из(intent)
     }
 
+    /* ЗВУКОВАЯ ОПОРА (SugarLifeCore#209). Имена методов те же, что на iOS: экран один на две
+       платформы, и разводить их значило бы держать в оболочке два кода вместо одного. */
+    @PluginMethod
+    fun backgroundKeepAlive(call: PluginCall) {
+        val о = ЗвуковаяОпора.общая(context)
+        call.resolve(
+            JSObject()
+                .put("mode", о.текущийРежим.name.lowercase())
+                .put("modes", com.getcapacitor.JSArray.from(ЗвуковаяОпора.Режим.entries.map { it.name.lowercase() }.toTypedArray()))
+                /* ФАКТ ОТДЕЛЬНО ОТ НАМЕРЕНИЯ: режим — чего человек хотел, `holding` — держим ли на
+                   самом деле. Молчаливо умершая опора неотличима от работающей, если не спросить. */
+                .put("holding", о.держимЗвук),
+        )
+    }
+
+    @PluginMethod
+    fun setBackgroundKeepAlive(call: PluginCall) {
+        val имя = call.getString("mode")
+        val режим = ЗвуковаяОпора.Режим.entries.firstOrNull { it.name.equals(имя, ignoreCase = true) }
+        if (режим == null) { call.reject("неизвестный режим: ${имя ?: "—"}"); return }
+        ЗвуковаяОпора.общая(context).установить(режим)
+        call.resolve(JSObject().put("mode", режим.name.lowercase()))
+    }
+
     @PluginMethod
     fun ожидающаяЦель(call: PluginCall) {
         call.resolve(JSObject().put("цель", ЦельПерехода.забрать()))
