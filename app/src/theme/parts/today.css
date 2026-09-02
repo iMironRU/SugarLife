@@ -531,6 +531,22 @@
 .тревога.низкий { background: color-mix(in srgb, var(--c-low, #e58a95) 12%, transparent); border-color: #e58a95; }
 .тревога.высокий { background: color-mix(in srgb, var(--c-high, #e8b980) 12%, transparent); border-color: #e8b980; }
 
+/* ОТБОЙ ВЫГЛЯДИТ ТИШЕ ТРЕВОГИ, И ЭТО НЕ УКРАШЕНИЕ (#482).
+
+   Полоса тревоги громкая нарочно: её читают спросонья. Хорошая новость живёт рядом и десять минут,
+   и такой же кегль сделал бы её вторым событием того же веса — а человек, увидев две одинаковые
+   карточки, снова начнёт разбираться, что случилось. Здесь всё наоборот: одна строка, приглушённый
+   цвет, никакого действия. */
+.новость {
+  margin: 10px 0; padding: 11px 14px; border-radius: 14px;
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--color-neutral-900); border: 1px solid var(--color-neutral-800);
+  font-size: 0.8125rem; color: var(--color-neutral-300); line-height: 1.4; text-wrap: pretty;
+}
+/* Цвет глюкозы в норме — им же в приложении покрашено «всё хорошо» на графике и в кружке.
+   Заводить свой зелёный ради одной строки значило бы завести второй словарь цвета. */
+.новость-знак { flex: 0 0 auto; color: var(--c-glu); font-weight: 600; }
+
 .тревога-шапка { display: flex; align-items: center; gap: 10px; }
 .тревога-знак {
   width: 22px; height: 22px; border-radius: 7px; flex: 0 0 auto;
