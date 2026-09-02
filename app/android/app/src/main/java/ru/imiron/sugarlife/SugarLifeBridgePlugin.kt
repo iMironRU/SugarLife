@@ -119,7 +119,11 @@ class SugarLifeBridgePlugin : Plugin() {
      *  Механизм сбора телеметрии от волонтёров (share sheet, без сервера — по раннему решению; сборщик — позже). */
     private fun exportAndShare() {
         try {
-            val file = File(context.cacheDir, "sugarlife-log.ndjson").apply { writeText(engine.exportLog()) }
+            /* ВЫЧИЩАЕМ ПЕРЕД ОТПРАВКОЙ (#656). Ядро вычищает по имени поля — `token`, `secret`,
+               `password`; адрес облака лежит в `id`, а полный запрос внутри текста ошибки, и оба
+               проходят мимо. Файл человек отправит в мессенджер, и обратной дороги не будет. */
+            val file = File(context.cacheDir, "sugarlife-log.ndjson")
+                .apply { writeText(ВычисткаЖурнала.вычистить(engine.exportLog())) }
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
             val send = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
