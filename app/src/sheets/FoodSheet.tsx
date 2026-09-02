@@ -7,9 +7,11 @@ import { fmt, useCarbUnit, toCarbs, carbUnitLabel, XE_GRAMS, plural } from '@/do
 import { addMeal, useMeals } from '@/sources/mealStore';
 import { необъяснённыеПодъёмы, времяМомента, СМЕЩЕНИЯ } from '@/domain/mealMoment';
 import { searchFoods, personalFoods, CAT_LABEL, CAT_ORDER, type Food } from '@/domain/foods';
-import { когоНазвать, вопрос, type Спросить } from '@/domain/mealNaming';
+import { когоНазвать, type Спросить } from '@/domain/mealNaming';
+import { вопрос } from '@/слова/имена';
 import { useMealNames, nameGroup, skipGroup } from '@/settings/mealNames';
 import { подсказка, приёмПоЧасу } from '@/domain/foodNow';
+import { почемуЭти } from '@/слова/еда';
 import Sheet from '@/ui/Sheet';
 import { падает } from '@/domain/trend';
 import { useEntries } from '@/sources/db';
@@ -264,7 +266,7 @@ export default function FoodSheet({ isOpen, onClose, времяПодъёма }:
         {сейчас && (
           <>
             <div className={'food-label' + (сейчас.гипо ? ' is-hypo' : '')}>
-              <Иконка icon={сейчас.гипо ? warningOutline : timeOutline} /> {сейчас.причина}
+              <Иконка icon={сейчас.гипо ? warningOutline : timeOutline} /> {почемуЭти(сейчас.повод)}
             </div>
             <div className="food-picks">
               {сейчас.свои.map((p) => (

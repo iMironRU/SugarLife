@@ -1,4 +1,5 @@
 import Иконка from '@/ui/Иконка';
+import { СЛОВО_УЧЁТКИ } from '@/слова/облака';
 import { cloudOutline, checkmarkCircle, alertCircle, personOutline, hardwareChipOutline } from 'ionicons/icons';
 import { useState } from 'react';
 import Section from '@/ui/Section';
@@ -8,7 +9,7 @@ import { useSnapshot, sendIntent } from '@/sources/bridge';
 import type { AccountView, CloudProviderView } from '@/sources/bridge';
 import {
   учёткиПровайдера, нуженВыборСубъекта, активныйСубъект, имяСубъекта,
-  состояниеУчётки, СЛОВО_УЧЁТКИ, чтоДелать, можноВойти,
+  состояниеУчётки, чтоДелать, можноВойти,
 } from '@/domain/cloudAccounts';
 
 /* Облачные учётки вендоров (SugarLifeCore#52, rev ≥ 1.10).

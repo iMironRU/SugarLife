@@ -19,26 +19,27 @@ import type { Device } from './types';
 
 export const СВЕЖЕСТЬ_ЦИКЛА_МС = 20 * 60e3;
 
+/* ПОЧЕМУ ЗНАЧЕНИЮ НЕЛЬЗЯ ВЕРИТЬ — кодом, а не фразой (#324). Слова — в `слова/цикл.ts`.
+
+   Три причины различаются не оттенком: «расчёта не было ни разу» и «цикл замолчал сорок минут
+   назад» ведут человека в разные места, и одна из них ещё и несёт срок. */
+export type ПочемуНеЗнаем = 'нет расчёта' | 'молчит' | 'нет значения';
+
 export interface ЗначениеЦикла {
   /** Значению можно верить как текущему. */
   known: boolean;
-  /** Почему нельзя — для подписи рядом. null, когда всё в порядке. */
-  reason: string | null;
-}
-
-function срок(мс: number): string {
-  const м = Math.round(мс / 60000);
-  if (м < 60) return м + ' мин';
-  const ч = Math.floor(м / 60);
-  return ч < 24 ? ч + ' ч' : Math.floor(ч / 24) + ' д';
+  /** Почему нельзя. null, когда всё в порядке. */
+  почему: ПочемуНеЗнаем | null;
+  /** Сколько молчит; есть только у `молчит` — остальным сроки не нужны. */
+  молчитМс?: number;
 }
 
 export function loopValue(value: number | null, loopAt: number | null, now = Date.now()): ЗначениеЦикла {
-  if (loopAt == null) return { known: false, reason: 'цикл не присылал расчёт' };
+  if (loopAt == null) return { known: false, почему: 'нет расчёта' };
   const возраст = now - loopAt;
-  if (возраст > СВЕЖЕСТЬ_ЦИКЛА_МС) return { known: false, reason: 'цикл молчит ' + срок(возраст) };
-  if (value == null) return { known: false, reason: 'цикл не прислал это значение' };
-  return { known: true, reason: null };
+  if (возраст > СВЕЖЕСТЬ_ЦИКЛА_МС) return { known: false, почему: 'молчит', молчитМс: возраст };
+  if (value == null) return { known: false, почему: 'нет значения' };
+  return { known: true, почему: null };
 }
 
 /** Активный инсулин из состояния устройства. */

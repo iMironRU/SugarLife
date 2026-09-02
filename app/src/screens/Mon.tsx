@@ -1,5 +1,6 @@
 import { useSnapshot } from '@/sources/bridge';
-import { предупредитьОСыром, СЛОВО_СЫРОГО, ПОЯСНЕНИЕ_СЫРОГО } from '@/domain/сырое';
+import { предупредитьОСыром } from '@/domain/сырое';
+import { СЛОВО_СЫРОГО, ПОЯСНЕНИЕ_СЫРОГО } from '@/слова/сырое';
 import Иконка from '@/ui/Иконка';
 import { useTab } from '@/app/nav';
 import { DeviceSection } from '@/sections/lazy';

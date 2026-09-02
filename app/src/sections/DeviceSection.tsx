@@ -35,7 +35,8 @@ import { писатьЛокально } from '@/domain/реестр';
 import { useSnapshot, sendIntent } from '@/sources/bridge';
 
 import { useBridgeAlert, setBridgeAlert } from '@/settings/bridgeAlerts';
-import { sourceStatusLabel, sourceStatusWarn } from '@/domain/sourceStatus';
+import { sourceStatusWarn } from '@/domain/sourceStatus';
+import { sourceStatusLabel } from '@/слова/приборы';
 import { toUnits, unitLabel } from '@/domain/units';
 import { useStore } from '@/sources/store';
 import { useChanges } from '@/settings/changes';

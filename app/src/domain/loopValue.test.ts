@@ -18,23 +18,24 @@ describe('известно / неизвестно у показателей ци
   it('ноль — это ноль, а не «нет данных»', () => {
     const r = activeInsulin(dev(0, now - 2 * МИН), now);
     expect(r.known).toBe(true);
-    expect(r.reason).toBeNull();
+    expect(r.почему).toBeNull();
   });
 
   it('свежий расчёт — верим', () => {
     expect(activeInsulin(dev(4.1, now - 5 * МИН), now).known).toBe(true);
   });
 
-  it('молчащий цикл — не верим и говорим, сколько молчит', () => {
+  it('молчащий цикл — не верим и запоминаем, сколько молчит', () => {
     const r = activeInsulin(dev(4.1, now - 40 * МИН), now);
     expect(r.known).toBe(false);
-    expect(r.reason).toBe('цикл молчит 40 мин');
+    expect(r.почему).toBe('молчит');
+    expect(r.молчитМс).toBe(40 * МИН);
   });
 
   it('расчёта не было вовсе — тоже неизвестно', () => {
     const r = activeInsulin(dev(null, null), now);
     expect(r.known).toBe(false);
-    expect(r.reason).toBe('цикл не присылал расчёт');
+    expect(r.почему).toBe('нет расчёта');
   });
 
   it('устройства нет — неизвестно, а не ноль', () => {
@@ -46,8 +47,5 @@ describe('известно / неизвестно у показателей ци
     expect(loopValue(1, now - СВЕЖЕСТЬ_ЦИКЛА_МС - 1, now).known).toBe(false);
   });
 
-  it('срок молчания читается по-человечески', () => {
-    expect(loopValue(1, now - 3 * 3600e3, now).reason).toBe('цикл молчит 3 ч');
-    expect(loopValue(1, now - 50 * 3600e3, now).reason).toBe('цикл молчит 2 д');
-  });
+  /* Как это произносится — в `слова/цикл.test.ts` (#324): срок часть фразы, а не часть правила. */
 });

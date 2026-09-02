@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { словоПустого } from '@/слова/журнал';
 import { IonToggle } from '@ionic/react';
 import Иконка from '@/ui/Иконка';
 import { shareOutline, checkmarkCircle } from 'ionicons/icons';
@@ -6,7 +7,7 @@ import Sheet from '@/ui/Sheet';
 import { запросЖурнала, sendIntent, type HardwareView, type LogRecord } from '@/sources/bridge';
 import { isNative } from '@/platform/appUpdate';
 import {
-  ОБЫЧНЫЙ_УРОВЕНЬ, важнее, естьИдентификаторы, подробноЕщёМинут, словоПустого,
+  ОБЫЧНЫЙ_УРОВЕНЬ, важнее, естьИдентификаторы, подробноЕщёМинут, пустой,
   времяЗаписи, строкаПолей,
 } from '@/domain/deviceLog';
 
@@ -103,7 +104,7 @@ export default function DeviceLogSheet({ прибор, onClose }: {
         </div>
       ) : (
         <div className="sheet-note" style={{ marginTop: 12 }}>
-          {словоПустого({ журналЕсть, всегоЗаписей: все.length, вПриложении: isNative })}
+          {словоПустого(пустой({ журналЕсть, всегоЗаписей: все.length, вПриложении: isNative }))}
         </div>
       )}
 

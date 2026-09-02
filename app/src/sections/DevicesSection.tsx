@@ -36,7 +36,7 @@ import { свежесть, чтоСПрибором } from '@/domain/freshness';
 import ПолосаХода from '@/ui/ПолосаХода';
 import { расходка, подписьРасходки } from '@/domain/supplies';
 
-import { sourceStatusLabel } from '@/domain/sourceStatus';
+import { sourceStatusLabel } from '@/слова/приборы';
 import { слотПоСнимку, путьСлота } from '@/domain/slotStatus';
 import type { DeviceCatKey } from './DeviceSection';
 import { useStack } from '@/app/stackCtx';
