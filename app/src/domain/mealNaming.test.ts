@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { когоНазвать, вопрос, ПОВТОРОВ, ДАВНОСТЬ_МС } from './mealNaming';
+import { когоНазвать, ПОВТОРОВ, ДАВНОСТЬ_МС } from './mealNaming';
 import type { Personal } from './foods';
 
 /* Когда предложить назвать приём (SugarLife#122).
@@ -53,18 +53,4 @@ describe('кого спросить', () => {
   });
 });
 
-describe('как спросить', () => {
-  it('называем то, что человек делал, без лишних требований', () => {
-    const т1 = вопрос({ id: 'Обед|55', kind: 'Обед', carbs: 55, count: 5 });
-    expect(т1).toMatch(/обед/);
-    expect(т1).toMatch(/55 г/);
-    expect(т1).toMatch(/5 раз/);
-  });
-
-  it('окончание числительного не режет глаз', () => {
-    expect(вопрос({ id: 'a', kind: 'Обед', carbs: 55, count: 3 })).toMatch(/3 раза/);
-    expect(вопрос({ id: 'a', kind: 'Обед', carbs: 55, count: 5 })).toMatch(/5 раз /);
-    expect(вопрос({ id: 'a', kind: 'Обед', carbs: 55, count: 11 })).toMatch(/11 раз /);
-    expect(вопрос({ id: 'a', kind: 'Обед', carbs: 55, count: 21 })).toMatch(/21 раз /);
-  });
-});
+/* Сам вопрос — в `слова/имена.test.ts` (#324). */

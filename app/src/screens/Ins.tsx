@@ -1,5 +1,4 @@
 import Иконка from '@/ui/Иконка';
-import { сколькоНазад, часы } from '@/слова/время';
 import { useTab } from '@/app/nav';
 import { DeviceSection, LoopSetupSection } from '@/sections/lazy';
 import { flash, repeat, chevronForward, moonOutline } from 'ionicons/icons';
@@ -10,7 +9,8 @@ import { detectTherapy } from '@/domain/therapy';
 import { useСейчас } from '@/показ/сейчас';
 import { fmt } from '@/domain/units';
 import { useSnapshot } from '@/sources/bridge';
-import { фонИнсулина, подписьФона } from '@/domain/longInsulin';
+import { фонИнсулина } from '@/domain/longInsulin';
+import { подписьФона } from '@/слова/длинный';
 import LongInsulinSheet from '@/sheets/LongInsulinSheet';
 import InsulinTimeChart from '@/charts/InsulinTimeChart';
 import { DataGate } from '@/ui/NotConfigured';
@@ -70,7 +70,7 @@ export default function Ins() {
       <div className="basal-rows">
         {фон ? (
           <div className="basal-row">
-            <span>{подписьФона(фон, часы, (мс) => сколькоНазад(мс))}</span>
+            <span>{подписьФона(фон)}</span>
             <button className="changed-btn is-undo во-всю" onClick={() => setПишуДлинный(true)}>Записать</button>
           </div>
         ) : (

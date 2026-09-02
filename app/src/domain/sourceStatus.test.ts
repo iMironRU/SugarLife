@@ -1,12 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { sourceStatusLabel, sourceStatusWarn } from './sourceStatus';
+import { sourceStatusWarn } from './sourceStatus';
 
+/* Слова статуса уехали в `слова/приборы.test.ts` (#324). Здесь осталось суждение: тревожный
+   статус или нет, — оно про поведение экрана, а не про буквы. */
 describe('статус источника данных', () => {
-  it('«связь есть, показаний ещё нет» — отдельное состояние, а не «подключено»', () => {
-    expect(sourceStatusLabel('Acquiring')).toBe('связь есть, показаний ещё нет');
-    expect(sourceStatusWarn('Acquiring')).toBe(false); // это норма, а не беда
-  });
-
   it('«отстаёт» и «нет связи» — тревожные, остальное нет', () => {
     expect(sourceStatusWarn('Delayed')).toBe(true);
     expect(sourceStatusWarn('Disconnected')).toBe(true);
@@ -14,9 +11,13 @@ describe('статус источника данных', () => {
     expect(sourceStatusWarn('Connecting')).toBe(false);
   });
 
-  it('поля нет — не выдумываем подпись', () => {
-    expect(sourceStatusLabel(undefined)).toBeNull();
-    expect(sourceStatusLabel(null)).toBeNull();
+  /* «Связь есть, показаний ещё нет» — норма, а не беда: тревожный вид у нормального состояния
+     обесценивает тревожный вид вообще. */
+  it('прогрев не тревога', () => {
+    expect(sourceStatusWarn('Acquiring')).toBe(false);
+  });
+
+  it('поля нет — и суждения нет', () => {
     expect(sourceStatusWarn(undefined)).toBe(false);
   });
 });

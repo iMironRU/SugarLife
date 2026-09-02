@@ -1,4 +1,5 @@
 import { useSnapshot, type InsulinLeftView } from '@/sources/bridge';
+import { почемуНеЗнаем } from '@/слова/цикл';
 import { useЧужаяПетля, активныйИнсулин } from '@/показ/чужаяПетля';
 import { activeInsulin } from '@/domain/loopValue';
 
@@ -60,7 +61,7 @@ export function useСейчас(): Сейчас {
       значение: выбран.значение,
       известен: свежесть.known,
       неполный: выбран.неполный,
-      почему: свежесть.reason ?? null,
+      почему: почемуНеЗнаем(свежесть),
     },
   };
 }

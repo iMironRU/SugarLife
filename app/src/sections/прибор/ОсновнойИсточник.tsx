@@ -1,6 +1,6 @@
 import type { DeviceView } from '@/sources/bridge';
 import { sendIntent } from '@/sources/bridge';
-import { sourceStatusLabel } from '@/domain/sourceStatus';
+import { sourceStatusLabel } from '@/слова/приборы';
 
 /* Какой сенсор считать главным — только для карточки сенсора (#406).
 

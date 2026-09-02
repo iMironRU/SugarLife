@@ -2,6 +2,7 @@ import СтрокаОхраны from '@/ui/СтрокаОхраны';
 import КнопкаСна from '@/ui/КнопкаСна';
 import ЖивыеТревоги from '@/ui/ЖивыеТревоги';
 import ХорошиеНовости from '@/ui/ХорошиеНовости';
+import { почемуНеЗнаем } from '@/слова/цикл';
 import ЗастойВОблаке from '@/ui/ЗастойВОблаке';
 import ОговоркиЧисел from '@/ui/ОговоркиЧисел';
 import Иконка from '@/ui/Иконка';
@@ -497,8 +498,8 @@ export default function Today() {
               <div className={'carb-big' + (ac.known ? '' : ' is-unknown')}>{cob != null ? toCarbs(cob, cu) : DASH}<span>{carbUnitLabel(cu)}</span></div>
               <div className="carb-now-t">
                 <div className="carb-lbl">активные углеводы</div>
-                {ac.reason
-                  ? <div className="carb-sub">{ac.reason}</div>
+                {почемуНеЗнаем(ac)
+                  ? <div className="carb-sub">{почемуНеЗнаем(ac)}</div>
                   : петля.by && <div className="carb-sub">по расчёту {петля.by}</div>}
               </div>
               {/* Действие названо глаголом. «Еда» была существительным: что случится по
