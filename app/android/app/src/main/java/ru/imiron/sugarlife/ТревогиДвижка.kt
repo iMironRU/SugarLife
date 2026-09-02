@@ -141,6 +141,10 @@ object ТревогиДвижка {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val b = NotificationCompat.Builder(ctx, канал)
+            /* Метка отправителя — та же и здесь (#701). Тревоги движка идут тем же каналом и на
+               те же часы; метка на одной половине тревог была бы хуже её отсутствия — человек
+               решил бы, что помеченные «наши», а прочие чужие. */
+            .setSubText(Тревоги.МЕТКА_ОТПРАВИТЕЛЯ)
             .setContentTitle(заголовок)
             .setContentText(текст)
             .setStyle(NotificationCompat.BigTextStyle().bigText(текст))
