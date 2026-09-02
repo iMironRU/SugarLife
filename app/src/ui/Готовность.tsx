@@ -1,5 +1,6 @@
 import Иконка from './Иконка';
 import { warningOutline, checkmarkCircle } from 'ionicons/icons';
+import { useState } from 'react';
 import { sendIntent } from '@/sources/bridge';
 import { спроситьМожно, кудаВНастройки, type Помеха } from '@/domain/scanReadiness';
 
@@ -19,6 +20,23 @@ export default function Готовность({ помеха, спокойно }:
      появляется в момент, когда человек ни о чём не спрашивал (#333). */
   спокойно?: boolean;
 }) {
+  /* ЧТО ОТВЕТИЛИ НА НАЖАТИЕ (#710).
+
+     Раньше просьба уходила в никуда: `void sendIntent(...)`, ответ выбрасывался. На iOS её вдобавок
+     никто не перехватывал, и кнопка молчала совсем. Но даже правильная кнопка, после которой на
+     экране ничего не меняется, читается как поломка — а системное окно поднимается не всегда:
+     доступ мог быть уже дан, и тогда дело не в разрешении вовсе.
+
+     Поэтому отказ показываем словами. Согласие — молчанием: на согласие отвечает само системное
+     окно, и подпись «попросили» рядом с ним была бы вторым голосом об одном. */
+  const [отказ, setОтказ] = useState<string | null>(null);
+
+  const попросить = async () => {
+    setОтказ(null);
+    const r = await sendIntent({ type: 'requestScanPermissions' });
+    if (!r.accepted) setОтказ(r.error || 'система не показала окно с вопросом');
+  };
+
   if (!помеха) {
     if (!спокойно) return null;
     return (
@@ -37,8 +55,7 @@ export default function Готовность({ помеха, спокойно }:
         {помеха.remediation && <span>{помеха.remediation}</span>}
         <span className="alert-ask alert-ask-row">
           {спроситьМожно(помеха) ? (
-            <button className="changed-btn is-undo"
-              onClick={() => void sendIntent({ type: 'requestScanPermissions' })}>Разрешить</button>
+            <button className="changed-btn is-undo" onClick={() => void попросить()}>Разрешить</button>
           ) : кудаВНастройки(помеха) ? (
             <button className="changed-btn is-undo"
               onClick={() => void sendIntent({ type: 'openSystemScreen', target: кудаВНастройки(помеха)! })}>
@@ -46,6 +63,7 @@ export default function Готовность({ помеха, спокойно }:
             </button>
           ) : null}
         </span>
+        {отказ && <span className="sheet-note warn">Не сработало: {отказ}</span>}
       </div>
     </div>
   );
