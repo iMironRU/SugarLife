@@ -182,6 +182,9 @@ class SugarLifeService : Service() {
         nm.notify(
             NOTIF_ID + 1,
             NotificationCompat.Builder(this, CHANNEL)
+                /* Метка отправителя (#701): на часах имя приложения часто не показывают, и число
+                   без неё неотличимо от такого же у соседнего приложения. */
+                .setSubText(Тревоги.МЕТКА_ОТПРАВИТЕЛЯ)
                 .setContentTitle(заголовок).setContentText(текст)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(текст))
                 .setSmallIcon(R.mipmap.ic_launcher)
@@ -499,6 +502,9 @@ class SugarLifeService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         return NotificationCompat.Builder(this, CHANNEL)
+            /* Метка отправителя (#701). Постоянная сводка носит сахар весь день — именно она чаще
+               всего и уезжает на часы, а не тревога. */
+            .setSubText(Тревоги.МЕТКА_ОТПРАВИТЕЛЯ)
             /* Число — в заголовок, а не в текст: заголовок виден и на экране блокировки, и в свёрнутой
                шторке, а текст система прячет первым. Нет числа — прежний заголовок про мониторинг. */
             .setContentTitle(последняяСтрока?.let { "$it ммоль/л" }
