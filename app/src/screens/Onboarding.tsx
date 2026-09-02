@@ -267,8 +267,15 @@ export default function Onboarding() {
         <Готовность помеха={мешаетТут} />
 
         <div className="connect-form">
+          {/* ЖДЁМ ОТВЕТА, ПРЕЖДЕ ЧЕМ ШАГНУТЬ (#710). Ответ здесь не решает, идти ли дальше: идём в
+              любом случае — «доступ уже есть» это тоже повод искать, а ушедшего в настройки вернёт
+              система. Но дождаться его надо: наш перехват на iOS по дороге пересчитывает готовность,
+              и без ожидания шаг поиска успевал открыться со вчерашним ответом на вопрос «что мешает».
+
+              Дальше говорит не эта кнопка, а блок «что мешает» — он один на все три места и знает
+              причину от движка. */}
           <IonButton expand="block" className="connect-btn"
-            onClick={() => { void sendIntent({ type: 'requestScanPermissions' }); setStep('scan'); }}>
+            onClick={() => { void sendIntent({ type: 'requestScanPermissions' }).finally(() => setStep('scan')); }}>
             <Иконка icon={bluetoothOutline} slot="start" />
             Разрешить и начать поиск
           </IonButton>
