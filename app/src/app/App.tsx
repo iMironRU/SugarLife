@@ -35,6 +35,7 @@ import { checkBridgeBattery } from '@/settings/bridgeAlerts';
 import { detectTherapy } from '@/domain/therapy';
 import { useTab, setTab, pressTab, getTab, TAB_PATHS } from '@/app/nav';
 import ПереходПоЦели from '@/app/ПереходПоЦели';
+import ВечернийДозор from '@/ui/ВечернийДозор';
 import { useOnboarded } from '@/settings/onboarding';
 import { StackHost } from '@/app/stack';
 import { requestNotifyPermissionOnStart } from '@/platform/notify';
@@ -125,7 +126,10 @@ function Pager() {
         <div data-tab={1} className={'pager-pane' + (idx === 1 ? ' is-active' : '')}><StackHost tab={1}><Mon /></StackHost></div>
         {/* Переход по цели живёт внутри стека «Сегодня» (#524): ему нужен `push`, а раздел он
             кладёт поверх — чтобы «назад» вернуло человека туда, где он был. */}
-        <div data-tab={2} className={'pager-pane' + (idx === 2 ? ' is-active' : '')}><StackHost tab={2}><ПереходПоЦели /><Today /></StackHost></div>
+        {/* Вечерний вопрос и разрыв после перезагрузки (#473, #477) — рядом с переходом по цели,
+            и по той же причине: они ничего не рисуют, но обязаны работать, пока приложение живо,
+            а не только когда открыта какая-то вкладка. */}
+        <div data-tab={2} className={'pager-pane' + (idx === 2 ? ' is-active' : '')}><StackHost tab={2}><ПереходПоЦели /><ВечернийДозор /><Today /></StackHost></div>
         <div data-tab={3} className={'pager-pane' + (idx === 3 ? ' is-active' : '')}><StackHost tab={3}><Ins /></StackHost></div>
         <div data-tab={4} className={'pager-pane' + (idx === 4 ? ' is-active' : '')}><StackHost tab={4}><Profile /></StackHost></div>
       </div>
