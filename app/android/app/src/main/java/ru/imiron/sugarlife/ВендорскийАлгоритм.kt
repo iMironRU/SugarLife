@@ -35,6 +35,31 @@ class ВендорскийАлгоритм private constructor(
     fun restore(state: ByteArray?): Boolean =
         runCatching { restore.invoke(ядро, state) as Boolean }.getOrDefault(false)
 
+    /**
+     * СЕМЕЙСТВ ДВА, И ВЫБОР НЕ КОСМЕТИЧЕСКИЙ (SugarLifeCore#206).
+     *
+     * У Sibionics пять вариантов, и три из них считают V116A: EU (SiJoy), Hematonix
+     * (Русибионикс) и Sibionics 2. Китайский и GS3 — V115G. До сих пор мы качали и звали только
+     * V115G, то есть российский Русибионикс наша сборка не посчитала бы вовсе — и узнали бы мы об
+     * этом, когда прибор окажется в руках.
+     *
+     * Подпакет `v116a` сохранён намеренно: оба файла получены одним декомпилятором и объявляют
+     * одинаковые внутренние помощники. В одном пакете они сталкиваются.
+     */
+    enum class Семейство(val класс: String) {
+        V115G("ru.imiron.sugarlife.vendor.SibionicsExactV115GCore"),
+        V116A("ru.imiron.sugarlife.vendor.v116a.SibionicsExactV116ACore"),
+        ;
+
+        companion object {
+            /** Какое семейство положено варианту прибора. Незнакомый вариант → V115G, как было. */
+            fun поВарианту(вариант: String?): Семейство = when (вариант?.trim()?.lowercase()) {
+                "eu", "hematonix", "sibionics2" -> V116A
+                else -> V115G
+            }
+        }
+    }
+
     companion object {
         private const val TAG = "SugarLifeVendor"
         private const val ЯДРО = "ru.imiron.sugarlife.vendor.SibionicsExactV115GCore"
@@ -48,8 +73,11 @@ class ВендорскийАлгоритм private constructor(
         }
 
         /** Собрать ядро под конкретную чувствительность партии. `null` — алгоритма в сборке нет. */
-        fun создать(чувствительность: Float): ВендорскийАлгоритм? = runCatching {
-            val класс = Class.forName(ЯДРО)
+        fun создать(
+            чувствительность: Float,
+            семейство: Семейство = Семейство.V115G,
+        ): ВендорскийАлгоритм? = runCatching {
+            val класс = Class.forName(семейство.класс)
             val конструктор = класс.getDeclaredConstructor(Float::class.javaPrimitiveType)
                 .apply { isAccessible = true }
             ВендорскийАлгоритм(
@@ -61,7 +89,7 @@ class ВендорскийАлгоритм private constructor(
                 snapshot = класс.getDeclaredMethod("snapshot").apply { isAccessible = true },
                 restore = класс.getDeclaredMethod("restore", ByteArray::class.java).apply { isAccessible = true },
             )
-        }.onFailure { Log.w(TAG, "чужой алгоритм не поднялся: $it") }.getOrNull()
+        }.onFailure { Log.w(TAG, "чужой алгоритм не поднялся ($семейство): $it") }.getOrNull()
 
         /**
          * Чувствительность партии из кода сенсора. Живёт в чужом файле, поэтому тоже через отражение;
