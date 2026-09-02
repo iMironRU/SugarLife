@@ -74,6 +74,19 @@
 .today-alert.warn > .иконка { color: var(--c-carb); }
 .today-alert.info > .иконка { color: var(--color-accent-300); }
 .today-alert b { display: block; font-size: 0.875rem; font-weight: 600; }
+/* ЗАГОЛОВОК ОБРАЩЕНИЯ — ТЕМ ЖЕ ВЕСОМ, ЧТО И `b` ВЫШЕ (#770).
+
+   Класс `.alert-title` жил без единого правила. Семь мест объявляли им заголовок, а рисовался он
+   ровно как поясняющий текст: та же серость, тот же кегль. Снаружи это читается сплошным
+   абзацем, у которого первая строка почему-то оборвана на середине мысли.
+
+   Поймано на карточке прибора, где имя из эфира обязано стоять крупнее объяснения. Но чинит это
+   все семь мест разом, и они того же требуют: «Ночью может не разбудить» и «Поиск сейчас
+   невозможен» — заголовки по смыслу, а выглядели подписями.
+
+   Цвет наследуем, а не назначаем: у `b` его нет, и второй источник правды для одного и того же
+   заголовка нам тут не нужен. */
+.today-alert .alert-title { font-size: 0.875rem; font-weight: 600; color: inherit; }
 .today-alert span { display: block; font-size: 0.75rem; color: var(--color-neutral-400); line-height: 1.4; margin-top: 3px; text-wrap: pretty; }
 .macros { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 14px 0 14px 18px; }
 .macros > div { font-size: 0.8125rem; font-weight: 600; }
