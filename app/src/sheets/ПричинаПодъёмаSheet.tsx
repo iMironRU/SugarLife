@@ -1,7 +1,8 @@
 import Иконка from '@/ui/Иконка';
 import { checkmarkCircle, ellipseOutline, trashOutline } from 'ionicons/icons';
 import Sheet from '@/ui/Sheet';
-import { ПРИЧИНЫ, отметкаДля, type Причина } from '@/domain/причиныПодъёма';
+import { отметкаДля, type Причина } from '@/domain/причиныПодъёма';
+import { ПРИЧИНЫ } from '@/слова/подъёмы';
 import { отметитьПодъём, убратьОтметку, useОтметкиПодъёмов } from '@/settings/подъёмы';
 import { часы } from '@/слова/время';
 

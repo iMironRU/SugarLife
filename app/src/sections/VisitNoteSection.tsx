@@ -16,7 +16,7 @@ import { ЦЕЛИ, полнота, МИН_ДНЕЙ, МИН_ДОЛЯ, type Наб
 import { вопросыДляВрача } from '@/показ/вопросыВрачу';
 import { строкиНМГ } from '@/показ/записка';
 import { имяЧасти } from '@/domain/безЗаписи';
-import { видПричины } from '@/domain/причиныПодъёма';
+import { видПричины } from '@/слова/подъёмы';
 import Dynamics from '@/ui/Dynamics';
 import { useVisitQuestions, переключитьВопрос, добавитьВопрос, убратьСвой, нужныЛиВопросы } from '@/settings/visitQuestions';
 import Row from '@/ui/Row';

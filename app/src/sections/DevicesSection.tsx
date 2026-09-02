@@ -17,7 +17,8 @@ import { pumpById, sensorById } from '@/domain/catalog';
 import { useSnapshot, sendIntent, эфирДоступен, type Discovered } from '@/sources/bridge';
 import { лента } from '@/domain/deviceFeed';
 import { движокХозяин } from '@/domain/реестр';
-import { мешает, словоПустоты, ТЕРПЕНИЕ_МС } from '@/domain/scanReadiness';
+import { мешает, пустота, ТЕРПЕНИЕ_МС } from '@/domain/scanReadiness';
+import { словоПустоты } from '@/слова/поиск';
 import Готовность from '@/ui/Готовность';
 import ФонГотовность from '@/ui/ФонГотовность';
 import ВПриложении from '@/ui/ВПриложении';
@@ -26,11 +27,11 @@ import { useМодели } from '@/показ/модели';
 import DeviceScanSheet from '@/sheets/DeviceScanSheet';
 import {
   железоДиспетчера, мостЖелезки, имяЖелезки, адресВЭфире,
-  заМостомЛи, звеноЦепочки, словоЦепочки,
+  заМостомЛи, звеноЦепочки,
 } from '@/domain/nearby';
 import { связь } from '@/domain/deviceState';
 import { имяСправочникаРядом } from '@/domain/имяПрибора';
-import { меткаСвязи, подписьСвежести, подписьЗанятия } from '@/слова/приборы';
+import { меткаСвязи, подписьСвежести, подписьЗанятия, словоЦепочки } from '@/слова/приборы';
 import { свежесть, чтоСПрибором } from '@/domain/freshness';
 import ПолосаХода from '@/ui/ПолосаХода';
 import { расходка, подписьРасходки } from '@/domain/supplies';
@@ -351,7 +352,7 @@ export default function DevicesSection({ onClose, встроенный, толь
             и тексты — в domain/scanReadiness, потому что то же самое говорит мастер. */}
         {!мешаетСкан && строкиПусты && (
           <div className="sheet-note">
-            {словоПустоты({ эфирЕсть: эфирДоступен(), сканирует, долгоЖдём })}
+            {словоПустоты(пустота({ эфирЕсть: эфирДоступен(), сканирует, долгоЖдём }))}
             {/* Ссылка, а не совет: без приложения дальше отсюда действительно нельзя. */}
             {!эфирДоступен() && <div><ВПриложении раздел="приборы" подпись="Открыть приборы в приложении" /></div>}
           </div>
