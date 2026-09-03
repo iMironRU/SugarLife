@@ -328,34 +328,49 @@ class SugarLifeBridgePlugin : Plugin() {
        гостиничный портал и выключенный VPN. Отличить «связи нет» от «связь есть, а нас не пускают»
        движок может только по мнению телефона о сети, и знать его он должен постоянно, а не однажды.
 
-       Интент идемпотентен: поток жив — ничего не произойдёт. Переключения Wi-Fi↔LTE случаются
-       несколько раз в день, так что «часто» здесь всё равно редко. */
-    private var сетьБыла = true
+       Интент идемпотентен: поток жив — ничего не произойдёт.
+
+       А ВОТ ЗДЕСЬ БЫЛА ОШИБКА, И ЖИЛА ОНА ДОЛГО (SugarLifeCore#213). Строчкой ниже раньше стояло
+       «переключения Wi-Fi↔LTE случаются несколько раз в день, так что „часто" здесь всё равно
+       редко». Померили: 830 сообщений за сутки, тридцать шесть в час, всю ночь при неизменном
+       Wi-Fi. `onCapabilitiesChanged` система зовёт на любое изменение свойств сети — скорость
+       канала, уровень сигнала, метрики оператора, — а мы на каждый вызов говорили «сеть вернулась».
+
+       Отдельно скверно то, что спам оказался НЕСУЩИМ: движок выводил «телефон видит сеть» из
+       свежести этих сообщений. Убрать их, не тронув движок, значило бы сломать различение «сети
+       нет» и «сеть есть, а до сервера не пускают» — то самое, ради которого всё и слушается.
+       Поэтому мост 1.68 возит МНЕНИЕ (`internet`), движок его помнит, и частота стала не нужна. */
+    private val сторожСети = СторожСети()
     private var подпискаНаСеть: android.net.ConnectivityManager.NetworkCallback? = null
 
     private fun слушатьСеть() {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE)
             as? android.net.ConnectivityManager ?: return
+        /** Единственное место, где рождается сообщение о сети: сторож решает, менялось ли что-то. */
+        fun сеть(есть: Boolean) {
+            if (!сторожСети.мнениеСменилось(есть)) return
+            Log.i(TAG, if (есть) "интернет появился — будим облако" else "интернет пропал")
+            deviceEvents.execute { engine.sendIntent(мнениеОСети(есть)) }
+        }
         val обратно = object : android.net.ConnectivityManager.NetworkCallback() {
+            /* Доступность сети сама по себе не значит, что по ней можно ходить. Спрашиваем систему
+               прямо, а не ждём, что следом придёт onCapabilitiesChanged. */
             override fun onAvailable(network: android.net.Network) {
-                Log.i(TAG, if (сетьБыла) "сеть сменилась — говорим движку, что связь есть"
-                           else "сеть вернулась — будим облако")
-                сетьБыла = true
-                deviceEvents.execute { engine.sendIntent(СЕТЬ_ВЕРНУЛАСЬ) }
+                сеть(
+                    cm.getNetworkCapabilities(network)
+                        ?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true,
+                )
             }
 
             /* Смена возможностей — это и есть «сеть та же, а ходить по ней стало можно или нельзя»:
-               подключился VPN, портал пустил дальше, пропал интернет при живом Wi-Fi. */
+               подключился VPN, портал пустил дальше, пропал интернет при живом Wi-Fi. Прежде случай
+               «стало нельзя» здесь терялся: обработчик выходил, не сказав об этом никому. */
             override fun onCapabilitiesChanged(
                 network: android.net.Network,
                 caps: android.net.NetworkCapabilities,
-            ) {
-                if (!caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)) return
-                сетьБыла = true
-                deviceEvents.execute { engine.sendIntent(СЕТЬ_ВЕРНУЛАСЬ) }
-            }
+            ) = сеть(caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET))
 
-            override fun onLost(network: android.net.Network) { сетьБыла = false }
+            override fun onLost(network: android.net.Network) = сеть(false)
         }
         runCatching { cm.registerDefaultNetworkCallback(обратно) }
             .onSuccess { подпискаНаСеть = обратно }
@@ -940,7 +955,9 @@ class SugarLifeBridgePlugin : Plugin() {
         private const val TAG = "SugarLifeBridge"
         private const val НАСТРОЙКИ_ДОСТУПА = "sugarlife-доступ"
         private const val КЛЮЧ_СПРАШИВАЛИ = "ble-perm-asked"
-        private const val СЕТЬ_ВЕРНУЛАСЬ = "{\"type\":\"networkBack\"}"
+        /** Мнение телефона о сети (мост 1.68, SugarLifeCore#213): состояние, а не признак жизни. */
+        fun мнениеОСети(интернетЕсть: Boolean): String =
+            "{\"type\":\"networkBack\",\"internet\":$интернетЕсть}"
     }
 }
 

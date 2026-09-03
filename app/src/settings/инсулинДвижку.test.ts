@@ -4,7 +4,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
    Сторожим три вещи, и все три — про молчание: настройка, которая никуда не уходит; выбор,
    отправленный дважды подряд; и снятый выбор, о котором движку не сказали. Первое мы уже
-   прожили: `fastInsulinId` лежал только у нас, а активный инсулин считался по умолчаниям. */
+   прожили: `fastInsulinId` лежал только у нас, а активный инсулин считался по умолчаниям.
+
+   Четвёртое добавилось с классом действия (ядро #789): имя без класса ядро связать с кривой не
+   может, а класс от прежнего инсулина рядом с новым именем — расчёт по чужой кривой. Поэтому оба
+   поля обязаны ехать вместе, одним патчем. */
 
 const посланное: Array<Record<string, string | null>> = [];
 vi.mock('@/sources/bridge', () => ({
@@ -27,7 +31,7 @@ describe('инсулин движку', () => {
     забытьОтправленное();
     посланное.length = 0;
     const стоп = следитьЗаИнсулином();
-    expect(посланное).toEqual([{ 'insulin.type': 'fiasp' }]);
+    expect(посланное).toEqual([{ 'insulin.type': 'fiasp', 'insulin.actionClass': 'ультрабыстрый' }]);
     стоп();
   });
 
@@ -35,7 +39,22 @@ describe('инсулин движку', () => {
     const стоп = следитьЗаИнсулином();
     посланное.length = 0;
     setDeviceConfig({ fastInsulinId: 'humalog' });
-    expect(посланное).toEqual([{ 'insulin.type': 'humalog' }]);
+    expect(посланное).toEqual([{ 'insulin.type': 'humalog', 'insulin.actionClass': 'УКД' }]);
+    стоп();
+  });
+
+  /* РАЗНЫЕ КЛАССЫ У ОДНОГО ВЕЩЕСТВА — ЭТО И ЕСТЬ СМЫСЛ ПОЛЯ (ядро #789).
+
+     Fiasp и NovoRapid оба «аспарт», Lyumjev и Humalog оба «лизпро». Ключ по веществу склеил бы их
+     попарно и стёр разницу, за которую человек платит: у ультрабыстрых пик заметно раньше. */
+  it('одно вещество, разные классы — не путаем', () => {
+    const стоп = следитьЗаИнсулином();
+    for (const [id, класс] of [['fiasp', 'ультрабыстрый'], ['novorapid', 'УКД'],
+      ['lyumjev', 'ультрабыстрый'], ['humalog', 'УКД']] as const) {
+      посланное.length = 0;
+      setDeviceConfig({ fastInsulinId: id });
+      expect(посланное, id).toEqual([{ 'insulin.type': id, 'insulin.actionClass': класс }]);
+    }
     стоп();
   });
 
@@ -58,7 +77,17 @@ describe('инсулин движку', () => {
     setDeviceConfig({ fastInsulinId: 'humalog' });
     посланное.length = 0;
     setDeviceConfig({ fastInsulinId: null });
-    expect(посланное).toEqual([{ 'insulin.type': null }]);
+    expect(посланное).toEqual([{ 'insulin.type': null, 'insulin.actionClass': null }]);
+    стоп();
+  });
+
+  /* Инсулина нет в справочнике — класс не выдумываем: незнакомый ядро возьмёт по умолчанию и
+     скажет об этом, а выдуманный тихо посчитает по чужой кривой. */
+  it('незнакомый инсулин — класс пустой, а не угаданный', () => {
+    const стоп = следитьЗаИнсулином();
+    посланное.length = 0;
+    setDeviceConfig({ fastInsulinId: 'такого-нет' });
+    expect(посланное).toEqual([{ 'insulin.type': 'такого-нет', 'insulin.actionClass': null }]);
     стоп();
   });
 
