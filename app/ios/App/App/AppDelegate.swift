@@ -36,14 +36,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
            событий не получает (#544). Человек смотрит на экран и ждёт свежего числа — худший момент
            досиживать минутную паузу движка. Интент идемпотентен: лишний раз безвреден. */
         Сеть.общая.приВозвращении()
-        /* Баннер мог закрыться, пока приложение спало, а поднять его из фона нельзя (#559). Сейчас
-           мы активны — момент подходящий. */
-        if #available(iOS 16.2, *) { SugarLifeBridgePlugin.общий?.оживитьБаннер("вернулись") }
         // Called as part of the transition from the background to the active state; here you can undo many of the changes made on entering the background.
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        /* ПОДНИМАЕМ БАННЕР ЗДЕСЬ, А НЕ В `willEnterForeground` (#428).
+
+           Раньше стояло на возвращении из фона — и с появлением проверки `applicationState == .active`
+           это перестало работать: в `willEnterForeground` приложение ещё `.inactive`, а карточку
+           система разрешает родить только активному. То есть хук остался, а толку от него не стало —
+           карточка поднималась случайно, следующим пришедшим снимком.
+
+           `didBecomeActive` — первый момент, когда состояние и правда `.active`. Он же зовётся и
+           при первом запуске, и после разблокировки экрана: все три случая нам подходят одинаково.
+
+           Осталось объяснить, почему я это заметил: журнал показал четырнадцать минут «рождение
+           отложено» подряд и запуск ровно тогда, когда пришёл снимок при открытом приложении, — а
+           не тогда, когда приложение открыли. */
+        if #available(iOS 16.2, *) { SugarLifeBridgePlugin.общий?.оживитьБаннер("стали активны") }
+        // Restart any tasks that were paused (or not yet started) while the application was inactive.
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
