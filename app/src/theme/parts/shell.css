@@ -314,6 +314,9 @@ ion-content { --background: var(--color-bg); }
   font-size: 0.75rem; line-height: 1.35; text-wrap: balance;
   color: var(--color-warning, #e0b050);
 }
+/* Наш совет под словами движка: тише и отдельной строкой (просьба владельца).
+   Выше — что случилось, здесь — что можно сделать. Одинаковый вид смешал бы диагноз с советом. */
+.застой-подсказка { margin-top: 6px; font-size: 0.75rem; color: var(--color-neutral-500); }
 /* часики: значение из кеша, идёт обновление */
 .hp-stale { font-size: 0.625rem; vertical-align: -1px; margin-left: 3px; opacity: 0.55; color: currentColor; }
 
