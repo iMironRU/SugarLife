@@ -144,11 +144,25 @@ Q "with e as (select atMs, lag(atMs) over (order by atMs) prev from logEntry)
           coalesce((select k.event from logEntry k where k.tag='keepalive' and k.atMs <= e.prev order by k.atMs desc limit 1),'—')
    from e where atMs-prev > $SILENCE_MS order by prev desc limit 8;"
 echo
-echo "═══ ЖИВАЯ КАРТОЧКА — просили против дали"
-Q "select 'отправили', count(*) from logEntry where tag='banner' and event like 'карточка обновлена%'
-   union all select 'система применила', count(*) from logEntry where tag='banner' and event like 'система показала%'
-   union all select 'отказ «не передний план»', count(*) from logEntry where tag='banner' and event like 'не удалось%foreground%'
-   union all select 'создавали заново', count(*) from logEntry where tag='banner' and event='запущено';"
+# ЖИВАЯ КАРТОЧКА: РОЖДЕНИЕ И ОБНОВЛЕНИЕ — РАЗНЫЕ ИСТОРИИ, И СЧИТАТЬ ИХ НАДО ПОРОЗНЬ (#428).
+#
+# Здесь стояли рядом «отправили 374» и «система применила 59», и из их отношения был сделан вывод
+# «система применяет одно обновление из шести». Вывод неверный, а числа верные — просто они не
+# сравниваются: «система показала» пишет подписка, которая живёт в нашем процессе. Приложение
+# усыпили — поток не идёт, и применённое обновление записать некому.
+#
+# Поэтому наблюдение теперь идёт отдельной строкой со своими границами, а рождение — своим блоком.
+echo "═══ ЖИВАЯ КАРТОЧКА — рождение"
+Q "select 'родилась', count(*) from logEntry where tag='banner' and event='запущено'
+   union all select 'поднята Быстрой командой', count(*) from logEntry where tag='banner' and event like 'поднята по просьбе%'
+   union all select 'рождение отложено (мы были в фоне)', count(*) from logEntry where tag='banner' and event like 'рождение отложено%'
+   union all select 'рождение отвергнуто системой', count(*) from logEntry where tag='banner' and event like 'не удалось%';"
+echo
+echo "═══ ЖИВАЯ КАРТОЧКА — обновление"
+Q "select 'обновлений отдали', count(*) from logEntry where tag='banner' and event like 'карточка обновлена%'
+   union all select '  из них система сочла протухшей', count(*) from logEntry where tag='banner' and event like '%СЧИТАЕТ ПРОТУХШЕЙ%'
+   union all select 'наблюдали (только пока не спали)', count(*) from logEntry where tag='banner' and event like 'система показала%'
+   union all select '  наблюдение начиналось', count(*) from logEntry where tag='banner' and event like 'наблюдение за карточкой%';"
 echo
 echo "═══ МЕРЦАНИЕ ЧУЖОГО ЗВУКА (должно быть около нуля)"
 Q "select 'переворотов', count(*) from logEntry where event like 'чужой звук%'
