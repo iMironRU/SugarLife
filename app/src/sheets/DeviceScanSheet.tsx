@@ -85,8 +85,20 @@ export default function DeviceScanSheet({ isOpen, onClose, kind, title, выбр
      startScan движок сносит, лишний stopScan — нет. */
   useEffect(() => { if (isOpen) sendIntent({ type: 'startScan' }); }, [isOpen]);
 
+  /* ЗАНЯТОГО СОСЕДА В ЭТУ ШТОРКУ НЕ ПУСКАЕМ (#717, мост 1.69).
+
+     Она отвечает на вопрос «что подключить», а занятый прибор подключить нельзя: им пользуется
+     другая программа, и войти в чужой сеанс мы не умеем. Показать его здесь значило бы предложить
+     нажать на то, что не сработает, — а нажатие без последствий читается как поломка приложения.
+
+     Видно его в списке приборов, отдельным видом и без действия: там вопрос другой — «что вообще
+     рядом», и на него занятый сосед отвечает честно.
+
+     Вторая дверь нашлась проверкой в браузере: правило стояло в ленте, а сюда `discovered`
+     приезжает напрямую, и занятый прибор снова оказывался кандидатом на добавление. */
+  const свободные = discovered.filter((d) => !d.busy);
   // релевантные категории: прямые устройства нужного kind + мосты, ведущие к нему
-  const relevant = kind == null ? discovered : discovered.filter((d) => {
+  const relevant = kind == null ? свободные : свободные.filter((d) => {
     const own = driverById(d.driverId);
     if (own?.kind === kind) return true;
     if (d.isTransport) return d.transportFor.some((t) => driverById(t)?.kind === kind);
