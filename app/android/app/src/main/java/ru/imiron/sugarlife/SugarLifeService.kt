@@ -65,9 +65,8 @@ class SugarLifeService : Service() {
         }
         val notif: Notification = уведомление()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val тип = if (bluetoothРазрешён(this)) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-            else ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            Log.i(TAG, "старт: тип ${if (тип == ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) "connectedDevice" else "dataSync (нет разрешения на Bluetooth — предел 6ч/сут на Android 15)"}")
+            val тип = выбратьТип()
+            Log.i(TAG, "старт: тип ${типСловами(тип)}")
             startForeground(NOTIF_ID, notif, тип)
             текущийТип = тип
         } else {
@@ -227,6 +226,30 @@ class SugarLifeService : Service() {
     private var текущийТип: Int = 0
 
     /**
+     * ЧЕМ МЫ ПРЕДСТАВЛЯЕМСЯ СИСТЕМЕ (#380, #685, SugarLifeCore#216).
+     *
+     * Три случая, и третий появился, когда стало ясно, что опекун — не урезанный человек с прибором,
+     * а половина продукта:
+     *
+     *  — **`connectedDevice`** — у нас есть прибор и Bluetooth разрешён. Предела по времени нет.
+     *  — **`mediaPlayback`** — прибора нет, но звуковая опора играет и мы числимся плеером. Предела
+     *    тоже нет, и это единственный выход для того, кто смотрит за ребёнком или за родителем через
+     *    интернет: приборов у него не будет никогда.
+     *  — **`dataSync`** — ни того, ни другого. Работает, но на Android 15 у него потолок шесть часов
+     *    в сутки на всё приложение: посмотрел вечером, лёг спать — под утро наблюдения нет.
+     *
+     * ОБЪЯВЛЯЕМ ТОЛЬКО ТО, ЧТО ЕСТЬ. `connectedDevice` без прибора и `mediaPlayback` без звука — это
+     * враньё системе, и на песочнице за него, судя по всему, и убили: служба обещала подключённый
+     * прибор при выключенном Bluetooth. Поэтому каждый тип подпёрт проверкой факта, а не намерения.
+     */
+    private fun выбратьТип(): Int = ТипСлужбы.выбрать(
+        прибор = bluetoothРазрешён(this),
+        медиа = runCatching { ЗвуковаяОпора.общая(this).можноОбъявлятьМедиа }.getOrDefault(false),
+    )
+
+    private fun типСловами(тип: Int): String = ТипСлужбы.словами(тип)
+
+    /**
      * ПОДНЯТЬ ТИП СЛУЖБЫ, ЕСЛИ BLUETOOTH РАЗРЕШИЛИ ПОЗЖЕ (#685).
      *
      * Цена ошибки здесь часовая, а не косметическая: у `dataSync` на Android 15 предел шесть часов в
@@ -241,15 +264,20 @@ class SugarLifeService : Service() {
      * Вниз не понижаем никогда. Разрешение можно и отобрать, но `connectedDevice` без него всё равно
      * работает до перезапуска, а понижение сделало бы шесть часов из ничего.
      */
-    private fun поправитьТип() {
+    fun поправитьТип() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
-        if (текущийТип == ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) return
-        if (!bluetoothРазрешён(this)) return
-        runCatching {
-            startForeground(NOTIF_ID, уведомление(держим = держимПриборы), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
-            текущийТип = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-            Log.i(TAG, "Bluetooth разрешили позже — тип службы поднят до connectedDevice, предела 6ч/сут больше нет")
-        }.onFailure { Log.w(TAG, "тип службы поднять не удалось, остаёмся на dataSync (предел 6ч/сут): $it") }
+        val нужен = выбратьТип()
+        if (нужен == текущийТип) return
+        /* Вниз не понижаем никогда: разрешение можно и отобрать, но объявленный тип работает до
+           перезапуска, а понижение сделало бы шесть часов из ничего. Опора же приходит ПОЗЖЕ старта —
+           она включается только в фоне, — поэтому подъём до mediaPlayback происходит именно здесь. */
+        if (нужен and текущийТип == текущийТип && нужен != текущийТип) {
+            runCatching {
+                startForeground(NOTIF_ID, уведомление(держим = держимПриборы), нужен)
+                Log.i(TAG, "тип службы поднят: ${типСловами(текущийТип)} → ${типСловами(нужен)}")
+                текущийТип = нужен
+            }.onFailure { Log.w(TAG, "тип службы поднять не удалось, остаёмся на ${типСловами(текущийТип)}: $it") }
+        }
     }
 
     /**
@@ -614,6 +642,8 @@ class SugarLifeService : Service() {
                 .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     }
     /** Опора нужна только когда экрана перед человеком нет: на переднем плане она жгла бы заряд зря. */
+    private val руки = android.os.Handler(android.os.Looper.getMainLooper())
+
     private fun завестиОпору() {
         val опора = ЗвуковаяОпора.общая(applicationContext)
         val app = applicationContext as? android.app.Application ?: return
@@ -622,7 +652,15 @@ class SugarLifeService : Service() {
             override fun onActivityStarted(a: android.app.Activity) { видимых++; опора.фон(false) }
             override fun onActivityStopped(a: android.app.Activity) {
                 видимых--
-                if (видимых <= 0) { видимых = 0; опора.фон(true) }
+                if (видимых <= 0) {
+                    видимых = 0
+                    опора.фон(true)
+                    /* Опора заводится ТОЛЬКО в фоне, то есть позже старта службы. Значит и подняться
+                       до mediaPlayback можно только здесь: на onCreate звука ещё нет, и объявлять
+                       его было бы тем же враньём системе, за которое нас, судя по всему, и убили
+                       на песочнице (SugarLifeCore#216). Опоре нужен тик, чтобы зазвучать. */
+                    руки.postDelayed({ поправитьТип() }, 1_500L)
+                }
             }
             override fun onActivityCreated(a: android.app.Activity, b: android.os.Bundle?) {}
             override fun onActivityResumed(a: android.app.Activity) {}
@@ -632,6 +670,7 @@ class SugarLifeService : Service() {
         })
         /* Служба поднимается и без экрана — например по загрузке телефона. Тогда мы уже в фоне. */
         опора.фон(true)
+        руки.postDelayed({ поправитьТип() }, 1_500L)
     }
 
 }
