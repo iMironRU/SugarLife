@@ -341,6 +341,7 @@ class SugarLifeBridgePlugin : Plugin() {
        нет» и «сеть есть, а до сервера не пускают» — то самое, ради которого всё и слушается.
        Поэтому мост 1.68 возит МНЕНИЕ (`internet`), движок его помнит, и частота стала не нужна. */
     private val сторожСети = СторожСети()
+
     private var подпискаНаСеть: android.net.ConnectivityManager.NetworkCallback? = null
 
     private fun слушатьСеть() {
@@ -348,6 +349,16 @@ class SugarLifeBridgePlugin : Plugin() {
             as? android.net.ConnectivityManager ?: return
         /** Единственное место, где рождается сообщение о сети: сторож решает, менялось ли что-то. */
         fun сеть(есть: Boolean) {
+            /* КОГДА ПРОПАЛА — ЧТОБЫ НА ВОЗВРАТЕ СКАЗАТЬ, СКОЛЬКО НЕ БЫЛО (SugarLife#805).
+
+               «Связи нет» — тревожное утверждение о настоящем, на которое человек ответить не
+               может. «Связи не было двадцать одну минуту» — закрытый факт о прошлом.
+
+               Момент наш: обрыв и возврат видит этот обработчик, движок про сеть нашего телефона
+               не знает ничего. Засекаем один раз — при обрыве система шлёт события пачкой, и
+               переписывать момент значило бы обнулять счёт на каждом шевелении. */
+            if (!есть) СостояниеСети.пропала()
+            else СостояниеСети.вернулась()?.let { Log.i(TAG, "сеть вернулась, не было $it с") }
             if (!сторожСети.мнениеСменилось(есть)) return
             Log.i(TAG, if (есть) "интернет появился — будим облако" else "интернет пропал")
             deviceEvents.execute { engine.sendIntent(мнениеОСети(есть)) }
@@ -368,7 +379,15 @@ class SugarLifeBridgePlugin : Plugin() {
             override fun onCapabilitiesChanged(
                 network: android.net.Network,
                 caps: android.net.NetworkCapabilities,
-            ) = сеть(caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET))
+            ) {
+                /* VPN ЗДЕСЬ — ФАКТ, А НЕ ДОГАДКА (SugarLife#805).
+
+                   На айфоне туннель приходится узнавать по имени интерфейса; здесь система говорит
+                   прямо. Разницу в надёжности между платформами движку сообщаем как есть: он один
+                   решает, как говорить при неуверенности. */
+                СостояниеСети.черезVPN = caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)
+                сеть(caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET))
+            }
 
             override fun onLost(network: android.net.Network) = сеть(false)
         }
