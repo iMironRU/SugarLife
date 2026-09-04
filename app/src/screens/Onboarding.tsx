@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { часы } from '@/слова/время';
 import Row from '@/ui/Row';
 import { IonInput, IonButton } from '@ionic/react';
@@ -22,6 +23,9 @@ import { addCloud } from '@/sources/clouds';
 import { refresh } from '@/sources/store';
 import { setDeviceConfig, UNKNOWN_MODEL } from '@/settings/deviceConfig';
 import { setOnboarded } from '@/settings/onboarding';
+import { прочитатьПрава, спроситьПраво, открытьНастройкиПрава } from '@/platform/права';
+import { строки as правоСтроки, type ПунктНатива, type Строка as ПравоСтрока } from '@/показ/разрешения';
+import { знакомствоНужно, чтоПоказать, знакомствоЗакрыто } from '@/показ/первоеЗнакомство';
 import { toUnits, unitLabel } from '@/domain/units';
 
 
@@ -32,7 +36,14 @@ import { toUnits, unitLabel } from '@/domain/units';
    И ссылка была одна на всех: с айфона она вела туда, где лежит только APK. */
 const ГДЕ_ВЗЯТЬ = 'https://imiron.ru/SugarLife/install.html';
 
-type Step = 'welcome' | 'ways' | 'доступ' | 'scan' | 'cloud' | 'streams';
+/* Каталог движка отфильтрован по платформе, и спрашивать её надо у Capacitor, а не выводить из
+   наличия эфира: эфир бывает и в демо. */
+function платформаЗдесь(): 'Android' | 'iOS' | undefined {
+  const п = Capacitor.getPlatform();
+  return п === 'ios' ? 'iOS' : п === 'android' ? 'Android' : undefined;
+}
+
+type Step = 'welcome' | 'ways' | 'доступ' | 'scan' | 'cloud' | 'streams' | 'ночь';
 
 /* Мастер первого запуска (docs/CONNECT-UX.md §7, путь 1) — discovery-first.
    Не «сначала Nightscout», а «как будем доставать данные»: прямое подключение / QR /
@@ -69,7 +80,31 @@ export default function Onboarding() {
   const [pick, setPick] = useState<null | 'sensor' | 'pump'>(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
 
-  const skip = () => setOnboarded(true); // «настрою потом» — приложение с прочерками
+  /* ПУТЬ ТРЕТИЙ: ПЕРВОЕ ЗНАКОМСТВО (#473). Мастер спрашивает только то, без чего не найти приборы.
+     Про то, без чего не разбудят ночью, здесь не было ни слова — и человек узнавал об этом
+     вечером следующего дня, если вообще узнавал. Теперь выход из мастера один на все восемь
+     кнопок: если движок говорит, что обязательного не хватает, показываем это сразу.
+
+     Если всё на месте — шага нет вовсе. Стена зелёных галочек в первую минуту учит пролистывать
+     ровно тот экран, ради которого всё затевалось. */
+  const [права, setПрава] = useState<ПунктНатива[] | null>(null);
+  const правоСписок: ПравоСтрока[] = правоСтроки(права ?? [], снимок?.permissions ?? [], платформаЗдесь());
+  const завершить = () => {
+    if (права === null) {
+      /* Права ещё не читали: спрашиваем и решаем по ответу. Закрывать мастер до ответа нельзя —
+         второго такого момента не будет. */
+      void прочитатьПрава().then((сп) => {
+        setПрава(сп ?? []);
+        const с = правоСтроки(сп ?? [], снимок?.permissions ?? [], платформаЗдесь());
+        if (знакомствоНужно(сп !== null, с)) setStep('ночь');
+        else setOnboarded(true);
+      });
+      return;
+    }
+    if (знакомствоНужно(true, правоСписок)) setStep('ночь');
+    else setOnboarded(true);
+  };
+  const skip = завершить; // «настрою потом» — приложение с прочерками, но про ночь всё равно скажем
 
   const doProbe = async () => {
     const u = url.trim(), t = token.trim();
@@ -140,9 +175,85 @@ export default function Onboarding() {
       ...(sensor ? { sensorId: sensor } : {}),
       ...(pump ? { pumpId: pump } : {}),
     });
-    setOnboarded(true);
     refresh();
+    завершить();
   };
+
+  // ---------- ночь: что нужно, чтобы разбудили (#473, путь первого знакомства) ----------
+  if (step === 'ночь') {
+    const нужное = чтоПоказать(правоСписок);
+    const дальше = () => { знакомствоЗакрыто(); setOnboarded(true); };
+    const нажать = async (с: ПравоСтрока) => {
+      if (!с.действие) return;
+      if (с.действие === 'спросить') {
+        const свежий = await спроситьПраво(с.id);
+        if (свежий) setПрава(свежий);
+        /* Системный диалог живёт своей жизнью: ответ приходит позже вызова. */
+        setTimeout(() => { void прочитатьПрава().then((сп) => { if (сп) setПрава(сп); }); }, 400);
+      } else {
+        await открытьНастройкиПрава(с.id);
+      }
+    };
+    return (
+      <div className="connect ob-page">
+        <div className="ob-head">
+          <div>
+            <div className="sheet-title">Чтобы разбудить ночью</div>
+            <div className="sheet-subtitle">Этого не хватает — починим сейчас</div>
+          </div>
+        </div>
+
+        {/* ПОЧЕМУ СЕЙЧАС, А НЕ ВЕЧЕРОМ. Вечерний путь на месте и он поймает то, что человек
+            отложит. Но между этой минутой и первым таким вечером лежит целый день, и всё это
+            время человек уверен, что защита есть. */}
+        <p className="connect-desc">
+          Тревога о низком сахаре должна разбудить вас ночью. Сейчас телефон этого не даст.
+          Разрешения спрашивают один раз — потом только через настройки, и в три часа ночи
+          чинить это будет некому.
+        </p>
+
+        <div className="list">
+          {нужное.map((с) => (
+            <div key={с.id} className="list-row охрана-пункт">
+              <span className={'охрана-знак-п ' + (с.знак === 'нет' ? 'нет' : 'незнаем')} />
+              <div className="охрана-пункт-кнопка">
+                <span className="list-title">{с.имя}</span>
+                {/* Слова движка, а не наши: он знает, что будет лично с этим человеком (#813). */}
+                <span className="pick-sub">{с.почемуВам || с.зачем}</span>
+              </div>
+              {с.действие ? (
+                <button className="охрана-чинить" onClick={() => void нажать(с)}>
+                  {с.действие === 'спросить' ? 'разрешить' : 'настройки'}
+                  <Иконка icon={chevronForward} />
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+
+        {/* СТРОКА БЕЗ КНОПКИ ОБЯЗАНА ОБЪЯСНИТЬСЯ. Иначе экран, где половина строк ничего не
+            предлагает, читается как поломка — а это не поломка, а честность: у защиты от
+            выгрузки прошивкой система не даёт ни прочитать состояние, ни открыть свой экран. */}
+        {нужное.some((с) => !с.действие) && (
+          <div className="sheet-note">
+            У строк без кнопки экрана в системе нет: включить их можно только руками, в настройках
+            самого телефона, и проверить потом мы этого не сможем. Подробности — в разделе
+            «Разрешения».
+          </div>
+        )}
+
+        <div className="connect-form">
+          <IonButton expand="block" className="connect-btn" onClick={дальше}>
+            <Иконка icon={checkmarkCircle} slot="start" />
+            Готово
+          </IonButton>
+        </div>
+        {/* Отложить можно. Это не стена: приложение работает и с прочерками, а вечерний путь
+            спросит снова, когда дело дойдёт до настоящей ночи. */}
+        <button className="ob-skip" onClick={дальше}>Потом — напомните вечером</button>
+      </div>
+    );
+  }
 
   // ---------- welcome ----------
   if (step === 'welcome') {
@@ -321,7 +432,7 @@ export default function Onboarding() {
                   ? `${имяЖелезки(живой)} на связи — данные пошли.`
                   : `Заведено ${заведено === 1 ? 'устройство' : `устройств: ${заведено}`}. Данные пойдут, как только прибор выйдет на связь: новый сенсор греется — это часы, и это нормально.`}
               </div>
-              <IonButton expand="block" className="connect-btn" onClick={() => setOnboarded(true)}>
+              <IonButton expand="block" className="connect-btn" onClick={завершить}>
                 <Иконка icon={checkmarkCircle} slot="start" />
                 Готово
               </IonButton>
