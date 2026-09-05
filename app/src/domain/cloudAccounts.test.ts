@@ -6,7 +6,7 @@ import {
 import type { AccountView, CloudProviderView, Problem, UiSnapshot } from '@/sources/bridge';
 
 const уч = (p: Partial<AccountView>): AccountView => ({
-  id: 'a', providerId: 'libre', displayName: 'LibreLinkUp', state: 'Linked', ...p,
+  id: 'a', vendor: 'libre', displayName: 'LibreLinkUp', state: 'Linked', ...p,
 });
 
 const беда = (p: Partial<Problem>): Problem => ({
@@ -104,5 +104,5 @@ describe('каталог провайдеров', () => {
 });
 
 function uch(providerId: string): AccountView {
-  return уч({ providerId });
+  return уч({ vendor: providerId });
 }

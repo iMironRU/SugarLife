@@ -10,7 +10,9 @@ import type { AccountView, CloudProviderView, SubjectView, UiSnapshot } from '@/
 export function учёткиПровайдера(
   snap: UiSnapshot | null | undefined, providerId: string,
 ): AccountView[] {
-  return (snap?.accounts ?? []).filter((a) => a.providerId === providerId);
+  /* Сравниваем с `vendor`: так поле зовётся у движка. Стояло `a.providerId`, которого в снимке
+     нет, — фильтр не совпадал никогда, и раздел показывал ноль учёток при любой заведённой (#813). */
+  return (snap?.accounts ?? []).filter((a) => a.vendor === providerId);
 }
 
 /* Нужен ли шаг «чьи данные читаем».

@@ -18,7 +18,7 @@ const п = (id: string, статус: ПунктНатива['статус'], с
   ({ id, статус, спросить });
 
 const из = (o: Partial<PermissionView> & { id: string }): PermissionView => ({
-  need: 'Обязательно', purpose: 'Выживание', platforms: ['Android', 'iOS'],
+  title: 'имя от движка', need: 'Обязательно', purpose: 'Выживание', platforms: ['Android', 'iOS'],
   gives: 'что даёт', withoutIt: 'что останется', price: null, checkable: true, whyYou: null, ...o,
 });
 
