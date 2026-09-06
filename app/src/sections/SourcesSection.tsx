@@ -10,6 +10,10 @@ import { useStack } from '@/app/stackCtx';
 import ЧипыПотоков, { ПОТОКИ, type Поток } from '@/ui/Потоки';
 import { CloudAccountsSection } from '@/sections/lazy';
 import { строкиДоставки } from '@/показ/доставка';
+import {
+  выгрузкуПоказывать, выгружаемВсех, КЛЮЧ_ВЫГРУЗКИ, ЦЕНА_ВЫГРУЗКИ_ВСЕХ,
+} from '@/показ/выгрузкаВсех';
+import { IonToggle } from '@ionic/react';
 
 /* «Откуда берутся данные» — слоты вместо двух плоских списков (SugarLife#277).
 
@@ -141,6 +145,37 @@ export default function SourcesSection({ onClose, встроенный }: {
                 </div>
               ))}
             </div>
+
+            {/* ВЫГРУЖАТЬ ВСЕ ПРИБОРЫ ИЛИ ТОЛЬКО ОСНОВНОЙ (#560, пункт 6).
+
+                Поле приезжало с моста 1.44 и не читалось никем: человек не мог ни узнать, что
+                уходит только основной прибор, ни изменить это.
+
+                Появляется, только когда приборов больше одного: при одном переключать нечего, а
+                предупреждение описывало бы опасность, которой не может случиться.
+
+                Цена стоит рядом, а не в подробностях, — прямая просьба ядра. Довод не про нас:
+                лента в Nightscout одна, и петля возьмёт самое свежее, не глядя, чей это прибор. */}
+            {выгрузкуПоказывать(snap) && (
+              <>
+                <div className="list">
+                  <div className="list-row охрана-пункт">
+                    <span className="pick-main">
+                      <span className="list-title">Выгружать все приборы</span>
+                      <span className="pick-sub">
+                        {выгружаемВсех(snap) ? 'уходят все' : 'уходит только основной'}
+                      </span>
+                    </span>
+                    <IonToggle checked={выгружаемВсех(snap)}
+                      onIonChange={(e) => void sendIntent({
+                        type: 'setConfig',
+                        patch: { [КЛЮЧ_ВЫГРУЗКИ]: e.detail.checked ? 'on' : 'off' },
+                      })} />
+                  </div>
+                </div>
+                <div className="metric-note">{ЦЕНА_ВЫГРУЗКИ_ВСЕХ}</div>
+              </>
+            )}
           </>
         );
       })()}
