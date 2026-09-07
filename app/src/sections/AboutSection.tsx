@@ -9,7 +9,8 @@ import { состояниеОболочки, словоОболочки, ПУС�
 import Row from '@/ui/Row';
 import { useSnapshot } from '@/sources/bridge';
 import { useUpdateState, checkNow, applyUpdate, ОБНОВИЛИСЬ_ПРИ_СТАРТЕ, перечитатьВсё } from '@/platform/swUpdate';
-import { APP_BUILD, APP_BUILT_AT, APP_EDITION, APP_VERSION, checkNativeUpdate, installApk, isNative, openApkDownload, platform, type ОтаБандл, useХодOta, ВЫПУСКАЕТСЯ_APK, ИЗДАНИЕ_РЕЛИЗА, ПРИЕХАЛО_ПРИ_СТАРТЕ, ССЫЛКИ, нативнаяСборка, откудаБандл, применитьOta, узнатьOta } from '@/platform/appUpdate';
+import HoldButton from '@/ui/HoldButton';
+import { APP_BUILD, APP_BUILT_AT, APP_EDITION, APP_VERSION, checkNativeUpdate, installApk, isNative, openApkDownload, platform, type ОтаБандл, useХодOta, ВЫПУСКАЕТСЯ_APK, ИЗДАНИЕ_РЕЛИЗА, ПРИЕХАЛО_ПРИ_СТАРТЕ, ССЫЛКИ, нативнаяСборка, откудаБандл, применитьOta, узнатьOta, вернутьВстроенный } from '@/platform/appUpdate';
 
 /* «О приложении» отдельным разделом (замечание с телефона).
 
@@ -183,6 +184,33 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
               setСтавлю(true);
               void применитьOta(найдено).then((ок) => { if (!ок) { setСтавлю(false); setИтог('Не удалось скачать — похоже, нет сети.'); } });
             }} />
+        )}
+        {/* ВЕРНУТЬСЯ НА ВСТРОЕННЫЙ ИНТЕРФЕЙС (#828).
+
+            Скачанный по воздуху бандл ПОБЕЖДАЕТ установку кабелем: приложение поднимается из него,
+            а не из того, что положили с компьютера. Пока он активен, поставить новый интерфейс
+            нельзя вовсе — правку ждут, а она не доезжает, и выглядит это как «не ставится».
+
+            Это же единственный выход, если бандл приехал сломанным.
+
+            Внизу и удержанием: перезапуск приложения — не мелочь, а случайное касание здесь стоило
+            бы человеку возврата на старый интерфейс без причины. */}
+        {isNative && (
+          <>
+            <div className="section-label sec">Если интерфейс не обновляется</div>
+            <div className="list">
+              <div className="list-row охрана-пункт">
+                <span className="pick-main">
+                  <span className="list-title">Вернуться на встроенный</span>
+                  <span className="pick-sub">
+                    откатит интерфейс к тому, что внутри установленного приложения, и перезапустит его
+                  </span>
+                </span>
+                <HoldButton label="Вернуть" holdMs={2000}
+                  onComplete={() => { void вернутьВстроенный(); }} />
+              </div>
+            </div>
+          </>
         )}
         {/* Путь для застрявших: переключать нечего, поэтому берём оболочку заново (#386).
             Отдельной строкой и другими словами — это не «применить скачанное», а «не верить
