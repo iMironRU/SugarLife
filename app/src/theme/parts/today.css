@@ -703,3 +703,20 @@
   font-size: 0.875rem; font-weight: 600; color: var(--color-text);
   font-variant-numeric: tabular-nums; margin-right: 4px;
 }
+
+/* «Вернуть встроенный» (#828). Блок, а не строка списка: у кнопки удержания есть своя подпись под
+   ней, и в ряду она распирала всё, а объяснение обрывалось многоточием. Объяснение здесь главное —
+   без него кнопка выглядит опасной наугад.
+
+   Форма взята у «Отдать устройства»: она уже проверена на телефоне и читается. */
+.встроенный {
+  margin-top: 10px; padding: 13px 15px; border-radius: 18px;
+  background: var(--color-neutral-900);
+  border: 1px solid var(--color-neutral-800);
+}
+.встроенный b { display: block; font-size: 0.875rem; font-weight: 600; line-height: 1.35; }
+.встроенный i {
+  display: block; margin-top: 6px; font-size: 0.75rem; font-style: normal;
+  color: var(--color-neutral-400); line-height: 1.45; text-wrap: pretty;
+}
+.встроенный-кнопка { margin-top: 12px; }
