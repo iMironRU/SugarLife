@@ -418,10 +418,18 @@ class SugarLifeService : Service() {
     private val ЗАМЕТНОЕ_ИЗМЕНЕНИЕ = 0.3
 
     /**
-     * ЕСТЬ ЛИ ХОТЬ ОДИН ПРИБОР НА СВЯЗИ (SugarLifeCore#228).
+     * ЕСТЬ ЛИ ХОТЬ ОДИН ПРИБОР НА СВЯЗИ ПО РАДИО (SugarLifeCore#228).
      *
-     * Смотрим `connection` у приборов: `Connected` и `Streaming` — это связь, всё остальное нет.
-     * Облачные источники не считаются: `connectedDevice` про радио, а не про интернет.
+     * Смотрим `connection`: `Connected` и `Streaming` — это связь, всё остальное нет.
+     *
+     * ОТЛИЧАЕМ РАДИО ПО АДРЕСУ, А НЕ ПО НАЗВАНИЮ ВИДА. Первая редакция отсекала облака по
+     * `kind != "cloud"` — и на Хуавее владельца это не сработало: источники Nightscout приходят с
+     * `kind: "service"`, `connection: "Streaming"`, и прошли как приборы. Служба объявила EMUI
+     * `connectedDevice` на телефоне, где нет ни одного радиоприбора, — то самое враньё, которое эта
+     * правка и убирала.
+     *
+     * `bleId` — структурный признак: `connectedDevice` про радио, а у радио есть адрес. У облачного
+     * источника его нет и быть не может.
      *
      * Тип службы поднимаем сразу, как связь появилась: ждать следующего повода значит оставаться
      * `dataSync` с его шестью часами в сутки, и человек узнает об этом под утро.
@@ -432,7 +440,7 @@ class SugarLifeService : Service() {
             val приборы = org.json.JSONObject(json).optJSONArray("devices") ?: return@runCatching false
             (0 until приборы.length()).any { i ->
                 val д = приборы.optJSONObject(i) ?: return@any false
-                д.optString("kind") != "cloud" &&
+                !д.optString("bleId").isNullOrBlank() &&
                     д.optString("connection") in setOf("Connected", "Streaming")
             }
         }.getOrDefault(false)
