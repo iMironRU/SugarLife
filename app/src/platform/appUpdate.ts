@@ -7,7 +7,7 @@
      нужна лишь при смене нативного кода/зависимостей.
    iOS-нативка через APK обновляться не может (только App Store), но OTA работает и на iOS. */
 import { useSyncExternalStore } from 'react';
-import { ПО_ВОЗДУХУ, обновитель } from '@/издание';
+import { ПО_ВОЗДУХУ, обновитель, обновительЗарегистрирован } from '@/издание';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { прочитать, записать, убрать, прочитатьJson, записатьJson } from '@/settings/storage';
 import { этоНашПерезапуск } from '@/app/местоStore';
@@ -105,12 +105,11 @@ export async function назватьЖивойИнтерфейс(): Promise<void
   try {
     const я = (globalThis as { Capacitor?: {
       getPlatform?: () => string;
-      isPluginAvailable?: (имя: string) => boolean;
       Plugins?: Record<string, unknown>;
     } }).Capacitor;
     вЖурналДвижка('Info', 'update',
       `платформа ${я?.getPlatform?.() ?? '—'}; плагин обновления зарегистрирован: ` +
-      `${я?.isPluginAvailable?.('CapacitorUpdater') ?? '—'}; всего плагинов ` +
+      `${обновительЗарегистрирован?.() ?? '—'}; всего плагинов ` +
       `${Object.keys(я?.Plugins ?? {}).length}: ${Object.keys(я?.Plugins ?? {}).join(',')}`);
   } catch (е) {
     вЖурналДвижка('Warn', 'update', `не спросил Capacitor: ${(е as Error)?.message ?? е}`);
@@ -142,7 +141,7 @@ export async function вернутьВстроенный(): Promise<boolean> {
        зависшей загрузки: на экране «Скачиваю…», в журнале ничего. */
     if (!плагин) {
       вЖурналДвижка('Error', 'update',
-        'плагин обновления не достался: издание собрано без воздуха либо модуль не отдал CapacitorUpdater');
+        'плагин обновления не достался: издание собрано без воздуха либо Capacitor его не отдал');
       return false;
     }
     вЖурналДвижка('Info', 'update', 'плагин получен');
