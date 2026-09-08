@@ -440,7 +440,11 @@ class SugarLifeService : Service() {
             val приборы = org.json.JSONObject(json).optJSONArray("devices") ?: return@runCatching false
             (0 until приборы.length()).any { i ->
                 val д = приборы.optJSONObject(i) ?: return@any false
-                !д.optString("bleId").isNullOrBlank() &&
+                /* `isNull` ОБЯЗАТЕЛЕН. У поля `"bleId": null` метод `optString` возвращает СТРОКУ
+                   «null», а не пустую, — и проверка «не пусто» проходит. На это я наступил прямо на
+                   телефоне: облачные источники снова прошли за приборы, и служба опять объявила
+                   connectedDevice там, где радио нет вовсе. */
+                !д.isNull("bleId") && д.optString("bleId").isNotBlank() &&
                     д.optString("connection") in setOf("Connected", "Streaming")
             }
         }.getOrDefault(false)
