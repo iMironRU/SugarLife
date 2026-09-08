@@ -43,7 +43,21 @@ class СторожОтрисовщика(
     bridge: Bridge,
     private val активность: Activity,
     private val наВиду: () -> Boolean,
+    /** Страница поднялась — можно снимать нативную заставку (SugarLifeCore#232). */
+    private val страницаГотова: () -> Unit = {},
 ) : BridgeWebViewClient(bridge) {
+
+    /**
+     * СНИМАЕМ ЗАСТАВКУ ПО ФАКТУ, А НЕ ПО ТАЙМЕРУ.
+     *
+     * Таймер разошёлся бы с действительностью на первом же медленном старте: на слабом телефоне
+     * страница поднимается дольше, и человек увидел бы вместо заставки пустоту — то есть ровно то,
+     * от чего заставка и заводилась.
+     */
+    override fun onPageFinished(view: WebView?, url: String?) {
+        super.onPageFinished(view, url)
+        runCatching { страницаГотова() }
+    }
 
     /** Отрисовщик умер, пока нас не было видно: поднимем экран, когда человек вернётся. */
     @Volatile private var ждём: Boolean = false
