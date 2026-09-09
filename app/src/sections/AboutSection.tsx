@@ -10,7 +10,7 @@ import Row from '@/ui/Row';
 import { useSnapshot } from '@/sources/bridge';
 import { useUpdateState, checkNow, applyUpdate, ОБНОВИЛИСЬ_ПРИ_СТАРТЕ, перечитатьВсё } from '@/platform/swUpdate';
 import HoldButton from '@/ui/HoldButton';
-import { APP_BUILD, APP_BUILT_AT, APP_EDITION, APP_VERSION, checkNativeUpdate, installApk, isNative, openApkDownload, platform, type ОтаБандл, useХодOta, ВЫПУСКАЕТСЯ_APK, ИЗДАНИЕ_РЕЛИЗА, ПРИЕХАЛО_ПРИ_СТАРТЕ, ССЫЛКИ, нативнаяСборка, откудаБандл, применитьOta, узнатьOta, вернутьВстроенный } from '@/platform/appUpdate';
+import { APP_BUILD, APP_BUILT_AT, APP_EDITION, APP_VERSION, checkNativeUpdate, installApk, isNative, openApkDownload, platform, type ОтаБандл, useХодOta, ВЫПУСКАЕТСЯ_APK, ИЗДАНИЕ_РЕЛИЗА, ПРИЕХАЛО_ПРИ_СТАРТЕ, ССЫЛКИ, нативнаяСборка, откудаБандл, применитьOta, узнатьOta, вернутьВстроенный, useЗагрузкаИдёт } from '@/platform/appUpdate';
 
 /* «О приложении» отдельным разделом (замечание с телефона).
 
@@ -55,7 +55,7 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
      ответ на «проверить» нельзя: экран моргает, человек оказывается на «Сегодня» и
      читает успешное обновление как сбой. */
   const [найдено, setНайдено] = useState<ОтаБандл | null>(null);
-  const [ставлю, setСтавлю] = useState(false);
+  const ставлю = useЗагрузкаИдёт();
   /* «Обновлено до …» — разово после перезагрузки. Флаг забирается один раз, иначе
      сообщение висело бы всю сессию и перекрывало собой результат новой проверки. */
   /* Что именно произошло при последнем запуске: веб перезагрузился ради обновления
@@ -181,8 +181,9 @@ export default function AboutSection({ onClose }: { onClose: () => void }) {
               ? `сборка ${найдено.build} · идёт загрузка, не закрывайте приложение`
               : `сборка ${найдено.build} · скачается и перезапустит приложение`}
             onClick={() => {
-              setСтавлю(true);
-              void применитьOta(найдено).then((ок) => { if (!ок) { setСтавлю(false); setИтог('Не удалось скачать — похоже, нет сети.'); } });
+              /* Признак «идёт» теперь общий и живёт в самом обновлении (#848): уйти с экрана и
+                 вернуться можно, строка не соврёт, а второе нажатие не пройдёт. */
+              void применитьOta(найдено).then((ок) => { if (!ок) setИтог('Не удалось скачать — похоже, нет сети.'); });
             }} />
         )}
         {/* ВЕРНУТЬСЯ НА ВСТРОЕННЫЙ ИНТЕРФЕЙС (#828).

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useUpdateState, applyUpdate, перечитатьВсё, ОБНОВИЛИСЬ_ПРИ_СТАРТЕ } from '@/platform/swUpdate';
 import { ключОтказа, КЛЮЧ_ОТКАЗА as КЛЮЧ } from '@/platform/отставание';
 import { вДневник } from '@/sources/дневникStore';
-import { APP_BUILD, isNative, применитьOta, ПРИЕХАЛО_ПРИ_СТАРТЕ, useХодOta } from '@/platform/appUpdate';
+import { APP_BUILD, isNative, применитьOta, ПРИЕХАЛО_ПРИ_СТАРТЕ, useХодOta, useЗагрузкаИдёт } from '@/platform/appUpdate';
 import { useОтаОбновление } from '@/platform/otaWatch';
 import { прочитать, записать } from '@/settings/storage';
 
@@ -52,7 +52,10 @@ export default function UpdateReady() {
      существенная для текста: обещать «пара секунд» там, где сейчас начнётся загрузка
      десятка мегабайт по мобильной сети, нельзя. */
   const ota = useОтаОбновление();
-  const [ставлю, setСтавлю] = useState(false);
+  /* Свой признак остался только для ВЕБА: там обновление — это перечитать оболочку, загрузки
+     бандла нет вовсе, и общему хранилищу сказать нечего (#848). */
+  const [ставлюВВебе, setСтавлюВВебе] = useState(false);
+  const качаем = useЗагрузкаИдёт();
   const [отказ, setОтказ] = useState<string | null>(null);
   const [прочитано, setПрочитано] = useState(false);
   const ход = useХодOta();
@@ -97,7 +100,7 @@ export default function UpdateReady() {
 
      Поэтому «обновляюсь» — самостоятельное состояние, а не побочный эффект: пока идёт
      работа, карточка стоит на месте и говорит, что будет дальше. */
-  const занят = ставлю || upd.applying;
+  const занят = ставлюВВебе || качаем || upd.applying;
   if (занят) {
     return (
       <Notice вид="сообщение" значок={refreshOutline}
@@ -160,11 +163,12 @@ export default function UpdateReady() {
               if (!isNative) {
                 /* Застряли — обычная кнопка ничего не переключит: переключать нечего.
                    Тогда сносим сохранённую оболочку и берём всё заново (#386). */
-                if (застряли) { setСтавлю(true); void перечитатьВсё(); return; }
+                if (застряли) { setСтавлюВВебе(true); void перечитатьВсё(); return; }
                 applyUpdate(); return;
               }
-              setСтавлю(true);
-              void применитьOta(ota!).then((ок) => { if (!ок) setСтавлю(false); });
+              /* Признак ставит и снимает само обновление — оно одно знает, когда началось и когда
+                 кончилось, и знает это одинаково для всех экранов (#848). */
+              void применитьOta(ota!);
             }}>
             {занят ? 'Обновляю…' : 'Обновить'}
           </button>
