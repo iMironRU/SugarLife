@@ -48,6 +48,9 @@ class BootReceiver : BroadcastReceiver() {
             Log.i(TAG, "${intent.action}: мониторинг был выключен — не поднимаем")
             return
         }
+        /* Взводим проверку жизни ДО попытки старта (SugarLifeCore#227): дальше есть ветка, где мы
+           уходим ни с чем, и тогда пятнадцатиминутная проверка — единственное, что у нас останется. */
+        Воскрешение.взвести(ctx)
         if (Build.VERSION.SDK_INT >= 35 && !SugarLifeService.bluetoothРазрешён(ctx)) {
             Log.i(TAG, "${intent.action}: нет разрешения на Bluetooth — из загрузки система стартовать не даст")
             return

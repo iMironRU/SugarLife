@@ -41,6 +41,10 @@ class SugarLifeService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        живаяСлужба = true
+        /* Взводим проверку жизни (SugarLifeCore#227). Именно здесь, а не только в `start`: сюда мы
+           попадаем и после того, как система сама перезапустила нас по START_STICKY. */
+        Воскрешение.взвести(applicationContext)
         /* Ответы «понял», не доехавшие раньше (#482). Ровно тот случай, ради которого очередь и заведена:
            ночью человек нажал, движка в памяти не было, утром процесс поднялся — отдаём. */
         Понял.разгрести(applicationContext)
@@ -181,6 +185,17 @@ class SugarLifeService : Service() {
     /** То же на старых сборках Android 15, где сигнатура без типа. */
     override fun onTimeout(startId: Int) = onTimeout(startId, 0)
 
+    /**
+     * Отметка «нас больше нет» для проверки жизни (SugarLifeCore#227).
+     *
+     * Сюда мы попадаем при мирном останове. При убийстве не попадаем вовсе — и это не потеря: вместе
+     * с процессом обнуляется и сам флаг, а именно этот случай проверка и ловит.
+     */
+    override fun onDestroy() {
+        живаяСлужба = false
+        super.onDestroy()
+    }
+
     private fun сообщить(заголовок: String, текст: String) {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(
@@ -213,6 +228,8 @@ class SugarLifeService : Service() {
      * его на каждый запуск службы ничего не стоит.
      */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        живаяСлужба = true
+        Воскрешение.взвести(applicationContext)
         Доставка.доложить(applicationContext)
         поправитьТип()
         // Нажали кнопку прямо в уведомлении (#395) — не открывая приложение.
@@ -703,7 +720,21 @@ class SugarLifeService : Service() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(i) else ctx.startService(i)
         }
 
+        /**
+         * ЖИВЫ ЛИ МЫ (SugarLifeCore#227). Опора проверки жизни, и держится она на том, что статика
+         * умирает вместе с процессом: убили нас — класс загрузится заново со значением `false`.
+         *
+         * Спрашивать об этом систему (`getRunningServices`) нельзя: с Android 8 она отвечает только
+         * про своё же приложение и делает это ненадёжно, а «жив ли я» — единственный вопрос, на
+         * который мы отвечаем точнее любого чужого источника.
+         */
+        @Volatile private var живаяСлужба = false
+
+        @JvmStatic fun живаЛи(): Boolean = живаяСлужба
+
         fun stop(ctx: Context) {
+            /* Человек выключил наблюдение — значит и воскрешать нечего (SugarLifeCore#227). */
+            Воскрешение.снять(ctx)
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ВКЛЮЧЁН, false).apply()
             хранилищеУстройства(ctx).edit().putBoolean(KEY_ВКЛЮЧЁН, false).apply()
             ctx.stopService(Intent(ctx, SugarLifeService::class.java))
