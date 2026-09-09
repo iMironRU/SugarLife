@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Section from '@/ui/Section';
 import PageLoading from '@/ui/PageLoading';
 import Insights from '@/ui/Insights';
+import РазборПадений from '@/ui/РазборПадений';
 import { useAnalysis } from '@/domain/useAnalysis';
 import { useHistory } from '@/sources/db';
 import Dynamics from '@/ui/Dynamics';
@@ -108,6 +109,12 @@ export default function AnalyticsSection({ onClose, встроенный, дни
           незачем: вид находки виден по её тексту, а разделы по важности показывают
           всё сразу. */}
       <Insights analysis={analysis} />
+
+      {/* СПУСКИ — ПОСЛЕ НАХОДОК, А НЕ ПЕРЕД (#812). Находки отвечают «что изменилось» и
+          «почему», то есть на вопрос, с которым в разбор приходят. Спуски — наблюдение
+          одного рода событий: полезное, но узкое, и ставить его выше значило бы решить за
+          человека, что он пришёл именно за ним. */}
+      <РазборПадений дней={days} />
 
       <div className="sheet-note">
         Всё посчитано из ваших же данных — истории CGM и событий Nightscout. Ничего не
