@@ -2,6 +2,8 @@ package ru.imiron.sugarlife
 
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -43,6 +45,16 @@ import android.util.Log
  *
  * ЧЕГО ЭТО НЕ ДЕЛАЕТ. Оно не мешает нас убить и не спорит с PowerGenie. Смерть остаётся, просто
  * после неё темнота длится не двенадцать часов, а [ЧЕРЕЗ_МС].
+ *
+ * И ОДНОГО БУДИЛЬНИКА МАЛО — ЭТО ЗАМЕРЕНО, А НЕ ПРЕДПОЛОЖЕНО. На EMUI нас убивают не как процесс, а
+ * через `forceStopPackage`: `Force stopping ru.imiron.sugarlife.pro … iAwareF[PowerGenie]`. Android
+ * при остановке пакета СНИМАЕТ ВСЕ ЕГО БУДИЛЬНИКИ и держит пакет в состоянии `stopped`, куда
+ * широковещательные сообщения не доставляются вовсе. Проверено командой `am force-stop`: наших
+ * будильников после неё ноль. То есть убийца стирает ровно тот механизм, который должен был пережить
+ * убийство.
+ *
+ * Отсюда второй звонящий — [проверить] из виджета. Его будильник принадлежит системе, и остановка
+ * пакета до него не дотягивается.
  */
 object Воскрешение {
 
@@ -72,6 +84,23 @@ object Воскрешение {
      */
     fun поднимать(мониторингВключён: Boolean, службаЖива: Boolean): Boolean =
         мониторингВключён && !службаЖива
+
+    /**
+     * ЕСТЬ ЛИ ВИДЖЕТ НА ЭКРАНЕ (SugarLifeCore#227).
+     *
+     * Спрашивать можно и нужно: ответ точный, мгновенный и без разрешений — система хранит список
+     * размещённых экземпляров, а не догадки о них.
+     *
+     * И это не любопытство. На EMUI виджет — ЕДИНСТВЕННЫЙ путь назад после `forceStopPackage`, то
+     * есть его отсутствие меняет не удобство, а то, что мы вправе обещать человеку на ночь. Значит
+     * знать это обязаны и мы, и движок: обещание, выданное без такого знания, ничего не стоит — ровно
+     * та же причина, по которой заведена [Доставка].
+     */
+    @JvmStatic
+    fun виджетЕсть(ctx: Context): Boolean = runCatching {
+        val мм = AppWidgetManager.getInstance(ctx.applicationContext) ?: return false
+        мм.getAppWidgetIds(ComponentName(ctx.applicationContext, SugarWidget::class.java)).isNotEmpty()
+    }.getOrDefault(false)
 
     private const val TAG = "SugarLifeВоскрешение"
     private const val ДЕЙСТВИЕ = "ru.imiron.sugarlife.ВОСКРЕСНУТЬ"
@@ -106,25 +135,40 @@ object Воскрешение {
             .onSuccess { Log.i(TAG, "проверка жизни через ${ЧЕРЕЗ_МС / 60_000} мин, будильник ${if (точно) "точный" else "НЕТОЧНЫЙ — подняться из фона не дадут"}") }
     }
 
+    /**
+     * ПРОВЕРИТЬ И ПОДНЯТЬ. Общее тело для всех, кто может нас разбудить.
+     *
+     * Звонящих двое, и второй появился по замеру. Будильник — наш собственный, и его убийца стирает
+     * (см. ниже). Виджет — чужой: обновление ему шлёт система, будильник на это принадлежит ей же, и
+     * остановка нашего пакета его не трогает.
+     *
+     * ЗАМЕРЕНО НА ХУАВЕЕ 09.09, ради этого всё и переписано:
+     *
+     * ```
+     * 20:54:09  am force-stop           → stopped=true, наших будильников 0
+     * 21:30:15  AlarmManager: WAKEUP alarm trigger APPWIDGET_UPDATE, package name is: android
+     *           Start proc 27299 for broadcast {…/SugarWidget}
+     *           PG_ash: ru.imiron.sugarlife.pro pop from SHDA
+     *           PG_ash: has widget app: ru.imiron.sugarlife.pro
+     * ```
+     *
+     * То есть виджет поднял процесс из состояния `stopped`, куда нас загнал `forceStopPackage`, и
+     * PowerGenie сам вынул нас из своего списка — потому что у приложения есть виджет. Процесс при
+     * этом поднялся, а служба нет: виджет рисовал себя и уходил. Тридцать шесть минут темноты вместо
+     * семи часов, и это единственный найденный путь, переживающий остановку пакета.
+     *
+     * @param откуда только для журнала — по нему видно, каким из двух путей мы вернулись.
+     */
     @JvmStatic
-    fun снять(ctx: Context) {
-        val am = ctx.applicationContext.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        runCatching { am.cancel(намерение(ctx)) }
-    }
-}
-
-/** Приёмник из МАНИФЕСТА — см. [Воскрешение]: только такой умеет поднять мёртвый процесс. */
-class ВоскрешениеПриёмник : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        val ctx = context.applicationContext
+    fun проверить(ctx: Context, откуда: String) {
+        val app = ctx.applicationContext
         /* Взводим СРАЗУ, до всего остального: если подъём службы упадёт, следующая попытка всё равно
            обязана состояться. Цепочка, рвущаяся на первой неудаче, — это не воскрешение. */
-        Воскрешение.взвести(ctx)
+        взвести(app)
 
-        val включён = SugarLifeService.былВключён(ctx)
-        val жива = SugarLifeService.живаЛи()
-        if (!Воскрешение.поднимать(включён, жива)) {
-            if (включён) Log.i(TAG, "проверка: служба жива")
+        val включён = SugarLifeService.былВключён(app)
+        if (!поднимать(включён, SugarLifeService.живаЛи())) {
+            if (включён) Log.i(TAG, "$откуда: служба жива")
             return
         }
 
@@ -135,10 +179,19 @@ class ВоскрешениеПриёмник : BroadcastReceiver() {
          * записи он неотличим от успеха — а молчание мы уже принимали за успех дважды и оба раза
          * ошибались. Что именно скажет прошивка, выяснит телефон, а не рассуждение.
          */
-        runCatching { SugarLifeService.start(ctx) }
-            .onSuccess { Log.i(TAG, "служба была мертва — подняли") }
-            .onFailure { Log.w(TAG, "подняться не дали: $it") }
+        runCatching { SugarLifeService.start(app) }
+            .onSuccess { Log.i(TAG, "$откуда: служба была мертва — подняли") }
+            .onFailure { Log.w(TAG, "$откуда: подняться не дали: $it") }
     }
 
-    private companion object { const val TAG = "SugarLifeВоскрешение" }
+    @JvmStatic
+    fun снять(ctx: Context) {
+        val am = ctx.applicationContext.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        runCatching { am.cancel(намерение(ctx)) }
+    }
+}
+
+/** Приёмник из МАНИФЕСТА — см. [Воскрешение]: только такой умеет поднять мёртвый процесс. */
+class ВоскрешениеПриёмник : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) = Воскрешение.проверить(context, "будильник")
 }
