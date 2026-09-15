@@ -163,6 +163,11 @@ jobs:
       - name: Setup Android SDK
         if: env.HAS_CORE_TOKEN == 'да'
         uses: android-actions/setup-android@v3
+        # Пакеты — явно (15.09.2026). По умолчанию действие ставит `tools platform-tools`, а в
+        # cmdline-tools 16.0 на раннере пакета `tools` больше нет: sdkmanager падает с кодом 1, и
+        # сборка краснеет без единой правки у нас. Остальное ставит следующий шаг.
+        with:
+          packages: platform-tools
 
       - name: Install SDK packages
         if: env.HAS_CORE_TOKEN == 'да'
