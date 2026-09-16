@@ -2,6 +2,7 @@ import { useSnapshot } from '@/sources/bridge';
 import { ПодробнееПоТеме } from '@/ui/Подробнее';
 import { бедаДляПоказа, показанияСвежие } from '@/показ/застойПоказывать';
 import { источникГлюкозы } from '@/domain/deviceState';
+import ЧужиеСайты from '@/ui/ЧужиеСайты';
 
 /* «В ОБЛАКЕ НЕТ СВЕЖИХ» — ПОДПИСЬ К ЧИСЛАМ (ядро #157, мост ≥ 1.56).
 
@@ -44,6 +45,7 @@ export default function ЗастойВОблаке() {
     return (
       <div className="застой-в-облаке">
         {беда.title}. {беда.remediation}
+        <ЧужиеСайты код={беда.code} />
         <ПотянитеЧтобыСпросить />
       </div>
     );

@@ -1,4 +1,5 @@
 import type { Problem } from '@/sources/bridge';
+import ЧужиеСайты from '@/ui/ЧужиеСайты';
 
 /* ЧТО ДЕЛАТЬ, КОГДА ПРИБОР НЕ РАБОТАЕТ (мост ≥ 1.58, ядро #171).
 
@@ -22,6 +23,7 @@ export default function ЧтоДелать({ беда }: { беда?: Problem | 
     <div className={'sheet-note' + (тяжёлая ? ' warn' : '')}>
       <b>{беда.title}</b>
       {беда.remediation ? <> {беда.remediation}</> : null}
+      <ЧужиеСайты код={беда.code} />
       <span className="что-делать-код">{беда.code}</span>
     </div>
   );

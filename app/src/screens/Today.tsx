@@ -6,6 +6,7 @@ import ТихиеЗаметки from '@/ui/ТихиеЗаметки';
 import Расхождение from '@/ui/Расхождение';
 import { почемуНеЗнаем } from '@/слова/цикл';
 import ЗастойВОблаке from '@/ui/ЗастойВОблаке';
+import ЧужиеСайты from '@/ui/ЧужиеСайты';
 import ОговоркиЧисел from '@/ui/ОговоркиЧисел';
 import Иконка from '@/ui/Иконка';
 /* Импорт под другим именем: местное «часы» — это длительность в часах, а не время
@@ -619,6 +620,7 @@ export default function Today() {
             <Notice key={б.code} id="device-problem" вид="предупреждение" значок={cloudOfflineOutline}
               заголовок={б.title}>
               {б.remediation}
+              <ЧужиеСайты код={б.code} />
               <span className="что-делать-код">{б.code}</span>
             </Notice>
           ))}
