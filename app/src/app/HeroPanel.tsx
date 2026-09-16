@@ -1,7 +1,7 @@
 import Иконка from '@/ui/Иконка';
 import { показЗаряда, type Знание } from '@/показ/пропажаЗаряда';
 import { сколькоНазад } from '@/слова/время';
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { pulse, flash, cloudOfflineOutline, syncOutline, timeOutline, phonePortraitOutline, gitNetworkOutline, warningOutline } from 'ionicons/icons';
 import { useTab, setTab } from '@/app/nav';
 import { useStore } from '@/sources/store';
@@ -21,6 +21,7 @@ import { выбратьПоказание, ОТСТАВАНИЕ_МС } from '@/d
 import { useСейчас, подписьОстатка } from '@/показ/сейчас';
 import { useSnapshot } from '@/sources/bridge';
 import { ярлыкЗастоя, знакЗастоя, ярлыкБеды } from '@/слова/застой';
+import { useСетьТелефона } from '@/показ/сетьТелефона';
 import { источникГлюкозы } from '@/domain/deviceState';
 import { расходка } from '@/domain/supplies';
 import CircleSparkline from '@/charts/CircleSparkline';
@@ -110,15 +111,12 @@ export default function HeroPanel() {
   const changes = useChanges();
   const cfg = getCfg();
 
-  // онлайн/офлайн — чтобы честно показать «нет сети»
-  const [online, setOnline] = useState<boolean>(typeof navigator === 'undefined' ? true : navigator.onLine);
-  useEffect(() => {
-    const on = () => setOnline(true);
-    const off = () => setOnline(false);
-    window.addEventListener('online', on);
-    window.addEventListener('offline', off);
-    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
-  }, []);
+  /* Онлайн/офлайн — чтобы честно показать «нет сети», и показать СРАЗУ.
+
+     Здесь стояла подписка на события `online`/`offline`. В WKWebView они приходят с опозданием,
+     и владелец поймал это на телефоне: включил авиарежим — «долго ничего не менялось».
+     Правило и опрос живут в `показ/сетьТелефона.ts`. */
+  const online = useСетьТелефона();
 
   /* Все экраны равны: панель везде начинается развёрнутой и сворачивается за
      прокруткой. Переключились на вкладку, прокрутанную вниз, — панель встаёт в то
