@@ -1078,6 +1078,9 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             /* И ЭКРАНУ — СОСТОЯНИЕ СЕТИ ТЕЛЕФОНА (#858). В вебе `navigator.onLine` в WKWebView
                остаётся `true` даже в авиарежиме — проверено на телефоне владельца. Правду знает
                только наблюдатель пути, и отдать её стоит даром. */
+            Сеть.общая.вЖурнал = { [weak self] уровень, событие in
+                self?.вЖурнал(уровень, "net", событие)
+            }
             Сеть.общая.приСменеСети = { [weak self] есть in
                 self?.notifyListeners("сеть", data: ["есть": есть])
             }
