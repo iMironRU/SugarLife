@@ -624,6 +624,7 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "alarmReadiness", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "openAlarmSettings", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "ожидающаяЦель", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "состояниеСети", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "statusNote", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "glucoseBadge", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setGlucoseBadge", returnType: CAPPluginReturnPromise),
@@ -1073,6 +1074,12 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             /* Сеть вернулась — будим облако движка немедленно, не досиживая его паузу (#544). */
             Сеть.общая.сообщить = { [weak self] json in
                 self?.engineQueue.async { _ = self?.engine?.sendIntent(json: json) }
+            }
+            /* И ЭКРАНУ — СОСТОЯНИЕ СЕТИ ТЕЛЕФОНА (#858). В вебе `navigator.onLine` в WKWebView
+               остаётся `true` даже в авиарежиме — проверено на телефоне владельца. Правду знает
+               только наблюдатель пути, и отдать её стоит даром. */
+            Сеть.общая.приСменеСети = { [weak self] есть in
+                self?.notifyListeners("сеть", data: ["есть": есть])
             }
             Сеть.общая.слушать()
 
@@ -1735,6 +1742,12 @@ public class SugarLifeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
        чем веб успеет подписаться. Держим последнюю здесь и отдаём, когда спросят, — иначе теряли бы
        её ровно в самом важном случае. */
     private static var ожидающаяЦельПерехода: String?
+
+    /* Первый вопрос из веба: событий он ещё не слышал, а состояние нужно сразу при открытии
+       экрана. То же место, что и `ожидающаяЦель`, и по той же причине. */
+    @objc func состояниеСети(_ call: CAPPluginCall) {
+        call.resolve(["есть": Сеть.общая.сетьЕсть])
+    }
 
     @objc func ожидающаяЦель(_ call: CAPPluginCall) {
         let цель = SugarLifeBridgePlugin.ожидающаяЦельПерехода ?? ""
