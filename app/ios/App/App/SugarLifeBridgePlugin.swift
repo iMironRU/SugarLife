@@ -364,8 +364,11 @@ final class BleLink: NSObject, CBPeripheralDelegate {
         идут.forEach { $0.1() }
     }
 
+    /* Снаружи — явный сильный захват (Xcode 27 требует назвать его): операция ставится в очередь
+       сейчас и обязана до неё дойти. Внутри — слабый: отложенная операция не должна держать мост,
+       если соединение уже разобрали. */
     func write(_ data: Data, to char: CBUUID) {
-        bleQueue.async { self.приГотовности(char) { [weak self] in
+        bleQueue.async { [self] in self.приГотовности(char) { [weak self] in
             guard let self else { return }
             guard let p = self.peripheral else {
                 NSLog("SugarLifeBLE: запись \(char) отброшена: нет соединения"); return
@@ -378,7 +381,7 @@ final class BleLink: NSObject, CBPeripheralDelegate {
         } }
     }
     func read(_ char: CBUUID, completion: @escaping (Data?) -> Void) {
-        bleQueue.async { self.приГотовности(char) { [weak self] in
+        bleQueue.async { [self] in self.приГотовности(char) { [weak self] in
             guard let self, let p = self.peripheral, let c = self.chars[char] else {
                 NSLog("SugarLifeBLE: чтение \(char) отброшено: нет соединения или характеристики")
                 bleOutQueue.async { completion(nil) }; return
@@ -558,7 +561,12 @@ final class PumpBridge: PumpTransportBridge {
         link.connectNow()
     }
     func command(bytes: KotlinByteArray, timeoutMs: Int64, callback: @escaping (KotlinByteArray) -> Void) {
-        bleOutQueue.async {
+        /* Сильный захват снаружи — ЯВНЫЙ (Xcode 27). Он был и раньше, только неявный: команда обязана
+           дойти до конца, иначе обратный вызов Kotlin не получит ответа никогда. Слабый захват
+           внутри, у срока, — отдельное решение: срок не должен держать мост после отмены. Компилятор
+           предупреждал, что два захвата разного рода выглядят как ошибка, — теперь видно, что это
+           два разных намерения. */
+        bleOutQueue.async { [self] in
             self.завершить(Data())          // предыдущая команда не теряется молча
             self.pending = callback
             if timeoutMs > 0 {
